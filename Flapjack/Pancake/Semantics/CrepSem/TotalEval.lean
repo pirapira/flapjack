@@ -2,16 +2,17 @@ import Flapjack.Pancake.Semantics.CrepSem.Eval
 import Flapjack.RiscV.PanMemory
 
 /-!
-# Total HOL-shaped Crep evaluator fragment
+# Total Crep evaluator fragment
 
-This module ports the leaf clauses `Skip`, `Break`, `Continue`, and `Tick`,
-plus `Assign`, `Store`, `ShMem`, `If`, `Seq`, `While`, `Return`, `Raise`, and
-`Dec` over its restricted recursive syntax, from `crepSem$evaluate_def` to the
-11-field `CrepHolState`. The restricted syntax makes the implemented domain
-explicit: this is not a whole-program evaluator and assigns no behavior to the
-remaining `CrepProg` constructors. The result carrier is `option
-crepSem$result`, so ordinary completion is `none` and control results retain
-their HOL constructors. The ShMem clause uses the executable
+This module gives total clock-based equations for `Skip`, `Break`, `Continue`,
+`Tick`, `Assign`, `Store`, `ShMem`, `If`, `Seq`, `While`, `Return`, `Raise`,
+`Dec`, and a restricted `Call` over its recursive syntax and the 11-field
+`CrepHolState`. Call reads the state's code map and recursively executes
+callee bodies which decode into this syntax; source bodies containing
+`Primitive`, `Store32`, `StoreByte`, `StoreGlob`, or a call exception handler
+remain outside this fragment. This is not a whole-program evaluator. The
+result carrier is `option crepSem$result`, so ordinary completion is `none`
+and control results retain their HOL constructors. The ShMem clause uses the executable
 `FfiState`/`UInt8` carrier; its bridge to exact HOL `ffi_state`/`word8` remains
 unclaimed.
 -/
@@ -40,7 +41,10 @@ def CrepClockLeaf.toCrepProg {width : Nat} :
     in the current HOL state, and its `Seq` nodes use the HOL `fix_clock` boundary
     between recursively evaluated programs. `While` uses clock decrease and
     the same `fix_clock` boundary between iterations. Return nodes evaluate
-    their expression list in the current HOL state. -/
+    their expression list in the current HOL state. Its Call form reads the
+    state's code map and only executes callees accepted by
+    `CrepProg.toCrepClockProg?`; unsupported source constructors and handler
+    continuations remain outside this fragment. -/
 inductive CrepClockProg (width : Nat) where
   | leaf (value : CrepClockLeaf)
   | raiseException (value : BitVec width)
@@ -54,6 +58,8 @@ inductive CrepClockProg (width : Nat) where
       (body : CrepClockProg width)
   | seq (first second : CrepClockProg width)
   | returnValues (values : List (CrepExp (BitVec width)))
+  | call (returnNames : Option (List Nat))
+      (function : FunName) (arguments : List (CrepExp (BitVec width)))
   | ite (condition : CrepExp (BitVec width))
       (thenBranch elseBranch : CrepClockProg width)
   | whileLoop (condition : CrepExp (BitVec width))
@@ -72,9 +78,63 @@ def CrepClockProg.toCrepProg {width : Nat} :
   | .decLocal name value body => .dec name value body.toCrepProg
   | .seq first second => .seq first.toCrepProg second.toCrepProg
   | .returnValues values => .return values
+  | .call returnNames function arguments =>
+      .call (returnNames.map fun names => (names, none)) function arguments
   | .ite condition thenBranch elseBranch =>
       .ite condition thenBranch.toCrepProg elseBranch.toCrepProg
   | .whileLoop condition body => .while condition body.toCrepProg
+termination_by program => sizeOf program
+decreasing_by
+  simp_wf
+  all_goals first
+    | decreasing_trivial
+    | (simp_all only [CrepClockProg.decLocal.sizeOf_spec,
+        CrepClockProg.seq.sizeOf_spec, CrepClockProg.ite.sizeOf_spec,
+        CrepClockProg.whileLoop.sizeOf_spec, CrepClockProg.call.sizeOf_spec]; omega)
+
+/-- Decode the source code-map bodies covered by this restricted evaluator.
+    Returning `none` keeps unsupported source constructors outside the exact
+    Call claim instead of assigning them invented behavior. -/
+def CrepProg.toCrepClockProg? {width : Nat} :
+    CrepProg (BitVec width) → Option (CrepClockProg width)
+  | .skip => some (.leaf .skip)
+  | .break label => some (.leaf (.breakAt label))
+  | .continue label => some (.leaf (.continueAt label))
+  | .tick => some (.leaf .tick)
+  | .raise value => some (.raiseException value)
+  | .assign name value => some (.assignLocal name value)
+  | .store destination source => some (.store destination source)
+  | .shMem operator name address => some (.sharedMemory operator name address)
+  | .extCall function configuration configurationLength array arrayLength =>
+      some (.extCall function configuration configurationLength array arrayLength)
+  | .dec name value body => do
+      let body ← body.toCrepClockProg?
+      pure (.decLocal name value body)
+  | .seq first second => do
+      let first ← first.toCrepClockProg?
+      let second ← second.toCrepClockProg?
+      pure (.seq first second)
+  | .return values => some (.returnValues values)
+  | .ite condition thenBranch elseBranch => do
+      let thenBranch ← thenBranch.toCrepClockProg?
+      let elseBranch ← elseBranch.toCrepClockProg?
+      pure (.ite condition thenBranch elseBranch)
+  | .while condition body => do
+      let body ← body.toCrepClockProg?
+      pure (.whileLoop condition body)
+  | .call none function arguments => some (.call none function arguments)
+  | .call (some (names, none)) function arguments =>
+      some (.call (some names) function arguments)
+  | .call (some (_, some _)) _ _ => none
+  | .primitive .. | .store32 .. | .storeByte .. | .storeGlob .. => none
+termination_by program => sizeOf program
+decreasing_by
+  simp_wf
+  all_goals first
+    | decreasing_trivial
+    | (simp_all only [CrepProg.dec.sizeOf_spec, CrepProg.seq.sizeOf_spec,
+        CrepProg.ite.sizeOf_spec, CrepProg.while.sizeOf_spec,
+        CrepProg.call.sizeOf_spec]; omega)
 
 /-- HOL `exit_loop` on an optional control result: propagate other outcomes,
     while decrementing the nesting label of Break and Continue. -/
@@ -215,9 +275,45 @@ def evalCrepClockExtCall [NeZero width] [BEq (BitVec width)] {σ : Type _}
       | _, _ => (some .error, state)
   | _, _, _, _ => (some .error, state)
 
+/-- Merge the nonlocal fields returned by a code-map callee while retaining
+    the caller's local environment, as `evaluate_def` does after `lookup_code`.
+    This is evaluator infrastructure, not a whole-program theorem. -/
+def crepClockCallerState {width : Nat} {σ : Type _}
+    (caller callee : CrepHolState (BitVec width) σ) :
+    CrepHolState (BitVec width) σ :=
+  { caller with
+    globals := callee.globals
+    code := callee.code
+    memory := callee.memory
+    memaddrs := callee.memaddrs
+    shMemaddrs := callee.shMemaddrs
+    clock := callee.clock
+    bigEndian := callee.bigEndian
+    ffi := callee.ffi
+    baseAddress := callee.baseAddress
+    topAddress := callee.topAddress }
+
+/-- Update a caller's existing return destinations after the Call result has
+    been arity-checked. `none` records HOL's `FLOOKUP` failure. -/
+def crepClockSetReturnLocals {width : Nat} {σ : Type _}
+    (state : CrepHolState (BitVec width) σ) (names : List Nat)
+    (values : List (PanWordLab (BitVec width))) :
+    Option (CrepHolState (BitVec width) σ) := do
+  if names.length != values.length then none else
+  let _ ← names.mapM state.locals
+  let locals := (names.zip values).foldl
+    (fun locals (name, value) candidate =>
+      if name = candidate then some value else locals candidate) state.locals
+  pure { state with locals := locals }
+
+/-- The source call metadata admits only duplicate-free return destinations. -/
+def crepClockCallInfoValid : Option (List Nat) → Bool
+  | none => true
+  | some destinations => destinations.eraseDups.length == destinations.length
+
 /-- Total result/state equations for the matching HOL `evaluate_def` leaves,
     `Assign`, `Store`, `ShMem`, `If`, `Seq`, `While`, `Return`, `Raise`, and
-    `Dec`, and `ExtCall`. This restricted function deliberately has no
+    `Dec`, `ExtCall`, and restricted source-code-map `Call`. This restricted function deliberately has no
     `Option` fuel wrapper and does not depend on `evalCrepRuntimeResult`. -/
 def evalCrepClockLeaf {width : Nat} {σ : Type _}
     (leaf : CrepClockLeaf) (state : CrepHolState (BitVec width) σ) :
@@ -290,6 +386,39 @@ def evalCrepClockProg [NeZero width] {σ : Type _}
       match values.mapM (evalCrepHolExpWordLab state) with
       | some words => (some (.return words), emptyCrepHolLocals state)
       | none => (some .error, state)
+  | .call returnInfo function arguments, state =>
+      match arguments.mapM (evalCrepHolExpWordLab state) with
+      | none => (some .error, state)
+      | some values =>
+          match lookupCrepHolCode state.code function values values.length with
+          | none => (some .error, state)
+          | some (sourceBody, calleeLocals) =>
+              if !crepClockCallInfoValid returnInfo then (some .error, state)
+              else if state.clock = 0 then
+                (some .timeOut, emptyCrepHolLocals state)
+              else
+                match sourceBody.toCrepClockProg? with
+                | none => (some .error, state)
+                | some body =>
+                    let callee := decCrepHolClockW { state with locals := calleeLocals }
+                    let (bodyResult, bodyState) := evalCrepClockProg body callee
+                    let (bodyResult, bodyState) :=
+                      fixCrepHolClockW callee (bodyResult, bodyState)
+                    let callerState := crepClockCallerState state bodyState
+                    match bodyResult with
+                    | none => (some .error, bodyState)
+                    | some (.break _) | some (.continue _) =>
+                        (some .error, bodyState)
+                    | some (.return values) =>
+                        match returnInfo with
+                        | none => (some (.return values), emptyCrepHolLocals bodyState)
+                        | some destinations =>
+                            match crepClockSetReturnLocals callerState destinations values with
+                            | some updated => (none, updated)
+                            | none => (some .error, bodyState)
+                    | some (.exception exception) =>
+                        (some (.exception exception), emptyCrepHolLocals bodyState)
+                    | some result => (some result, emptyCrepHolLocals callerState)
   | .ite condition thenBranch elseBranch, state =>
       match evalCrepHolExp state condition with
       | some value =>
@@ -331,13 +460,18 @@ def evalCrepClockProg [NeZero width] {σ : Type _}
                 evalCrepClockProg (.whileLoop condition body) loopState
             | (some (.break 0), loopState) => (none, loopState)
             | (result, loopState) => (exitCrepClockLoopResult result, loopState)
-termination_by program state => (sizeOf program, state.clock)
+termination_by program state => (state.clock, sizeOf program)
 decreasing_by
   all_goals
     simp_wf
-    first | decreasing_trivial | omega
+    first
+    | decreasing_trivial
+    | (simp [setCrepHolVarW, decCrepHolClockW, fixCrepHolClockW] at *; omega)
+    | (simp only [fixCrepHolClockW]; split <;> simp_wf <;>
+        first | decreasing_trivial | omega)
   all_goals
     simp_wf
+    simp [setCrepHolVarW, decCrepHolClockW, fixCrepHolClockW] at *
     omega
 
 theorem evalCrepClockProg_return_success [NeZero width] {σ : Type _}

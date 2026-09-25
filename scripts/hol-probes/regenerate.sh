@@ -509,7 +509,7 @@ run_probe pan_sem_pan_primop_probeScript.sml pan_sem_pan_primop_probe.out \
   pan_primop_basic pan_primop_non_word "$cake_dir/pancake/semantics/panSemScript.sml"
 # The set_var probe checks local override, unrelated locals, globals, and clock.
 run_probe pan_sem_set_var_probeScript.sml pan_sem_set_var_probe.out \
-  set_var_new set_var_clock "$cake_dir/pancake/semantics/panSemScript.sml"
+  set_var_new set_var_done "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
   pan_dec_clock_five pan_dec_clock_zero \
   "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -702,6 +702,10 @@ run_probe crep_clock_leaf_eval_probeScript.sml crep_clock_leaf_eval_probe.out \
   return_missing_eval raise_eval dec_shadow_eval dec_new_local_eval dec_error_eval \
   while_false_eval while_error_eval while_timeout_eval while_normal_recursion_eval \
   while_break_zero_eval while_break_label_eval while_continue_label_eval \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_total_call_eval_probeScript.sml crep_total_call_eval_probe.out \
+  call_total_return_success call_total_return_destination call_total_missing_code \
+  call_total_wrong_arity call_total_timeout \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_assign_eval_probeScript.sml crep_assign_eval_probe.out \
   assign_overwrite_eval assign_missing_destination_eval assign_expression_error_eval \
@@ -1574,3 +1578,28 @@ run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.ou
   ss_one ss_eq \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+
+# The is_wf_shape probe observes is_wf_shape/is_wf_flds/is_wf_ctxt over the
+# exact MlString-keyed context, including the duplicate-name and missing-field
+# rejections.
+run_probe pan_lang_is_wf_shape_probeScript.sml pan_lang_is_wf_shape_probe.out \
+  iwf_one iwf_ctxt_field_miss \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"
+
+# The shape_of probe observes the total HOL shape_of over panSem$v.
+run_probe pan_sem_shape_of_probeScript.sml pan_sem_shape_of_probe.out \
+  so_valword so_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The isValWord probe observes the exact boolean `panSem$isValWord` on
+# Val/RStruct/NStruct and on the raw Word payload.
+run_probe pan_sem_is_val_word_probeScript.sml pan_sem_is_val_word_probe.out \
+  is_valword_val is_valword_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The empty_locals probe observes the exact `panSem$empty_locals` state update:
+# the locals map is cleared while other fields are preserved.
+run_probe pan_sem_empty_locals_probeScript.sml pan_sem_empty_locals_probe.out \
+  el_lookup el_globals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

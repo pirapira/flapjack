@@ -1,0 +1,5 @@
+fzn_notmem=T
+fzn_mem=SOME 10
+fzn_preserved=T
+dtd_disjoint=DISJOINT (set [1; 2]) (set [4])
+ddt_disjoint=DISJOINT (set [4]) (set [1; 2])

@@ -31,6 +31,111 @@ counterpart.  The relations over pure `num`/`num` finite maps (`distinct_funcs`,
 
 namespace Flapjack
 
+/-! The Cake theorem `mem_lookup_fromalist_some` is stated in this proof
+counterpart, while the generic `sptFromAList` rendering stays with the Spt
+carrier in `Flapjack.Misc.Sptree`. The helpers below are local proof support
+for this theorem. -/
+
+/-- Same-key lookup after insertion, proved by strong induction on the HOL
+binary-tree key recursion. -/
+private theorem sptLookup_sptInsert_same {α : Type} :
+    ∀ (key : Nat) (value : α) (tree : Spt α),
+      sptLookup key (sptInsert key value tree) = some value := by
+  intro key
+  induction key using Nat.strongRecOn with
+  | ind key ih =>
+      intro value tree
+      by_cases hzero : key = 0
+      · subst key
+        exact sptLookup_sptInsert_zero value tree
+      · have hpositive : 0 < key := Nat.pos_of_ne_zero hzero
+        have hdecrease : (key - 1) / 2 < key := by
+          have hdiv : (key - 1) / 2 ≤ key - 1 := Nat.div_le_self _ _
+          have hlt : key - 1 < key := Nat.sub_lt hpositive (by decide)
+          omega
+        by_cases heven : key % 2 = 0
+        · cases tree with
+          | ln =>
+              conv => lhs; rw [sptInsert.eq_1, if_neg hzero, if_pos heven]
+              conv => lhs; rw [sptLookup.eq_3, if_neg hzero, if_pos heven]
+              exact ih ((key - 1) / 2) hdecrease value .ln
+          | ls existing =>
+              conv => lhs; rw [sptInsert.eq_2, if_neg hzero, if_pos heven]
+              conv => lhs; rw [sptLookup.eq_4, if_neg hzero, if_pos heven]
+              exact ih ((key - 1) / 2) hdecrease value .ln
+          | bn left right =>
+              conv => lhs; rw [sptInsert.eq_3, if_neg hzero, if_pos heven]
+              conv => lhs; rw [sptLookup.eq_3, if_neg hzero, if_pos heven]
+              exact ih ((key - 1) / 2) hdecrease value left
+          | bs left existing right =>
+              conv => lhs; rw [sptInsert.eq_4, if_neg hzero, if_pos heven]
+              conv => lhs; rw [sptLookup.eq_4, if_neg hzero, if_pos heven]
+              exact ih ((key - 1) / 2) hdecrease value left
+        · cases tree with
+          | ln =>
+              conv => lhs; rw [sptInsert.eq_1, if_neg hzero, if_neg heven]
+              conv => lhs; rw [sptLookup.eq_3, if_neg hzero, if_neg heven]
+              exact ih ((key - 1) / 2) hdecrease value .ln
+          | ls existing =>
+              conv => lhs; rw [sptInsert.eq_2, if_neg hzero, if_neg heven]
+              conv => lhs; rw [sptLookup.eq_4, if_neg hzero, if_neg heven]
+              exact ih ((key - 1) / 2) hdecrease value .ln
+          | bn left right =>
+              conv => lhs; rw [sptInsert.eq_3, if_neg hzero, if_neg heven]
+              conv => lhs; rw [sptLookup.eq_3, if_neg hzero, if_neg heven]
+              exact ih ((key - 1) / 2) hdecrease value right
+          | bs left existing right =>
+              conv => lhs; rw [sptInsert.eq_4, if_neg hzero, if_neg heven]
+              conv => lhs; rw [sptLookup.eq_4, if_neg hzero, if_neg heven]
+              exact ih ((key - 1) / 2) hdecrease value right
+
+private theorem sptFromAList_mem_insert {α : Type}
+    {entries : List (Nat × α)} {key : Nat} {value : α}
+    (hnodup : (entries.map Prod.fst).Nodup)
+    (hmem : (key, value) ∈ entries) :
+    ∃ tree, sptFromAList entries = sptInsert key value tree := by
+  induction entries with
+  | nil => simp at hmem
+  | cons entry entries ih =>
+      obtain ⟨headKey, headValue⟩ := entry
+      rcases List.nodup_cons.mp hnodup with ⟨hheadNot, htailNodup⟩
+      rcases List.mem_cons.mp hmem with hhead | htail
+      · have hpair : headKey = key ∧ headValue = value := by
+          simpa using hhead.symm
+        rcases hpair with ⟨hkey, hvalue⟩
+        subst key
+        subst value
+        exact ⟨sptFromAList entries, rfl⟩
+      · have hkeyMem : key ∈ entries.map Prod.fst := by
+          simp only [List.mem_map]
+          exact ⟨(key, value), htail, rfl⟩
+        have hheadNe : headKey ≠ key := by
+          intro heq
+          subst headKey
+          exact hheadNot hkeyMem
+        obtain ⟨tree, htree⟩ := ih htailNodup htail
+        refine ⟨sptInsert headKey headValue tree, ?_⟩
+        change sptInsert headKey headValue (sptFromAList entries) =
+          sptInsert key value (sptInsert headKey headValue tree)
+        rw [htree]
+        exact sptInsert_swap headKey key headValue value tree hheadNe
+
+/-- Exact port of CakeML `mem_lookup_fromalist_some`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`). For a distinct
+    key list, every member association is returned by HOL `lookup` after
+    `fromAList`. The premises and conclusion match the HOL theorem; the
+    association-list recursion uses the exact Spt rendering imported from
+    `Flapjack.Misc.Sptree`, with no list-lookup substitute. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_lookup_fromalist_some"]
+theorem memLookupFromAListSomeExact {α : Type}
+    {entries : List (Nat × α)} {key : Nat} {value : α}
+    (hnodup : (entries.map Prod.fst).Nodup)
+    (hmem : (key, value) ∈ entries) :
+    sptLookup key (sptFromAList entries) = some value := by
+  obtain ⟨tree, htree⟩ := sptFromAList_mem_insert hnodup hmem
+  rw [htree]
+  exact sptLookup_sptInsert_same key value tree
+
 /-- Flapjack analogue of HOL `state_rel_def`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:28-36`):
     `state_rel s t` holds when the source and target states agree on the
@@ -426,9 +531,15 @@ def findVarHOL (ctxt : CrepToLoopFiniteMapContext) (v : Nat) : Nat :=
    (`cakeml/pancake/crep_to_loopScript.sml:27-32`) keys `ctxt.funcs` by HOL
    `funname = mlstring`, while `CrepToLoopFiniteMapContext.funcs` is a
    `FiniteMap FunName (Nat × Nat)` with `FunName = String`; the key carrier
-   differs even though the lookup shape matches. The exact counterpart needs an
-   MlString-keyed loop-context carrier (dependency `flapjack-pxn.18.3.5.8` /
-   the downstream MlString audit), so no `@[hol]` tag is attached yet. -/
+   differs even though the lookup/default-0 equations match. HOL's `context`
+   record declares `funcs : funname |-> num # num`, with `funname = mlstring`;
+   this Lean definition therefore cannot be tagged by matching its equations
+   alone. Direct HOL probes cover hit/miss lookup, and Lean parity examples
+   exercise this helper, but neither establishes equality of the key carriers.
+   The exact counterpart needs an MlString-keyed loop-context carrier
+   (dependency `flapjack-pxn.18.3.5.8` / the downstream MlString audit).
+   The executed `crepFindLab` is separately tested, not an exact-carrier
+   witness for this proof-side helper; no `@[hol]` tag is attached yet. -/
 def findLabHOL (ctxt : CrepToLoopFiniteMapContext) (f : FunName) : Nat :=
   match FLOOKUP ctxt.funcs f with
   | some (n, _) => n

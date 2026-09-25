@@ -63,6 +63,7 @@ for the review rule.
 | `crep_arithScript.sml` | `Flapjack/Pancake/CrepArith.lean` |
 | `crep_inlineScript.sml` | `Flapjack/Pancake/CrepInline.lean`, `CrepInline/Pass.lean` |
 | `crep_to_loopScript.sml` | `Flapjack/Pancake/CrepToLoop.lean`, `CrepToLoop/Optimise.lean` |
+| `proofs/crep_to_loopProofScript.sml` | `Flapjack/Pancake/CrepToLoop/StateRel.lean` (proof relations and exact `mem_lookup_fromalist_some` port) |
 | `misc/miscScript.sml` (`spt`/`num_set`) | `Flapjack/Misc/Sptree.lean` (exact `spt` inductive carrier + tagged `num_set` abbrev; `Spt` itself untagged because HOL/src is outside cakeml) |
 | `loopLangScript.sml` | `Flapjack/Pancake/LoopLang.lean` (exact exp/loop_arith/prog carriers, now over the exact `unit spt`-backed `NumSet`; executable `LoopProg` bridge tracked by .18.5.17.1.1) |
 | `loop_callScript.sml` | `Flapjack/Pancake/LoopCall.lean` |

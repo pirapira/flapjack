@@ -555,6 +555,22 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "eval_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_baseAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged BaseAddr leaf returns the exact state field with its full word_lab wrapper; the enclosing evaluator still uses explicit HolFiniteDimension source projection instead of native HOL eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_topAddr",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged TopAddr leaf returns the exact state field with its full word_lab wrapper; the enclosing evaluator still uses explicit HolFiniteDimension source projection instead of native HOL eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepHolFiniteStateSource_load32",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged Load32 case with the recursive address premise, exact finite-state memory/domain projection, and full word_lab result via tagged mem_load_32_def. The surrounding evaluator still uses explicit HolFiniteDimension and is not native crepSem eval."
@@ -614,6 +630,22 @@
     "lean_name": "crepSimpExpCorrect1CrepSemHOLStateBitVecRuntime",
     "statement_status": "documented_mismatch",
     "reviewer": "Uses exact HOL expression and word_lab carriers over positive BitVec width and the actual mapc-shaped state, but code/FFI are fixed in the expression-only runtime projection and arbitrary HOL finite_index/native eval_def correspondence remains open. Untagged support only."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLStateHolEval",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Uses exact CrepSemHOLState, MlString/CrepProgHOL mapc update, and exact CrepExpHOL input with full word_lab result over every positive BitVec width. Evaluation is the source-shaped evalCrepHolExp translation, but canonical BitVec width is not yet identified with arbitrary HOL finite_index; the production-runtime theorem is separately linked by the all-constructor evaluator relation. No @[hol] tag."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Quantifies over an arbitrary HolFiniteDimension and uses exact finite-map, MlString, CrepProgHOL, set-domain, HolFfiState, expression, mapc-update, and word_lab result carriers. The source evaluator still transports through the explicit dimension and word-operation adapter; its identity with HOL's implicit finite_index instances and native crepSem$eval remains open. No @[hol] tag."
   },
   {
     "hol_path": null,
@@ -1885,7 +1917,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "globalCompileTopCake_shapes_wf_nil",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "Codex source review against pan_globalsProofScript.sml:2495-2504: HOL premises are evaluate_decls s code = SOME s', s.structs = [], and EVERY admissible-constructor check; conclusion is one EVERY predicate over compile_top code start. Lean has the corresponding success, empty-struct, and admissibility premises, but its conclusion is membership in globalCompileTopCake plus an equality test per function output, not the HOL conclusion shape. Its Decl/FunDecl/Shape/state names are also String-backed, while HOL uses mlstring. Keep untagged as documented_mismatch; flapjack-pxn.18.3.5.8 tracks exact MlString carriers. The current Lean statement fixture is not a direct HOL oracle regression; a faithful retarget needs the reviewed compile_top definition and direct source rows."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
@@ -8208,7 +8240,7 @@
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "extractLabels",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-by-clause match with extract_labels_def wordConvsScript.sml:440-459: Call NONE=>[], Call SOME ret with no handler => [(l1,l2)]++ret_rest, with handler => [(l1,l2);(l1',l2')]++ret_rest++h_rest, MustTerminate/Seq/Loop/If descend, catch-all []; the width-specialized WordLangProg (BitVec width) carrier is implicit-width and the function inspects only labels/structure, matching HOL's universally quantified word type; direct HOL oracle rows in scripts/hol-probes/word_convs_extract_labels_probe.out)"
+    "reviewer": "Codex source review against wordConvsScript.sml:440-459: Call NONE=>[], Call SOME ret with no handler => [(l1,l2)]++ret_rest, with handler => [(l1,l2);(l1',l2')]++ret_rest++h_rest, MustTerminate/Seq/Loop/If descend, catch-all []; uses exact WordLangProgHOL including HOL num_set and mlstring fields; direct HOL oracle rows in scripts/hol-probes/word_convs_extract_labels_probe.out are reproduced by WordLangExtractLabelsParity.lean."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
@@ -8231,16 +8263,16 @@
     "hol_name": "every_inst_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "everyInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:299-315: Inst uses P; Seq/Loop/If/MustTerminate recurse; OpCurrHeap synthesizes the Add instruction with the second register as right operand; Call NONE returns T without inspecting its handler, while SOME checks both handler bodies. Input uses exact WordLangProgHOL; direct rows in word_convs_inst_preds_probe.out are reproduced in WordLangInstPredsParity.lean."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "flat_exp_conventions_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "flatExpConventions",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:179-205: Assign/Store are rejected; Set and ShareInst accept only the stated flat expression forms; Seq/Loop/If/MustTerminate recurse; Call checks return and handler independently; catch-all accepts. Uses exact WordLangProgHOL/WordLangExpHOL; direct rows in word_convs_flat_exp_probe.out are reproduced in WordLangFlatExpParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
@@ -8430,17 +8462,17 @@
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
     "hol_name": "exp_to_addr_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
-    "lean_name": "expToAddr",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "lean_name": "expToAddrHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordLangScript.sml:323-326: exact Var and Op Add [Var,Const] clauses over WordLangExpHOL, whose Lookup field uses the fixed store_name carrier; all other expressions return none. Direct ShareInst address rows in word_convs_full_inst_ok_less_probe.out exercise this exact function."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "full_inst_ok_less_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "fullInstOkLess",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison; Call NONE handler case oracle added after review)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:318-345: Inst delegates to inst_ok_less; recursive clauses and Call NONE behavior match; ShareInst uses exact expToAddrHOL then the matching address-offset class for each memop. Uses exact WordLangProgHOL/WordLangExpHOL and the checked AsmConfig width; all direct fiol_* rows in word_convs_full_inst_ok_less_probe.out are reproduced in WordLangFullInstOkLessParity.lean."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
@@ -8454,9 +8486,9 @@
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "call_arg_convention_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
-    "lean_name": "callArgConvention",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "lean_name": "callArgConventionHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:391-423: each scalar, list GENLIST, Inst, Call, and recursive constructor clause matches; the function uses exact WordLangProgHOL fields and remains Bool-valued like HOL. All 23 direct rows in word_convs_call_arg_probe.out are reproduced in WordLangCallArgParity.lean."
   },
   {
     "hol_path": null,
@@ -8510,9 +8542,9 @@
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
     "hol_name": "every_var_exp_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
-    "lean_name": "everyVarExp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "lean_name": "everyVarExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordLangScript.sml:85-91: Var applies P, Load recurses, Op applies the list traversal, Shift conjoins both operands, and all other expressions return T. Uses exact WordLangExpHOL so Lookup has the fixed store_name field."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
@@ -8527,14 +8559,6 @@
     "hol_name": "every_var_inst_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
-    "hol_name": "good_handlers_def",
-    "lean_path": "Flapjack/Pancake/WordConvs.lean",
-    "lean_name": "goodHandlers",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   },
@@ -9825,5 +9849,45 @@
     "lean_name": "panToCrepSourceLoad32HOLCase",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Codex (Flapjack-specific RISC-V source evaluator case under stateRel: reduces source Load32 to existing panMemLoad32HOL using source memaddrs/be and target word memory; not a standalone HOL theorem or pc_compile_correct case proof. Direct HOL EVAL row state_rel_source_word32_little and state_rel_source_word32_misaligned in pan_sem_state_eval_probe.out.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "mem_lookup_fromalist_some",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "memLookupFromAListSomeExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (compared with mem_lookup_fromalist_some at crep_to_loopProofScript.sml:3813-3827: HOL !xs n x. ALL_DISTINCT (MAP FST xs) ∧ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x; Lean uses (xs.map Prod.fst).Nodup, pair membership, and sptLookup n (sptFromAList xs) = some x over Nat keys and polymorphic values. Spt matches the exact HOL spt constructor arity. sptFromAList matches external HOL/src/finite_maps/sptreeScript.sml:1478-1480 recursive head insertion; lookup/insert mirror that same Spt carrier. Direct HOL EVAL rows ml_hit/ml_miss/ml_distinct in scripts/hol-probes/crep_to_loop_mem_lookup_probe.out are reproduced in Flapjack/Test/CrepToLoopParity.lean."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "exp",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "WordLangExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordLangScript.sml:14-21: exact Const 'a word, Var num, Lookup store_name, Load exp, Op binop (exp list), and Shift shift exp exp constructor shapes. The lookup field uses the exact WordStoreHOL alias for fixed HOL store_name, avoiding WordStore's phantom word parameter."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
+    "hol_name": "prog",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "WordLangProgHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordLangScript.sml:35-68: every prog constructor is present with matching arity and field types. WordLangCutsetsHOL uses Spt Unit for HOL num_set (unit spt); the FFI function uses exact MlString; expressions use the exact WordLangExpHOL/store_name carriers; the word, instruction, register/immediate, operator, and scalar fields match their HOL carriers."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
+    "hol_name": "store_name",
+    "lean_path": "Flapjack/Pancake/WordLang.lean",
+    "lean_name": "WordStoreHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against stackLangScript.sml:17-22: the Temp constructor carries BitVec 5, and all remaining nullary store names match the HOL constructor set and arity. WordStore Unit fixes its otherwise phantom word parameter while preserving the exact source field carrier."
+  },
+  {
+    "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+    "hol_name": "good_handlers_def",
+    "lean_path": "Flapjack/Pancake/WordConvs.lean",
+    "lean_name": "goodHandlersHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex source review against wordConvsScript.sml:512-520: Call ret=NONE returns true without inspecting its handler; ret=SOME checks the return-handler program and, when present, requires its label equal n and checks that body; Seq and If conjoin recursive checks; Loop and MustTerminate recurse on their body; every remaining constructor is true. Lean uses the exact WordLangProgHOL carrier with positive BitVec word width corresponding to HOL words, exact spt num_set and mlstring fields, so there are no added predicates or altered clauses. All 12 direct HOL EVAL rows gh_call_none through gh_other in scripts/hol-probes/word_convs_good_handlers_probe.out are reproduced by Flapjack/Test/WordLangGoodHandlersParity.lean."
   }
 ]

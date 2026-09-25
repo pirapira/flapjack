@@ -65,7 +65,6 @@ example (input : String) (p : Token × Locs) (hp : p ∈ pancakeLex input) :
 example (fuel : Nat) (input : List Char) (loc : Posn) (h : CharsByteRanged input)
     (p : Token × Locs) (hp : p ∈ lexAux fuel input loc) : TokenNameByteRanged p.1 :=
   lexAux_tokens_byteRanged fuel input loc h p hp
-
 /-! Direct parity with the original-HOL `get_keyword` oracle
     (`scripts/hol-probes/pan_lexer_get_keyword_probe.out`,
     bead `flapjack-pxn.18.3.5.8.7.2`): every table entry and fallback. -/

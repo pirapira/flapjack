@@ -28,7 +28,6 @@ below are the conservative review frontier, not claims of completed ports.
 
 | Lean module:line | HOL name | Lean declaration | carrier |
 |---|---|---|---|
-| `Pancake/Semantics/PanSem.lean:67` | `word_lab` | `HolWordLab` | `BitVec width` (word payload) |
 | `Pancake/Semantics/PanSemStateEval.lean:164` | `mem_load_byte_def` | `panMemLoadByteHOL` | `HolWordLab`/`RiscV.Word` |
 | `Pancake/Semantics/PanSemStateEval.lean:183` | `mem_load_32_def` | `panMemLoad32HOL` | `HolWordLab`/`RiscV.Word` |
 | `Pancake/Semantics/PanSemStateEval.lean:228` | `mem_store_byte_def` | `memStoreByteAuxHOL` | `HolWordLab`/`RiscV.Word` |
@@ -48,8 +47,15 @@ by the name mismatch.
 
 | Lean module:line | HOL name | offending carrier(s) | tracking |
 |---|---|---|---|
-| `Pancake/Semantics/PanSem/Primop.lean` | `flatten_def` | `PanValue` (`nStruct` names `FieldName`/`StructName` `String`; `.word` payload `α` vs `'a word_lab`) | withdrawn (`flapjack-0lj.3`; exact port pending) |
-| `Pancake/Semantics/PanSem/Primop.lean` | `pan_primop_def` | `PanValue` (same carrier mismatch; body ignores names but the quantifier is not exact) | withdrawn (`flapjack-0lj.3`; exact port pending) |
+| `Pancake/Semantics/PanSem.lean:76` | `word_lab` | `HolWordLab width` admits `width = 0`; HOL `'a word` requires positive `dimindex`. Constructor arity/field type otherwise match | withdrawn (`flapjack-0lj.5`; positive-width `[NeZero width]` inductive pending, blocked by the `PanSemStateEval.lean` edit freeze and the `CrepLocalsExact`/`HolValue` propagation) |
+| `Pancake/Semantics/PanSem/Primop.lean` | `flatten_def` | `PanValue` (`nStruct` names `FieldName`/`StructName` `String`; `.word` payload `α` vs `'a word_lab`) | withdrawn (`flapjack-0lj.3`); exact MlString port landed as `flattenHOL` (`PanSem/ValueHOL.lean`) |
+| `Pancake/Semantics/PanSem/Primop.lean` | `pan_primop_def` | `PanValue` (same carrier mismatch; body ignores names but the quantifier is not exact) | withdrawn (`flapjack-0lj.3`); exact MlString port landed as `panPrimopHOLExact` (`PanSem/ValueHOL.lean`) |
+
+`PanSem/ValueHOL.lean` adds the positive-width exact `ValueHOL`
+(`[NeZero width]` on the inductive, mirroring `CrepProgHOL`), with `flattenHOL`
+and `panPrimopHOLExact` tagged and their direct-HOL oracle rows reproduced by
+`Flapjack/Test/PanSemValueHOLParity.lean`. `ValueHOL.val` still wraps the
+generic `HolWordLab`, whose Datatype tag remains withheld (`flapjack-0lj.5`).
 
 ## Resolution order
 

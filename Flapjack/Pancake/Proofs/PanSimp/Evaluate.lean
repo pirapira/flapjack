@@ -3265,7 +3265,7 @@ theorem evalPanValueFfiClockProg_decCall_returned_some
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord fuel locals globals memory ffi clock none
         function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
           callClock))
     (hmatch : panShapeMatches (panValueShape structs value) shape = true)
@@ -3302,7 +3302,7 @@ theorem evalPanValueFfiClockProg_decCall_returned_some_progSize
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord (progSize body) locals globals memory ffi clock
         none function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
           callClock))
     (hmatch : panShapeMatches (panValueShape structs value) shape = true)
@@ -3349,7 +3349,7 @@ theorem evalPanValueFfiClockProg_decCall_returned_some_progCallFuel
         baseAddress topAddress bytesInWord
         (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
         none function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
           callClock))
     (hmatch : panShapeMatches (panValueShape structs value) shape = true)
@@ -3393,7 +3393,7 @@ theorem evalPanValueFfiClockProg_decCall_raised_some
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord fuel locals globals memory ffi clock none
         function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.raised calleeLocals nextGlobals nextMemory nextFfi exception
           value), callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
@@ -3423,7 +3423,7 @@ theorem evalPanValueFfiClockProg_decCall_timeout_some
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord fuel locals globals memory ffi clock none
         function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.timeout nextLocals nextGlobals nextMemory nextFfi, callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
         baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
@@ -3451,7 +3451,7 @@ theorem evalPanValueFfiClockProg_decCall_finalFfi_some
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord fuel locals globals memory ffi clock none
         function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
           callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
@@ -3487,7 +3487,7 @@ theorem evalPanValueFfiClockProg_decCall_raised_some_progSize
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord (progSize body) locals globals memory ffi
         clock none function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.raised calleeLocals nextGlobals nextMemory nextFfi exception
           value), callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
@@ -3524,7 +3524,7 @@ theorem evalPanValueFfiClockProg_decCall_timeout_some_progSize
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord (progSize body) locals globals memory ffi
         clock none function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.timeout nextLocals nextGlobals nextMemory nextFfi, callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
         baseAddress topAddress bytesInWord
@@ -3559,7 +3559,7 @@ theorem evalPanValueFfiClockProg_decCall_finalFfi_some_progSize
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
         baseAddress topAddress bytesInWord (progSize body) locals globals memory ffi
         clock none function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
           callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
@@ -3605,7 +3605,7 @@ theorem evalPanValueFfiClockProg_decCall_raised_some_progCallFuel
         baseAddress topAddress bytesInWord
         (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
         none function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.raised calleeLocals nextGlobals nextMemory nextFfi exception
           value), callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
@@ -3645,7 +3645,7 @@ theorem evalPanValueFfiClockProg_decCall_timeout_some_progCallFuel
         baseAddress topAddress bytesInWord
         (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
         none function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.timeout nextLocals nextGlobals nextMemory nextFfi, callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
         baseAddress topAddress bytesInWord
@@ -3683,7 +3683,7 @@ theorem evalPanValueFfiClockProg_decCall_finalFfi_some_progCallFuel
         baseAddress topAddress bytesInWord
         (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
         none function arguments (memoryAccess := ma) (contracts := c)
-        (memoryHandler := mh) =
+        (memoryHandler := mh) (preserveReturnLocals := true) =
         some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
           callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
@@ -5498,7 +5498,7 @@ theorem PanValueFfiClockNormalAdequateProgAt_decCall_returned
           baseAddress topAddress bytesInWord
           (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
           none function arguments (memoryAccess := ma) (contracts := c)
-          (memoryHandler := mh) =
+          (memoryHandler := mh) (preserveReturnLocals := true) =
           some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
             callClock))
     (hmatch : ∀ value : PanValue α,
@@ -6719,7 +6719,7 @@ theorem PanValueFfiClockNormalAdequateProgFrom_decCall_returned
           baseAddress topAddress bytesInWord
           (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
           none function arguments (memoryAccess := ma) (contracts := c)
-          (memoryHandler := mh) =
+          (memoryHandler := mh) (preserveReturnLocals := true) =
           some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
             callClock))
     (hmatch : ∀ value : PanValue α,
@@ -6775,7 +6775,7 @@ theorem PanValueFfiClockNormalAdequateProgFromFloor_decCall_returned
           baseAddress topAddress bytesInWord
           (max callBudget (progCallFuel callBudget body)) locals globals memory ffi clock
           none function arguments (memoryAccess := ma) (contracts := c)
-          (memoryHandler := mh) =
+          (memoryHandler := mh) (preserveReturnLocals := true) =
           some (.control (.returned nextLocals nextGlobals nextMemory nextFfi [value]),
             callClock) ∧
         lo ≤ callClock ∧

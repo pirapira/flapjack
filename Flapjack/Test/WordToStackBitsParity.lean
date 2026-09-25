@@ -662,6 +662,217 @@ def wLiveParityGuard : Bool :=
 #eval wLiveParityGuard
 #guard wLiveParityGuard
 
+/-! ## StackHandlerArgs / PushHandler / PopHandler oracle parity
+
+Direct HOL `EVAL` rows checked in at
+`scripts/hol-probes/word_to_stack_handler_probe.out` (bead
+`flapjack-pxn.18.5.15.3.19`), for `StackHandlerArgs` (`word_to_stackScript.sml:350`),
+`PushHandler` (`:355`) and `PopHandler` (`:378`):
+
+```
+shaF=T   shaT=T   phF_top=T   phT_top=T   phF_eq=T   pop_eq=T
+```
+
+-/
+
+/-- Structural equality for the handler-argument fragment of `ProgM`. -/
+def handlerInstBEq : WordLangInst (BitVec 64) → WordLangInst (BitVec 64) → Bool
+  | .const r v, .const r' v' => r == r' && v == v'
+  | .arith (.binop op d a (.reg n)), .arith (.binop op' d' a' (.reg n')) =>
+      op == op' && d == d' && a == a' && n == n'
+  | _, _ => false
+
+def handlerProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => handlerProgBEq a c && handlerProgBEq b d
+  | .inst i, .inst j => handlerInstBEq i j
+  | .stackAlloc n, .stackAlloc m => n == m
+  | .stackFree n, .stackFree m => n == m
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .stackGetSize r, .stackGetSize s => r == s
+  | .locValue r a b, .locValue r' a' b' => r == r' && a == a' && b == b'
+  | .get r .handler, .get r' .handler => r == r'
+  | .set .handler r, .set .handler r' => r == r'
+  | _, _ => false
+
+def hpInstConst (k v : Nat) : StackMoveProg := .inst (.const k (BitVec.ofNat 64 v))
+def hpInstOr (k a b : Nat) : StackMoveProg := .inst (.arith (.binop .or k a (.reg b)))
+def hpLoc (k l1 l2 : Nat) : StackMoveProg := .locValue k l1 l2
+def hpGet (k : Nat) : StackMoveProg := .get k .handler
+def hpSet (k : Nat) : StackMoveProg := .set .handler k
+def hpSize (k : Nat) : StackMoveProg := .stackGetSize k
+def hpFree (k : Nat) : StackMoveProg := .stackFree k
+
+def handlerParityGuard : Bool :=
+  (Flapjack.Compiler.Backend.WordToStack.handlerSlots false == 3) &&
+  (Flapjack.Compiler.Backend.WordToStack.handlerSlots true == 5) &&
+  handlerProgBEq
+    (stackHandlerArgs (α := BitVec 64)
+      false (Sum.inl 4) 7 (2, 7, 9))
+    (stackArgs (α := Nat) (β := Nat) (γ := BitVec 64) (Sum.inl 4) 7 (2, 10, 12)) &&
+  handlerProgBEq
+    (stackHandlerArgs (α := BitVec 64)
+      true (Sum.inr 4) 7 (2, 7, 9))
+    (stackArgs (α := Nat) (β := Nat) (γ := BitVec 64) (Sum.inr 4) 7 (2, 12, 14)) &&
+  handlerProgBEq
+    (popHandler (α := BitVec 64) false (1, 2, 3) smSkip)
+    (smSeq (smLoad 1 2) (smSeq ((.set .handler 1) : StackMoveProg)
+      (smSeq (hpFree 3) smSkip))) &&
+  handlerProgBEq
+    (pushHandlerW (width := 64) false 1 2 (3, 4, 5))
+    (smSeq (smAlloc 3) (smSeq (hpInstConst 3 1) (smSeq (smStore 3 0)
+      (smSeq (hpLoc 3 1 2) (smSeq (smStore 3 1) (smSeq (hpGet 3)
+        (smSeq (smStore 3 2) (smSeq smSkip (smSeq (hpSize 3) (hpSet 3)))))))))) &&
+  handlerProgBEq
+    (pushHandlerW (width := 64) true 1 2 (3, 4, 5))
+    (smSeq (smAlloc 5) (smSeq (hpInstConst 3 1) (smSeq (smStore 3 0)
+      (smSeq (hpLoc 3 1 2) (smSeq (smStore 3 1) (smSeq (hpGet 3)
+        (smSeq (smStore 3 2) (smSeq (smSeq (hpInstOr 3 14 14)
+          (smSeq (smStore 3 3) (smSeq (hpInstOr 3 15 15) (smStore 3 4))))
+          (smSeq (hpSize 3) (hpSet 3))))))))))
+
+#eval handlerParityGuard
+#guard handlerParityGuard
+
+example : stackHandlerArgs (α := BitVec 64)
+    false (Sum.inl 4) 7 (2, 7, 9)
+    = stackArgs (α := Nat) (β := Nat) (γ := BitVec 64) (Sum.inl 4) 7 (2, 10, 12) := rfl
+example : popHandler (α := BitVec 64) false (1, 2, 3) .skip
+    = .seq (.stackLoad 1 2) (.seq (.set .handler 1) (.seq (.stackFree 3) .skip)) := rfl
+
+/-!
+## `call_dest` and stub-constant oracle parity
+
+`call_dest_def` (`word_to_stackScript.sml:264`) plus `stack_num_stubs_def` /
+`word_num_stubs_def` (`backend_commonScript.sml:124/128`) and
+`raise_stub_location_def` / `store_consts_stub_location_def`
+(`wordLangScript.sml:70/73`), checked in
+`scripts/hol-probes/word_to_stack_call_dest_probe.out`.
+-/
+
+private def callDestSomeSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.skip, .inl 3) => true
+  | _ => false
+
+private def callDestNoneRegSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.skip, .inr 1) => true
+  | _ => false
+
+private def callDestNoneStackSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.seq (.stackLoad 3 4) .skip, .inr 3) => true
+  | _ => false
+
+private def callDestEmptySum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.skip, .inl 5) => true
+  | _ => false
+
+def callDestParityGuard : Bool :=
+  (callDestSomeSum (callDest (some 3) [1, 2] (2, 7, 9))) &&
+  (callDestNoneRegSum (callDest none [1, 2] (2, 7, 9))) &&
+  (callDestNoneStackSum (callDest none [1, 8] (2, 7, 9))) &&
+  (callDestEmptySum (callDest none [] (2, 7, 9))) &&
+  (Flapjack.stackNumStubs == 5) &&
+  (Flapjack.wordNumStubs == 7) &&
+  (Flapjack.raiseStubLocation == 5) &&
+  (Flapjack.storeConstsStubLocation == 6)
+
+#eval callDestParityGuard
+#guard callDestParityGuard
+
+example : callDest (α := Nat) (some 3) [1, 2] (2, 7, 9) = (.skip, .inl 3) := rfl
+example : callDest (α := Nat) none [1, 2] (2, 7, 9) = (.skip, .inr 1) := rfl
+example : callDest (α := Nat) none [1, 8] (2, 7, 9)
+    = (.seq (.stackLoad 3 4) .skip, .inr 3) := rfl
+example : callDest (α := Nat) none [] (2, 7, 9) = (.skip, .inl 5) := rfl
+example : Flapjack.raiseStubLocation = 5 := rfl
+
+/-!
+## `perf_call_prefix`/`perf_call_suffix` and stub oracle parity
+
+`perf_call_prefix_def` (`word_to_stackScript.sml:319`), `perf_call_suffix_def`
+(`:336`), `raise_stub_def` (`:557`) and `store_consts_stub_def` (`:578`),
+checked in `scripts/hol-probes/word_to_stack_stub_probe.out`.
+-/
+
+private def stubAddrsBEq : WordLangAddr (BitVec 64) → WordLangAddr (BitVec 64) → Bool
+  | .addr b o, .addr b' o' => b == b' && o == o'
+
+private def stubInstsBEq : WordLangInst (BitVec 64) → WordLangInst (BitVec 64) → Bool
+  | .const r v, .const r' v' => r == r' && v == v'
+  | .mem op r a, .mem op' r' a' => op == op' && r == r' && stubAddrsBEq a a'
+  | .arith (.binop op d s (.imm v)), .arith (.binop op' d' s' (.imm v')) =>
+      op == op' && d == d' && s == s' && v == v'
+  | .arith (.binop op d s (.reg n)), .arith (.binop op' d' s' (.reg n')) =>
+      op == op' && d == d' && s == s' && n == n'
+  | _, _ => false
+
+private def stubProgBEq : StackMoveProg → StackMoveProg → Bool
+  | .skip, .skip => true
+  | .seq a b, .seq c d => stubProgBEq a c && stubProgBEq b d
+  | .inst i, .inst j => stubInstsBEq i j
+  | .locValue r a b, .locValue r' a' b' => r == r' && a == a' && b == b'
+  | .get r .handler, .get r' .handler => r == r'
+  | .set .handler r, .set .handler r' => r == r'
+  | .stackSetSize r, .stackSetSize s => r == s
+  | .stackLoad r i, .stackLoad s j => r == s && i == j
+  | .stackStore r i, .stackStore s j => r == s && i == j
+  | .stackFree n, .stackFree m => n == m
+  | .raise r, .raise r' => r == r'
+  | .storeConsts s b o, .storeConsts s' b' o' => s == s' && b == b' && o == o'
+  | .ret r, .ret r' => r == r'
+  | _, _ => false
+
+private def spSkip : StackMoveProg := .skip
+private def spSeq (a b : StackMoveProg) : StackMoveProg := .seq a b
+private def spLoc (k l1 l2 : Nat) : StackMoveProg := .locValue k l1 l2
+private def spMemStore (r base : Nat) (off : Int) : StackMoveProg :=
+  .inst (.mem .store r (.addr base (BitVec.ofInt 64 off)))
+private def spMemLoad (r base : Nat) (off : Int) : StackMoveProg :=
+  .inst (.mem .load r (.addr base (BitVec.ofInt 64 off)))
+private def spArithImm (op : BinOp) (d s : Nat) (v : Int) : StackMoveProg :=
+  .inst (.arith (.binop op d s (.imm (BitVec.ofInt 64 v))))
+private def spArithReg (op : BinOp) (d s r : Nat) : StackMoveProg :=
+  .inst (.arith (.binop op d s (.reg r)))
+private def spStackLoad (r i : Nat) : StackMoveProg := .stackLoad r i
+private def spStackFree (n : Nat) : StackMoveProg := .stackFree n
+private def spStackSetSize (k : Nat) : StackMoveProg := .stackSetSize k
+private def spGet (k : Nat) : StackMoveProg := .get k .handler
+private def spSet (k : Nat) : StackMoveProg := .set .handler k
+private def spRaise (k : Nat) : StackMoveProg := .raise k
+
+private def spRaiseStubTail (k : Nat) (perfPart : StackMoveProg) (slots : Nat) : StackMoveProg :=
+  spSeq (spGet k) (spSeq (spStackSetSize k) (spSeq perfPart
+    (spSeq (spStackLoad k 2) (spSeq (spSet k) (spSeq (spStackLoad k 1)
+      (spSeq (spStackFree slots) (spRaise k)))))))
+
+private def spRaisePerfPart : StackMoveProg :=
+  spSeq (spStackLoad 3 3) (spSeq (spArithReg .or 14 3 3)
+    (spSeq (spStackLoad 3 4) (spArithReg .or 15 3 3)))
+
+private def spPrefixTree : StackMoveProg :=
+  spSeq (spLoc 3 1 2) (spSeq (spMemStore 3 14 (-8)) (spSeq (spMemStore 15 14 (-16))
+    (spSeq (spArithImm .sub 14 14 16) (spArithReg .or 15 14 14))))
+
+private def spSuffixTree : StackMoveProg :=
+  spSeq (spMemLoad 15 14 0) (spArithImm .add 14 14 16)
+
+def stubParityGuard : Bool :=
+  stubProgBEq (perfCallPrefixW (width := 64) 1 2 3) spPrefixTree &&
+  stubProgBEq (perfCallSuffixW (width := 64)) spSuffixTree &&
+  stubProgBEq (raiseStub (α := BitVec 64) false 3) (spRaiseStubTail 3 spSkip 3) &&
+  stubProgBEq (raiseStub (α := BitVec 64) true 3) (spRaiseStubTail 3 spRaisePerfPart 5) &&
+  stubProgBEq (storeConstsStub (α := BitVec 64) 3)
+    (spSeq (.storeConsts 3 4 none) (.ret 0))
+
+#eval stubParityGuard
+#guard stubParityGuard
+
+example : storeConstsStub (α := BitVec 64) 3
+    = .seq (.storeConsts 3 4 none) (.ret 0) := rfl
+example : raiseStub (α := BitVec 64) false 3
+    = spRaiseStubTail 3 spSkip 3 := rfl
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
@@ -671,6 +882,7 @@ def runChecks : IO Bool := do
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
     stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard &&
-    copyRetIndependentGuard && wLiveParityGuard)
+    copyRetIndependentGuard && wLiveParityGuard && handlerParityGuard &&
+    callDestParityGuard && stubParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

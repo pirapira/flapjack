@@ -623,8 +623,9 @@ run_probe pan_sem_assign_memory_probeScript.sml pan_sem_assign_memory_probe.out 
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
-  deccall_ok_result deccall_missing_result \
-  "$cake_dir/pancake/semantics/panSemScript.sml"
+  deccall_ok_result nested_deccall_bad_shape_state_exact \
+  "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"
 # The Call argument probe observes that a failing argument rejects the call
 # with `SOME Error` before callee lookup, preserving clock and locals.
 run_probe pan_sem_call_arg_error_probeScript.sml pan_sem_call_arg_error_probe.out \
@@ -1738,6 +1739,13 @@ run_probe pan_globals_fperm_name_probeScript.sml pan_globals_fperm_name_probe.ou
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"
 
+run_probe word_to_stack_handler_probeScript.sml word_to_stack_handler_probe.out \
+  shaF pop_eq "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
+
+run_probe word_to_stack_call_dest_probeScript.sml word_to_stack_call_dest_probe.out \
+  cd_some wl_store "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"
 # The pan_globals fperm probe observes the source-shape program permutation
 # `fperm f g p` (pan_globalsScript.sml:191-214) for the recursive control
 # constructs, the Call handler case, the DecCall case and the catch-all.
@@ -1745,3 +1753,15 @@ run_probe pan_globals_fperm_probeScript.sml pan_globals_fperm_probe.out \
   recursive_control fperm_done \
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"
+
+# The pan_globals fperm_decs probe observes the source-shape declaration-list
+# permutation `fperm_decs f g ds` (pan_globalsScript.sml:216-221) for a mixed
+# declaration list and the empty list.
+run_probe pan_globals_fperm_decs_probeScript.sml pan_globals_fperm_decs_probe.out \
+  mixed singleton_nonfunction \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+run_probe word_to_stack_stub_probeScript.sml word_to_stack_stub_probe.out \
+  pcp_eq pcp_top "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"

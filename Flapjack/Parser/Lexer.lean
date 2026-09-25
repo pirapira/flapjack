@@ -17,9 +17,13 @@ namespace Flapjack.Parser
 /-- Encode a source string to the list of bytes the original CakeML lexer
     observes. HOL `string` is a `char list` with 256 possible characters, and the
     executed compiler reads the source file as bytes through CakeML's UTF-8 file
-    input; re-encoding the Lean decoded string recovers exactly those bytes.
+    input; for well-formed UTF-8 input, re-encoding the Lean decoded string
+    recovers exactly those bytes (Lean `String` does not represent invalid UTF-8).
     This keeps accepted identifiers byte-valued, so `MlString.ofString`
-    round-trips without silent truncation. -/
+    round-trips without silent truncation. For non-ASCII source, lexer columns
+    and the text recovered from `/@ ... @/` annotations follow this byte view;
+    exact diagnostic-text/column parity for those inputs is not covered by the
+    current fixtures. -/
 def utf8Bytes (s : String) : List Char :=
   s.toUTF8.toList.map (fun b => Char.ofNat b.toNat)
 

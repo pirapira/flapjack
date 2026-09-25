@@ -528,6 +528,14 @@
     "reviewer": "All-width TopAddr case over exact CrepExpHOL syntax with the original successful-result shape and code-map update; the state is projected and evaluated by the source adapter, not native crepSem$eval. No @[hol] tag."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",
+    "lean_name": "crepSimpExpCorrect1SourceProjection_cmp",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-width Cmp case over exact CrepExpHOL syntax with complete Option word_lab child hypotheses and code-map update; it uses the source projection, not native crepSem$eval/eval_def. No @[hol] tag."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

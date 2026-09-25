@@ -1,6 +1,6 @@
 import Flapjack.Pancake.Semantics.PanSem.MemLoad32Alt
 
-/-! Exact HOL `panSem$mem_store_32_alt` (`cakeml/pancake/semantics/panSemScript.sml:344`)
+/-! RV64-specialized analogue of HOL `panSem$mem_store_32_alt` (`cakeml/pancake/semantics/panSemScript.sml:344`)
     over the HOL-shaped memory carrier.
 
     HOL states `mem_store_32 m dm be w hw` two equivalent ways: the definition
@@ -119,7 +119,7 @@ theorem panMemStore32HOL_eq_orig (memory : RiscV.Word 64 → HolWordLab 64)
         else none := by
   simp only [panMemStore32HOL, store32Orig]
 
-/-- Exact HOL `panSem$mem_store_32_alt`: the shifted-byte store chain equals the
+/-- RV64-specialized analogue of HOL `panSem$mem_store_32_alt`: the shifted-byte store chain equals the
     definition's `get_byte` chain. Untagged (see the module docstring). -/
 theorem panMemStore32HOL_eq_alt (memory : RiscV.Word 64 → HolWordLab 64)
     (domain : RiscV.Word 64 → Prop) [DecidablePred domain]

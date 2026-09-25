@@ -1958,17 +1958,29 @@ theorem localsRelWfShape
   rw [← panValueIsWf_eq_isWfShape_panValueShape_of_nil [] value rfl]
   exact hshape
 
-/-- HOL `mk_ctxt_imp_locals_rel`: the initial compiler context built from the
-    source function table has an empty variable map and slot bound, so the
-    locals relation holds against any target locals for the empty source
-    locals map. The proof-context record mirrors Cake `mk_ctxt FEMPTY
-    (make_funcs pc) 0 es`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- HOL `mk_ctxt_imp_locals_rel` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4677-4682`):
+    the initial compiler context built from the source function table has an empty
+    variable map and slot bound, so the locals relation holds against any target
+    locals for the empty source locals map. The proof-context record mirrors Cake
+    `mk_ctxt FEMPTY (make_funcs pc) 0 es`.
+
+    The statement shape is mirrored (`∀ pc lcl es. locals_rel (mk_ctxt …) FEMPTY lcl`
+    becomes a universally quantified `declarations`/`eids`/`locals` with the same
+    `mk_ctxt`-shaped context and conclusion). It is intentionally untagged because
+    the carriers differ from the reviewed exact HOL carriers: this declaration uses
+    the production `Decl α`, `FunName`/`VarName`/`ExceptionId = String`, production
+    `Shape` and `PanToCrepProofContext`, plus `FiniteMap`-valued `eids` and
+    `PanWordLab`-valued `locals`, whereas HOL quantifies an `'a decl list` and
+    `(mlstring,'a word) fmap` with `mlstring` keys and HOL `shape`. It also delegates
+    to the production `panToCrepMakeFuncs`/`infoMapToFiniteMap` rather than HOL
+    `make_funcs`, and carries the executable `[LawfulBEq String]` condition. A
+    `names_as_string` qualifier cannot authorize the `Decl`/`Shape`/value carriers,
+    and no `NameRanged` byte witness applies (`locals_rel` is a relation, not a name).
+    The reviewed exact carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+    `flapjack-pxn.18.3.5.7.2`). `docs/HOL-THEOREM-MAP.json` already records this
+    hol_name as `documented_mismatch`. Evidence:
+    `Flapjack/Test/MkCtxtImpLocalsRelParity.lean` instantiates the theorem against
+    the `mk_ctxt`-shaped `initialContext`. -/
 theorem mkCtxtImpLocalsRel [LawfulBEq String]
     (declarations : List (Decl α)) (eids : FiniteMap String α)
     (locals : FiniteMap Nat (PanWordLab α)) :

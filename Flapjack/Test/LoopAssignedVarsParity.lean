@@ -75,6 +75,42 @@ theorem loopAssignedVars_mapIdxAssign_nil_fixture :
   rw [loopAssignedVars_mapIdxAssign]
   decide
 
+/-! Cake `loopPropsScript.sml:890` `assigned_vars_seq_split`, as the
+    width-indexed `loopAssignedVars_seqW`. -/
+
+theorem loopAssignedVars_seqW_fixture :
+    loopAssignedVars
+        ((.seq (.assign 3 (.const 0)) (.assign 4 (.const 1))) :
+          LoopProg (BitVec 64)) =
+      loopAssignedVars (.assign 3 (.const 0) : LoopProg (BitVec 64)) ++
+        loopAssignedVars (.assign 4 (.const 1) : LoopProg (BitVec 64)) :=
+  loopAssignedVars_seqW _ _
+
+/-! Cake `loopPropsScript.sml:880` `assigned_vars_nested_seq_split`, as the
+    width-indexed `loopAssignedVars_nestedSeq_appendW`. -/
+
+theorem loopAssignedVars_nestedSeq_appendW_fixture :
+    loopAssignedVars
+        (loopNestedSeq
+          (([.assign 3 (.const 0)] : List (LoopProg (BitVec 64))) ++
+            [.assign 4 (.const 1)])) =
+      loopAssignedVars
+          (loopNestedSeq ([.assign 3 (.const 0)] : List (LoopProg (BitVec 64)))) ++
+        loopAssignedVars
+          (loopNestedSeq ([.assign 4 (.const 1)] : List (LoopProg (BitVec 64)))) :=
+  loopAssignedVars_nestedSeq_appendW _ _
+
+/-! Cake `loopPropsScript.sml:897` `assigned_vars_nested_assign`, as the
+    width-indexed `loopAssignedVars_loopAssignPairsW`. -/
+
+theorem loopAssignedVars_loopAssignPairsW_fixture :
+    loopAssignedVars
+        (loopNestedSeq
+          (loopAssignPairs [3, 4, 5]
+            ([.const 0, .const 1, .const 2] : List (LoopExp (BitVec 64))))) =
+      [3, 4, 5] :=
+  loopAssignedVars_loopAssignPairsW [3, 4, 5] _ (by decide)
+
 /-! Cake `crep_to_loopProofScript.sml:342` `cut_sets_MAPi_Assign`. -/
 
 theorem loopCutSets_loopAssignPairs_fixture :

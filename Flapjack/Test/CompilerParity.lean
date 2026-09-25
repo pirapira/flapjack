@@ -230,6 +230,8 @@ import Flapjack.Test.PanSemReturnRaiseExactParity
 import Flapjack.Test.PanSemIteParity
 import Flapjack.Test.PanSemAssignMemoryParity
 import Flapjack.Test.PanSemReturnRaiseMemoryParity
+import Flapjack.Test.PanSemEvalExactParity
+import Flapjack.Test.PanSemStoreExactParity
 import Flapjack.Test.PanSemCallErrorExactParity
 import Flapjack.Test.PanSemDecErrorExactParity
 import Flapjack.Test.PanSemPrimitiveErrorExactParity
@@ -363,6 +365,8 @@ import Flapjack.Test.PanSemIsValWordHOLParity
 import Flapjack.Test.PanSemEmptyLocalsHOLParity
 import Flapjack.Test.PanSemMemStore32HOLParity
 import Flapjack.Test.PanSemMemStoreHOLParity
+import Flapjack.Test.PanSemShMemHOLParity
+import Flapjack.Test.PanSemDecsStcnamesHOLParity
 import Flapjack.Test.PanSemMemLoadExactParity
 
 /-!
@@ -884,6 +888,8 @@ def main : IO Unit := do
     Flapjack.Test.PanSemIteParity.runChecks,
     Flapjack.Test.PanSemAssignMemoryParity.runChecks,
 Flapjack.Test.PanSemReturnRaiseMemoryParity.runChecks,
+    Flapjack.Test.PanSemEvalExactParity.runChecks,
+  Flapjack.Test.PanSemStoreExactParity.runChecks,
 Flapjack.Test.PanSemCallErrorExactParity.runChecks,
 Flapjack.Test.PanSemDecErrorExactParity.runChecks,
 Flapjack.Test.PanSemPrimitiveErrorExactParity.runChecks,
@@ -994,6 +1000,8 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.PanSemEmptyLocalsHOLParity.runChecks,
     Flapjack.Test.PanSemMemStore32HOLParity.runChecks,
     Flapjack.Test.PanSemMemStoreHOLParity.runChecks,
+    Flapjack.Test.PanSemShMemHOLParity.runChecks,
+    Flapjack.Test.PanSemDecsStcnamesHOLParity.runChecks,
     Flapjack.Test.PanSemMemLoadExactParity.runChecks,
     Flapjack.Test.CrepSemTotalExtCallParity.runChecks
     ].mapM id

@@ -25,13 +25,19 @@ tracked as follow-up slices of `flapjack-pxn.18.3.7.1.3.1.1.3.1`.
 The four helpers below are **temporarily untagged**. Their finite-map
 representation (`HolFiniteMapExact` fields on `CrepSemHOLState`) must be
 recorded with the `@[hol]` qualifier `(fmap_as_finite_support := [locals,
-globals, code])` rather than a bare tag, per the standard-translation rule. That
-qualifier, its canonical witness `holFmapAsFiniteSupportWitness`, and the
-`reviewed_fmap_as_finite_support` manifest status are being added under bead
-`flapjack-pxn.18.3.7.1.3.1.1.2.4` (ds3 commits `01dae7ba5`/`bcca041b5`, not yet
-in the integration branch). Each helper is still reviewed case-by-case for
-statement/side conditions and must be re-tagged with the qualifier only after
-that checker accepts it; until then no exact claim is made here.
+globals, code])` rather than a bare tag, per the standard-translation rule.
+
+This module is **not** the right home for those tags: `StateExact.lean` does not
+declare an owning structure with the `HolFiniteMapExact` fields, so no
+same-module `holFmapAsFiniteSupportWitness` can name the owner here (an imported
+owner is not accepted). The qualifying declarations must be relocated into
+`Flapjack/Pancake/Semantics/CrepSem/HOLState.lean`, which declares
+`CrepSemHOLState` and its canonical
+`holFmapAsFiniteSupportWitness`. That relocation is a reviewed layout change
+tracked by bead `flapjack-pxn.18.3.7.1.3.1.1.3.1`; until it and the owner-type
+checker fix (`flapjack-pxn.18.3.7.1.3.1.1.2.6`, ds3 commits `71686968e` +
+`3c88b4bda`) land in the integration branch, no exact claim is made here and
+each helper remains case-by-case statement-reviewed only.
 
 References: `cakeml/pancake/semantics/crepSemScript.sml:48-51` (mem_load_def),
 `:145-148` (dec_clock_def), `:150-152` (fix_clock_def), `:155-158`
@@ -83,20 +89,5 @@ def memLoadCrepSemHOL {width : Nat} [NeZero width] {σ : Type}
     [DecidablePred state.memaddrs] :
     Option (HolWordLab width) :=
   if state.memaddrs address then some (state.memory address) else none
-
-namespace CrepSemStateExact
-
-/-- Canonical kernel witness for the `fmap_as_finite_support` `@[hol]` qualifier
-on the helpers in this module, which are stated over `CrepSemHOLState`. It
-mirrors `CrepSemHOLState.holFmapAsFiniteSupportWitness` so that the checker
-finds a same-module witness stating the genuine `toBroad`/`ofBroad` roundtrip. -/
-theorem holFmapAsFiniteSupportWitness {width : Nat} [NeZero width] {σ : Type} :
-    (∀ (state : CrepSemBroadState width σ) (h : state.FiniteSupport),
-        (CrepSemBroadState.ofBroad state h).toBroad = state) ∧
-    (∀ state : CrepSemHOLState width σ,
-        CrepSemBroadState.ofBroad state.toBroad state.toBroad_finiteSupport = state) :=
-  CrepSemHOLState.holFmapAsFiniteSupportWitness
-
-end CrepSemStateExact
 
 end Flapjack

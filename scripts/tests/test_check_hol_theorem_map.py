@@ -899,6 +899,19 @@ class ValidateInventoryTest(unittest.TestCase):
         errors = MAP["validate_inventory"]([record], {key}, {key: reference})
         self.assertTrue(any("must not carry an @[hol] tag" in error for error in errors))
 
+    def test_globals_lookup_carrier_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", "globalsLookup")
+        self.assertIn(key, MAP["DOCUMENTED_MISMATCHES"])
+        hol_path, hol_name, reviewer = MAP["DOCUMENTED_MISMATCHES"][key]
+        self.assertEqual(
+            (hol_path, hol_name),
+            (
+                "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+                "globals_lookup_def",
+            ),
+        )
+        self.assertIn("flapjack-pxn.18.3.5.8.8", reviewer)
+
 
 if __name__ == "__main__":
     unittest.main()

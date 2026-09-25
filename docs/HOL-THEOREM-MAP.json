@@ -5387,6 +5387,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "globals_lookup_def",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "globalsLookup",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.5.15): HOL `globals_lookup_def` (`pan_to_crepProofScript.sml:435-438`) `OPT_MMAP (FLOOKUP t.globals) (GENLIST (λx. n2w x) (size_of_shape (shape_of v)))` matches this `List.range (Shape.shapeSize (panSemShapeOf value))).mapM (fun index => state.globals (BitVec.ofNat 5 index))` clause-for-clause (5-bit indices, shape-size count, optional-map traversal). Tag withheld: HOL inputs are `panSem$value`/`crepSem$state`, whereas the Lean statement uses production `PanValue α` with String struct/field names, untagged production `panSemShapeOf`/`Shape.shapeSize` instead of HOL `shape_of`/`size_of_shape`, and `CrepRuntimeState α σ`, only a production projection of the HOL state; `names_as_string` cannot authorize the value/shape/state carriers and no `NameRanged` witness is statable for an `Option (List (PanWordLab α))` output. Declaration-local note at `PanToCrep.lean:26-45`; direct HOL-EVAL rows (`lookup_success`, `lookup_missing`, `lookup_struct`) in `scripts/hol-probes/globals_lookup_probe.out` reproduced by `Flapjack/Test/PanToCrepGlobalsLookupParity.lean`. Exact-carrier replacement tracked by flapjack-pxn.18.3.5.8.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "EL_load_globals",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "elLoadGlobals",

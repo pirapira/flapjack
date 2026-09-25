@@ -96,6 +96,20 @@ DOCUMENTED_MISMATCHES = {
         "declaration bridge for names_as_string. Keep @[hol] withheld pending "
         "exact-carrier work flapjack-pxn.18.3.5.8."
     ),
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "globalsLookup"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "globals_lookup_def",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:435-438: "
+        "the OPT_MMAP/FLOOKUP/GENLIST n2w/size_of_shape(shape_of v) algorithm "
+        "matches clause-for-clause, but HOL inputs are panSem$value/crepSem$state "
+        "while the Lean statement uses production PanValue α with String "
+        "struct/field names, untagged panSemShapeOf/Shape.shapeSize instead of "
+        "HOL shape_of/size_of_shape, and CrepRuntimeState α σ, only a production "
+        "projection of the HOL state. names_as_string cannot authorize the "
+        "value/shape/state carriers, and no NameRanged witness is statable for an "
+        "Option (List (PanWordLab α)) output. Keep @[hol] withheld; exact-carrier "
+        "work flapjack-pxn.18.3.5.8.8.)"
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "is_wf_shape_drop",

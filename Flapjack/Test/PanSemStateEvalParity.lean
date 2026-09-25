@@ -1174,4 +1174,13 @@ abbrev flatStoreDomain : Word64 → Prop := fun address => address = 10 ∨ addr
 #guard (panMemStoresHOL (10 : Word64) [(.word 3), (.word 5)]
   (fun address => address = 10) flatStoreMemory).isNone
 
+/- Exact HOL `word_lab` helpers: `scripts/hol-probes/pan_sem_e2e_probe.out` rows
+   `isWord_def_word=T` and `theWord_def_word=3w`. -/
+example : isWordHOL (width := 64) (HolWordLab.word (3 : Word64)) = true :=
+  isWordHOL_word 3
+example : theWordHOL (width := 64) (HolWordLab.word (3 : Word64)) = 3 :=
+  theWordHOL_word 3
+#guard isWordHOL (width := 64) (HolWordLab.word (3 : Word64)) == true
+#guard theWordHOL (width := 64) (HolWordLab.word (3 : Word64)) == 3
+
 end Flapjack.Test.PanSemStateEvalParity

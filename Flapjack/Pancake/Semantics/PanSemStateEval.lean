@@ -1213,6 +1213,28 @@ def holValueIsWord {width : Nat} [NeZero width] : HolValue width → Bool
   | .val (.word _) => true
   | _ => false
 
+/-- Exact port of HOL `isWord` (`cakeml/pancake/semantics/panSemScript.sml:28`)
+    over the width-indexed one-constructor `word_lab` carrier `HolWordLab`.
+    Carries `[NeZero width]` because HOL word types have positive `dimindex`. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "isWord_def"]
+def isWordHOL {width : Nat} [NeZero width] : HolWordLab width → Bool
+  | .word _ => true
+
+/-- Exact port of HOL `theWord` (`cakeml/pancake/semantics/panSemScript.sml:33`)
+    over the width-indexed one-constructor `word_lab` carrier `HolWordLab`.
+    HOL's `theWord_def` only patterns `Word w`, which is total for the
+    one-constructor datatype, so this is a complete exact port.  Carries
+    `[NeZero width]` because HOL word types have positive `dimindex`. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "theWord_def"]
+def theWordHOL {width : Nat} [NeZero width] : HolWordLab width → BitVec width
+  | .word value => value
+
+@[simp] theorem isWordHOL_word {width : Nat} [NeZero width] (value : BitVec width) :
+    isWordHOL (HolWordLab.word value) = true := rfl
+
+@[simp] theorem theWordHOL_word {width : Nat} [NeZero width] (value : BitVec width) :
+    theWordHOL (HolWordLab.word value) = value := rfl
+
 /-- Bridge for the production-to-`evalHOL` adapter: the exact HOL-shaped
     `holShapeOf` on the `HolValue` image `value.toHolValue` of a production
     value equals the production `panValueShape` (whose `StructContext` argument

@@ -1499,6 +1499,41 @@ private def holFiniteWordSourceWordOfBytesBitVecAt {ι : Type u}
           (bitVecToHolWord dimension
             (holWordToBitVec dimension address + 1)) rest)
 
+/-- Nat fold for the exact four-byte `word_of_bytes` case used by HOL
+    `mem_load_32_def`. Every input is a 32-bit carrier word; the equations
+    expose the four low-byte bounds before the result is lifted back to
+    BitVec32. -/
+private theorem holFiniteWordSourceWordOfBytesBitVecAt_four_toNat
+    (bigEndian : Bool) (byte0 byte1 byte2 byte3 : BitVec 32) :
+    (holFiniteWordSourceWordOfBytesBitVecAt
+      (instFinHolFiniteDimension (width := 32)) bigEndian
+      (bitVecToHolWord (instFinHolFiniteDimension (width := 32))
+        (BitVec.ofNat 32 0)) [byte0, byte1, byte2, byte3]).toNat =
+      if bigEndian then
+        (byte0.toNat % 2 ^ 8) * 2 ^ 24 +
+          (byte1.toNat % 2 ^ 8) * 2 ^ 16 +
+          (byte2.toNat % 2 ^ 8) * 2 ^ 8 + byte3.toNat % 2 ^ 8
+      else
+        byte0.toNat % 2 ^ 8 +
+          (byte1.toNat % 2 ^ 8) * 2 ^ 8 +
+          (byte2.toNat % 2 ^ 8) * 2 ^ 16 +
+          (byte3.toNat % 2 ^ 8) * 2 ^ 24 := by
+  let dimension32 : HolFiniteDimension (Fin 32) :=
+    instFinHolFiniteDimension (width := 32)
+  have hWidth : dimension32.width = 32 := rfl
+  change (holFiniteWordSourceWordOfBytesBitVecAt dimension32 bigEndian
+      (bitVecToHolWord dimension32 (BitVec.ofNat 32 0))
+      [byte0, byte1, byte2, byte3]).toNat = _
+  have hbyte0 : byte0.toNat % 2 ^ 8 < 2 ^ 8 := Nat.mod_lt _ (Nat.two_pow_pos _)
+  have hbyte1 : byte1.toNat % 2 ^ 8 < 2 ^ 8 := Nat.mod_lt _ (Nat.two_pow_pos _)
+  have hbyte2 : byte2.toNat % 2 ^ 8 < 2 ^ 8 := Nat.mod_lt _ (Nat.two_pow_pos _)
+  have hbyte3 : byte3.toNat % 2 ^ 8 < 2 ^ 8 := Nat.mod_lt _ (Nat.two_pow_pos _)
+  cases bigEndian <;>
+    simp [holFiniteWordSourceWordOfBytesBitVecAt,
+      holFiniteWordSourceByteIndex, dimension32,
+      hWidth, holWordToBitVec_bitVecToHolWord,
+      holFiniteWordSetByteBitVec_toNat, Nat.mod_eq_of_lt] <;> omega
+
 def holFiniteWordSourceWordOfBytes32BitVec {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)
     (bytes : List (ι → Bool)) : BitVec 32 := by
@@ -1508,6 +1543,82 @@ def holFiniteWordSourceWordOfBytes32BitVec {ι : Type u}
     BitVec.ofNat 32 ((holWordToBitVec dimension byte).toNat % 256)
   exact holFiniteWordSourceWordOfBytesBitVecAt dimension32 bigEndian
     (bitVecToHolWord dimension32 (BitVec.ofNat 32 0)) bytes32
+
+/-- The source four-byte `word_of_bytes` fold agrees with the executable
+    RISC-V fold once each input has been narrowed to its low byte. This is
+    Flapjack bridge infrastructure for HOL `mem_load_32_def`, not a separate
+    HOL declaration. -/
+private theorem holFiniteWordSourceWordOfBytes32BitVec_four_eq_riscv
+    {ι : Type u} (dimension : HolFiniteDimension ι) (bigEndian : Bool)
+    (byte0 byte1 byte2 byte3 : ι → Bool) :
+    holFiniteWordSourceWordOfBytes32BitVec dimension bigEndian
+      [byte0, byte1, byte2, byte3] =
+    RiscV.panRiscVWordOfBytes (width := 32) bigEndian
+      [BitVec.ofNat 32 ((holWordToBitVec dimension byte0).toNat % 256),
+       BitVec.ofNat 32 ((holWordToBitVec dimension byte1).toNat % 256),
+       BitVec.ofNat 32 ((holWordToBitVec dimension byte2).toNat % 256),
+       BitVec.ofNat 32 ((holWordToBitVec dimension byte3).toNat % 256)] := by
+  let dimension32 : HolFiniteDimension (Fin 32) :=
+    instFinHolFiniteDimension (width := 32)
+  change holFiniteWordSourceWordOfBytesBitVecAt dimension32 bigEndian
+      (bitVecToHolWord dimension32 (BitVec.ofNat 32 0))
+      [BitVec.ofNat 32 ((holWordToBitVec dimension byte0).toNat % 256),
+       BitVec.ofNat 32 ((holWordToBitVec dimension byte1).toNat % 256),
+       BitVec.ofNat 32 ((holWordToBitVec dimension byte2).toNat % 256),
+       BitVec.ofNat 32 ((holWordToBitVec dimension byte3).toNat % 256)] = _
+  have hbyte0 : (holWordToBitVec dimension byte0).toNat % 256 < 256 :=
+    Nat.mod_lt _ (by decide)
+  have hbyte1 : (holWordToBitVec dimension byte1).toNat % 256 < 256 :=
+    Nat.mod_lt _ (by decide)
+  have hbyte2 : (holWordToBitVec dimension byte2).toNat % 256 < 256 :=
+    Nat.mod_lt _ (by decide)
+  have hbyte3 : (holWordToBitVec dimension byte3).toNat % 256 < 256 :=
+    Nat.mod_lt _ (by decide)
+  apply BitVec.eq_of_toNat_eq
+  rw [holFiniteWordSourceWordOfBytesBitVecAt_four_toNat]
+  cases bigEndian
+  · simp [RiscV.panRiscVWordOfBytes, Option.getD_some,
+      BitVec.toNat_ofNat]
+    change _ = (((holWordToBitVec dimension byte0).toNat % 256 % 2 ^ 32) +
+      256 * ((holWordToBitVec dimension byte1).toNat % 256 % 2 ^ 32) +
+      65536 * ((holWordToBitVec dimension byte2).toNat % 256 % 2 ^ 32) +
+      16777216 * ((holWordToBitVec dimension byte3).toNat % 256 % 2 ^ 32)) % 2 ^ 32
+    rw [Nat.mod_eq_of_lt (by omega :
+      (holWordToBitVec dimension byte0).toNat % 256 < 2 ^ 32)]
+    rw [Nat.mod_eq_of_lt (by omega :
+      (holWordToBitVec dimension byte1).toNat % 256 < 2 ^ 32)]
+    rw [Nat.mod_eq_of_lt (by omega :
+      (holWordToBitVec dimension byte2).toNat % 256 < 2 ^ 32)]
+    rw [Nat.mod_eq_of_lt (by omega :
+      (holWordToBitVec dimension byte3).toNat % 256 < 2 ^ 32)]
+    have hsum : (holWordToBitVec dimension byte0).toNat % 256 +
+        256 * ((holWordToBitVec dimension byte1).toNat % 256) +
+        65536 * ((holWordToBitVec dimension byte2).toNat % 256) +
+        16777216 * ((holWordToBitVec dimension byte3).toNat % 256) < 2 ^ 32 := by
+      omega
+    rw [Nat.mod_eq_of_lt hsum]
+    omega
+  · simp [RiscV.panRiscVWordOfBytes, Option.getD_some,
+      BitVec.toNat_ofNat]
+    change _ = (((holWordToBitVec dimension byte3).toNat % 256 % 2 ^ 32) +
+      256 * ((holWordToBitVec dimension byte2).toNat % 256 % 2 ^ 32) +
+      65536 * ((holWordToBitVec dimension byte1).toNat % 256 % 2 ^ 32) +
+      16777216 * ((holWordToBitVec dimension byte0).toNat % 256 % 2 ^ 32)) % 2 ^ 32
+    rw [Nat.mod_eq_of_lt (by omega :
+      (holWordToBitVec dimension byte0).toNat % 256 < 2 ^ 32)]
+    rw [Nat.mod_eq_of_lt (by omega :
+      (holWordToBitVec dimension byte1).toNat % 256 < 2 ^ 32)]
+    rw [Nat.mod_eq_of_lt (by omega :
+      (holWordToBitVec dimension byte2).toNat % 256 < 2 ^ 32)]
+    rw [Nat.mod_eq_of_lt (by omega :
+      (holWordToBitVec dimension byte3).toNat % 256 < 2 ^ 32)]
+    have hsum : (holWordToBitVec dimension byte3).toNat % 256 +
+        256 * ((holWordToBitVec dimension byte2).toNat % 256) +
+        65536 * ((holWordToBitVec dimension byte1).toNat % 256) +
+        16777216 * ((holWordToBitVec dimension byte0).toNat % 256) < 2 ^ 32 := by
+      omega
+    rw [Nat.mod_eq_of_lt hsum]
+    omega
 
 /-- HOL `mem_load_32` builds `word_of_bytes` at fixed width 32 and only then
     applies `w2w` to the carrier word. -/
@@ -1739,6 +1850,25 @@ theorem holFiniteWordSourceMemoryModel_wordOfBytes32_toBitVec {ι : Type u}
   change holWordToBitVec dimension
       (holFiniteWordSourceWordOfBytes32 dimension bigEndian bytes) = _
   exact holFiniteWordSourceWordOfBytes32_toBitVec dimension bigEndian bytes
+
+/-- Four-byte source-model `wordOfBytes32` agrees with the exact RISC-V
+    `word_of_bytes` fold after narrowing each source word to its low byte.
+    This is the packing step needed to compare the source `mem_load_32`
+    equation with the production `panMemLoad32HOL` result. -/
+theorem holFiniteWordSourceMemoryModel_wordOfBytes32_four_eq_riscv
+    {ι : Type u} (dimension : HolFiniteDimension ι) (modelEndian bigEndian : Bool)
+    (byte0 byte1 byte2 byte3 : ι → Bool) :
+    holWordToBitVec dimension
+        ((holFiniteWordSourceMemoryModel dimension modelEndian).wordOfBytes32
+          bigEndian [byte0, byte1, byte2, byte3]) =
+      BitVec.ofNat dimension.width
+        (RiscV.panRiscVWordOfBytes (width := 32) bigEndian
+          [BitVec.ofNat 32 ((holWordToBitVec dimension byte0).toNat % 256),
+           BitVec.ofNat 32 ((holWordToBitVec dimension byte1).toNat % 256),
+           BitVec.ofNat 32 ((holWordToBitVec dimension byte2).toNat % 256),
+           BitVec.ofNat 32 ((holWordToBitVec dimension byte3).toNat % 256)]).toNat := by
+  rw [holFiniteWordSourceMemoryModel_wordOfBytes32_toBitVec]
+  rw [holFiniteWordSourceWordOfBytes32BitVec_four_eq_riscv]
 
 /-- The model-level form of `byte_align_def` for the source-shaped load
     adapter. The unused byte-count argument reflects that HOL's

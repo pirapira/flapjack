@@ -266,10 +266,9 @@ def structure_field_types(lines: list[str]) -> dict[str, str]:
     return field_types
 
 
-def structure_names_for_fields(lines: list[str], fields: Iterable[str]) -> set[str]:
-    """Structures declared in this module that own any of the given fields."""
-    wanted = set(fields)
-    names: set[str] = set()
+def structure_field_map(lines: list[str]) -> dict[str, set[str]]:
+    """Field names of every structure declared in this module."""
+    members: dict[str, set[str]] = {}
     structure_indent: int | None = None
     current: str | None = None
     for line in strip_lean_comments("\n".join(lines)).splitlines():
@@ -279,6 +278,7 @@ def structure_names_for_fields(lines: list[str], fields: Iterable[str]) -> set[s
         if structure:
             structure_indent = len(structure.group(1))
             current = structure.group(2)
+            members.setdefault(current, set())
             continue
         if structure_indent is None:
             continue
@@ -290,21 +290,45 @@ def structure_names_for_fields(lines: list[str], fields: Iterable[str]) -> set[s
             current = None
             continue
         field = re.match(r"^\s+([A-Za-z_][A-Za-z0-9_']*)\s*:", line)
-        if field and current is not None and field.group(1) in wanted:
-            names.add(current)
-    return names
+        if field and current is not None:
+            members[current].add(field.group(1))
+    return members
 
 
-def has_fmap_witness(lines: list[str], structure_names: Iterable[str]) -> bool:
+def owning_structure_for_fields(
+    members: dict[str, set[str]], fields: Iterable[str]
+) -> str | None:
+    """The single structure declaring every qualified field, if unique.
+
+    The qualifier stays narrow: all named fields must live in one carrier
+    structure, so fields split across several structures are rejected.
+    """
+    wanted = set(fields)
+    owners = [name for name, names in members.items() if wanted <= names]
+    if len(owners) == 1:
+        return owners[0]
+    return None
+
+
+ROUNDTRIP_RE = re.compile(r"\b(?:to|of)[A-Z][A-Za-z0-9_']*")
+
+
+def has_fmap_witness(
+    lines: list[str],
+    owning: str | None,
+    counterpart_names: Iterable[str],
+) -> bool:
     """Require the canonical finite-map translation witness in this module.
 
-    The witness is named `holFmapAsFiniteSupportWitness` and its statement must
-    mention the carrier structure that owns the qualified fields, i.e. the
-    checked translation between the finite-support representation and the
-    qualified state.  Lake checks the proof; this gate checks its presence and
-    shape, without hard-coding any one carrier module.
+    The witness is named `holFmapAsFiniteSupportWitness`; its statement must
+    name the unique structure that owns every qualified field together with its
+    broad counterpart (another structure declared in the same module) or the
+    canonical `toX`/`ofX` roundtrip.  Lake checks the proof; this gate checks
+    presence and shape without hard-coding any one carrier module.
     """
-    names = [name for name in structure_names if name]
+    if not owning:
+        return False
+    counterparts = {name for name in counterpart_names if name and name != owning}
     source = strip_lean_comments("\n".join(lines))
     pattern = re.compile(
         rf"^\s*(?:@\[[\s\S]*?\]\s*)?(?:private\s+|protected\s+)?"
@@ -314,7 +338,11 @@ def has_fmap_witness(lines: list[str], structure_names: Iterable[str]) -> bool:
     )
     for match in pattern.finditer(source):
         statement = match.group("statement")
-        if not names or any(name in statement for name in names):
+        if owning not in statement:
+            continue
+        if any(name in statement for name in counterparts):
+            return True
+        if ROUNDTRIP_RE.search(statement):
             return True
     return False
 
@@ -326,8 +354,9 @@ def fmap_as_finite_support_errors(
 
     Each named field must be a same-module structure field whose declared type
     uses `HolFiniteMapExact`; a raw `α → Option β` lookup map is ineligible.
-    The module must also provide the canonical witness
-    `holFmapAsFiniteSupportWitness`.
+    All named fields must belong to ONE owning carrier structure, and the module
+    must provide a canonical witness `holFmapAsFiniteSupportWitness` naming that
+    structure together with its broad counterpart or `toX`/`ofX` roundtrip.
     """
     errors: list[str] = []
     if len(set(fields)) != len(fields):
@@ -347,13 +376,18 @@ def fmap_as_finite_support_errors(
                 f"fmap_as_finite_support field `{field}` does not use the approved "
                 "HolFiniteMapExact carrier; a raw function-backed map is ineligible"
             )
-    if fields and not has_fmap_witness(
-        lines, structure_names_for_fields(lines, fields)
-    ):
+    members = structure_field_map(lines)
+    owning = owning_structure_for_fields(members, fields) if fields else None
+    if fields and owning is None:
+        errors.append(
+            "fmap_as_finite_support fields must all be declared by one owning "
+            f"carrier structure in {module}"
+        )
+    elif fields and not has_fmap_witness(lines, owning, members.keys()):
         errors.append(
             "fmap_as_finite_support has no same-module checked canonical witness "
-            "`holFmapAsFiniteSupportWitness` mentioning `HolFiniteMapExact` and the "
-            "structure owning the qualified fields"
+            "`holFmapAsFiniteSupportWitness` naming the owning structure and its "
+            "broad counterpart or `toX`/`ofX` roundtrip"
         )
     return errors
 

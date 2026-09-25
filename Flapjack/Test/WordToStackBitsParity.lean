@@ -771,8 +771,8 @@ def callDestParityGuard : Bool :=
 #eval callDestParityGuard
 #guard callDestParityGuard
 
-example : callDest (some 3) [1, 2] (2, 7, 9) = (.skip, .inl 3) := rfl
-example : callDest none [1, 8] (2, 7, 9)
+example : callDest (α := Nat) (some 3) [1, 2] (2, 7, 9) = (.skip, .inl 3) := rfl
+example : callDest (α := Nat) none [1, 8] (2, 7, 9)
     = (.seq (.stackLoad 3 4) .skip, .inr 3) := rfl
 example : Flapjack.raiseStubLocation = 5 := rfl
 

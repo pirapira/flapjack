@@ -34,6 +34,20 @@ val phF_eq = ``((PushHandler F 1 2 (3,4,5)
                 (Seq (StackStore 3 2)
                   (Seq Skip
                     (Seq (StackGetSize 3) (Set Handler 3)))))))))) : bool)``;
+val phT_eq = ``((PushHandler T 1 2 (3,4,5)
+   = Seq (StackAlloc 5)
+      (Seq (Inst (Const 3 1w))
+        (Seq (StackStore 3 0)
+          (Seq (LocValue 3 1 2)
+            (Seq (StackStore 3 1)
+              (Seq (Get 3 Handler)
+                (Seq (StackStore 3 2)
+                  (Seq (list_Seq
+                         [Inst (Arith (Binop Or 3 14 (Reg 14)));
+                          StackStore 3 3;
+                          Inst (Arith (Binop Or 3 15 (Reg 15)));
+                          StackStore 3 4])
+                    (Seq (StackGetSize 3) (Set Handler 3)))))))))) : bool)``;
 val pop_eq = ``((PopHandler F (1,2,3) Skip
    = Seq (StackLoad 1 2)
       (Seq (Set Handler 1) (Seq (StackFree 3) Skip))) : bool)``;
@@ -43,4 +57,5 @@ print_eval "shaT" shaT;
 print_eval "phF_top" phF_top;
 print_eval "phT_top" phT_top;
 print_eval "phF_eq" phF_eq;
+print_eval "phT_eq" phT_eq;
 print_eval "pop_eq" pop_eq;

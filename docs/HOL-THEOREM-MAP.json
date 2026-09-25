@@ -8821,7 +8821,7 @@
     "hol_name": "PushHandler_def",
     "lean_name": "pushHandlerW",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `PushHandler_def` at word_to_stackScript.sml:355 - StackAlloc (handler_slots perf) then Const k 1w, StackStore k 0, LocValue k l1 l2, StackStore k 1, Get k Handler, StackStore k 2, the perf list_Seq [Or k perf_rsp (Reg perf_rsp); StackStore k 3; Or k perf_rbp (Reg perf_rbp); StackStore k 4] (or Skip), StackGetSize k, Set Handler k. HOL `Const k 1w` is word-indexed, so the exact statement is width-indexed ProgM (BitVec width) with [NeZero width]; HOL-EVAL rows phF_top=T/phT_top=T/phF_eq=T reproduced by handlerParityGuard.)"
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `PushHandler_def` at word_to_stackScript.sml:355 - StackAlloc (handler_slots perf) then Const k 1w, StackStore k 0, LocValue k l1 l2, StackStore k 1, Get k Handler, StackStore k 2, the perf list_Seq [Or k perf_rsp (Reg perf_rsp); StackStore k 3; Or k perf_rbp (Reg perf_rbp); StackStore k 4] (or Skip), StackGetSize k, Set Handler k. HOL `Const k 1w` is word-indexed, so the exact statement is width-indexed ProgM (BitVec width) with [NeZero width]; HOL-EVAL rows phF_top=T/phT_top=T/phF_eq=T plus the full perf=T structural row phT_eq=T reproduced by handlerParityGuard.)"
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
@@ -9637,6 +9637,6 @@
     "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
     "lean_name": "callDest",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (source comparison): HOL call_dest SOME pos args kf = (Skip, INL pos); NONE with LENGTH args = 0 gives (Skip, INL raise_stub_location) and otherwise takes LAST args through wReg2 then wStackLoad; the argument type is monomorphic num (LAST args is fed to wReg2), rendered as List Nat; Lean callDest matches on Option and on args.getLast? (none iff empty) so the empty branch is exactly HOL's, and uses the ported wReg2/wStackLoad/raiseStubLocation; no word operation and no dimindex; HOL rows cd_some/cd_none_reg/cd_none_stack/cd_empty in scripts/hol-probes/word_to_stack_call_dest_probe.out, reproduced by callDestParityGuard in Flapjack/Test/WordToStackBitsParity.lean."
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL call_dest SOME pos args kf = (Skip, INL pos); NONE with LENGTH args = 0 gives (Skip, INL raise_stub_location) and otherwise takes LAST args through wReg2 then wStackLoad; the argument type is monomorphic num (LAST args is fed to wReg2), rendered as List Nat; Lean callDest matches on Option and on args.getLast? (none iff empty) so the empty branch is exactly HOL's, and uses the ported wReg2/wStackLoad/raiseStubLocation; HOL is polymorphic in the stack-program word type, so the exact statement returns ProgM alpha for an arbitrary alpha (Lean callDest is `{alpha : Type} ... : ProgM alpha x Sum Nat Nat`); the argument list alone is monomorphic num; no word operation and no dimindex; HOL rows cd_some/cd_none_reg/cd_none_stack/cd_empty in scripts/hol-probes/word_to_stack_call_dest_probe.out, reproduced by callDestParityGuard in Flapjack/Test/WordToStackBitsParity.lean."
   }
 ]

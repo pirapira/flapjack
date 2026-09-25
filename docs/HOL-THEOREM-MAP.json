@@ -4591,8 +4591,13 @@
     "hol_name": "map_fst_eq_alookup",
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "map_fst_eq_lookup",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "statement_status": "reviewed_names_as_string",
+    "names_as_string": [
+      "nm",
+      "xs",
+      "ys"
+    ],
+    "reviewer": "Codex (P0 source review: HOL premise MAP FST xs = MAP FST ys and ALOOKUP xs nm = SOME v, existential shared afindi index, both in-bounds facts, selected xs value, and selected ys ALOOKUP conclusion match the Lean theorem. Lean expresses the selected-value clauses using Option.map Prod.snd; under the explicit index bounds these are exactly the SND (EL i ...) observations. The only carrier difference is String for HOL mlstring identifiers. Reviewed with names_as_string: nm: equality/map-key-only; xs: equality/map-key-only; ys: equality/map-key-only. No name bytes are output or observed, so no boundary witness is needed. Direct HOL instance result is scripts/hol-probes/afindi_probe.out:18 and the Lean fixture is Flapjack/Test/PanStructsAfindiParity.lean: map_fst_eq_lookup_fixture."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

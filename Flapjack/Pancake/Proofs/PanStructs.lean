@@ -1081,9 +1081,17 @@ theorem afindi_eq_of_map_fst_eq [DecidableEq α] (key : α) :
           · rw [afindi_cons key (cx, vx) xs, afindi_cons key (cx, vy) ys,
               if_neg hbc, if_neg hbc, ih ys htail]
 
-/-! Lean option-indexing adaptation of Cake's local `map_fst_eq_alookup`
-    (`cakeml/pancake/proofs/pan_structsProofScript.sml:278`). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- HOL `map_fst_eq_alookup` (`pan_structsProofScript.sml:278`): matching key
+    lists and a successful lookup in `xs` yield the same first-match index in
+    both lists, with the selected values matching the lookup results. The
+    `Option.map` projections are the Lean list-index API form of HOL `EL` at
+    the accompanying in-bounds indices, so the conclusion has the same
+    information as `SND (EL i xs)` and `ALOOKUP ys nm`. The declaration is
+    qualified with `names_as_string`: `nm`, `xs`, and `ys` carry `mlstring`
+    identifiers in HOL, and every such identifier is equality/map-key-only;
+    none is rendered or otherwise byte-observable. -/
+@[hol "cakeml/pancake/proofs/pan_structsProofScript.sml" "map_fst_eq_alookup"
+  (names_as_string := [nm, xs, ys])]
 theorem map_fst_eq_lookup
     (xs ys : List (String × β)) (nm : String) {v : β}
     (hlen : xs.map Prod.fst = ys.map Prod.fst)

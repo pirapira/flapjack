@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.PanToCrep.Compile
+import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.RiscV.Model
 
 /-!
@@ -16,31 +17,44 @@ namespace Flapjack
 /-- Generic Flapjack helper for extracting a value from a Const node.
     This is not tagged as CakeML's `dest_const_def`: HOL's `crepLang$Const`
     stores an `'a word`, while this production helper accepts arbitrary `α`.
-    The exact word-carrier definition is tagged below; this generic helper is
-    retained for the executable simplifier and connected to it on word values. -/
+    The exact word-carrier definition below uses `CrepExpHOL`; this helper is
+    retained for the executable simplifier. -/
 def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none
 
-/-- Word-valued counterpart of CakeML's `crep_arith$dest_const_def`
-    (`crep_arithScript.sml:10-12`). HOL's `Const` payload is an `'a word`,
-    represented here by the Boolean function `Fin width → Bool`; `NeZero`
-    records HOL's nonempty finite index requirement. Width-specializing the
-    tagged declaration avoids claiming that an arbitrary Boolean function
-    carrier is a HOL word. -/
-@[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
+/-- Flapjack-only word-valued adapter over the generic production AST. It is
+    not the HOL definition because its syntax carrier is generic `CrepExp`,
+    rather than the exact width-indexed `CrepExpHOL`. -/
 def crepDestConstHolWord {width : Nat} [NeZero width] :
     CrepExp (Fin width → Bool) → Option (Fin width → Bool)
   | .const value => some value
   | _ => none
 
-/-- The executable arbitrary-carrier extractor reduces to the tagged HOL
-    word definition whenever its carrier is a word. This keeps the production
-    simp implementation reusable while exposing its exact word behavior. -/
+/-- Flapjack-only reduction of the word-valued adapter to the generic helper. -/
 theorem crepDestConstHolWord_eq_production {width : Nat} [NeZero width]
     (expression : CrepExp (Fin width → Bool)) :
     crepDestConstHolWord expression = crepDestConst expression := by
   cases expression <;> rfl
+
+/-- Exact width-indexed port of CakeML's `crep_arith$dest_const_def`
+    (`crep_arithScript.sml:10-12`) over `CrepExpHOL`, whose `Const` payload
+    is the width-indexed HOL word representation used by `crepLang$exp`. The
+    generic executable helper above stays untagged because it accepts any
+    value carrier. -/
+@[hol "cakeml/pancake/crep_arithScript.sml" "dest_const_def"]
+def crepDestConstHOL {width : Nat} [NeZero width] :
+    CrepExpHOL width → Option (BitVec width)
+  | .const value => some value
+  | _ => none
+
+/-- Flapjack-only connection between the exact HOL carrier and the generic
+    production syntax. This has no HOL counterpart because it crosses two
+    different Lean expression carriers. -/
+theorem crepDestConstHOL_eq_production {width : Nat} [NeZero width]
+    (expression : CrepExpHOL width) :
+    crepDestConstHOL expression = crepDestConst (crepExpOfHOL expression) := by
+  cases expression <;> simp [crepDestConstHOL, crepDestConst, crepExpOfHOL]
 
 def crepDest2ExpFuel [BEq α] [OfNat α 0] [OfNat α 1]
     [AndOp α] [ShiftRight α] : Nat → Nat → α → Option Nat

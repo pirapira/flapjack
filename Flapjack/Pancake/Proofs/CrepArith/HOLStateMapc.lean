@@ -844,6 +844,55 @@ theorem crepSimpExpCorrect1CrepSemHOLStateHolEval
   rw [hCodeId] at hPres
   exact hPres
 
+/-- Arbitrary finite-index support over the exact HOL-shaped state/code
+carriers. The state retains finite-map locals/globals/code, the HOL
+`MlString`/`CrepProgHOL` code-entry type, total memory and set domains, and
+`HolFfiState`; `dimension` supplies the explicit finite-index enumeration.
+Expressions and word-lab results are transported between the exact
+`CrepExpHOL`/`BitVec` syntax and the dimension-indexed `ι → Bool` source
+evaluator. This remains untagged because that source evaluator's dimension
+and word-operation adapters have not yet been proved identical to HOL's
+implicit `finite_index` instances and native `crepSem$eval`. -/
+theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
+    {ι : Type} (dimension : HolFiniteDimension ι) {σ : Type}
+    (update : MlString ×
+      (List Nat × CrepProgHOL dimension.width) →
+      List Nat × CrepProgHOL dimension.width)
+    (state : CrepSemHOLFiniteState ι
+      (List Nat × CrepProgHOL dimension.width) σ)
+    (expression : CrepExpHOL dimension.width)
+    (_result : PanWordLab (ι → Bool))
+    (h : evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState
+      (mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)) ≠ none) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      (state.mapc update).toSourceEvaluatorState
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension (BitVec.ofNat dimension.width n))
+        (mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression))) =
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState
+      (mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)) := by
+  letI : HolFiniteDimension ι := dimension
+  let source := state.toSourceEvaluatorState
+  let sourceExpression :=
+    mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)
+  have hSourceUpdate :
+      crepArithHolFiniteDimensionMapCode
+        (fun pair : FunName × (List Nat × CrepProg (ι → Bool)) => pair.2)
+        source = source := by
+    cases source with
+    | mk locals globals code memory memaddrs shMemaddrs clock bigEndian ffi
+        baseAddress topAddress =>
+      simp [crepArithHolFiniteDimensionMapCode]
+  have hPreserved := crepSimpExpCorrect1HolFiniteWordSourceEvalClass
+    (dimension := dimension)
+    (f := fun pair : FunName × (List Nat × CrepProg (ι → Bool)) => pair.2)
+    source sourceExpression _result h
+  rw [hSourceUpdate] at hPreserved
+  rw [CrepSemHOLFiniteState.toSourceEvaluatorState_mapc]
+  exact hPreserved
+
 /-- Native production-evaluator `Var` case against the exact finite-map local
 field in `CrepSemHOLState`, corresponding to HOL `crepSem$eval_def`
 (`crepSemScript.sml:91`). The production runtime state remains arbitrary,

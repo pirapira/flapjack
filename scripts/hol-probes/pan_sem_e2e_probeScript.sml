@@ -607,6 +607,28 @@ val _ = print_eval "dec_shape_mismatch"
          panLang$Skip,
        (ARB:((8),unit) panSem$state)))``
 
+val _ = print_eval "dec_missing_local_break"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Break,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY)))).locals
+       (strlit "x"))``
+
+val _ = print_eval "dec_missing_local_continue"
+  ``(FST (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY))),
+     FLOOKUP (SND (panSem$evaluate
+      (panLang$Dec (strlit "x") panLang$One (panLang$Const (9w:8 word))
+         panLang$Continue,
+       ((ARB:((8),unit) panSem$state) with locals := FEMPTY)))).locals
+       (strlit "x"))``
+
 val _ = print_eval "nb_op_op8" ``nb_op Op8``
 
 val _ = print_eval "nb_op_op16" ``nb_op Op16``

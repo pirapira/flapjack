@@ -4276,8 +4276,8 @@
     "hol_name": "state_rel_globals",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "stateRel_globals",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port): keyed by FunName/VarName/ExceptionId = String (or a String-keyed PanToCrepProofContext/PanToCrepHOLContext), while HOL pan_to_crepProofScript.sml keys by funname/varname/eid = mlstring; the exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -4392,60 +4392,12 @@
     "reviewer": "Codex (source comparison; HOL Datatype word_lab (panSemScript.sml:17, one constructor Word ('a word)) is width-indexed over BitVec width in the panSemScript.sml counterpart; production generic PanWordLab related by checked round-trip isomorphism theorems at each width)"
   },
   {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compileProgRiscV",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (RISC-V statement review)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "make_vmap_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "panToCrepMakeVmapHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source and direct HOL oracle comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "crep_vars_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "panToCrepVars",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source and direct HOL oracle comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "get_eids_from_decls_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "panToCrepGetEidsFromDeclsHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_to_crep_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compileToCrepHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_prog_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/CompileProg.lean",
-    "lean_name": "compileProgTopHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
-  },
-  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "code_rel_imp",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "codeRelImp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port): keyed by FunName/VarName/ExceptionId = String (or a String-keyed PanToCrepProofContext/PanToCrepHOLContext), while HOL pan_to_crepProofScript.sml keys by funname/varname/eid = mlstring; the exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -7444,16 +7396,16 @@
     "hol_name": "el_compile_prog_el_prog_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "elCompileToCrepElProgEq",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact clause-for-clause port. HOL EL n (compile_to_crep prog) = (start,[],cprog), ALL_DISTINCT names, n < length, ALOOKUP (functions prog) start = SOME ([],p,rshape) implies EL n (functions prog) = (start,[],p,rshape). Lean List.get? n replaces bounded EL n (same n < length hypothesis); lookupFunctionEntry is the ALOOKUP analogue used for the panLang function table; functionEntries is the tagged functions projection. The direct HOL probe scripts/hol-probes/crep_el_compile_probe.out uses the actual functions of one declaration list (rows source_el_f, alookup_f, compiled_el_f) and the Lean kernel guard/example is in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS), not proved by the theorem."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port): keyed by FunName/VarName/ExceptionId = String (or a String-keyed PanToCrepProofContext/PanToCrepHOLContext), while HOL pan_to_crepProofScript.sml keys by funname/varname/eid = mlstring; the exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "alookup_compile_prog_code",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "alookupCompileToCrepCode",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact clause-for-clause port. HOL ALOOKUP (functions pan_code) start = SOME ([],prog,rshape) implies ALOOKUP (compile_to_crep pan_code) start = SOME ([], comp_func (make_funcs (functions pan_code)) (get_eids_from_decls pan_code) [] prog). Lean List.lookup over functionEntries is HOL ALOOKUP; panToCrepVars [] = []. Tagged counterparts used: compileToCrepHOL (compile_to_crep_def), panToCrepVars (crep_vars_def), panToCrepGetEidsFromDeclsHOL (get_eids_from_decls_def), panToCrepMkCtxtHOL (mk_ctxt_def), panToCrepMakeVmapHOL (make_vmap_def), compileProgRiscV (compile_def). functionInfosHOL and panToCrepCompFuncRiscV are deliberate UNTAGGED adapters (alist_to_fmap (make_funcs ...) as reversed FUPDATE_LIST; comp_func with the context threaded as a record reading context.funcs/context.eids). The HOL-vs-Lean equivalence of the statement is reviewed by comparing the definitions (per SOUNDNESS); it is NOT proved by this theorem, which is a within-Lean lookup fact. Exact-body kernel guards plus the alookupGuard shape guard in Flapjack/Test/PanToCrepCodeRelParity.lean, and direct HOL probe scripts/hol-probes/crep_alookup_compile_probe.out (rows compare the actual functions of one declaration list: source_names_distinct, alookup_empty_params, alookup_param_entry)."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port): keyed by FunName/VarName/ExceptionId = String (or a String-keyed PanToCrepProofContext/PanToCrepHOLContext), while HOL pan_to_crepProofScript.sml keys by funname/varname/eid = mlstring; the exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
   },
   {
     "hol_path": null,
@@ -7480,22 +7432,6 @@
     "reviewer": "Private support for the NStruct specialization: successful full evaluation preserves the input field-name order. Untagged because this helper is stated over Lean's full evaluator rather than HOL's fixed-width eval and finite-map state."
   },
   {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "make_funcs_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "makeFuncsHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact port of HOL make_funcs_def (pan_to_crepScript.sml:366): pair each function entry's name with its parameter list and return shape, then build the finite map with alist_to_fmap (first duplicate name wins), rendered as FUPDATE_LIST FEMPTY over the reversed association list. functionInfosHOL_eq_makeFuncsHOL proves the declaration-list adapter functionInfosHOL equals makeFuncsHOL (functionEntries declarations). Direct HOL probe scripts/hol-probes/crep_make_funcs_probe.out (rows make_funcs_empty_params, make_funcs_param_entry, make_funcs_absent, make_funcs_duplicate_first_wins) and Lean guards in Flapjack/Test/PanToCrepCodeRelParity.lean. Unfolded by HOL mk_ctxt_code_imp_code_rel."
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "comp_func_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compFuncHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact port of HOL comp_func_def (pan_to_crepScript.sml:337): build make_vmap from the parameter shapes, take vmax = size_of_shape (Comb (MAP SND params)) - 1, and compile the body in the mk_ctxt context carrying the caller's function and exception maps. panToCrepCompFuncRiscV_eq_compFuncHOL proves the record-context adapter panToCrepCompFuncRiscV equals compFuncHOL at context.funcs/context.eids. Unfolded by HOL mk_ctxt_code_imp_code_rel."
-  },
-  {
     "hol_path": "cakeml/compiler/encoders/riscv/proofs/riscv_targetProofScript.sml",
     "hol_name": "word_extract_6",
     "lean_path": "Flapjack/RiscV/CorrectnessEncoding.lean",
@@ -7508,8 +7444,8 @@
     "hol_name": "get_eids_imp_excp_rel",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "getEidsFromDeclsImpExcpRel",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact port of HOL get_eids_imp_excp_rel (pan_to_crepProofScript.sml:4656): given sizeOfEids pc < 2^width and FDOM seids = FDOM (get_eids_from_decls pc), conclude excp_rel (get_eids_from_decls pc) seids. excp_rel's domain conjunct is the hypothesis; the injectivity conjunct is proved by extracting an aligned source zip index for each code lookup (membership via flookupFupdateList_mem_or_base + mem_zip_getElem?), showing each code equals BitVec.ofNat width of that index, using BitVec injectivity below 2^width (bitVecOfNat_inj) to identify the indices, then identifying the exception names. Direct HOL probe scripts/hol-probes/crep_get_eids_probe.out (rows eids_present, eids_second, eids_absent, eids_codes_distinct) and Lean guards in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions (per SOUNDNESS)."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port): keyed by FunName/VarName/ExceptionId = String (or a String-keyed PanToCrepProofContext/PanToCrepHOLContext), while HOL pan_to_crepProofScript.sml keys by funname/varname/eid = mlstring; the exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
   },
   {
     "hol_path": null,
@@ -7724,8 +7660,8 @@
     "hol_name": "rewritten_context_unassigned",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "rewrittenContextUnassigned",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Clause-for-clause: nctxt/ctxt record update, FLOOKUP ctxt.vars v, no_overlap/ctxt_max for both contexts, distinct_lists nvars ns ==> distinct_lists ns (assigned_free_vars (compile nctxt p)). Uses the landed not_mem_context_assigned_mem_gt port; Lean test/guards in Flapjack/Test/PanToCrepCodeRelParity.lean. HOL-vs-Lean equivalence reviewed by comparing definitions."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Flapjack-specific source-shaped statement (NOT an exact HOL port): keyed by FunName/VarName/ExceptionId = String (or a String-keyed PanToCrepProofContext/PanToCrepHOLContext), while HOL pan_to_crepProofScript.sml keys by funname/varname/eid = mlstring; the exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
   },
   {
     "hol_path": null,
@@ -7910,14 +7846,6 @@
     "lean_name": "compileCodeRelProg_eq_compileProgRiscV",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only bridge proving compileCodeRelProg is the tagged compile_def compiler (compileProgRiscV) on the bridged context for every proof context; makes the code_rel_def tag truthful for arbitrary ctxt_fc contexts."
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-    "hol_name": "code_rel_def",
-    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
-    "lean_name": "codeRelW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (width-indexed exact proof boundary for HOL code_rel_def; compiler expression is the tagged compileProgRiscV at BitVec width via nextContext.toHOLContext, and codeRelW width = codeRel at BitVec width by Iff.rfl; codeRel itself stays untagged because it is generic in alpha)"
   },
   {
     "hol_path": null,
@@ -8390,14 +8318,6 @@
     "lean_name": "distinctListsHol",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_exp_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compileExpHOLW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (exact width-indexed port): carrier BitVec width with [NeZero width] matching HOL 'a word; body delegates to the generic compileExpHOL; mirrors the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228). Recursive compile_exp dependency of memCompileExpVmaxW and genlistVmaxDistinctListsCompiledExpsW is stated through this tag. BRIDGE ONLY, NOT TEXTUAL ROUTING (flapjack-pxn.18.3.1.3.2): the shipped compileProgRiscV/compileProgHOL path still calls the generic compileExpHOL; the kernel-checked bridge compileExpHOLW_eq_compileExpHOL shows production is definitionally equal to this tag, but production has NOT been textually routed to it, so the AGENTS.md production-path rule is NOT met by this bridge alone. Full routing is tracked by flapjack-pxn.18.3.5.3.1.2. Oracle-backed parity rows for the tag live in Flapjack/Test/CompileExpParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

@@ -571,7 +571,7 @@ theorem panToCrepGetEidsFromDeclsHOL_lookup_mem
     rwa [heq] at hentry
   · exact absurd hbase (by simp)
 
-/-- Exact port of HOL `get_eids_imp_excp_rel`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `get_eids_imp_excp_rel`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4656`): if the source
     exception map has the compiler's exception-code domain and the declaration
     list has fewer exception declarations than `2 ^ width`, then the compiler's
@@ -579,7 +579,12 @@ theorem panToCrepGetEidsFromDeclsHOL_lookup_mem
     value conversion as in `get_eids_from_decls_def`; the HOL-vs-Lean
     equivalence is reviewed by comparing definitions (per SOUNDNESS), not
     proved by this theorem. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "get_eids_imp_excp_rel"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+-- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
+-- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem getEidsFromDeclsImpExcpRel [NeZero width]
     (seids : FiniteMap ExceptionId (BitVec width))
     (pc : List (Decl (BitVec width)))
@@ -1462,9 +1467,14 @@ theorem stateRel_structs (s : PanSemState α (FfiState σ)) (t : CrepRuntimeStat
   rcases hrel with ⟨_, _, _, hstructs, _, _, _, _, _, _⟩
   exact hstructs
 
-/-- HOL `state_rel_globals[local]`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `state_rel_globals[local]`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:65`). -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "state_rel_globals"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+-- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
+-- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem stateRel_globals (s : PanSemState α (FfiState σ)) (t : CrepRuntimeState α σ)
     (hrel : stateRel s t) : s.globals = (FEMPTY : FiniteMap VarName (PanValue α)) := by
   rcases hrel with ⟨_, _, _, _, hglobals, _, _, _, _, _⟩
@@ -2049,7 +2059,12 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     so this width-indexed form makes the compiler expression the tagged
     `compileProgRiscV` (`compile_def`) boundary. The generic `codeRel` is its
     `alpha`-instantiated view (`codeRelW_iff_codeRel` below). -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+-- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
+-- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 def codeRelW (width : Nat)
     (context : PanToCrepProofContext (BitVec width))
     (sourceCode : FiniteMap FunName
@@ -2103,9 +2118,14 @@ theorem compileExpNotMemLoadGlob [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     expression address
   simpa only [hcompile] using hsafe
 
-/-- HOL `code_rel_imp`: an entry in related source code is localised and
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `code_rel_imp`: an entry in related source code is localised and
     has the corresponding function metadata and compiled target entry. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "code_rel_imp"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+-- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
+-- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem codeRelImp [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (context : PanToCrepProofContext α)
@@ -2178,7 +2198,7 @@ theorem compileToCrepHOL_eq_map
   simp [compileToCrepHOL, functionInfosHOL_eq_makeFuncsHOL,
     panToCrepCompFuncRiscV_eq_compFuncHOL, panToCrepMkCtxtHOL]
 
-/-- Exact port of HOL `alookup_compile_prog_code`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `alookup_compile_prog_code`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4575`): a source
     function entry with empty parameters and body `prog` is compiled to the
     Crepe entry whose argument slots are `crep_vars []` and whose body is
@@ -2204,7 +2224,12 @@ theorem compileToCrepHOL_eq_map
       this theorem: the theorem is a within-Lean lookup fact, and the HOL
       correspondence is reviewed by comparing the definitions (per SOUNDNESS),
       not established by the proof below. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "alookup_compile_prog_code"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+-- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
+-- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem alookupCompileToCrepCode [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (start : FunName) (prog : Prog (BitVec width)) (rshape : Shape)
@@ -2435,7 +2460,7 @@ theorem mkCtxtCodeImpCodeRelW [NeZero width] (declarations : List (Decl (BitVec 
   (codeRelW_iff_codeRel width _ _ _).mpr
     (mkCtxtCodeImpCodeRel declarations _hdistinct hlocalised)
 
-/-- Exact port of HOL `el_compile_prog_el_prog_eq`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `el_compile_prog_el_prog_eq`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4589`).  The compiled
     entry at index `n` comes from the source table at the same index, with
     identical name, empty argument slots, body and return shape.  `List.get?`
@@ -2444,7 +2469,12 @@ theorem mkCtxtCodeImpCodeRelW [NeZero width] (declarations : List (Decl (BitVec 
     `(name, params, body, rshape)` projection.  The HOL-vs-Lean equivalence of
     the statement is reviewed by comparing the definitions (per SOUNDNESS), not
     proved by this theorem, which is a within-Lean indexed-table fact. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "el_compile_prog_el_prog_eq"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+-- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
+-- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem elCompileToCrepElProgEq [NeZero width]
     (declarations : List (Decl (BitVec width))) (n : Nat) (start : FunName)
     (cprog : CrepProg (BitVec width)) (p : Prog (BitVec width)) (rshape : Shape)
@@ -3761,12 +3791,17 @@ theorem distinctLists_eq_true_iff {left right : List Nat} :
     distinctLists left right = true ↔ ∀ x ∈ left, x ∉ right := by
   simp [distinctLists, List.all_eq_true, List.contains_eq_mem, decide_eq_false_iff_not]
 
-/-- Exact HOL port of Cake `rewritten_context_unassigned`
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake `rewritten_context_unassigned`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1457`): extending the
     context with the slot list `nvars` for variable `v` (whose previous slot
     list is `ns`, with `distinct_lists nvars ns`) keeps every slot of `ns`
     outside the assigned free variables of the compiled program. -/
-@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "rewritten_context_unassigned"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
+-- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+-- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
+-- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem rewrittenContextUnassigned [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (program : Prog α) (nctxt ctxt : PanToCrepHOLContext α) (v : VarName)

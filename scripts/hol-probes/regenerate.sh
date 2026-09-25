@@ -1729,3 +1729,7 @@ run_probe pan_globals_new_main_name_probeScript.sml pan_globals_new_main_name_pr
   empty absent \
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"
+
+run_probe word_to_stack_handler_probeScript.sml word_to_stack_handler_probe.out \
+  shaF pop_eq "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"

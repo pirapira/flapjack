@@ -3,6 +3,8 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.PanCommonProps
+import Flapjack.Pancake.PanLang.Decl
+import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 
 /-!
@@ -15,6 +17,72 @@ starts with the value-well-formedness definition used by PanStructs
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS)
+open Flapjack.Pancake.PanLang (StructContextExact)
+
+/-! ## Exact `is_wf_shape_v` on HOL carriers
+
+The `panIsWfShapeValueHOL` definition below uses the production `PanValue` /
+`String` carriers and remains Flapjack-specific. This mutually recursive port
+uses HOL's `ValueHOL` datatype with `mlstring` constructor/field names and the
+exact `StructContextExact`, preserving the source clauses and first-match
+`ALOOKUP` behavior.
+-/
+
+/-- Lean-only termination measure helper for `MAP SND`; HOL uses its native
+    `v_size` and has no separate declaration corresponding to this theorem. -/
+theorem valueHOLSizeOfMapSndLe {width : Nat} [NeZero width]
+    (fields : List (MlS × ValueHOL width)) :
+    sizeOf (fields.map Prod.snd) ≤ sizeOf fields := by
+  induction fields with
+  | nil => simp
+  | cons pair pairs ih =>
+      obtain ⟨name, value⟩ := pair
+      simp only [List.map_cons]
+      simp
+      omega
+
+/-- Lean-only constructor-size helper for the `ValueHOL` well-founded
+    recursion; HOL's termination proof has no corresponding declaration. -/
+theorem valueHOLSizeOfFieldsLtNStruct {width : Nat} [NeZero width]
+    (name : MlS) (fields : List (MlS × ValueHOL width)) :
+    sizeOf fields < sizeOf (ValueHOL.nStruct name fields) := by
+  simp
+  omega
+
+mutual
+  /-- Exact port of HOL `is_wf_shape_v_def`
+      (`cakeml/pancake/semantics/panPropsScript.sml:24-34`). The `Val` case is
+      true, `RStruct` checks `EVERY`, and `NStruct` checks first-match
+      `ALOOKUP context name <> NONE` plus `EVERY` over `MAP SND fields`.
+      Values and all names use the exact `ValueHOL`/`MlS` carriers. -/
+  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_v_def"]
+  def panIsWfShapeValueHOLExact {width : Nat} [NeZero width]
+      (context : StructContextExact) : ValueHOL width → Bool
+    | .val _ => true
+    | .rStruct values => panIsWfShapeValuesHOLExact context values
+    | .nStruct name fields =>
+        (Flapjack.Pancake.PanLang.structContextLookupHOL name context).isSome &&
+          panIsWfShapeValuesHOLExact context (fields.map Prod.snd)
+  termination_by value => sizeOf value
+  decreasing_by
+    all_goals first
+      | sizeOf_list_dec
+      | decreasing_trivial
+      | (have h := valueHOLSizeOfMapSndLe fields
+         have h2 := valueHOLSizeOfFieldsLtNStruct name fields
+         omega)
+
+  /-- Lean recursion helper for HOL `EVERY`; HOL defines no separate list
+      predicate, so this helper has no independent HOL declaration. -/
+  def panIsWfShapeValuesHOLExact {width : Nat} [NeZero width]
+      (context : StructContextExact) : List (ValueHOL width) → Bool
+    | [] => true
+    | value :: values =>
+        panIsWfShapeValueHOLExact context value &&
+          panIsWfShapeValuesHOLExact context values
+  termination_by values => sizeOf values
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+end
 
 /-! Equality-based first-match lookup for HOL `ALOOKUP` expressions. Lean's
     production `lookupInfo` intentionally takes `[BEq κ]`; this version keeps

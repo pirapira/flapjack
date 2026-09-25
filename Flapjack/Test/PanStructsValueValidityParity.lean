@@ -105,6 +105,17 @@ private def exactNestedValue : ValueHOL 8 :=
         [(leftName, .val (.word 2)), (rightName, .rStruct [])]),
      (tagName, .val (.word 3))]
 
+private def exactPairContext : Flapjack.Pancake.PanLang.StructContextExact :=
+  [(pairName,
+      { fields := [(leftName, .one), (rightName, .comb [])], size := 2 })]
+
+private def exactPairValue : ValueHOL 8 :=
+  .nStruct pairName [(markerName, .val (.word 2))]
+
+private def exactDuplicatePairContext : Flapjack.Pancake.PanLang.StructContextExact :=
+  [(pairName, { fields := [(markerName, .one)], size := 1 }),
+   (pairName, { fields := [(leftName, .one), (rightName, .comb [])], size := 2 })]
+
 private def holValueValidityMismatch : PanValue Nat :=
   .nStruct "Pair" [("left", .word 2), ("wrong", .rStruct [])]
 
@@ -216,6 +227,45 @@ example : valueFldsOkHOLExact (exactAppendPrefix ++ exactNestedContext)
       innerName, tagName]
   · simp [exactAppendPrefix, exactNestedContext, prefixName, pairName, outerName,
       leftName, rightName, innerName, tagName]
+
+/-! Exact `is_wf_shape_v_def` regressions over `ValueHOL` and
+`StructContextExact`, paired with the direct HOL rows in the probe fixture. -/
+
+/-- `is_wf_shape_v_word` on the exact value carrier. -/
+example : panIsWfShapeValueHOLExact exactPairContext (.val (.word 1) : ValueHOL 8) = true := by
+  simp [panIsWfShapeValueHOLExact, exactPairContext]
+
+/-- `is_wf_shape_v_named_match` on the exact `mlstring` carriers. -/
+example : panIsWfShapeValueHOLExact exactPairContext exactPairValue = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactPairContext,
+    exactPairValue, pairName, markerName]
+
+/-- `is_wf_shape_v_named_missing` on the exact `mlstring` carriers. -/
+example : panIsWfShapeValueHOLExact ([] : Flapjack.Pancake.PanLang.StructContextExact)
+    exactPairValue = false := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactPairValue]
+
+/-- HOL only checks nested values and the record constructor name; it ignores
+    field names, so a field-name mismatch still satisfies this predicate. -/
+example : panIsWfShapeValueHOLExact exactPairContext
+    (.nStruct pairName [(markerName, .rStruct [])] : ValueHOL 8) = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactPairContext,
+    pairName, markerName]
+
+/-- `is_wf_shape_v_duplicate_second` on the exact context carrier. -/
+example : panIsWfShapeValueHOLExact exactDuplicatePairContext exactPairValue = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactDuplicatePairContext,
+    exactPairValue, pairName, markerName]
+
+/-- `is_wf_shape_v_nested_match` on the exact nested fixture. -/
+example : panIsWfShapeValueHOLExact exactNestedContext exactNestedValue = true := by
+  simp [panIsWfShapeValueHOLExact, panIsWfShapeValuesHOLExact,
+    Flapjack.Pancake.PanLang.structContextLookupHOL, exactNestedContext,
+    exactNestedValue, pairName, outerName, leftName, rightName, innerName, tagName]
 
 /-- `is_wf_shape_v_nested_match` in `pan_structs_value_validity_probe.out`. -/
 example : panIsWfShapeValueHOL nestedContext nestedValue = true := by

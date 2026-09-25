@@ -10043,6 +10043,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_v_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "panIsWfShapeValueHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against panPropsScript.sml:24-34: `ValueHOL width` matches the exact HOL v constructors and payload carrier, `MlS` names match stcname/fldname mlstring, and `StructContextExact` is the `(stcname # struct_info) list`; the definition preserves Val=T, EVERY for RStruct and MAP SND values, first-match ALOOKUP <> NONE, and the NStruct conjunction with no extra premises. `[NeZero width]` reflects HOL's positive word dimension. The direct HOL rows is_wf_shape_v_word/named_match/named_missing/named_mismatch/duplicate_second/nested_match from pan_structs_value_validity_probe.out are replayed on the exact carriers by PanStructsValueValidityParity.lean. The older String-backed production definition remains untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "size_of_sh_with_ctxt_eq",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "sizeOfShapeWithContextHOL_eq",

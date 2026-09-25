@@ -358,7 +358,10 @@ match rows for
 `v_flds_ok_def` and `is_wf_shape_v_def`; the matching Bool-valued Lean
 definitions and regressions live in
 `Flapjack.Pancake.Proofs.PanStructs.CompileCorrect` and
-`Flapjack.Test.PanStructsValueValidityParity`.
+`Flapjack.Test.PanStructsValueValidityParity`. The exact `is_wf_shape_v_def`
+port is `panIsWfShapeValueHOLExact` over `ValueHOL` and `StructContextExact` in
+`Flapjack.Pancake.Semantics.PanProps`; its test cases replay the direct HOL
+rows on those carriers. The older String-backed comparison remains untagged.
 `pan_structs_afindi_append_probe.out` records direct HOL EVAL of prefix-hit,
 shifted suffix-hit and missing-key rows for `afindi_append` at
 `cakeml/pancake/proofs/pan_structsProofScript.sml:417`; matching Lean cases

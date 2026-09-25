@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.CrepLang.Exp
+import Flapjack.Pancake.CrepLang.Prog
 import Flapjack.Pancake.Semantics.CrepSem
 
 /-!
@@ -649,6 +650,62 @@ theorem crepAssignedFreeVars_nestedSeq_assign_zipWithW {width : Nat} [NeZero wid
           (names.zipWith (fun name value => CrepProg.assign name value) values)) =
       names :=
   crepAssignedFreeVars_nestedSeq_assign_zipWith names values h
+
+/-- Exact port of Cake `crepProps$nested_seq_assigned_vars_eq`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:410-415`) over the exact
+    `CrepProgHOL` carrier: `assigned_vars (nested_seq (MAP2 Assign ns vs)) = ns`
+    when `LENGTH ns = LENGTH vs`. The claim is in `varname = num` keys only, so
+    no `mlstring` identifier is inspected. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "nested_seq_assigned_vars_eq"]
+theorem crepAssignedVarsHOL_nestedSeq_assign_zipWith {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExpHOL width))
+    (h : names.length = values.length) :
+    crepAssignedVarsHOL
+        (crepNestedSeqHOL
+          (names.zipWith (fun name value => CrepProgHOL.assign name value) values)) =
+      names := by
+  revert values
+  induction names with
+  | nil =>
+      intro values h
+      cases values with
+      | nil => simp [List.zipWith, crepNestedSeqHOL, crepAssignedVarsHOL]
+      | cons value values => simp at h
+  | cons name names ih =>
+      intro values h
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.length_cons, Nat.succ.injEq] at h
+          simp [List.zipWith, crepNestedSeqHOL, crepAssignedVarsHOL, ih values h]
+
+/-- Exact port of Cake `crepProps$nested_seq_assigned_free_vars_eq`
+    (`cakeml/pancake/semantics/crepPropsScript.sml:420-427`) over the exact
+    `CrepProgHOL` carrier: `assigned_free_vars (nested_seq (MAP2 Assign ns vs)) = ns`
+    when `LENGTH ns = LENGTH vs`. The claim is in `varname = num` keys only, so
+    no `mlstring` identifier is inspected. -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "nested_seq_assigned_free_vars_eq"]
+theorem crepAssignedFreeVarsHOL_nestedSeq_assign_zipWith {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExpHOL width))
+    (h : names.length = values.length) :
+    crepAssignedFreeVarsHOL
+        (crepNestedSeqHOL
+          (names.zipWith (fun name value => CrepProgHOL.assign name value) values)) =
+      names := by
+  revert values
+  induction names with
+  | nil =>
+      intro values h
+      cases values with
+      | nil => simp [List.zipWith, crepNestedSeqHOL, crepAssignedFreeVarsHOL]
+      | cons value values => simp at h
+  | cons name names ih =>
+      intro values h
+      cases values with
+      | nil => simp at h
+      | cons value values =>
+          simp only [List.length_cons, Nat.succ.injEq] at h
+          simp [List.zipWith, crepNestedSeqHOL, crepAssignedFreeVarsHOL, ih values h]
 
 theorem crepAssignedVars_nestedDecs_appendW {width : Nat} [NeZero width]
     (names : List Nat) (values : List (CrepExp (BitVec width)))

@@ -427,8 +427,10 @@ def shapeVars (shapes : List Shape) (values : List α) : List (Shape × List α)
     Only a multi-word `Comb` needs a handler that copies the returned global
     words into its flattened local destinations. It uses production `Shape`
     with String-backed named fields and generic `CrepProg α`; HOL uses
-    `mlstring`-named shapes and a word-width-indexed program. It is untagged
-    until those carriers are aligned. -/
+    `mlstring`-named shapes and a word-width-indexed program. It stays untagged
+    until those carriers are aligned; the exact `mlstring`-backed port is
+    `retHdlHOL` below (tagged `ret_hdl_def`), related by the kernel bridge
+    `crepProgToHOL_retHdl`. -/
 def retHdl [OfNat α 0] [OfNat α 1] [Add α]
     (shape : Shape) (names : List Nat) : CrepProg α :=
   match shape with
@@ -437,6 +439,80 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
       if 1 < Shape.shapeSize (.comb fields) then assignRet names
       else .skip
   | .named _ => .skip
+
+/-- Exact-shaped `assign_ret` helper over `CrepProgHOL`, mirroring HOL
+    `crepLang$assign_ret_def` (`crepLangScript.sml:122-125`). The tagged
+    `assign_ret_def` port is `assignRetW` over the production carrier; this
+    helper exists so `retHdlHOL` can state `ret_hdl_def` exactly. -/
+def assignRetHOL {width : Nat} [NeZero width] (names : List Nat) :
+    CrepProgHOL width :=
+  crepNestedSeqHOL
+    (names.zipWith (fun name value => .assign name value)
+      (loadGlobalsHOL (0 : BitVec 5) names.length))
+
+/-- `crepProgToHOL` sends the production `assignRet` to the exact `assignRetHOL`. -/
+theorem crepProgToHOL_assignRet {width : Nat} [NeZero width] (names : List Nat) :
+    crepProgToHOL (assignRet (α := BitVec width) names) = assignRetHOL names := by
+  have aux : ∀ (names : List Nat) (address : BitVec 5),
+      crepProgToHOL
+          (crepNestedSeq
+            (names.zipWith (fun name value => CrepProg.assign name value)
+              (loadGlobals (α := BitVec width) address names.length))) =
+        crepNestedSeqHOL
+          (names.zipWith (fun name value => CrepProgHOL.assign name value)
+            (loadGlobalsHOL address names.length)) := by
+    intro names
+    induction names with
+    | nil =>
+        intro address
+        simp [crepNestedSeq, crepNestedSeqHOL, loadGlobals, loadGlobalsHOL,
+          crepProgToHOL]
+    | cons name names ih =>
+        intro address
+        simp [crepNestedSeq, crepNestedSeqHOL, loadGlobals, loadGlobalsHOL,
+          crepProgToHOL, crepExpToHOL, ih]
+  unfold assignRet assignRetHOL
+  exact aux names 0
+
+/-- Exact port of HOL `pan_to_crep$ret_hdl` (`pan_to_crepScript.sml:122-127`) over
+    the `mlstring`-backed `ShapeHOL` and the width-indexed `CrepProgHOL`. The
+    `One` and `Named` cases emit `Skip`; a multi-word `Comb` emits `assign_ret`,
+    which is the exact-shaped `assignRetHOL`. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_hdl_def"]
+def retHdlHOL {width : Nat} [NeZero width]
+    (shape : Flapjack.Pancake.PanLang.ShapeHOL) (names : List Nat) :
+    CrepProgHOL width :=
+  match shape with
+  | .one => .skip
+  | .comb fields =>
+      if 1 < Flapjack.Pancake.PanLang.sizeOfShapeHOL (.comb fields) then
+        assignRetHOL names
+      else .skip
+  | .named _ => .skip
+
+/-- Narrow kernel bridge: on every shape the `crepProgToHOL` image of the
+    production `retHdl` equals the exact `retHdlHOL` after the `shapeToHOL`
+    codec. Names are discarded by both, so no byte-rangedness hypothesis is
+    needed. -/
+theorem crepProgToHOL_retHdl {width : Nat} [NeZero width]
+    (shape : Shape) (names : List Nat) :
+    crepProgToHOL (retHdl (α := BitVec width) shape names) =
+      retHdlHOL (Flapjack.Pancake.PanLang.shapeToHOL shape) names := by
+  cases shape with
+  | one =>
+      simp [retHdl, retHdlHOL, Flapjack.Pancake.PanLang.shapeToHOL, crepProgToHOL]
+  | comb fields =>
+      simp only [Flapjack.Pancake.PanLang.shapeToHOL, retHdl, retHdlHOL]
+      rw [show Flapjack.Pancake.PanLang.sizeOfShapeHOL
+            (Flapjack.Pancake.PanLang.ShapeHOL.comb
+              (fields.map Flapjack.Pancake.PanLang.shapeToHOL)) =
+            List.foldl (fun total field => total + Shape.shapeSize field) 0 fields by
+          rw [Flapjack.Pancake.PanLang.sizeOfShapeHOL_comb,
+            sizeOfShapesHOL_shapeToHOL fields]]
+      simp only [Shape.shapeSize]
+      split <;> simp [crepProgToHOL, crepProgToHOL_assignRet]
+  | named name =>
+      simp [retHdl, retHdlHOL, Flapjack.Pancake.PanLang.shapeToHOL, crepProgToHOL]
 
 /-! Flapjack-specific analogue of `pan_to_crep$wrap_rt`
     (`cakeml/pancake/pan_to_crepScript.sml:131-136`).

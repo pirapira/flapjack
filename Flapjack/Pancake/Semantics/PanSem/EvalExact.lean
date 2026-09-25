@@ -5,7 +5,20 @@ Function-backed rendering of HOL `eval_def` (`cakeml/pancake/semantics/panSemScr
 identical to `pan_itreeSemScript.sml:79`) over `PanSemStateExact`, the exact
 `ExpHOL` syntax, and the exact `ValueHOL` values. `PanSemStateExact` currently
 admits arbitrary lookup functions instead of HOL finite-map fields, so this
-definition has no `@[hol]` tag. Every lookup is `=`-keyed (`MlString` derives
+definition has no `@[hol]` tag.
+
+Source review (flapjack-dlc.120) confirms the tag stays withdrawn: all fifteen
+clauses and every used subcarrier match --- `MlS`/`ExpHOL`/`ValueHOL`/`ShapeHOL`/
+`StructContextExact` carriers, `HolWordLab` memory, `memaddrs` as a `Prop` for
+HOL's `'a word set`, `[NeZero width]` for HOL's positive `dimindex`, and the
+Lean-only `[DecidablePred state.memaddrs]` decidability evidence. The blocking
+mismatch is the state carrier: HOL `locals`/`globals` are finite maps
+`varname |-> 'a v`, while `PanSemStateExact.locals`/`globals` are unrestricted
+`MlS → Option _` functions, a strict superset admitting infinite support. The
+evaluator is faithful only on the finite-support subcarrier; the exact
+finite-map state replacement (`flapjack-pxn.18.3.7.1.3.1.1.2`; audit
+`flapjack-pxn.18.3.7.1.3.1.2`) must land before the `eval_def` tag is restored.
+Every lookup is `=`-keyed (`MlString` derives
 `DecidableEq`); the shape
 comparisons go through `shapeEqHOL` (whose `= true` reading is proved exact in
 `IsValidValueExact.lean`); loads reuse the tagged exact `memLoadHOLExact`

@@ -305,4 +305,20 @@ example {token : Token} (h : TokenNameByteRanged token) :
     ∀ s trees s', P.defaultLeaf token s = (some trees, s') → TreesByteRanged trees :=
   defaultLeaf_trees_byteRanged h
 
+/-! Tree-producing primitive safety (bead 18.3.5.8.7.1.1.1). -/
+
+example : PTreesSafe (P.keepTok (fun _ => true) "any") := keepTok_treesSafe _ _
+example : PTreesSafe P.keepIdent := keepIdent_treesSafe
+example : PTreesSafe P.keepAnnot := keepAnnot_treesSafe
+example (nonterminal : Nonterminal) : PTreesSafe (P.emptyNode nonterminal) :=
+  emptyNode_treesSafe nonterminal
+example {p : P P.Trees} (hp : PTreesSafe p) : PTreesSafe (P.tryRule p) :=
+  tryRule_treesSafe hp
+example (nonterminal : Nonterminal) {children : P.Trees} (h : TreesByteRanged children) :
+    TreesByteRanged (P.mkSubtree nonterminal children) :=
+  mkSubtree_treesByteRanged nonterminal h
+example (nonterminal : Nonterminal) {p : P P.Trees} (hp : PTreesSafe p) :
+    PTreesSafe (P.subtree nonterminal p) :=
+  subtree_treesSafe nonterminal hp
+
 end Flapjack.Test.ParserByteRangedParity

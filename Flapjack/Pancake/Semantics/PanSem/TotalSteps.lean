@@ -1044,27 +1044,31 @@ theorem panSemTotalWhileStep_word_continue [DecidableEq α] [OfNat α 0]
   rw [panSemTotalWhileStep_word_body state word hzero hclock evaluateBody recurseWhile]
   simp [hbody]
 
-/-! ## Exact HOL panSem clock helpers (flapjack-pxn.18.4.3.77.11)
+/-! ## Flapjack panSem clock helpers (flapjack-pxn.18.4.3.77.11)
 
 `panSem$dec_clock_def` and `panSem$fix_clock_def`
 (`cakeml/pancake/semantics/panSemScript.sml:441/446`) are the clock-only
-state operations used by the recursive `evaluate` clauses. They are ported
-here over the HOL-shaped source state `PanSemHolState`, with no extra
-carrier side conditions. -/
+state operations used by the recursive `evaluate` clauses. The bodies here are
+clause-for-clause copies, but the `@[hol]` tags are **withdrawn**: the carrier
+`PanSemHolState` is a String-backed source projection (its `locals`/`globals`
+are `VarName`-keyed, `code` is `FunName`-keyed, `eshapes` is
+`ExceptionId`-keyed, `structs : StructContextHOL`, and `locals` values are
+`HolValue`, whose `nStruct` names/fields are `StructName`/`FieldName` = String),
+while HOL's `'a` word / `mlstring` carriers are exact only once the MlString
+state carrier lands (tracked by `flapjack-pxn.18.3.5.8`, exact port bead
+`flapjack-pxn.18.4.3.77.11.1`, carrier audit `docs/PANSEM-CARRIER-AUDIT.md`). -/
 
-/-- Exact port of Cake's `dec_clock` (`panSemScript.sml:441`):
-    `dec_clock s = s with clock := s.clock - 1` over the word-indexed
-    HOL-shaped source state `PanSemHolState width σ`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "dec_clock_def"]
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): `dec_clock s = s with
+    clock := s.clock - 1` over the word-indexed source projection
+    `PanSemHolState width σ`; tag withheld for the String carrier reason above. -/
 def decClockHOL {width : Nat} [NeZero width] (state : PanSemHolState width σ) :
     PanSemHolState width σ :=
   { state with clock := state.clock - 1 }
 
-/-- Exact port of Cake's `fix_clock` (`panSemScript.sml:446`): the result
-    component is threaded through unchanged, so the port is RESULT-POLYMORPHIC
-    in `β`, exactly as HOL's `fix_clock` is (HOL leaves `res` unconstrained);
-    the returned clock is clamped to the smaller of the old and new clocks. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "fix_clock_def"]
+/-- FLAPJACK-SPECIFIC (not a statement-exact HOL port): the result component is
+    threaded through unchanged (RESULT-POLYMORPHIC in `β`, as HOL's `fix_clock`
+    leaves `res` unconstrained) and the returned clock is clamped to the smaller
+    of the old and new clocks; tag withheld for the String carrier reason above. -/
 def fixClockHOL {width : Nat} [NeZero width] {β : Type} (oldState : PanSemHolState width σ)
     (step : β × PanSemHolState width σ) : β × PanSemHolState width σ :=
   (step.1, { step.2 with

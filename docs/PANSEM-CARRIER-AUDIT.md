@@ -64,8 +64,8 @@ by the name mismatch.
 | `Pancake/Semantics/PanSem/LookupCode.lean:37` | `lookup_code_def` | `FunName`-keyed code map | withdrawn (`flapjack-0lj.2`; retarget `flapjack-4w9`) |
 | `Pancake/Semantics/PanSem.lean:24` | `empty_locals_def` | `PanSemState` (`StructContext`, `VarName`) | withdrawn (`flapjack-0lj.1`, `7dd5e7f7b`) |
 | `Pancake/Semantics/PanSem.lean:2421` | `evaluate_decls_def` | `PanSemState` | withdrawn (`flapjack-0lj.1`, `7dd5e7f7b`) |
-| `Pancake/Semantics/PanSem/TotalSteps.lean:1058` | `dec_clock_def` | `PanSemHolState` | review (clock-only body) |
-| `Pancake/Semantics/PanSem/TotalSteps.lean:1067` | `fix_clock_def` | `PanSemHolState` | review (clock-only body) |
+| `Pancake/Semantics/PanSem/TotalSteps.lean:1058` | `dec_clock_def` | `PanSemHolState` | withdrawn (`flapjack-pxn.18.4.3.77.11.1`) |
+| `Pancake/Semantics/PanSem/TotalSteps.lean:1067` | `fix_clock_def` | `PanSemHolState` | withdrawn (`flapjack-pxn.18.4.3.77.11.1`) |
 | `Pancake/Semantics/PanSem/Primop.lean:16` | `flatten_def` | `PanValue` (`nStruct` names `String`) | review (name-ignoring body) |
 | `Pancake/Semantics/PanSem/Primop.lean:48` | `pan_primop_def` | `PanValue` (`nStruct` names `String`) | review (name-ignoring body) |
 
@@ -78,7 +78,8 @@ by the name mismatch.
    `isValWord_def` tags once a `HolValue`-equivalent over `MlString` exists
    (`flapjack-0lj`).
 3. Retarget `lookup_code_def` (`flapjack-4w9`).
-4. Re-review the clock-only and name-ignoring tags (`dec_clock_def`,
-   `fix_clock_def`, `flatten_def`, `pan_primop_def`, `empty_locals_def`,
-   `evaluate_decls_def`) against the landed exact carriers; do not assume the
-   strict transitive reading without a decision from the reviewer.
+4. Re-review the name-ignoring tags (`flatten_def`, `pan_primop_def`) against
+   the landed exact carriers; the clock-only `dec_clock_def`/`fix_clock_def`
+   tags were withdrawn under `flapjack-pxn.18.4.3.77.11.1` because
+   `PanSemHolState` is String-backed. Do not assume the strict transitive
+   reading without a decision from the reviewer.

@@ -70,11 +70,17 @@ theorem parseTopDecs_declByteRanged {width : Nat} (ofInt : Int → BitVec width)
 
 `parseTopDecs` returns byte-ranged declarations (`parseTopDecs_declByteRanged`),
 so the exact MLString-keyed `compile_prog` boundary
-(`compileProgTopHOLOfExact`) applied to their `declToHOL` image is
-definitionally equal to the production String-keyed `compileProgTopHOL`.
+(`compileProgTopHOLOfExact`) applied to their `declToHOL` image equals the
+production String-keyed `compileProgTopHOL`. This equality is NOT definitional:
+it is kernel-proved by `compileProgTopHOLOfExact_declToHOL` using the
+`DeclByteRanged` premise, i.e. propositional (not definitional) equality.
 This is the kernel-checked bridge from the executed parser output to the exact
-carrier; the executed pipeline still calls `compileProgTopHOLWithMetadata`
-directly, so the textual-routing obligation remains tracked separately. -/
+carrier. Direct original-Pancake parity evidence for the executed boundary is
+`python3 scripts/check-parity-goldens.py` (wide_constants.pnk, parity
+goldens=1, failures=0). The executed pipeline still calls
+`compileProgTopHOLWithMetadata` directly, so the textual-routing/tagging
+obligation remains tracked separately under parent beads `flapjack-6nn` and
+`flapjack-0up`, not claimed here. -/
 theorem parseTopDecs_routes_exactBoundary {width : Nat} [NeZero width]
     [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
     [OfNat (BitVec width) 0] [OfNat (BitVec width) 1]

@@ -1,60 +1,50 @@
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.CrepLang.Prog
 import Flapjack.FiniteMap.Basic
 import Flapjack.Basis.Pure.MlString
 
 /-!
-Flapjack-specific lookup-code bridge toward HOL `crepSem$lookup_code_def`
-(`cakeml/pancake/semantics/crepSemScript.sml:76-84`); this module does not yet
-contain an exact tagged port.
+Exact port of HOL `crepSem$lookup_code_def`
+(`cakeml/pancake/semantics/crepSemScript.sml:76-84`), together with a
+kernel-checked relationship to the production `Flapjack.lookupCrepHolCode`.
 
-HOL keys the code map by `funname = ``:mlstring`` (`crepSemScript.sml:17`) and
-stores argument/local values of type `'a word_lab` (`panSemScript.sml:17`).
-The production `Flapjack.lookupCrepHolCode` uses Lean `String` keys and
-`PanWordLab`, so it cannot carry the `lookup_code_def` tag. This submodule
-uses `MlString` keys and width-indexed `HolWordLab` values, but its stored
-`CrepProg` still contains String-valued Call/ExtCall names. It proves a
-kernel-checked relationship to production; the exact code-value carrier and
-tagged lookup remain tracked by beads `flapjack-4w9.1` and `flapjack-4w9.2`.
+HOL keys the code map by `funname = ``:mlstring`` (`crepSemScript.sml:17`),
+stores `(varname list # 'a crepLang$prog)` values, and takes `'a word_lab`
+argument/local values (`panSemScript.sml:17`). This submodule therefore uses the
+faithful `MlString` key, the exact width-indexed `CrepProgHOL` code value
+(`Flapjack/Pancake/CrepLang/Prog.lean`), and width-indexed `HolWordLab` values.
+The production `Flapjack.lookupCrepHolCode` uses Lean `String` keys,
+`CrepProg (BitVec width)`, and `PanWordLab`; the bridge
+`lookupCodeHOL_exactToProd` transports the exact result back along
+`crepProgOfHOL` and `HolWordLab.toPanWordLab`.
 -/
 
 namespace Flapjack
 
-/-- The `lookup_code` code-map carrier: HOL `funname |-> (varname list # 'a crepLang$prog)`
-(`crepSemScript.sml:17,23`), with the HOL `funname = mlstring` key and the word-indexed
-program.  NOT YET EXACT: the map key is the faithful MlString carrier, but the
-stored code value `CrepProg (BitVec width)` still uses `FunName := String` for its
-`call`/`extCall` names (`Flapjack/Pancake/CrepLang.lean:60-62`), whereas HOL
-`crepLang$prog.Call`/`ExtCall` carry `funname = mlstring`.  The exact code-value
-carrier is tracked by `flapjack-4w9.1`; the exact lookup statement by
-`flapjack-4w9.2`. -/
-abbrev CrepCodeMapExact (width : Nat) : Type :=
-  Flapjack.Basis.Pure.MlString.MlString → Option (List Nat × CrepProg (BitVec width))
+/-- The exact `lookup_code` code-map carrier: HOL `funname |-> (varname list # 'a crepLang$prog)`
+(`crepSemScript.sml:17,23`), with the faithful `funname = mlstring` key and the
+exact width-indexed `CrepProgHOL` code value. -/
+abbrev CrepCodeMapExact (width : Nat) [NeZero width] : Type :=
+  Flapjack.Basis.Pure.MlString.MlString → Option (List Nat × CrepProgHOL width)
 
 /-- The exact `lookup_code` local-variable carrier: HOL `varname |-> 'a word_lab`. -/
 abbrev CrepLocalsExact (width : Nat) : Type :=
   FiniteMap Nat (HolWordLab width)
 
-/-- Structural port of HOL `crepSem$lookup_code_def` (`crepSemScript.sml:76-84`):
+/-- Exact port of HOL `crepSem$lookup_code_def` (`crepSemScript.sml:76-84`):
 look the function up by its `mlstring` name, require a duplicate-free declared
 parameter list of the same length as the supplied `word_lab` argument list, and
 return the body together with the finite map `FEMPTY |++ ZIP (parameters, args)`.
 The `len` argument is retained from the HOL signature, where the definition does
-not inspect it.
-
-NOT TAGGED (coordinator review HOLD on `f1e2a00be`, bead `flapjack-4w9`): the map
-key and the `word_lab` argument/local carriers are exact, but the code value's
-`CrepProg.call`/`.extCall` names are `FunName := String`, while HOL
-`crepLang$prog.Call`/`ExtCall` carry `funname = mlstring`, so the transitive
-code-value carrier is not exact.  The useful kernel-checked production bridge
-below is kept, but no `@[hol]` tag is claimed.  Exact carrier: `flapjack-4w9.1`;
-exact tagged statement: `flapjack-4w9.2`; executable routing: `flapjack-4w9.3`. -/
+not inspect it. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
 def lookupCodeHOL {width : Nat} [NeZero width]
     (code : CrepCodeMapExact width)
     (fname : Flapjack.Basis.Pure.MlString.MlString)
     (args : List (HolWordLab width)) (_len : Nat) :
-    Option (CrepProg (BitVec width) × CrepLocalsExact width) :=
+    Option (CrepProgHOL width × CrepLocalsExact width) :=
   match FLOOKUP code fname with
   | none => none
   | some (parameters, body) =>
@@ -65,9 +55,10 @@ def lookupCodeHOL {width : Nat} [NeZero width]
 /-! ## Kernel-checked relationship to the production definition
 
 The production `Flapjack.lookupCrepHolCode` (`CrepSem.lean`) uses `String` keys
-and `PanWordLab` values.  We transport the exact code map by the byte-ranged
-`toStringOfBytes` and transport the exact `word_lab` values by the checked
-isomorphism `HolWordLab.toPanWordLab`; the two lookups then agree exactly. -/
+and `PanWordLab` values.  We transport the code map by the byte-ranged
+`ofString`/`toStringOfBytes` key conversion and the code value by the checked
+isomorphism `crepProgOfHOL`; the exact `word_lab` values are transported by
+`HolWordLab.toPanWordLab`; the two lookups then agree exactly. -/
 
 /-- Pointwise transport of a finite map's codomain along an option map. -/
 def mapFiniteMap {α β γ : Type} (g : β → γ) (f : FiniteMap α β) : FiniteMap α γ :=
@@ -94,17 +85,21 @@ theorem mapFiniteMap_FUPDATE_LIST [BEq α] (g : β → γ) (f : FiniteMap α β)
       rw [← mapFiniteMap_FUPDATE (g := g) (f := f) entry]
       exact ih (FUPDATE f entry)
 
-/-- The production code map induced by an exact one, via the byte-ranged
-`toStringOfBytes` key conversion. -/
-def codeMapExactToProd {width : Nat} (code : CrepCodeMapExact width) :
+/-- The production code map induced by an exact one: the byte-ranged
+`ofString` key conversion and the checked `crepProgOfHOL` code-value
+isomorphism. -/
+def codeMapExactToProd {width : Nat} [NeZero width] (code : CrepCodeMapExact width) :
     FunName → Option (List Nat × CrepProg (BitVec width)) :=
-  fun name => code (Flapjack.Basis.Pure.MlString.ofString name)
+  fun name => (code (Flapjack.Basis.Pure.MlString.ofString name)).map
+    (fun entry => (entry.1, crepProgOfHOL entry.2))
 
 /-- The exact code map induced by a production one, via the byte-ranged
-`toStringOfBytes` key conversion. -/
-def codeMapProdToExact {width : Nat}
+`toStringOfBytes` key conversion and the checked `crepProgToHOL` code-value
+isomorphism (which requires byte-ranged name fields for an exact roundtrip). -/
+def codeMapProdToExact {width : Nat} [NeZero width]
     (code : FunName → Option (List Nat × CrepProg (BitVec width))) : CrepCodeMapExact width :=
-  fun name => code (Flapjack.Basis.Pure.MlString.toStringOfBytes name)
+  fun name => (code (Flapjack.Basis.Pure.MlString.toStringOfBytes name)).map
+    (fun entry => (entry.1, crepProgToHOL entry.2))
 
 /-- Transporting the empty finite map's codomain leaves it empty. -/
 @[simp] theorem mapFiniteMap_empty {α β γ : Type} (g : β → γ) :
@@ -128,20 +123,23 @@ theorem zip_holToPan {width : Nat} (names : List Nat)
           rw [ih args]
           simp
 
-/-- Kernel-checked bridge: on the exact code-map image of a production map and on
-`PanWordLab` arguments transported by the checked isomorphism, the exact
-`lookupCodeHOL` returns exactly the production `lookupCrepHolCode` result
-(transporting the resulting `word_lab` locals back along the isomorphism). -/
-theorem lookupCodeHOL_prodToExact {width : Nat} [NeZero width]
-    (code : FunName → Option (List Nat × CrepProg (BitVec width)))
+/-- Kernel-checked bridge: on the exact code map and on `PanWordLab` arguments
+transported by the checked isomorphism, the exact `lookupCodeHOL` returns
+exactly the production `lookupCrepHolCode` applied to the induced production
+map `codeMapExactToProd code`, transporting the returned `word_lab` locals and
+the code-value body back along the checked isomorphisms. -/
+theorem lookupCodeHOL_exactToProd {width : Nat} [NeZero width]
+    (code : CrepCodeMapExact width)
     (fname : Flapjack.Basis.Pure.MlString.MlString)
     (args : List (PanWordLab (BitVec width))) (len : Nat) :
-    (lookupCodeHOL (codeMapProdToExact code) fname (args.map PanWordLab.toHolWordLab) len).map
-        (fun result => (result.1, mapFiniteMap HolWordLab.toPanWordLab result.2)) =
-      lookupCrepHolCode code (Flapjack.Basis.Pure.MlString.toStringOfBytes fname) args len := by
-  unfold lookupCodeHOL lookupCrepHolCode codeMapProdToExact
+    (lookupCodeHOL code fname (args.map PanWordLab.toHolWordLab) len).map
+        (fun result => (crepProgOfHOL result.1, mapFiniteMap HolWordLab.toPanWordLab result.2)) =
+      lookupCrepHolCode (codeMapExactToProd code) (Flapjack.Basis.Pure.MlString.toStringOfBytes fname)
+        args len := by
+  unfold lookupCodeHOL lookupCrepHolCode codeMapExactToProd
   simp only [FLOOKUP]
-  generalize h : code (Flapjack.Basis.Pure.MlString.toStringOfBytes fname) = value
+  rw [Flapjack.Basis.Pure.MlString.ofString_toStringOfBytes fname]
+  generalize h : code fname = value
   cases value with
   | none => rfl
   | some pair =>

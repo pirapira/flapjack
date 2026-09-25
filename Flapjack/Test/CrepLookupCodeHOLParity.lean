@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepSem.LookupCode
+import Flapjack.Pancake.CrepLang.Prog
 import Flapjack.Pancake.CrepLang
 import Flapjack.Basis.Pure.MlString
 
@@ -20,8 +21,8 @@ private def key (s : String) : MlS := Flapjack.Basis.Pure.MlString.ofString s
 duplicate-parameter `dup` entry. -/
 private def exactCodeMap : CrepCodeMapExact 8 :=
   fun name =>
-    if name = key "id" then some ([1], CrepProg.skip)
-    else if name = key "dup" then some ([1, 1], CrepProg.skip)
+    if name = key "id" then some ([1], Flapjack.CrepProgHOL.skip)
+    else if name = key "dup" then some ([1, 1], Flapjack.CrepProgHOL.skip)
     else none
 
 private def word8 (n : Nat) : HolWordLab 8 := HolWordLab.word (BitVec.ofNat 8 n)
@@ -51,13 +52,12 @@ private example : lookupCodeHOL exactCodeMap (key "dup") [word8 7, word8 8] 2 = 
     (lookupCodeHOL exactCodeMap (key "dup") [word8 7, word8 8] 2).isNone
 
 /-- Kernel-checked production bridge at width 8. -/
-example (code : FunName → Option (List Nat × CrepProg (BitVec 8)))
+example (code : CrepCodeMapExact 8)
     (fname : MlS) (args : List (PanWordLab (BitVec 8))) (len : Nat) :
-    (lookupCodeHOL (codeMapProdToExact code) fname
-        (args.map PanWordLab.toHolWordLab) len).map
-        (fun result => (result.1, mapFiniteMap HolWordLab.toPanWordLab result.2)) =
-      lookupCrepHolCode code (Flapjack.Basis.Pure.MlString.toStringOfBytes fname)
-        args len :=
-  lookupCodeHOL_prodToExact code fname args len
+    (lookupCodeHOL code fname (args.map PanWordLab.toHolWordLab) len).map
+        (fun result => (Flapjack.crepProgOfHOL result.1, mapFiniteMap HolWordLab.toPanWordLab result.2)) =
+      lookupCrepHolCode (Flapjack.codeMapExactToProd code)
+        (Flapjack.Basis.Pure.MlString.toStringOfBytes fname) args len :=
+  Flapjack.lookupCodeHOL_exactToProd code fname args len
 
 end Flapjack.Test.CrepLookupCodeHOLParity

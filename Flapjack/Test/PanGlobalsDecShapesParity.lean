@@ -560,9 +560,9 @@ def decShapesProbeGuard : Bool :=
 #guard decShapesProbeGuard
 
 def runChecks : IO Bool := do
-  IO.println (if decShapesProbeGuard then
-    "PASS pan_globals dec_shapes_def parity (2 HOL rows)"
-    else "FAIL pan_globals dec_shapes_def parity (2 HOL rows)")
-  pure decShapesProbeGuard
+  IO.println (if parityGuard && decShapesProbeGuard then
+    "PASS pan_globals dec_shapes_def parity (3 HOL rows)"
+    else "FAIL pan_globals dec_shapes_def parity (3 HOL rows)")
+  pure (parityGuard && decShapesProbeGuard)
 
 end Flapjack.Test.PanGlobalsDecShapesParity

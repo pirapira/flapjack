@@ -9630,5 +9630,13 @@
     "lean_name": "flattenHOL_length_eq_sizeOfShapeHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL panPropsScript.sml:171 states !v. is_wf_shape_nil (shape_of v) ==> LENGTH (flatten v) = size_of_shape (shape_of v). Lean renders is_wf_shape_nil as isWfShapeExactHOL [] over the exact ShapeHOL/StructContextExact carriers, flatten as flattenHOL, shape_of as shapeOfHOLExact and size_of_shape as sizeOfShapeHOL; oracle rows lfs_val/lfs_two/lfs_nested/lfs_val_len/lfs_nested_len/lfs_wf_nested in scripts/hol-probes/pan_props_length_flatten_probe.out, reproduced by Flapjack/Test/PanPropsShapeResVarParity.lean)."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "is_wf_shape_nil_length_flatten",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "isWfShapeExactHOL_length_flatten",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; exact ValueHOL/ShapeHOL rendering: is_wf_shape_nil rendered as isWfShapeExactHOL ([] : StructContextExact), shape_of as shapeOfHOLExact, size_of_shape as sizeOfShapeHOL, flatten as flattenHOL, LENGTH as .length; both HOL side conditions preserved; reused the exact flattenHOL_length_eq_sizeOfShapeHOL (panPropsScript.sml:171); oracle rows iwf_val/iwf_struct/iwf_nested/iwf_val_len/iwf_size_val/iwf_wf_val/iwf_wf_struct in scripts/hol-probes/pan_to_crep_is_wf_shape_nil_probe.out, reproduced by Flapjack/Test/PanToCrepStateRelParity.lean)"
   }
 ]

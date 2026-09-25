@@ -11,6 +11,7 @@ import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
+import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Pancake.Proofs.PanToCrep.CompileExpVmax
@@ -3992,5 +3993,32 @@ theorem evaluateReplicateConst
   | zero => simp [evalCrepRuntimeExpsWordLab]
   | succ count ih =>
       simp [List.replicate_succ, evalCrepRuntimeExpsWordLab, evalCrepRuntimeExpWordLab, ih]
+
+/-! ## Exact HOL `pan_to_crep` `is_wf_shape_nil_length_flatten`
+
+The match above is the source-shaped port over the production `PanValue`/`String`
+carrier. The declaration below is the exact port of the same HOL theorem over
+the HOL-shaped `ValueHOL`/`StructContextExact` carriers. -/
+open Flapjack.Pancake.PanLang
+
+/-- Exact port of HOL Cake `pan_to_crepProof$is_wf_shape_nil_length_flatten`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2469`). Over the
+    HOL-shaped `ValueHOL`/`StructContextExact` carriers, a word list selected
+    by the zero-size or positive-size branch has the size prescribed by the
+    source value shape. Reuses the exact `flattenHOL_length_eq_sizeOfShapeHOL`
+    (HOL `panPropsScript.sml:171`). -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "is_wf_shape_nil_length_flatten"]
+theorem isWfShapeExactHOL_length_flatten {width : Nat} [NeZero width]
+    (value : ValueHOL width) (words : List (HolWordLab width))
+    (hwf : isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact value) = true)
+    (hzero : sizeOfShapeHOL (shapeOfHOLExact value) = 0 → words = [])
+    (hpositive : 0 < sizeOfShapeHOL (shapeOfHOLExact value) →
+      words = flattenHOL value) :
+    words.length = sizeOfShapeHOL (shapeOfHOLExact value) := by
+  by_cases hz : sizeOfShapeHOL (shapeOfHOLExact value) = 0
+  · simp [hzero hz, hz]
+  · have hpos : 0 < sizeOfShapeHOL (shapeOfHOLExact value) := Nat.pos_of_ne_zero hz
+    rw [hpositive hpos]
+    exact flattenHOL_length_eq_sizeOfShapeHOL value hwf
 
 end Flapjack

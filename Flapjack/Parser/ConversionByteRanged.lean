@@ -3,6 +3,7 @@ import Flapjack.Parser.Conversion
 import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.PanLang.Exp
 import Flapjack.Pancake.PanLang.Prog
+import Flapjack.Pancake.PanLang.Decl
 
 /-!
 Byte-rangedness of the concrete parse tree and of the first conversion step.
@@ -1922,6 +1923,118 @@ theorem convProgSeq_byteRanged {width : Nat} (ofInt : Int → BitVec width) (loc
     ∀ trees, (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ p,
       convProgSeq ofInt locations fuel trees = some p → ProgByteRanged p :=
   (convProg_convProgSeq_byteRanged ofInt locations fuel).2
+
+theorem convTopDec_byteRanged {width : Nat} (ofInt : Int → BitVec width) (locations : Bool)
+    (fuel : Nat) :
+    ∀ tree, ParseTreeByteRanged tree → ∀ d, convTopDec ofInt locations fuel tree = some d →
+      DeclByteRanged d := by
+  intro tree ht decl h
+  unfold convTopDec at h
+  split at h
+  · rename_i inlineTree exportTree shapeTree nameTree paramsTree bodyTree hargs
+    cases hpl : paramsTree.argsNT .paramList with
+    | none => simp [hpl] at h
+    | some pchildren =>
+      cases hp : convParams fuel pchildren with
+      | none => simp [hpl, hp] at h
+      | some params =>
+        cases hb : convProg ofInt locations fuel bodyTree with
+        | none => simp [hpl, hp, hb] at h
+        | some body =>
+          cases hn : convIdent nameTree with
+          | none => simp [hpl, hp, hb, hn] at h
+          | some name =>
+            cases hi : convInline inlineTree with
+            | none => simp [hpl, hp, hb, hn, hi] at h
+            | some inline =>
+              cases he : convExport exportTree with
+              | none => simp [hpl, hp, hb, hn, hi, he] at h
+              | some exported =>
+                cases hs : convShape fuel shapeTree with
+                | none => simp [hpl, hp, hb, hn, hi, he, hs] at h
+                | some returnShape =>
+                  simp [hpl, hp, hb, hn, hi, he, hs] at h
+                  subst h
+                  refine ⟨?_, ?_, ?_, ?_⟩
+                  · simpa [NameRanged, StringByteRanged, CharsByteRanged]
+                      using convIdent_byteRanged
+                        (argsNT_byteRanged ht hargs nameTree (by simp)) hn
+                  · exact convParams_byteRanged fuel pchildren
+                      (argsNT_byteRanged
+                        (argsNT_byteRanged ht hargs paramsTree (by simp)) hpl) params hp
+                  · exact convProg_byteRanged ofInt locations fuel bodyTree
+                      (argsNT_byteRanged ht hargs bodyTree (by simp)) body hb
+                  · exact convShape_byteRanged fuel shapeTree
+                      (argsNT_byteRanged ht hargs shapeTree (by simp)) returnShape hs
+  · cases hd : convDecForm ofInt fuel .globalDec tree with
+    | none =>
+      simp only [hd] at h
+      cases hs : convStructName fuel tree with
+      | none =>
+        simp only [hs] at h
+        cases he : convExnDec fuel tree with
+        | none => simp [he] at h
+        | some r =>
+          simp only [he, Option.some.injEq] at h
+          subst h
+          obtain ⟨exception, shape⟩ := r
+          exact ⟨(convExnDec_byteRanged fuel tree ht _ he).1,
+            (convExnDec_byteRanged fuel tree ht _ he).2⟩
+      | some r =>
+        simp only [hs, Option.some.injEq] at h
+        subst h
+        obtain ⟨name, fields⟩ := r
+        exact ⟨(convStructName_byteRanged ht _ hs).1, (convStructName_byteRanged ht _ hs).2⟩
+    | some r =>
+      simp only [hd, Option.some.injEq] at h
+      subst h
+      obtain ⟨shape, name, value⟩ := r
+      exact ⟨(convDecForm_byteRanged ofInt fuel .globalDec tree ht _ hd).1,
+        (convDecForm_byteRanged ofInt fuel .globalDec tree ht _ hd).2.1,
+        (convDecForm_byteRanged ofInt fuel .globalDec tree ht _ hd).2.2⟩
+
+theorem convTopDecList_byteRanged {width : Nat} (ofInt : Int → BitVec width)
+    (locations : Bool) :
+    ∀ fuel, ∀ tree, ParseTreeByteRanged tree → ∀ ds,
+      convTopDecList ofInt locations fuel tree = some ds → ∀ d ∈ ds, DeclByteRanged d := by
+  intro fuel
+  induction fuel using Nat.strongRecOn with
+  | ind n ih =>
+    intro tree ht ds h d hd
+    cases n with
+    | zero => simp [convTopDecList] at h
+    | succ m =>
+      unfold convTopDecList at h
+      split at h
+      · -- some []
+        rename_i hargs
+        simp only [Option.some.injEq] at h
+        subst h
+        simp at hd
+      · -- some [itemTree, restTree]
+        rename_i itemTree restTree hargs
+        cases ha : destAnnotTok itemTree with
+        | some _ =>
+          simp [ha] at h
+          exact ih m (by omega) restTree
+            (argsNT_byteRanged ht hargs restTree (by simp)) ds h d hd
+        | none =>
+          cases hdec : convTopDec ofInt locations m itemTree with
+          | none => simp [ha, hdec] at h
+          | some dcl =>
+            cases hrest : convTopDecList ofInt locations m restTree with
+            | none => simp [ha, hdec, hrest] at h
+            | some restDecls =>
+              simp [ha, hdec, hrest] at h
+              subst h
+              rw [List.mem_cons] at hd
+              rcases hd with rfl | htail
+              · exact convTopDec_byteRanged ofInt locations m itemTree
+                  (argsNT_byteRanged ht hargs itemTree (by simp)) _ hdec
+              · exact ih m (by omega) restTree
+                  (argsNT_byteRanged ht hargs restTree (by simp)) restDecls hrest d htail
+      · -- no match
+        simp at h
 
 
 end Flapjack.Parser

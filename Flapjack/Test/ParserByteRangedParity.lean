@@ -275,4 +275,18 @@ example {width : Nat} (ofInt : Int → BitVec width) (locations : Bool) (fuel : 
     (h : convProgSeq ofInt locations fuel trees = some p) : ProgByteRanged p :=
   convProgSeq_byteRanged ofInt locations fuel trees ht p h
 
+/-- A parsed top-level declaration is byte-ranged when its parse tree is. -/
+example {width : Nat} (ofInt : Int → BitVec width) (locations : Bool) (fuel : Nat)
+    (tree : ParseTree) (ht : ParseTreeByteRanged tree) (d : Flapjack.Decl (BitVec width))
+    (h : convTopDec ofInt locations fuel tree = some d) : DeclByteRanged d :=
+  convTopDec_byteRanged ofInt locations fuel tree ht d h
+
+/-- A parsed top-level declaration list is byte-ranged when its parse tree is. -/
+example {width : Nat} (ofInt : Int → BitVec width) (locations : Bool) (fuel : Nat)
+    (tree : ParseTree) (ht : ParseTreeByteRanged tree)
+    (ds : List (Flapjack.Decl (BitVec width)))
+    (h : convTopDecList ofInt locations fuel tree = some ds) :
+    ∀ d ∈ ds, DeclByteRanged d :=
+  convTopDecList_byteRanged ofInt locations fuel tree ht ds h
+
 end Flapjack.Test.ParserByteRangedParity

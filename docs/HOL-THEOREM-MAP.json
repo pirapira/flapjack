@@ -1677,6 +1677,18 @@
     "reviewer": "Codex (source comparison) HOL fperm_name_def (pan_globalsScript.sml:184): if f = h then g else if g = h then f else h. Lean globalRenameFunctionName matches clause-for-clause. Reviewed under names_as_string: source: equality/map-key-only, target: equality/map-key-only, name: equality/map-key-only. No byte-observable use, so no boundary witness. Direct HOL rows in pan_globals_fperm_name_probe.out."
   },
   {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalRenameProg",
+    "statement_status": "reviewed_names_as_string",
+    "names_as_string": [
+      "source",
+      "target"
+    ],
+    "reviewer": "Codex (source comparison) HOL fperm_def (pan_globalsScript.sml:191): rename source/target in every function occurrence and nested handler/body, other constructs unchanged. Lean globalRenameProg matches clause-for-clause with propositional name equality and no side condition. Reviewed under names_as_string: source: equality/map-key-only, target: equality/map-key-only. No byte-observable use, so no boundary witness. Direct HOL rows in pan_globals_fperm_probe.out."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "fperm_name_cong",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",

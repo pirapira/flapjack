@@ -294,6 +294,43 @@ val _ = print_eval "recursive_deccall_missing_function"
        ^recursive_missing_code_state) of
       (res, s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
 
+val recursive_bad_argument_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («x», ValWord (7w:8 word));
+      code := FEMPTY |+ («id», ([], panLang$Skip, panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_call_bad_argument"
+  ``case panSem$evaluate
+      (panLang$Call NONE «id» [panLang$Var panLang$Local «absent»],
+       ^recursive_bad_argument_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "recursive_deccall_bad_argument"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «id»
+        [panLang$Var panLang$Local «absent»] panLang$Skip,
+       ^recursive_bad_argument_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val recursive_call_destination_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («answer», ValWord (3w:8 word));
+      code := FEMPTY |+ («id», ([(«x», panLang$One)],
+        panLang$Return (panLang$Var panLang$Local «x»), panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_call_destination_success"
+  ``case panSem$evaluate
+      (panLang$Call (SOME (SOME (panLang$Local, «answer»), NONE)) «id»
+        [panLang$Const (7w:8 word)], ^recursive_call_destination_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
+
+val _ = print_eval "recursive_call_destination_shape_error"
+  ``case panSem$evaluate
+      (^bad_destination_call_program, ^bad_destination_call_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
+
 (* Negative recursive dispatch rows for Call control and exception handling. *)
 val recursive_skip_state =
   ``((ARB:((8),unit) panSem$state) with <|
@@ -313,6 +350,23 @@ val recursive_break_state =
 
 val _ = print_eval "recursive_call_callee_break"
   ``case panSem$evaluate (panLang$Call NONE «break» [], ^recursive_break_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
+val recursive_continue_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («keep», ValWord (42w:8 word));
+      code := FEMPTY |+ («continue», ([], panLang$Continue, panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_call_callee_continue"
+  ``case panSem$evaluate
+      (panLang$Call NONE «continue» [], ^recursive_continue_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
+val _ = print_eval "recursive_deccall_callee_continue"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «continue» [] panLang$Skip,
+       ^recursive_continue_state) of
       (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
 
 val recursive_wrong_exception_handler_state =
@@ -947,6 +1001,35 @@ val _ = print_eval "seq_first_errors"
        ((ARB:((8),unit) panSem$state) with <|
           locals := FEMPTY |+ («x», ValWord (0w:8 word)); structs := []; clock := 5 |>)) of
       (res,s') => (res, FLOOKUP s'.locals «x»)``
+
+val recursive_seq_call_normal_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («answer», ValWord (0w:8 word));
+      code := FEMPTY |+ («id», ([(«x», panLang$One)],
+        panLang$Return (panLang$Var Local «x»), panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_seq_call_normal_continue"
+  ``case panSem$evaluate
+      (panLang$Seq
+        (panLang$Call (SOME (NONE, NONE)) «id» [panLang$Const (7w:8 word)])
+        (panLang$Return (panLang$Const (9w:8 word))),
+       ^recursive_seq_call_normal_state) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
+
+val recursive_seq_call_error_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («answer», ValWord (0w:8 word));
+      code := FEMPTY |+ («skip», ([], panLang$Skip, panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_seq_call_terminal_error"
+  ``case panSem$evaluate
+      (panLang$Seq
+        (panLang$Call (SOME (NONE, NONE)) «skip» [])
+        (panLang$Return (panLang$Const (9w:8 word))),
+       ^recursive_seq_call_error_state) of
+      (res,s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
 
 val _ = print_eval "if_true"
   ``case panSem$evaluate

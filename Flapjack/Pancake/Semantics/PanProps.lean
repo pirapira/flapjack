@@ -215,6 +215,78 @@ theorem isWfShapeValueHOLExact_shapeOfHOLExact {width : Nat} [NeZero width]
     Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = true :=
   isWfShapeValueHOLExact_shapeOf_val context value h
 
+/-! Exact port of HOL `panProps$every_exp` (`panPropsScript.sml:1311-1333`) and
+    `panProps$exps_of` (`panPropsScript.sml:1336-1358`) over the exact
+    MlString/width-indexed `ExpHOL width`/`ProgHOL width` carriers.
+
+    `every_exp P e` conjoins the leaf predicate `P` on `e` with the recursive
+    predicate on its immediate sub-expressions; the HOL `EVERY` folds are
+    rendered as the structural helpers `everyExpListHOL` (for `exp list`) and
+    `everyExpFieldListHOL` (for the `MAP SND` field list of `NStruct`), matching
+    the `isWfShapesExactHOL` convention.  `exps_of` returns the list of all
+    expressions occurring in a program, mirroring the HOL clauses in order. -/
+mutual
+  /-- Exact port of HOL `panProps$every_exp`. -/
+  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "every_exp_def"]
+  def everyExpHOL {width : Nat} [NeZero width]
+      (P : Flapjack.Pancake.PanLang.ExpHOL width → Bool) :
+      Flapjack.Pancake.PanLang.ExpHOL width → Bool
+    | .const w => P (.const w)
+    | .var vk v => P (.var vk v)
+    | .rstruct es => P (.rstruct es) && everyExpListHOL P es
+    | .rfield i e => P (.rfield i e) && everyExpHOL P e
+    | .nstruct nm nm_es => P (.nstruct nm nm_es) && everyExpFieldListHOL P nm_es
+    | .nfield i e => P (.nfield i e) && everyExpHOL P e
+    | .load sh e => P (.load sh e) && everyExpHOL P e
+    | .load32 e => P (.load32 e) && everyExpHOL P e
+    | .loadByte e => P (.loadByte e) && everyExpHOL P e
+    | .op bop es => P (.op bop es) && everyExpListHOL P es
+    | .panop op es => P (.panop op es) && everyExpListHOL P es
+    | .cmp c e1 e2 => P (.cmp c e1 e2) && everyExpHOL P e1 && everyExpHOL P e2
+    | .shift sh e1 e2 => P (.shift sh e1 e2) && everyExpHOL P e1 && everyExpHOL P e2
+    | .baseAddr => P .baseAddr
+    | .topAddr => P .topAddr
+    | .bytesInWord => P .bytesInWord
+
+  /- `EVERY (every_exp P) es` over an exact expression list. -/
+  def everyExpListHOL {width : Nat} [NeZero width]
+      (P : Flapjack.Pancake.PanLang.ExpHOL width → Bool) :
+      List (Flapjack.Pancake.PanLang.ExpHOL width) → Bool
+    | [] => true
+    | e :: es => everyExpHOL P e && everyExpListHOL P es
+
+  /- `EVERY (every_exp P) (MAP SND nm_es)` over a field list. -/
+  def everyExpFieldListHOL {width : Nat} [NeZero width]
+      (P : Flapjack.Pancake.PanLang.ExpHOL width → Bool) :
+      List (MlS × Flapjack.Pancake.PanLang.ExpHOL width) → Bool
+    | [] => true
+    | (_, e) :: es => everyExpHOL P e && everyExpFieldListHOL P es
+end
+
+/-- Exact port of HOL `panProps$exps_of`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "exps_of_def"]
+def expsOfHOL {width : Nat} [NeZero width] :
+    Flapjack.Pancake.PanLang.ProgHOL width → List (Flapjack.Pancake.PanLang.ExpHOL width)
+  | .raise _ e => [e]
+  | .dec _ _ e p => e :: expsOfHOL p
+  | .seq p q => expsOfHOL p ++ expsOfHOL q
+  | .ite e p q => e :: (expsOfHOL p ++ expsOfHOL q)
+  | .while e p => e :: expsOfHOL p
+  | .call none _ es => es
+  | .call (some (_, some (_, _, ep))) _ es => es ++ expsOfHOL ep
+  | .call (some (_, none)) _ es => es
+  | .decCall _ _ _ es p => es ++ expsOfHOL p
+  | .store e1 e2 => [e1, e2]
+  | .store32 e1 e2 => [e1, e2]
+  | .storeByte e1 e2 => [e1, e2]
+  | .return e => [e]
+  | .extCall _ e1 e2 e3 e4 => [e1, e2, e3, e4]
+  | .assign _ _ e => [e]
+  | .primitive _ _ es => es
+  | .shMemLoad _ _ _ e => [e]
+  | .shMemStore _ e1 e2 => [e1, e2]
+  | _ => []
+
 /-- The `MAP SND` view of a field list does not increase `sizeOf`, which
     justifies the well-founded recursion of `panIsWfShapeValueHOL` (HOL's
     `EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs)`). -/

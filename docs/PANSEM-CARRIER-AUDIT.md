@@ -17,8 +17,11 @@ map is **held** until the exact MlString carriers land (see
 `Flapjack/Pancake/PanLang/Shape.lean` `ShapeHOL`, and the MlString state
 carrier work under `flapjack-pxn.18.3.5.8`).
 
-This document is descriptive only. No tag is changed by it; the classification
-is a conservative review frontier.
+This document is descriptive only; the classification below is a conservative
+review frontier. Four `HolValue`-dependent tags (`holShapeOf`, `holValueIsWord`,
+`evalHOL`, `panSemLookupCodeHOL`) have since been **withdrawn** under
+`flapjack-0lj.2` (untagged with local caveats, manifest/type-lock updated); the
+rows below record their pre-withdrawal locations.
 
 ## Carrier-safe tags (word payload / `OpSize` only)
 
@@ -45,12 +48,12 @@ by the name mismatch.
 | Lean module:line | HOL name | offending carrier(s) | tracking |
 |---|---|---|---|
 | `Pancake/Semantics/PanSem.lean:95` | `v` | `HolValue.nStruct name : StructName`, `fields : List (FieldName × …)` | `flapjack-0lj` |
-| `Pancake/Semantics/PanSemStateEval.lean:1369` | `eval_def` | returns `HolValue`; `PanSemHolState` (structs, code, eshapes) | same hold |
+| `Pancake/Semantics/PanSemStateEval.lean:1369` | `eval_def` | returns `HolValue`; `PanSemHolState` (structs, code, eshapes) | withdrawn (`flapjack-0lj.2`) |
 | `Pancake/Semantics/PanSemStateEval.lean:361` | `mem_load_def` | `StructContextHOL`, `HolValue.nStruct` | same hold |
 | `Pancake/Semantics/PanSem.lean:36` | `shape_of_def` | returns `Shape` (`named` = `StructName`) | same hold |
-| `Pancake/Semantics/PanSemStateEval.lean:1201` | `shape_of_def` | returns `Shape` (`named` = `StructName`) | same hold |
-| `Pancake/Semantics/PanSemStateEval.lean:1211` | `isValWord_def` | `HolValue` | same hold |
-| `Pancake/Semantics/PanSem/LookupCode.lean:37` | `lookup_code_def` | `FunName`-keyed code map | `flapjack-4w9` |
+| `Pancake/Semantics/PanSemStateEval.lean:1201` | `shape_of_def` | returns `Shape` (`named` = `StructName`) | withdrawn (`flapjack-0lj.2`) |
+| `Pancake/Semantics/PanSemStateEval.lean:1211` | `isValWord_def` | `HolValue` | withdrawn (`flapjack-0lj.2`) |
+| `Pancake/Semantics/PanSem/LookupCode.lean:37` | `lookup_code_def` | `FunName`-keyed code map | withdrawn (`flapjack-0lj.2`; retarget `flapjack-4w9`) |
 | `Pancake/Semantics/PanSem.lean:24` | `empty_locals_def` | `PanSemState` (`StructContext`, `VarName`) | review |
 | `Pancake/Semantics/PanSem.lean:2421` | `evaluate_decls_def` | `PanSemState` | review |
 | `Pancake/Semantics/PanSem/TotalSteps.lean:1058` | `dec_clock_def` | `PanSemHolState` | review (clock-only body) |

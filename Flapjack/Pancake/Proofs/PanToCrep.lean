@@ -4306,17 +4306,45 @@ theorem distinctLists_eq_true_iff {left right : List Nat} :
     distinctLists left right = true ↔ ∀ x ∈ left, x ∉ right := by
   simp [distinctLists, List.all_eq_true, List.contains_eq_mem, decide_eq_false_iff_not]
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake `rewritten_context_unassigned`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1457`): extending the
-    context with the slot list `nvars` for variable `v` (whose previous slot
-    list is `ns`, with `distinct_lists nvars ns`) keeps every slot of `ns`
-    outside the assigned free variables of the compiled program. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Source-shaped but FLAPJACK-SPECIFIC statement (NOT an exact HOL port), mirroring
+    Cake `rewritten_context_unassigned`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1457-1468`):
+
+    HOL: `!p nctxt v ctxt ns nvars sh sh'.`
+      `nctxt = ctxt with <| vars := ctxt.vars |+ (v,sh,nvars);`
+      `vmax := ctxt.vmax + size_of_shape sh |> /\`
+      `FLOOKUP ctxt.vars v = SOME (sh',ns) /\ no_overlap ctxt.vars /\`
+      `ctxt_max ctxt.vmax ctxt.vars /\ no_overlap nctxt.vars /\`
+      `ctxt_max nctxt.vmax nctxt.vars /\ distinct_lists nvars ns ==>`
+      `distinct_lists ns (assigned_free_vars (compile nctxt p))`.
+
+    The Lean statement keeps the same hypothesis set and conclusion shape:
+    the context-extension equation `h_nctxt` (via `FUPDATE` and
+    `Shape.shapeSize`), the lookup `h_lookup`, `noOverlap`/`ctxtMax` for both
+    the original and rewritten context, `distinctLists nvars ns = true`, and the
+    conclusion `distinctLists ns (crepAssignedFreeVars (compileProgHOL nctxt program)) = true`.
+
+    Carrier mismatch (why the tag stays withdrawn): the statement is keyed by
+    the production identifiers `FunName`/`VarName`/`ExceptionId` = `String`
+    (embedded in a `PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+    by the production `Shape` (`named : String`), and by the production
+    `Prog α`/`compileProgHOL`, whereas HOL `pan_to_crepProofScript.sml` keys by
+    `funname`/`varname`/`eid` = `mlstring`, uses HOL `shape`, and compiles the
+    word-indexed `'a prog` with `compile`. The executable-only typeclass
+    arguments `[BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]`
+    also have no HOL counterpart. `names_as_string` cannot authorize the
+    embedded `Shape`/program carriers, and no `NameRanged` byte witness applies
+    (the conclusion is a `distinctLists` membership predicate over `Nat`, not a
+    name). The statement is recorded as `documented_mismatch` in
+    `docs/HOL-THEOREM-MAP.json` (intentionally untagged), and the exact MlString
+    carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+
+    Oracle evidence: the `rewritten_context_unassigned` statement is exercised
+    by the kernel-checked `example` in `Flapjack/Test/PanToCrepCodeRelParity.lean`
+    (lines 413-429), and the supporting `no_overlap`/`distinct_lists` predicates
+    are pinned by `scripts/hol-probes/pan_common_props_no_overlap_probe.out`
+    (rows `slot_nodup_x`, `slot_nodup_y`, `slots_disjoint`, `distinct_lists_self`,
+    `nested_zip_lookup`); there is no dedicated probe for this combined theorem. -/
 theorem rewrittenContextUnassigned [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (program : Prog α) (nctxt ctxt : PanToCrepHOLContext α) (v : VarName)

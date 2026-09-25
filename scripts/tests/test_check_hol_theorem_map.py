@@ -242,7 +242,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             "memLoadCrepSemHOL": "mem_load_def",
         }
         for lean_name, hol_name in exact_cases.items():
-            key = ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", lean_name)
+            key = ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", lean_name)
             with self.subTest(lean_name=lean_name):
                 record = manifest_by_key[key]
                 self.assertEqual(

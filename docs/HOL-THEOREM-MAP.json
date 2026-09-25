@@ -8196,7 +8196,7 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "dec_clock_def",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
     "lean_name": "decClockCrepSemHOL",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): clause-for-clause HOL dec_clock_def (crepSemScript.sml:145-148) over the finite-support CrepSemHOLState carrier: locals/globals/code are HolFiniteMapExact with HolWordLab/MlString payloads, so the whole-state quantification matches HOL finite maps (the earlier raw-function CrepHolState carrier was the reason for withdrawal). The word dimension is the canonical positive BitVec width model, the same reviewed_exact representation used by HolWordLab/CrepProgHOL and by PanSem memLoadHOLExact. Only clock is decremented. Direct HOL rows dec_clock_clock/globals/be/top in crep_dec_clock_simp_probe.out. This declaration is TEMPORARILY WITHDRAWN from an exact claim pending the fmap_as_finite_support qualifier (bead flapjack-pxn.18.3.7.1.3.1.1.2.4); the helper and its executable bridge remain valid Flapjack infrastructure."
@@ -8204,7 +8204,7 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "fix_clock_def",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
     "lean_name": "fixClockCrepSemHOL",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): clause-for-clause HOL fix_clock_def (crepSemScript.sml:150-152) over the finite-support CrepSemHOLState carrier. The result is polymorphic in the unconstrained res component and only the clock is clamped to old_s.clock when it is lower; no side conditions beyond the accepted positive BitVec width representation. Direct HOL rows fix_clock_clamps/fix_clock_keeps_lower in crep_fix_clock_probe.out. This declaration is TEMPORARILY WITHDRAWN from an exact claim pending the fmap_as_finite_support qualifier (bead flapjack-pxn.18.3.7.1.3.1.1.2.4); the helper and its executable bridge remain valid Flapjack infrastructure."
@@ -8212,7 +8212,7 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "fix_clock_IMP_LESS_EQ",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
     "lean_name": "fixClockCrepSemHOL_IMP_LESS_EQ",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): HOL fix_clock_IMP_LESS_EQ (crepSemScript.sml:155-160) stated over the finite-support CrepSemHOLState carrier: for any step pair x and any result, if fix_clock returns (res, s1) then s1.clock <= s.clock. No extra hypotheses beyond HOL; the pair is destructured as in HOL's FORALL_PROD. This declaration is TEMPORARILY WITHDRAWN from an exact claim pending the fmap_as_finite_support qualifier (bead flapjack-pxn.18.3.7.1.3.1.1.2.4); the helper and its executable bridge remain valid Flapjack infrastructure."
@@ -8220,7 +8220,7 @@
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "mem_load_def",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/HOLState.lean",
     "lean_name": "memLoadCrepSemHOL",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.3.1): clause-for-clause HOL mem_load_def (crepSemScript.sml:48-51) over the finite-support CrepSemHOLState carrier: a total word -> word_lab memory guarded by the memaddrs set (HOL ('a word) set rendered as a BitVec width -> Prop with an explicit DecidablePred, the same proof-only encoding accepted for PanSem memLoadHOLExact at panSemScript.sml:137), returning SOME of the cell in-domain and NONE otherwise. Direct HOL rows crep_mem_load_probe.out. This declaration is TEMPORARILY WITHDRAWN from an exact claim pending the fmap_as_finite_support qualifier (bead flapjack-pxn.18.3.7.1.3.1.1.2.4); the helper and its executable bridge remain valid Flapjack infrastructure."

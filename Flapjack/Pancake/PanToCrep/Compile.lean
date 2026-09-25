@@ -712,15 +712,32 @@ def panToCrepMakeFuncs : List (Decl α) → InfoMap (List (VarName × Shape) × 
 def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape) :=
   panToCrepMakeFuncs
 
-/-! HOL `make_funcs_def` (`cakeml/pancake/pan_to_crepScript.sml:366`) over the
-    the extracted function table: pair every name with its parameter list and
-    return shape, then build the finite map with `alist_to_fmap` (first
-    duplicate name wins; rendered as `FUPDATE_LIST FEMPTY` over the reversed
-    association list, since `FUPDATE_LIST` is a left fold). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the table is keyed by
--- `FunName` = `String`, while HOL `pan_to_crepScript.sml` keys `make_funcs` by
--- `funname` = `mlstring` (tracked by `flapjack-pxn.18.3.5.8`, parent
--- `flapjack-pxn.18.3.5.7.2`).
+/-! HOL `make_funcs_def` (`cakeml/pancake/pan_to_crepScript.sml:366-373`) over
+    the extracted function table:
+    `make_funcs prog = alist_to_fmap (MAP3 (λx y z. (x,y,z)) (MAP FST prog)
+    (MAP (FST o SND) prog) (MAP (SND o SND o SND) prog))`, keyed by
+    `funname = mlstring` and valued by `(varname # shape) list # shape`;
+    `alist_to_fmap` is a right fold of `FUPDATE`, so the first duplicate name
+    wins. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): `makeFuncsHOL` keys the table by
+-- `FunName` = `String` and stores values in the production `VarName` = `String`
+-- and `Shape` (`named : StructName` = `String`) carriers, not HOL's
+-- `funname`/`varname` = `mlstring` and `shape` (`named : mlstring`); its input
+-- also mentions the production `Prog α` body carrier even though `make_funcs`
+-- ignores bodies; and the result is a `FiniteMap` function rather than HOL's
+-- `fmap` (rendered by `FUPDATE_LIST FEMPTY` over the reversed association list,
+-- a left fold).  The `names_as_string` qualifier cannot authorize the `Shape`
+-- and `Prog` carriers, and no `NameRanged` byte witness applies because the
+-- output is a finite map of function signatures, not a name.  (The theorem
+-- map's `make_funcs_def` -> `crepToLoopMakeFuncsHOL` entry is the exact port of
+-- the *different* `crep_to_loopScript.sml` declaration, not this one.)  Direct
+-- HOL-EVAL rows `make_funcs_empty_params`/`make_funcs_param_entry`/
+-- `make_funcs_absent`/`make_funcs_duplicate_first_wins` are recorded in
+-- `scripts/hol-probes/crep_make_funcs_probe.out` and exercised by
+-- `makeFuncsGuard` (`Flapjack/Test/PanToCrepCodeRelParity.lean`) and
+-- `makeFuncsOracle` (`Flapjack/Test/CompileToCrepeParity.lean`).  The faithful
+-- exact-carrier port is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`); this analogue remains deliberately untagged.
 def makeFuncsHOL
     (functions : List (FunName × List (VarName × Shape) × Prog α × Shape)) :
     FiniteMap FunName (List (VarName × Shape) × Shape) :=

@@ -85,6 +85,13 @@ the exact HOL `compile` port tracked by bead `flapjack-pxn.18.3.1.4`.
 `pan_to_crepProof$globals_lookup_def` for a present singleton word and a
 missing global; the matching Lean guards live in
 `Flapjack.Test.PanToCrepGlobalsLookupParity`.
+`crep_store_eval_probe.out` records direct HOL `evaluate_def` Store cases from
+`cakeml/pancake/semantics/crepSemScript.sml:267`: successful in-domain write,
+address-expression failure, value-expression failure, and address-domain
+failure. The matching restricted total state evaluator and Lean guards are in
+`Flapjack.Pancake.Semantics.CrepSem.TotalEval` and
+`Flapjack.Test.CrepSemTotalStoreParity`; the restricted evaluator has no
+whole-definition `@[hol]` tag.
 `crep_arith_dest_const_probe.out` records direct HOL EVAL of
 `crep_arith$dest_const_def` at
 `cakeml/pancake/crep_arithScript.sml:10-12` for a constant, variable, load,

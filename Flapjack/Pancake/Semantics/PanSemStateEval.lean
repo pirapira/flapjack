@@ -267,6 +267,41 @@ def panWriteBytearrayHOL {width : Nat} [NeZero width]
       | none => memory
 
 
+/-- Exact port of HOL `panSem$mem_store_32`
+    (`cakeml/pancake/semantics/panSemScript.sml:327-346`).  When `aligned 2`
+    holds, the four bytes of the `word32` argument are written at `w`, `w+1`,
+    `w+2`, `w+3` in the requested byte order (each via `set_byte`) and the
+    aligned cell is replaced; unaligned or out-of-domain addresses yield `NONE`.
+    As in the other memory ports, HOL's total `word_lab` memory is a total map
+    into `HolWordLab` and the `word set` domain a `Prop` predicate.  `aligned 2`
+    is written as `w2n w MOD 4 = 0` to avoid BitVec's overloaded shift notation
+    truncating literal `2` for one-bit words. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_store_32_def"]
+def panMemStore32HOL {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) (address : RiscV.Word width) (value : RiscV.Word 32) :
+    Option (RiscV.Word width → HolWordLab width) :=
+  if address.toNat % 4 = 0 then
+    let aligned := panByteAlignHOL (width := width) address
+    match memory aligned with
+    | .word cell =>
+        if domain aligned then
+          let getByte := fun (index : Nat) =>
+            panGetByteHOL (width := 32) (BitVec.ofNat 32 index) value bigEndian
+          let setByte := fun (index : Nat) (byte : UInt8)
+              (current : RiscV.Word width) =>
+            panSetByteHOL (address + BitVec.ofNat width index)
+              (BitVec.ofNat width byte.toNat) current bigEndian
+          let cell0 := setByte 0 (getByte 0) cell
+          let cell1 := setByte 1 (getByte 1) cell0
+          let cell2 := setByte 2 (getByte 2) cell1
+          let cell3 := setByte 3 (getByte 3) cell2
+          some (fun current => if current = aligned then .word cell3 else memory current)
+        else none
+  else none
+
+
 /-- HOL `size_of_sh_with_ctxt` (`cakeml/pancake/panLangScript.sml:164-171`), the
     context-sensitive shape size used by `mem_load` to advance the address. -/
 def sizeOfShWithCtxt (context : StructContextHOL) : Shape → Nat

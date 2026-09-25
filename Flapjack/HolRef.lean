@@ -54,10 +54,12 @@ structure HolRef where
       the witness premises. The reference checker validates this shape; it does
       not independently prove source-to-Lean semantic correspondence. -/
   listAsArray : Array String := #[]
-  /-- Same-module Lean fields using `String` for HOL `mlstring` names. Each
-      field must have a checked `holMlStringWitness_<field>` whose result
-      proves the field's byte-range/round-trip condition; the reference checker
-      verifies this witness shape but does not prove semantic correspondence. -/
+  /-- Same-module Lean fields using `String` for HOL `mlstring` names. Fields
+      used only for equality and map keys need source review. A tagged
+      declaration that exposes a field at a byte-observable FFI or generated-
+      name boundary must also provide a checked `holMlStringWitness_<field>`
+      for its byte-range/round-trip condition; the checker verifies the
+      witness shape, not the HOL-to-Lean semantic correspondence. -/
   namesAsString : Array String := #[]
   deriving Inhabited, Repr, BEq
 

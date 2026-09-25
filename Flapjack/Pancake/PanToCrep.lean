@@ -42,25 +42,18 @@ def panToCrepMkCtxtHOL (vars : FiniteMap VarName (Shape × List Nat))
     (vmax : Nat) (eids : FiniteMap ExceptionId α) : PanToCrepHOLContext α :=
   { vars, funcs, eids, vmax }
 
-/-- Production helper used by expression compilation. Its carrier is generic
-    over `CrepExp α`, whereas HOL `cexp_heads_def` is stated over the
-    word-indexed `crepLang$exp`. The exact width-indexed tag is on
-    `cexpHeadsW` below. -/
-def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
+/-- HOL infers `cexp_heads_def` as `α list list -> α list option` because its
+    body only inspects list structure; no `crepLang$exp` constructors constrain
+    the element type. The production compiler uses this polymorphic definition
+    at `β := CrepExp α`. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
+def cexpHeads {β : Type u} : List (List β) → Option (List β)
   | [] => some []
   | expressions :: rest =>
       match expressions, cexpHeads rest with
       | [], _ => none
       | _, none => none
       | expression :: _, some heads => some (expression :: heads)
-
-/-- Exact positive-width specialization of HOL `cexp_heads_def` over
-    `CrepExp (BitVec width)`. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "cexp_heads_def"]
-def cexpHeadsW {width : Nat} [NeZero width]
-    (expressions : List (List (CrepExp (BitVec width)))) :
-    Option (List (CrepExp (BitVec width))) :=
-  cexpHeads expressions
 
 /-- Flapjack-specific analogue of HOL `comp_field_def`. This implementation
     uses production `Shape`, whose named fields are Lean `String`, and a

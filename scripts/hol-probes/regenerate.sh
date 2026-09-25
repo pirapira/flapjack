@@ -882,7 +882,7 @@ run_probe crep_var_cexp_probeScript.sml crep_var_cexp_probe.out \
 run_probe crep_exps_probeScript.sml crep_exps_probe.out \
   leaves loads ops "$cake_dir/pancake/crepLangScript.sml"
 run_probe cexp_heads_probeScript.sml cexp_heads_probe.out \
-  empty heads empty_head empty_tail "$cake_dir/pancake/pan_to_crepScript.sml"
+  empty heads empty_head empty_tail inferred_type "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe comp_field_probeScript.sml comp_field_probe.out \
   first second fallback "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \

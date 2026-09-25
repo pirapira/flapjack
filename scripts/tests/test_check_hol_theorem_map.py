@@ -1086,6 +1086,20 @@ class ValidateInventoryTest(unittest.TestCase):
         self.assertNotIn(eq_filter, MAP["tagged_declarations"]())
         self.assertNotIn(eq_filter, by_key)
 
+    def test_panprops_is_wf_shape_of_v_exact_port(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        key = ("Flapjack/Pancake/Semantics/PanProps.lean",
+               "isWfShapeValueHOLExact_shapeOfHOLExact")
+        record = next(
+            (r for r in manifest
+             if (r["lean_path"], r["lean_name"]) == key), None)
+        self.assertIsNotNone(record)
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml", "is_wf_shape_of_v"))
+        self.assertEqual(record["statement_status"], "reviewed_exact")
+        self.assertIn(key, MAP["tagged_declarations"]())
+
 
 if __name__ == "__main__":
     unittest.main()

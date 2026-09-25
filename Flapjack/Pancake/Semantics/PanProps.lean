@@ -56,7 +56,22 @@ mutual
       that the production representation is the same HOL interface. Lean
       `StructInfo` also has an additional `shapedFields` cache absent from HOL.
       The separate Prop-valued convenience predicate in CompileCorrect is
-      further from the HOL Bool statement. -/
+      further from the HOL Bool statement.
+
+      Executable-path disposition (bead `flapjack-4ac.4.4.1`): this value-level
+      predicate has no call site on the executable compiler path. The RISC-V
+      entrypoints (`compileFlapjackRiscVSourceRuntimeImageChecked` and siblings
+      in `Flapjack/RiscV/PipelineDiagnostics.lean`) run `staticCheck`
+      (`Flapjack/Pancake/PanStatic.lean:1794`), which checks declared shapes
+      (`isWfShape`/`checkShape`/`shapedBased...`), not runtime value validity.
+      `panIsWfShapeValueBool` occurs only as a proof-side precondition
+      (`panStructEveryValueShapeWfBool`,
+      `Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean:614`) over
+      locals/globals, and the kernel-checked `panIsWfShapeValueHOL_toHOL`
+      already connects it to the HOL-shaped `panIsWfShapeValueHOL`. The
+      remaining gap to the exact `isWfShapeValueHOLExact` is the carrier
+      (`String`/`StructContextHOL` vs `MlStringHOL`/`StructContextExact`),
+      tracked by bead `flapjack-pxn.18.3.5.8`. -/
   def panIsWfShapeValueBool (structs : StructContext) : PanValue α → Bool
     | .word _ => true
     | .rStruct values => panIsWfShapeValuesBool structs values
@@ -154,6 +169,51 @@ mutual
   termination_by values => sizeOf values
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
+
+/-- Untagged support: the exact value-level well-formedness predicate implies
+    that the exact `shape_of` image is well-formed (`is_wf_shape_of_v`
+    `panPropsScript.sml:38`). -/
+private theorem isWfShapeValueHOLExact_shapeOf_val {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (value : ValueHOL width) :
+    isWfShapeValueHOLExact context value = true →
+      Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = true := by
+  induction value using isWfShapeValueHOLExact.induct
+    (motive2 := fun values =>
+      isWfShapeValuesHOLExact context values = true →
+        Flapjack.Pancake.PanLang.isWfShapesExactHOL context (values.map shapeOfHOLExact) = true) with
+  | case1 value =>
+      simp [shapeOfHOLExact]
+  | case2 values ih =>
+      intro h
+      simp only [isWfShapeValueHOLExact.eq_2] at h
+      simpa [shapeOfHOLExact, Flapjack.Pancake.PanLang.isWfShapeExactHOL] using ih h
+  | case3 name fields _ =>
+      simp only [isWfShapeValueHOLExact.eq_3, Bool.and_eq_true]
+      intro h
+      simpa [shapeOfHOLExact, Flapjack.Pancake.PanLang.isWfShapeExactHOL] using h.1
+  | case4 =>
+      rfl
+  | case5 value values ihValue ihValues =>
+      rename_i h
+      have hp : isWfShapeValueHOLExact context value = true ∧
+          isWfShapeValuesHOLExact context values = true := by
+        simpa [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true] using h
+      simp only [List.map_cons, Flapjack.Pancake.PanLang.isWfShapesExactHOL.eq_2,
+        Bool.and_eq_true]
+      exact ⟨ihValue hp.1, ihValues hp.2⟩
+
+/-- Exact port of HOL `panProps$is_wf_shape_of_v`
+    (`panPropsScript.sml:38`): `!sctxt v. is_wf_shape_v sctxt v ==>
+    is_wf_shape sctxt (shape_of v)`, over the exact `ValueHOL width` value
+    carrier and MlString-keyed `StructContextExact` context.  The Bool-valued
+    predicates are rendered as `= true`, matching the accepted
+    `flattenHOL_length_eq_sizeOfShapeHOL` style; no extra hypotheses. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_of_v"]
+theorem isWfShapeValueHOLExact_shapeOfHOLExact {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (value : ValueHOL width)
+    (h : isWfShapeValueHOLExact context value = true) :
+    Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = true :=
+  isWfShapeValueHOLExact_shapeOf_val context value h
 
 /-- The `MAP SND` view of a field list does not increase `sizeOf`, which
     justifies the well-founded recursion of `panIsWfShapeValueHOL` (HOL's

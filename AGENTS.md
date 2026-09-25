@@ -153,7 +153,14 @@ claimed HOL port.
 
 **Qualify only named list-to-array state fields.** An unqualified tag records a
 statement reviewed as exact and has manifest status `reviewed_exact`. The
-`(list_as_array := [field, ...])` qualifier is only for specific HOL list
+standard translation of a HOL data structure must be explicit in the `@[hol]`
+tag of every declaration that relies on it, using a specific supported
+qualifier. Do not treat acceptance of a translation for one declaration as a
+blanket exception for other declarations or leave a representation difference
+implicit under an unqualified tag. Add a new qualifier and its checker/review
+rules before using a further standard translation; a qualifier records only
+that translation, not unrelated differences in the statement or behavior.
+The `(list_as_array := [field, ...])` qualifier is only for specific HOL list
 fields represented by Lean arrays; it does not allow any other difference in
 the theorem statement or semantics. Review the fields against the surrounding
 HOL state relation, list lengths, index bounds, and update behavior. The
@@ -197,8 +204,12 @@ represented by the reviewed canonical Lean translation `HolFiniteMapExact`
 (a `lookup` function plus a `finiteSupport` proposition). Every named field must
 be declared by ONE owning carrier structure in the same module, whose field
 types use `HolFiniteMapExact`; a raw function-backed `α → Option β` map is
-ineligible, and fields split across several structures are rejected. The module
-must contain the checked canonical witness `holFmapAsFiniteSupportWitness`,
+ineligible, and fields split across several structures are rejected. When a
+module declares several structures with the same field names (for example a
+broad state and its finite-support counterpart), the tagged declaration's own
+carrier disambiguates: the owner must be named in that declaration's signature.
+The module must contain the checked canonical witness
+`holFmapAsFiniteSupportWitness`,
 whose statement names that owning structure and states a real `toX`/`ofX`
 roundtrip between it and its broad counterpart (a bare `State -> Broad -> State`
 arrow, or an unrelated counterpart mention, is rejected; the broad counterpart

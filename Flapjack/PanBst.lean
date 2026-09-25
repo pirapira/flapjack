@@ -53,6 +53,31 @@ theorem panSemCodeLookup_mem_support [BEq String] [LawfulBEq String]
         simp only [List.map_cons, List.mem_cons]
         exact Or.inr hmem
 
+/-- A successful state-code lookup is backed by the corresponding stored
+    association. This connects the observable first-match lookup to the finite
+    support used for recursive fuel bounds. -/
+theorem panSemCodeLookup_mem_binding [BEq String] [LawfulBEq String]
+    (code : PanSemCodeMap α) (name : FunName)
+    (value : List (VarName × Shape) × Prog α × Shape)
+    (hlookup : panSemCodeLookup code name = some value) :
+    (name, value) ∈ code := by
+  induction code with
+  | nil => simp [panSemCodeLookup, lookupInfo] at hlookup
+  | cons entry entries ih =>
+      rcases entry with ⟨candidate, stored⟩
+      by_cases hname : candidate == name
+      · have hkey : candidate = name := beq_iff_eq.mp hname
+        have hstored : stored = value := by
+          simpa [panSemCodeLookup, lookupInfo, hname] using hlookup
+        subst candidate
+        subst stored
+        simp
+      · have htail : panSemCodeLookup entries name = some value := by
+          simpa [panSemCodeLookup, lookupInfo, hname] using hlookup
+        have hmem := ih htail
+        simp only [List.mem_cons]
+        exact Or.inr hmem
+
 /-! `panSemCodeUpdate` is the finite-support counterpart of Cake `FUPDATE`:
     it removes old occurrences and stores the updated binding at the head. -/
 def panSemCodeUpdate [BEq String] (code : PanSemCodeMap α)

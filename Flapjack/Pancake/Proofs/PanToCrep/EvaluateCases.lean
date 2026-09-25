@@ -3378,6 +3378,24 @@ private theorem compileExpListHOL_heads_eq_compileArgs_of_singleton
               simp [compileArgsHOL, hcompiledPair]
           | cons _ _ => simp [hcompiled] at hheadLength
 
+/-! Source review of HOL `eval_map_comp_exp_flat_eq`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1055`). Its statement
+    takes `MAP (eval s) expressions = MAP SOME values`, HOL `state_rel`,
+    `code_rel`, `locals_rel`, and `EVERY localised_exp expressions`, then proves
+    target evaluation of all flattened `compile_exp` outputs. The theorem below
+    is not that port: it quantifies production `PanSemState` and
+    `CrepRuntimeState`, uses Flapjack's `stateRel`/`codeRel`/`localsRel`, and
+    additionally assumes a per-expression `heach` relation containing target
+    evaluation plus shape/length/well-formedness facts. Those stronger premises
+    and different state/evaluator carriers change the theorem statement; the
+    helper must not receive the HOL tag.
+
+    `compileArgsHOL` is a useful flattening adapter, but it does not close this
+    gap. The finite-support PanSem evaluator is now tagged; a faithful port
+    still needs exact Pan-to-Crep state/context/local relations, tracked by
+    `flapjack-pxn.18.3.5.8.8`. Keep bead `flapjack-4ac.5.22` open until the
+    exact HOL premises and conclusion are stated and proved. -/
+
 /-! Adapter from the complete per-expression `compile_exp_val_rel` shape to
 the `compile_args` evaluator boundary. The target evaluation premise consumed
 by the list induction is projected from the expression IH itself; callers do

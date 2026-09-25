@@ -1,4 +1,6 @@
 import Flapjack.PanNbOp
+import Flapjack.PanValueFfiSemantics
+import Flapjack.Pancake.Semantics.PanSemStateEval
 
 /-!
 # Parity checks for `panSem$nb_op_def`
@@ -21,6 +23,19 @@ def op32 : Bool := panNbOp .op32 == 4
 #guard op16
 #guard opW
 #guard op32
+
+/-- Kernel-checked bridge: the Flapjack-specific source-shaped `panNbOp` agrees
+pointwise with the exact tagged HOL port `nbOpHOL` (`nb_op_def`). -/
+theorem panNbOp_eq_nbOpHOL : panNbOp = nbOpHOL := by
+  funext size
+  cases size <;> rfl
+
+/-- Kernel-checked bridge: the production FFI byte-width mapping
+`panValueFfiWidth` agrees pointwise with the exact tagged HOL port `nbOpHOL`
+(`nb_op_def`). -/
+theorem panValueFfiWidth_eq_nbOpHOL : panValueFfiWidth = nbOpHOL := by
+  funext size
+  cases size <;> rfl
 
 def runChecks : IO Bool := do
   if op8 then IO.println "PASS Pan nb_op Op8"

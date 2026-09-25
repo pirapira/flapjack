@@ -75,6 +75,41 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+private def exactFieldValues : List (ValueHOL 8) :=
+  [.val (.word 1), .rStruct [.val (.word 2), .val (.word 3)]]
+
+private def exactFieldShapes : List Flapjack.Pancake.PanLang.ShapeHOL :=
+  [.one, .comb [.one, .one]]
+
+private def exactFieldExpressions : List (CrepExpHOL 8) :=
+  [.const 1, .const 2, .const 3]
+
+/-- Exact-carrier `mem_comp_field` regression using the `first` row of the
+    direct HOL `comp_field` EVAL oracle. -/
+example :
+    (CrepExpHOL.const (1 : BitVec 8)) ∈ exactFieldExpressions := by
+  apply memCompFieldHOLExact exactFieldShapes 0 exactFieldExpressions
+    .one (.const 1) [.const 1] exactFieldValues
+  · decide
+  · simp [exactFieldExpressions, exactFieldValues, shapeOfHOLExact,
+      Flapjack.Pancake.PanLang.sizeOfShapeHOL]
+  · rfl
+  · simp [exactFieldShapes, exactFieldValues, shapeOfHOLExact]
+  · simp
+
+/-- The exact theorem also carries membership from the second selected field,
+    matching the `second` direct HOL oracle row. -/
+example :
+    (CrepExpHOL.const (3 : BitVec 8)) ∈ exactFieldExpressions := by
+  apply memCompFieldHOLExact exactFieldShapes 1 exactFieldExpressions
+    (.comb [.one, .one]) (.const 3) [.const 2, .const 3] exactFieldValues
+  · decide
+  · simp [exactFieldExpressions, exactFieldValues, shapeOfHOLExact,
+      Flapjack.Pancake.PanLang.sizeOfShapeHOL]
+  · rfl
+  · simp [exactFieldShapes, exactFieldValues, shapeOfHOLExact]
+  · simp
+
 example :
     (compileField (α := BitVec 8) 1
         [Flapjack.Shape.one, Flapjack.Shape.comb [Flapjack.Shape.one, Flapjack.Shape.one]]

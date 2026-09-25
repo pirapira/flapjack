@@ -71,6 +71,9 @@ while_timeout=(SOME TimeOut,NONE)
 while_break=(NONE,4,SOME (ValWord 1w))
 while_continue_then_zero=(NONE,4,SOME (ValWord 0w))
 while_error_condition=SOME Error
+while_skip_timeout=(SOME TimeOut,0,NONE)
+while_continue_timeout=(SOME TimeOut,0,NONE)
+while_return_propagates=(SOME (Return (ValWord 9w)),4,NONE)
 dec_clock_step=<|clock := 4|>
 fix_clock_clamps=(NONE,2)
 fix_clock_keeps_new=(NONE,4)

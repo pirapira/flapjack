@@ -8,9 +8,9 @@ import Flapjack.Pancake.Semantics.PanSem.DecCallExact
 import Flapjack.Pancake.Semantics.PanSem.ClockExact
 
 /-!
-# Exact-state dispatcher for reviewed nonrecursive PanSem clauses
+# Exact-state PanSem dispatcher fragments
 
-This dispatcher assembles the reviewed clause definitions over the exact
+The nonrecursive dispatcher assembles the reviewed clause definitions over the exact
 `PanSemStateExact` / `ProgHOL` / `ExpHOL` carriers. It handles the
 nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 `Primitive`, the three stores, `ShMemLoad`, `ShMemStore`, `Break`, `Continue`,
@@ -18,8 +18,9 @@ nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 
 The outer `Option` means that a constructor has no assembled clause in the
 nonrecursive dispatcher; it is distinct from the inner HOL result option. The
-recursive evaluator below assembles `Dec`, `Seq`, `If`, `Call`, and `DecCall`.
-`While` and other unsupported clauses remain explicit gaps. This file does not
+recursive evaluator below assembles `Dec`, `Seq`, `If`, `While`, `Call`, and
+`DecCall`. `Assign`, `Primitive`, stores, `ExtCall`, and ShMem remain explicit gaps.
+This file does not
 claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
 -/
 
@@ -101,13 +102,14 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
       rw [hshared]
       exact context.shMemaddrsDecidable address }
 
-/-- Exact recursive Dec/Seq/If/Call/DecCall evaluator over the state-owned HOL code map.
+/-- Exact recursive Dec/Seq/If/While/Call/DecCall evaluator over the state-owned HOL code map.
     Its outer `Option` marks constructors not yet assembled in this fragment;
     it is not a HOL result. Seq applies HOL `fix_clock` to its first result,
     recurs on the second program only for HOL `NONE`, and propagates terminal
-    results. `If` selects and recursively evaluates one branch. `Dec` installs
-    its binding for the body and restores the prior local afterwards. `Assign`,
-    `Primitive`, stores, `While`, `ExtCall`, and ShMem leaves remain explicit
+    results. `If` selects and recursively evaluates one branch. `While` decrements
+    the clock before its body and recurses only on normal or Continue outcomes.
+    `Dec` installs its binding for the body and restores the prior local afterwards.
+    `Assign`, `Primitive`, stores, `ExtCall`, and ShMem leaves remain explicit
     gaps, so this definition does not claim or tag the full `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
     ProgHOL width → PanSemExactEvalContext width σ →
@@ -149,7 +151,29 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
               else
                 evalPanSemRecursiveCallContextHOLExact elseBranch context
           | _ => some (some .error, context)
-      | .while _ _ => none
+      | .while condition body =>
+          match evalHOLExact state condition with
+          | some (.val (.word word)) =>
+              if word ≠ 0 then
+                if state.clock = 0 then
+                  some (some .timeOut,
+                    context.withState (emptyLocalsHOLExact state) rfl rfl)
+                else
+                  let entry := decClockHOLExact state
+                  let entryContext := context.withState entry rfl rfl
+                  match evalPanSemRecursiveCallContextHOLExact body entryContext with
+                  | none => none
+                  | some (bodyResult, bodyContext) =>
+                      let fixed := fixClockHOLExact entry (bodyResult, bodyContext.state)
+                      let fixedContext := bodyContext.withState fixed.2 rfl rfl
+                      match bodyResult with
+                      | some .continue | none =>
+                          evalPanSemRecursiveCallContextHOLExact
+                            (.while condition body) fixedContext
+                      | some .break => some (none, fixedContext)
+                      | _ => some (bodyResult, fixedContext)
+              else some (none, context)
+          | _ => some (some .error, context)
       | .call info function arguments =>
           match evalListHOLExact state arguments with
           | none => some (some .error, context)
@@ -333,6 +357,14 @@ decreasing_by
     apply Prod.Lex.right
     simp_wf
     omega
+  · simp only [PanSemExactEvalContext.withState]
+    apply Prod.Lex.left
+    exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)
+  · simp only [PanSemExactEvalContext.withState]
+    apply Prod.Lex.left
+    exact Nat.lt_of_le_of_lt
+      (fixClockHOLExact_clock_le entry (bodyResult, bodyContext.state))
+      (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
   · simp only [PanSemExactEvalContext.withState]
     apply Prod.Lex.left
     exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)

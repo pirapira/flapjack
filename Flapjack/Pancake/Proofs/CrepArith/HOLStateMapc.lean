@@ -1381,6 +1381,42 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeWordLabCore
         (evalCrepRuntimeExpWordLab_CrepSemHOLFiniteStateSource
           state expression).symm
 
+/-- Exact-syntax corollary of the all-width direct `word_lab` support theorem.
+It fixes the code-entry carrier to HOL's `List Nat × CrepProgHOL` and keeps
+the input in `CrepExpHOL`; the explicit finite-index word transport and
+Flapjack evaluator helper still differ from native HOL `crepSem$eval`, so
+this result remains untagged. -/
+theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeHOLExpWordLabCore
+    {ι σ : Type} [dimension : HolFiniteDimension ι]
+    [NeZero dimension.width]
+    (update : MlString × (List Nat × CrepProgHOL dimension.width) →
+      List Nat × CrepProgHOL dimension.width)
+    (state : CrepSemHOLFiniteState ι
+      (List Nat × CrepProgHOL dimension.width) σ)
+    (expression : CrepExpHOL dimension.width)
+    (_result : PanWordLab (ι → Bool))
+    (h : evalCrepRuntimeExpWordLab
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      (mapCrepExpWord (bitVecToHolWord dimension)
+        (crepExpOfHOL expression)) ≠ none) :
+    evalCrepRuntimeExpWordLab
+      ((state.mapc update).toSourceEvaluatorState.toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n))
+        (mapCrepExpWord (bitVecToHolWord dimension)
+          (crepExpOfHOL expression))) =
+    evalCrepRuntimeExpWordLab
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      (mapCrepExpWord (bitVecToHolWord dimension)
+        (crepExpOfHOL expression)) := by
+  exact crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeWordLabCore
+    update state
+      (mapCrepExpWord (bitVecToHolWord dimension)
+        (crepExpOfHOL expression))
+      (PanWordLab.word (fun _ => false)) h
+
 /-- All-width production-runtime support for HOL `eval_mul_const`. The
 successful premise and complete `Option word_lab` conclusion match the source
 theorem's evaluation shape. Locals/globals use finite maps, while the code

@@ -659,6 +659,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeHOLExpWordLabCore",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Exact CrepExpHOL syntax and List Nat × CrepProgHOL code-entry carrier with the all-width complete Option word_lab result shape. It still maps through an explicit HolFiniteDimension and Flapjack's untagged evaluator helper rather than native HOL crepSem eval_def; no HOL tag is claimed."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepSimpExpCorrect1CrepSemHOLStateSource",
     "statement_status": "documented_mismatch",
     "reviewer": "HOL expression syntax and mapc update over a finite-width state carrier; evaluation still passes through an explicit source projection, and the successful premise/result are not native crepSem eval_def. The selected HOL finite_index and recursive evaluator correspondence remain open; this declaration stays untagged."

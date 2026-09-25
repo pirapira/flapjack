@@ -382,8 +382,27 @@ theorem flookupResVarQuant [BEq κ] [LawfulBEq κ]
 
 end
 
-/-- HOL `no_overlap_wrap_rt_some_all_distinct`: a successful wrapped return
-    lookup retains the duplicate-free slot list supplied by `no_overlap`. -/
+/-- Flapjack analogue of HOL `no_overlap_wrap_rt_some_all_distinct`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2461-2468`), which states
+    `no_overlap fm ∧ wrap_rt (FLOOKUP fm r) = SOME (vsh, ns) ⇒ ALL_DISTINCT ns`.
+    The statement shape is preserved (`noOverlap` for `no_overlap`, `wrapRt` for
+    `wrap_rt`, `FLOOKUP` for `FLOOKUP`, `Nodup` for `ALL_DISTINCT`, same
+    hypothesis/conclusion structure), but this declaration is deliberately
+    untagged for substantive carrier differences: `fm` is keyed by
+    `FunName`/`VarName` = `String` and stores the production `Shape` whose
+    `Named` constructor carries a `String`, whereas HOL keys by
+    `varname` = `mlstring` and stores `shape` whose `Named` carries an
+    `mlstring`. The `names_as_string` qualifier cannot authorize the embedded
+    `Shape` carrier, and no same-module `NameRanged` byte witness applies because
+    the conclusion is `slots.Nodup`, a duplicate-freeness fact about a `Nat` list
+    rather than a name. `docs/HOL-THEOREM-MAP.json` classifies this hol_name as
+    `documented_mismatch`; the faithful exact-MlString carrier is tracked by
+    `flapjack-pxn.18.3.5.8`. Oracle evidence for the two conjuncts is indirect:
+    `scripts/hol-probes/pan_common_props_no_overlap_probe.out` pins
+    `no_overlap` (rows `slot_nodup_x`, `slot_nodup_y`, `slots_disjoint`) and
+    `scripts/hol-probes/wrap_rt_probe.out` pins `wrap_rt` (rows `none`,
+    `empty_one`, `one_word`, `comb_empty`, `named`); there is no dedicated probe
+    for this combined theorem. -/
 theorem noOverlapWrapRtNodup
     (fm : FiniteMap String (Shape × List Nat)) (name : String)
     (shape : Shape) (slots : List Nat)

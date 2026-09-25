@@ -112,7 +112,8 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
     the clock before its body and recurses only on normal or Continue outcomes.
     `Dec` installs its binding for the body and restores the prior local afterwards.
     `Assign` and `Primitive` use reviewed nonrecursive clauses and preserve
-    both memory predicates. Stores, `ExtCall`, and ShMem leaves remain explicit
+    both memory predicates. Store clauses are assembled below with the same
+    preservation proof. `ExtCall` and ShMem leaves remain explicit
     gaps, so this definition does not claim or tag the full `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
     ProgHOL width → PanSemExactEvalContext width σ →
@@ -338,6 +339,60 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
                         setVarHOLExact]
                     · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid]
           some (output.1, context.withState output.2 hmem hshared)
+      | .store address value =>
+          let output := storeStepHOLExact state address value
+            (fun _ expression => evalHOLExact state expression)
+          have hmem : output.2.memaddrs = state.memaddrs := by
+            simp only [output, storeStepHOLExact]
+            split
+            · split
+              · split <;> rfl
+              · rfl
+            · rfl
+          have hshared : output.2.shMemaddrs = state.shMemaddrs := by
+            simp only [output, storeStepHOLExact]
+            split
+            · split
+              · split <;> rfl
+              · rfl
+            · rfl
+          some (output.1, context.withState output.2 hmem hshared)
+      | .store32 address value =>
+          let output := store32StepHOLExact state address value
+            (fun _ expression => evalHOLExact state expression)
+          have hmem : output.2.memaddrs = state.memaddrs := by
+            simp only [output, store32StepHOLExact]
+            split
+            · split
+              · split <;> rfl
+              · rfl
+            · rfl
+          have hshared : output.2.shMemaddrs = state.shMemaddrs := by
+            simp only [output, store32StepHOLExact]
+            split
+            · split
+              · split <;> rfl
+              · rfl
+            · rfl
+          some (output.1, context.withState output.2 hmem hshared)
+      | .storeByte address value =>
+          let output := storeByteStepHOLExact state address value
+            (fun _ expression => evalHOLExact state expression)
+          have hmem : output.2.memaddrs = state.memaddrs := by
+            simp only [output, storeByteStepHOLExact]
+            split
+            · split
+              · split <;> rfl
+              · rfl
+            · rfl
+          have hshared : output.2.shMemaddrs = state.shMemaddrs := by
+            simp only [output, storeByteStepHOLExact]
+            split
+            · split
+              · split <;> rfl
+              · rfl
+            · rfl
+          some (output.1, context.withState output.2 hmem hshared)
       | other =>
           match other with
           | .skip => some (none, context)
@@ -373,8 +428,8 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
               else
                 some (none, context.withState (decClockHOLExact state) rfl rfl)
           | .annot _ _ => some (none, context)
-          | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ | .store32 _ _ |
-            .storeByte _ _ | .seq _ _ | .ite _ _ _ |
+          | .dec _ _ _ _ | .assign _ _ _ | .primitive _ _ _ | .store _ _ |
+            .store32 _ _ | .storeByte _ _ | .seq _ _ | .ite _ _ _ |
             .while _ _ | .call _ _ _ | .decCall _ _ _ _ _ | .extCall _ _ _ _ _ |
             .shMemLoad _ _ _ _ | .shMemStore _ _ _ => none
 termination_by _program context => (context.state.clock, sizeOf _program)

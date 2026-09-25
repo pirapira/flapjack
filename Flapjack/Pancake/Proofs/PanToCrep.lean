@@ -672,11 +672,22 @@ theorem panToCrepGetEidsFromDeclsHOL_lookup_mem
     value conversion as in `get_eids_from_decls_def`; the HOL-vs-Lean
     equivalence is reviewed by comparing definitions (per SOUNDNESS), not
     proved by this theorem. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- FLAPJACK-SPECIFIC (not an exact HOL port): source-shaped port of HOL
+-- `get_eids_imp_excp_rel` (`pan_to_crepProofScript.sml:4656-4667`). The premise
+-- `panLang$size_of_eids pc < dimword (:'a)` is mirrored by `sizeOfEids pc < 2 ^ width`
+-- (with an executable `[NeZero width]`), and `FDOM seids = FDOM (get_eids_from_decls pc)`
+-- / conclusion `excp_rel ...` by `FDOM ... = FDOM (panToCrepGetEidsFromDeclsHOL pc)` /
+-- `excpRel ...`. The carriers differ: HOL quantifies a positive-width `'a decl list` whose
+-- `get_eids_from_decls` returns an `(mlstring, 'a word) fmap`, while this statement uses the
+-- production `Decl (BitVec width)` with `ExceptionId`/`VarName` = `String` and production
+-- `Shape`, and `panToCrepGetEidsFromDeclsHOL : FiniteMap ExceptionId (BitVec width)`. The
+-- result is an injectivity `Prop`; `names_as_string` cannot authorize the `Decl`/`Shape`/word
+-- carriers and no `NameRanged` byte witness applies. Direct HOL-EVAL rows `empty_maps`,
+-- `same_domain_injective`, `domain_mismatch`, `noninjective_compiler_codes` in
+-- `scripts/hol-probes/excp_rel_probe.out` pin the HOL relation; the Lean statement is
+-- exercised by the `example` and `getEidsGuard` in
+-- `Flapjack/Test/PanToCrepCodeRelParity.lean:249-264` (registered `:443`). The map already
+-- records `documented_mismatch`; exact MlString carrier tracked by `flapjack-pxn.18.3.5.8`
 -- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem getEidsFromDeclsImpExcpRel [NeZero width]
     (seids : FiniteMap ExceptionId (BitVec width))

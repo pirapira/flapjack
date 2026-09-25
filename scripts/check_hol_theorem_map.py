@@ -29,6 +29,41 @@ THEOREM_RE = re.compile(
     r"(?:(?:private|protected|noncomputable|partial|unsafe)\s+)*"
     r"(?:theorem|lemma)\s+([^\s:({\[]+)"
 )
+DATA_DECLARATION_RE = re.compile(
+    r"^\s*(?:(?:private|protected|noncomputable|partial|unsafe)\s+)*"
+    r"(?:def|abbrev|opaque|structure|inductive|class)\s+([^\s:({\[]+)"
+)
+# HOL definition candidates whose Lean declarations were withdrawn from
+# @[hol] because their carrier or statement shape differs. Keep this explicit
+# inventory small and source-reviewed; a mismatch row is not generated merely
+# because an arbitrary Lean def happens to mention a HOL name.
+WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Pancake/Semantics/PanSem.lean", "panEmptyLocals"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "empty_locals_def",
+        "Codex (source comparison with panSemScript.sml:436-438: HOL updates the "
+        "finite mlstring-keyed locals map to FEMPTY; panEmptyLocals uses the "
+        "production String-keyed unrestricted lookup-function state. "
+        "emptyLocalsHOLExact in PanSem/StateExact.lean improves the name and "
+        "value carriers but its untouched map fields still admit infinite support. "
+        "Direct HOL rows empty_locals/empty_locals_globals/empty_locals_clock are "
+        "in pan_empty_locals_probe.out and sampled by PanSemEmptyLocalsHOLParity. "
+        "No exact finite-map bridge; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.2."
+    ),
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "res_var_def",
+        "Codex (source comparison with crepSemScript.sml:163-166: the delete/update "
+        "equations and Nat keys match; PanWordLab (BitVec width) is the single-Word "
+        "word_lab carrier at positive width. However FiniteMap Nat _ is the raw "
+        "unrestricted Nat-to-Option function and admits infinite support, unlike HOL "
+        "num |-> word_lab. Direct HOL rows res_var_delete_hit/res_var_update_hit "
+        "are in crep_res_var_probe.out and sampled by FiniteMapParity. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
+}
 VALID_STATUSES = {
     "reviewed_exact",
     "reviewed_list_as_array",
@@ -125,6 +160,21 @@ def proof_theorem_declarations(root: Path = ROOT) -> set[tuple[str, str]]:
     return declarations
 
 
+def data_declarations(root: Path = ROOT) -> set[tuple[str, str]]:
+    """Return data/definition declaration names outside the Proofs inventory."""
+    declarations: set[tuple[str, str]] = set()
+    for path in sorted(root.rglob("*.lean")):
+        if ".lake" in path.parts:
+            continue
+        source = strip_comments(path.read_text(encoding="utf-8"))
+        rel = path.relative_to(root).as_posix()
+        for line in source.splitlines():
+            match = DATA_DECLARATION_RE.match(line)
+            if match:
+                declarations.add((rel, match.group(1)))
+    return declarations
+
+
 def tagged_declarations(
     root: Path = ROOT,
 ) -> dict[tuple[str, str], tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]]:
@@ -211,6 +261,16 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
             inventory[key]["statement_status"] = "reviewed_exact"
             inventory[key]["reviewer"] = "Codex (source comparison)"
 
+    for key, (hol_path, hol_name, reviewer) in WITHDRAWN_HOL_DECLARATIONS.items():
+        inventory[key] = {
+            "hol_path": hol_path,
+            "hol_name": hol_name,
+            "lean_path": key[0],
+            "lean_name": key[1],
+            "statement_status": "documented_mismatch",
+            "reviewer": reviewer,
+        }
+
     return [inventory[key] for key in sorted(inventory)]
 
 
@@ -221,6 +281,7 @@ def validate_inventory(
         tuple[str, str],
         tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]],
     ],
+    data_declarations_: set[tuple[str, str]] | None = None,
 ) -> list[str]:
     errors: list[str] = []
     by_key: dict[tuple[str, str], dict[str, Any]] = {}
@@ -334,6 +395,12 @@ def validate_inventory(
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
             if key in tagged:
                 errors.append(f"{key[0]}:{key[1]}: documented mismatch must not carry an @[hol] tag")
+            if key not in proof_declarations and key not in WITHDRAWN_HOL_DECLARATIONS:
+                errors.append(f"{key[0]}:{key[1]}: untagged HOL mismatch is not source-reviewed")
+            if key in WITHDRAWN_HOL_DECLARATIONS and hol_path is not None:
+                expected_path, expected_name, _reviewer = WITHDRAWN_HOL_DECLARATIONS[key]
+                if (hol_path, hol_name) != (expected_path, expected_name):
+                    errors.append(f"{key[0]}:{key[1]}: withdrawn declaration HOL candidate differs from source review")
         elif hol_path is not None:
             if not isinstance(hol_path, str) or not isinstance(hol_name, str):
                 errors.append(f"{key[0]}:{key[1]}: HOL path/name must be strings")
@@ -359,7 +426,10 @@ def validate_inventory(
             errors.append(f"Proofs theorem missing from manifest: {key[0]}:{key[1]}")
 
     for key in by_key:
-        if key not in tagged and key not in proof_declarations:
+        if key not in tagged and key not in proof_declarations and not (
+            key in WITHDRAWN_HOL_DECLARATIONS
+            and (data_declarations_ is None or key in data_declarations_)
+        ):
             errors.append(f"manifest entry is not a current declaration: {key[0]}:{key[1]}")
     return errors
 
@@ -393,6 +463,7 @@ def main(argv: list[str]) -> int:
             records,
             proof_theorem_declarations(),
             tagged_declarations(),
+            data_declarations(),
         )
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)

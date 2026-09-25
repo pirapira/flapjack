@@ -20,13 +20,15 @@ source semantics.
 
 namespace Flapjack
 
-/-- HOL `panSem$empty_locals`: clear only the source state's local map. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `empty_locals`
--- (`panSemScript.sml:74`) clears a `panSem$state` whose `locals` is
--- `varname |-> v` with `varname = mlstring`, whereas this Lean state's
--- `locals : VarName → Option (PanValue α)` is keyed by `VarName = String`.
--- The tag is withheld until an exact MlString-keyed source state lands
--- (tracked by `flapjack-pxn.18.3.5.8`, parent `flapjack-0lj`).
+/-- Flapjack's executable operation that clears the source state's local map.
+    HOL `panSem$empty_locals` (`panSemScript.sml:436-438`) instead updates the
+    finite `mlstring`-keyed map field to `FEMPTY`. This production state uses
+    String-keyed unrestricted lookup functions and `PanValue`; it is not the
+    HOL state carrier. The more faithful `emptyLocalsHOLExact` helper in
+    `PanSem/StateExact.lean` uses `MlString`/`ValueHOL`, but the other map fields
+    remain unrestricted and admit infinite support. Keep this declaration
+    untagged until the exact finite-map carrier bridge lands
+    (`flapjack-pxn.18.3.7.1.3.1.1.2`). -/
 def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
   { state with locals := fun _ => none }
 

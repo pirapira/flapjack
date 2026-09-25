@@ -496,6 +496,14 @@
     "reviewer": "Flapjack-only Shift adapter equation: after successful child evaluations, it exposes tagged HOL word_sh with its Option failure and transports the result to the explicit finite-dimension carrier. No standalone HOL declaration states this representation bridge; full crepSem eval/state correspondence remains open."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_op_eq_wordOpHOL",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only Op adapter equation: a successful mapped child-list evaluation is followed by tagged HOL word_op over the entire list; its Option arity failure is retained. No standalone HOL declaration states this representation bridge; full crepSem eval/state correspondence remains open."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",

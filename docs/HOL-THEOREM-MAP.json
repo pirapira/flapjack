@@ -2313,6 +2313,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "fun_ids_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "funIdsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.45): HOL fun_ids_def (cakeml/pancake/panLangScript.sml:336-343) is the recursive callee-name collector over the word-indexed prog; Dec/Seq/If/While recurse, a Call with metadata SOME(_, SOME(_,_,ep)) contributes its name and the handler names, any other Call contributes just its name, DecCall contributes its name and the body names, and every other form contributes nothing. funIdsHOL matches clause-for-clause over the exact ProgHOL/MlS carrier; the checked bridge funIdsHOL_map_toStringOfBytes relates it to the production Flapjack.funIds (direct routing unavailable because production is polymorphic over Prog α with String names). Direct HOL-EVAL rows empty/call/handler/dec_call in scripts/hol-probes/pan_lang_fun_ids_probe.out are replayed in Flapjack/Test/PanLangFunIdsParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "global_var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "globalVarExpHOL",

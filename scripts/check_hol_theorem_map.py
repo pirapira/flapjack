@@ -97,15 +97,8 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "matching production expGlobalVars) extends HOL's specification and cannot "
         "be an exact port. Direct HOL-EVAL rows global_var/nested_global are in "
         "pan_lang_var_exp_probe.out and replayed in Flapjack/Test/"
-        "PanLangVarExpParity.lean. The tag is withheld. The untagged Option-valued "
-        "globalVarExpHOL? (same file, bead flapjack-4ac.1.39.1) is a conservative "
-        "known-result analysis: some exactly when the thirteen specified clauses "
-        "force the result independently of the ARB choices, and none on Load32/"
-        "BaseAddr/TopAddr/BytesInWord or on any composite reaching one (for example "
-        "RStruct [Load32 e]); it is therefore an under-approximation and not a "
-        "clause-for-clause rendering of all thirteen HOL clauses (HOL's RStruct "
-        "clause still returns an arbitrary list for an ARB child). Its nested-unknown "
-        "propagation is exercised in Flapjack/Test/PanLangVarExpParity.lean."
+        "PanLangVarExpParity.lean. The tag is withheld; ARB/partial rendering is "
+        "tracked by the child bead of flapjack-4ac.1.39."
     ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",

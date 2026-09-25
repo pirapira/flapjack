@@ -194,7 +194,8 @@ def retVar (shape : Shape) (names : List Nat) : Option Nat :=
     and field types match `ShapeHOL`, so this is the exact statement.  The
     production `retVar` above mirrors these equations over `Flapjack.Shape`
     (String names) and stays untagged; `retVarHOL_shapeToHOL` below is the
-    narrow kernel bridge on byte-ranged shapes. -/
+    narrow kernel bridge on every production shape; the name is discarded, so
+    no byte-rangedness premise is needed. -/
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_var_def"]
 def retVarHOL (shape : Flapjack.Pancake.PanLang.ShapeHOL) (names : List Nat) : Option Nat :=
   match shape with

@@ -717,7 +717,12 @@ def crepInlineTopRecursiveByNames [BEq FunName] [LawfulBEq FunName]
     in `CrepExpHOL width` (`CrepLang/Prog.lean`). A `names_as_string` qualifier
     can record the name representation difference when it is the only gap, but
     it cannot bridge the generic program carrier. The exact `compile_inl_top`
-    boundary over both carriers remains open under bead `flapjack-e7w.1`. -/
+    boundary over both carriers remains open. `flapjack-e7w.1` covers only the
+    faithful inline-map carrier prerequisite; recursive exact `inline_prog`,
+    the `compile_inl_top` wrapper, and production-path routing remain separate
+    follow-up work. This declaration is a proof-side analogue; the executed
+    `panToCrepCompileInlTop` currently calls the production record-based
+    traversal instead. -/
 def compileInlTopHOL [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat α 0] [OfNat α 1]
     (inlineNames : List FunName)

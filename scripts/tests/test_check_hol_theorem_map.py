@@ -184,6 +184,33 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
                 self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_crepprops_globals_and_assigned_var_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        expected = {
+            "flookup_setCrepHolGlobals_localsW": "FLOOKUP_set_globals",
+            "crepAssignedFreeVars_nestedSeq_storeGlobalsW":
+                "assigned_free_vars_store_globals_empty",
+            "crepAssignedVars_nestedSeq_storeGlobalsW":
+                "assigned_vars_store_globals_empty",
+            "mem_crepAssignedFreeVars_imp_mem_crepAssignedVarsW":
+                "assigned_free_vars_IMP_assigned_vars",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Semantics/CrepProps.lean", lean_name)
+            with self.subTest(key=key):
+                record = inventory[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/semantics/crepPropsScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("String", record["reviewer"])
+                self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+                self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_pan_empty_locals_definition_mismatch_is_in_review_inventory(self):
         key = (
             "Flapjack/Pancake/Semantics/PanSem.lean",

@@ -333,10 +333,20 @@ theorem lookupInfo_drop_helper [BEq String] [LawfulBEq String] (n : Nat)
   rw [lookupInfo_eq_lookup] at hlookup ⊢
   exact (lookup_drop_helper n context name info hlookup hnodup).2
 
-/-- Exact API translation of HOL `size_of_sh_with_ctxt_drop`
+/-- Production analogue of HOL `size_of_sh_with_ctxt_drop`
     (`pan_structsProofScript.sml:99`): a well-formed shape has the same
-    context-sensitive size in a distinct-key context and its suffix. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    context-sensitive size in a distinct-key context and its suffix. It is
+    untagged because HOL's `sh_ctxt` is `StructContextExact` over `MlS`,
+    `ShapeHOL`, and the exact fields/size-only struct record, whereas this
+    theorem uses production `StructContext`/`Shape`: struct and named-shape
+    identifiers use `String`, and production `StructInfo` has an additional
+    `shapedFields` cache. The body uses String-keyed production lookup. A
+    `names_as_string` qualifier cannot cover those context/record differences.
+    The statement otherwise has HOL's two premises and equality conclusion;
+    the exact context-sensitive size definition already exists as
+    `sizeOfShapeWithContextHOL`, but the drop theorem over exact carriers is
+    still missing; the exact theorem is tracked by
+    `flapjack-pxn.18.3.5.8.16` under the exact-carrier work. -/
 theorem shapeSizeWithContext_drop (context : StructContext)
     (shape : Shape) (n : Nat)
     (h : isWfShape (context.drop n) shape = true)
@@ -639,20 +649,35 @@ theorem structCompileShapeWF_size
       exact hfalse.elim
   exact hsize context shape hshape hok
 
-/-- Exact API translation of HOL `struct_infos_ok_append`
+/-- Production analogue of HOL `struct_infos_ok_append`
     (`pan_structsProofScript.sml:198`): a valid appended structure context
-    remains valid in its suffix. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    remains valid in its suffix. It is untagged because HOL's contexts use
+    `MlS` structure/field names, `ShapeHOL`, and a fields/size-only
+    `struct_info`; this theorem uses production `String`-backed
+    `StructContext`/`Shape` and cache-augmented `StructInfo.shapedFields`.
+    The body relies on production String-keyed lookup through `structInfosOk`.
+    `names_as_string` cannot cover the context/record difference. The single
+    premise and conclusion otherwise match HOL exactly, and no name bytes are
+    observable in this proposition. A faithful statement can use the exact
+    `StructContextExact` carrier; name-carrier/bridge work is tracked by
+    `flapjack-pxn.18.3.5.8`. -/
 theorem structInfosOk_append (xs ys : StructContext)
     (h : structInfosOk (xs ++ ys)) : structInfosOk ys := by
   have hdrop := structInfosOk_drop xs.length (xs ++ ys) h
   rwa [List.drop_left] at hdrop
 
-/-- Exact API translation of HOL `struct_infos_ok_cons`
+/-- Production analogue of HOL `struct_infos_ok_cons`
     (`pan_structsProofScript.sml:132`): adding a fresh structure with distinct
     fields, well-formed field shapes, and its computed size preserves the
-    structure-context invariant. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    structure-context invariant. It remains untagged because HOL uses
+    `MlS`/`ShapeHOL`/`StructContextExact` with the fields/size-only exact
+    `struct_info`, while this statement uses String-backed production
+    `StructName`, `Shape`, `StructContext`, and cache-augmented `StructInfo`.
+    Its well-formedness and size premises also use production String-keyed
+    lookup. The logical hypotheses and conclusion otherwise match HOL; no
+    byte-observable name output is present. A faithful exact-carrier invariant
+    and its cons/append theorems are tracked by
+    `flapjack-pxn.18.3.5.8.18`. -/
 theorem structInfosOk_cons (xs : StructContext) (nm : StructName) (info : StructInfo)
     (hxs : structInfosOk xs)
     (hflds : (info.fields.map Prod.fst).Nodup)

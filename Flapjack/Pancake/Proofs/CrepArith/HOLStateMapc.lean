@@ -420,6 +420,41 @@ theorem evalCrepSemHOLStateSource_load_eq_memLoad
     simp [memLoadCrepHolW, CrepSemHOLState.toBitVecEvaluatorState,
       hDomain]
 
+/-- The direct `evalCrepHolExp` Load clause over the exact finite-support
+Crep state has the native HOL `mem_load` branches (`crepSemScript.sml:91-93,
+48-52`): after a successful address evaluation, it returns exactly the stored
+`HolWordLab` iff the address belongs to `memaddrs`, and otherwise returns
+`NONE`. This is a positive-width BitVec rendering of one source evaluator
+clause; arbitrary HOL `finite_index` and the recursive all-constructor
+correspondence are still required before any `simp_exp_correct1` tag. -/
+theorem evalCrepSemHOLStateHolEval_load_eq_memLoad
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepSemHOLState width σ)
+    (addressExpression : CrepExpHOL width)
+    (address : BitVec width)
+    (hAddress : evalCrepHolExp state.toBitVecEvaluatorState
+      (crepExpOfHOL addressExpression) = some address) :
+    (state.memaddrs address →
+      (evalCrepHolExpWordLab state.toBitVecEvaluatorState
+        (.load (crepExpOfHOL addressExpression))).map
+        PanWordLab.toHolWordLab = some (state.memory address)) ∧
+    (¬ state.memaddrs address →
+      (evalCrepHolExpWordLab state.toBitVecEvaluatorState
+        (.load (crepExpOfHOL addressExpression))).map
+        PanWordLab.toHolWordLab = none) := by
+  constructor
+  · intro hDomain
+    simp only [evalCrepHolExpWordLab, evalCrepHolExp,
+      Option.bind_eq_bind, hAddress]
+    cases hCell : state.memory address <;>
+      simp [CrepSemHOLState.toBitVecEvaluatorState, hDomain, hCell,
+        HolWordLab.toPanWordLab, PanWordLab.toHolWordLab, panTheWord]
+  · intro hDomain
+    simp only [evalCrepHolExpWordLab, evalCrepHolExp,
+      Option.bind_eq_bind, hAddress]
+    simp [CrepSemHOLState.toBitVecEvaluatorState, hDomain,
+      HolWordLab.toPanWordLab, panTheWord]
+
 /-- All-positive-width `simp_exp_correct1` support over the HOL-shaped Crep
 state carrier and the proof-script-local `mapc` update. The statement keeps
 the unused word_lab result binder, a successful full word_lab evaluation

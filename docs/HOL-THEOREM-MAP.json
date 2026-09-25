@@ -504,6 +504,14 @@
     "reviewer": "Flapjack-only Load constructor equation for the exact finite-support Crep state: on a successful address, the two branches return the stored HolWordLab exactly when the state memory domain contains that address, otherwise none. It follows crepSem eval_def/mem_load_def at positive BitVec widths but still uses the explicit Fin width dictionary and is not the full arbitrary-index recursive evaluator correspondence."
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepSemHOLStateHolEval_load_eq_memLoad",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only direct eval_def Load clause equation over the exact finite-support Crep state and positive BitVec width: a successful address returns the stored HolWordLab precisely on the original memory-domain proposition. Arbitrary HOL finite_index and recursive evaluator correspondence remain unproved, so no HOL tag is claimed."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

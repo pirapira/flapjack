@@ -94,6 +94,31 @@ example :
     crepSemLoadState64 (.const (bitVecToHolWordBits (BitVec.ofNat 64 9)))
     (bitVecToHolWordBits (BitVec.ofNat 64 9)) hAddress).2 hOutside
 
+/-! The direct BitVec evaluator translation has the same exact-state Load
+branch behavior, independently of the production finite-word adapter above. -/
+example :
+    (evalCrepHolExpWordLab crepSemLoadState64.toBitVecEvaluatorState
+      (.load (.const (BitVec.ofNat 64 8)))).map PanWordLab.toHolWordLab =
+      some (.word (BitVec.ofNat 64 0x1122334455667788)) := by
+  have hAddress : evalCrepHolExp crepSemLoadState64.toBitVecEvaluatorState
+      (crepExpOfHOL (.const (BitVec.ofNat 64 8))) =
+      some (BitVec.ofNat 64 8) := by
+    simp [crepExpOfHOL, evalCrepHolExp]
+  simpa [crepExpOfHOL, crepSemLoadState64] using (evalCrepSemHOLStateHolEval_load_eq_memLoad
+    crepSemLoadState64 (.const (BitVec.ofNat 64 8)) (BitVec.ofNat 64 8)
+    hAddress).1 (by simp [crepSemLoadState64])
+
+example :
+    (evalCrepHolExpWordLab crepSemLoadState64.toBitVecEvaluatorState
+      (.load (.const (BitVec.ofNat 64 9)))).map PanWordLab.toHolWordLab = none := by
+  have hAddress : evalCrepHolExp crepSemLoadState64.toBitVecEvaluatorState
+      (crepExpOfHOL (.const (BitVec.ofNat 64 9))) =
+      some (BitVec.ofNat 64 9) := by
+    simp [crepExpOfHOL, evalCrepHolExp]
+  simpa [crepExpOfHOL, crepSemLoadState64] using (evalCrepSemHOLStateHolEval_load_eq_memLoad
+    crepSemLoadState64 (.const (BitVec.ofNat 64 9)) (BitVec.ofNat 64 9)
+    hAddress).2 (by simp [crepSemLoadState64])
+
 /-! HOL words use a finite Boolean-function carrier. This direct check
     exercises its `Fin n` encoding and conversion to the production BitVec
     representation independently of the expression evaluator bridge. -/

@@ -137,4 +137,23 @@ example (fuel : Nat) (result : String × List (VarName × Shape))
     (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc)
       (by simp [TokenNameByteRanged])) result h
 
+
+example {tree : ParseTree} (ht : ParseTreeByteRanged tree)
+    (e : Flapjack.Exp (BitVec 64)) (h : convVar (α := BitVec 64) tree = some e) :
+    ExpByteRanged e :=
+  convVar_byteRanged ht e h
+
+example (ofInt : Int → BitVec 64) {tree : ParseTree}
+    (e : Flapjack.Exp (BitVec 64)) (h : convConst ofInt tree = some e) :
+    ExpByteRanged e :=
+  convConst_byteRanged ofInt e h
+
+example (ofInt : Int → BitVec 64) (fuel : Nat)
+    (acc : Flapjack.Exp (BitVec 64)) (hacc : ExpByteRanged acc)
+    (r : Flapjack.Exp (BitVec 64))
+    (h : convAccessors ofInt fuel [] acc = some r) :
+    ExpByteRanged r :=
+  convAccessors_byteRanged ofInt fuel [] (by simp) acc hacc r h
+
+
 end Flapjack.Test.ParserByteRangedParity

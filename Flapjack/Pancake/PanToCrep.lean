@@ -196,35 +196,25 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
 
 /-! `pan_to_crep$exp_hdl` over the `MlString`-keyed / `ShapeHOL` / `CrepProgHOL`
-    carriers (`cakeml/pancake/pan_to_crepScript.sml:106-112`).
+    (`cakeml/pancake/pan_to_crepScript.sml:106-112`).
 
     HOL's equations are
     `exp_hdl fm v = case FLOOKUP fm v of
       | NONE => Skip
       | SOME (vshp, ns) => nested_seq (MAP2 Assign ns (load_globals 0w (LENGTH ns)))`.
-
     The `@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]` tag is
-    WITHDRAWN (bead `flapjack-2s5`).  HOL quantifies over a finite map
+    WITHDRAWN (bead `flapjack-2s5`). HOL quantifies over a finite map
     `varname |-> (shape # num list)`; this declaration instead takes
-    `FiniteMap MlS (ShapeHOL × List Nat)`, which is the production raw
-    function `MlString → Option (ShapeHOL × List Nat)` and admits infinite
-    support.  That is a genuine representation difference, not an input-only
-    convenience: the quantified domain is strictly broader than HOL's.
+    `FiniteMap MlS (ShapeHOL × List Nat)`, the production raw function
+    `MlString → Option (ShapeHOL × List Nat)`, which admits infinite support.
+    Its quantified domain is therefore strictly broader than HOL's.
 
-    The `fmap_as_finite_support` qualifier does not apply here: under that
-    convention every qualified name must be a field of one same-module owning
-    carrier structure whose field type uses `HolFiniteMapExact`, together with a
-    canonical wide/narrow roundtrip witness.  `expHdlHOL`'s map is a bare
-    declaration parameter, not a structure field, so the gate cannot authorize
-    the representation and no canonical witness exists.
-
-    A faithful finite-map port (taking `HolFiniteMapExact MlS (ShapeHOL × List
-    Nat)`, or a context carrier owning such a field) is tracked by
-    `flapjack-pxn.18.3.5.8.13.2`.  This raw-map helper stays as untagged
-    infrastructure; the executed production `expHdlFiniteMap` is untagged too
-    (it keys by `VarName = String`), and the narrow kernel bridge
-    `crepProgToHOL_expHdlFiniteMap` still relates the two through the codecs on
-    every byte-ranged name. -/
+    The `fmap_as_finite_support` qualifier covers fields of a same-module
+    carrier structure, not a bare map parameter. A faithful finite-map port
+    is tracked by `flapjack-pxn.18.3.5.8.13.2`. This raw-map helper remains
+    untagged infrastructure. The executed production `expHdlFiniteMap` is
+    also untagged (its key is `VarName = String`); the checked bridge
+    `crepProgToHOL_expHdlFiniteMap` relates the two under byte-ranged codecs. -/
 def expHdlHOL {width : Nat} [NeZero width]
     (fm : FiniteMap Flapjack.Pancake.PanLang.MlS
       (Flapjack.Pancake.PanLang.ShapeHOL × List Nat))

@@ -5,14 +5,12 @@ import Flapjack.Pancake.PanToCrep
 
 The expected values come from the direct HOL-EVAL fixture
 `scripts/hol-probes/exp_hdl_probe.out`, sourced from
-`cakeml/pancake/pan_to_crepScript.sml:106-112`.  `expHdlHOL` reproduces those
-HOL rows over the `MlString`-keyed / `ShapeHOL` / width-indexed `CrepProgHOL`
-carriers, but its input is the production raw function
-`MlString → Option (ShapeHOL × List Nat)`, which is broader than HOL's finite
-map, so the `@[hol ... exp_hdl_def]` tag is WITHDRAWN (bead `flapjack-2s5`;
-faithful finite-map port tracked by `flapjack-pxn.18.3.5.8.13.2`).  The
-duplicate fixtures pin the finite-map semantics: the last binding wins for the
-HOL `FLOOKUP` map.
+`cakeml/pancake/pan_to_crepScript.sml:106-112`. `expHdlHOL` reproduces these
+HOL rows over `MlString`/`ShapeHOL`/`CrepProgHOL`, but its raw lookup-function
+input is broader than HOL's finite-map domain. Its `@[hol ... exp_hdl_def]`
+tag is withdrawn (bead `flapjack-2s5`; faithful finite-map port tracked by
+`flapjack-pxn.18.3.5.8.13.2`). The duplicate fixtures pin the finite-map
+behavior: the last binding wins for HOL `FLOOKUP`.
 
 `crepProgToHOL_expHdlFiniteMap` is the kernel bridge from the executed
 `String`-keyed `expHdlFiniteMap`; the `bridge` example below checks it on a
@@ -72,7 +70,7 @@ def parityGuard : Bool :=
 #guard parityGuard
 
 /-- The kernel bridge reproduces the exact carrier on a duplicate-bearing
-    production map, so the executed `expHdlFiniteMap` and the (untagged)
+    production map, so the executed `expHdlFiniteMap` and the untagged
     `expHdlHOL` agree under the codecs. -/
 example :
     crepProgToHOL

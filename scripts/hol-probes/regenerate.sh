@@ -748,7 +748,7 @@ run_probe crep_shmem_eval_probeScript.sml crep_shmem_eval_probe.out \
   shmem_missing_local_error shmem_load_final \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_sem_call_return_shape_probeScript.sml pan_sem_call_return_shape_probe.out \
-  call_bad_return_shape_result call_bad_return_shape_param_local \
+  call_good_return_shape_result call_bad_return_shape_result call_bad_return_shape_param_local \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_add_probeScript.sml pan_sem_e2e_add_probe.out \
   return_add_6_7 return_add_6_7 "$cake_dir/pancake/semantics/panSemScript.sml"

@@ -973,7 +973,7 @@ theorem fresh_name_correct' [BEq String] [LawfulBEq String]
     same recursion. Direct HOL rows are in
     `scripts/hol-probes/pan_globals_fresh_name_probe.out`. -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct"
-  (names_as_string := [name]) (names_as_string_boundary := [name])]
+  (names_as_string := [name, names]) (names_as_string_boundary := [name])]
 theorem freshNameHOL_not_mem_hol (name : String) (names : List String) :
     freshNameHOL name names ∉ names :=
   freshNameHOL_not_mem name names
@@ -996,7 +996,7 @@ theorem holMlStringWitness_freshNameHOL_not_mem_hol (name : String)
     membership-only lists `names`/`names'`. Direct HOL rows are in
     `scripts/hol-probes/pan_globals_fresh_name_probe.out`. -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "fresh_name_correct'"
-  (names_as_string := [name]) (names_as_string_boundary := [name])]
+  (names_as_string := [name, names, names']) (names_as_string_boundary := [name])]
 theorem freshNameHOL_not_mem_of_subset_hol (name : String)
     (names names' : List String)
     (hmem : freshNameHOL name names ∈ names')

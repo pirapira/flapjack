@@ -2187,7 +2187,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
     "lean_name": "fperm_decs_decls",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+    "reviewer": "Codex (source comparison with pan_globalsProofScript.sml:2023-2029): the unused ys binder, non-function premise, and rename-to-self equation correspond. Lean quantifies over production Decl α, with String names and arbitrary α global values; HOL uses mlstring names and word-valued globals. Although the premise makes each renamer a no-op, it does not equate declaration carriers. There is no NameRanged premise or checked declaration bridge for names_as_string; keep documented_mismatch pending the exact carrier (flapjack-pxn.18.3.5.8)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

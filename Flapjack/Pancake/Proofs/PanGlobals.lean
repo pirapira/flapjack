@@ -725,13 +725,14 @@ theorem fperm_decs_FILTER_is_function [BEq String] (source target : FunName)
     statement carries an unused `ys` binder introduced by `recInduct`, which is
     reproduced here for statement parity.  HOL `EVERY ($¬ ∘ is_function)` is
     Lean `declarations.all (fun declaration => !globalDeclIsFunction declaration)`
-    and HOL `fperm_decs` is the reviewed production `globalRenameDecls`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
--- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
--- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+    and HOL `fperm_decs` is represented by production `globalRenameDecls`.
+    Keep this theorem untagged: its argument is production `Decl α`, with
+    String-based names and an arbitrary `α` payload on global declarations;
+    HOL's `decl` uses `mlstring` names and word-valued globals. The no-function
+    premise makes the renaming a no-op in each carrier, but does not identify
+    those declaration carriers. There is no `NameRanged` premise or checked
+    declaration bridge for `names_as_string`. The exact MlString carrier is
+    tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). -/
 theorem fperm_decs_decls [BEq String] (source target : FunName)
     (declarations _unused : List (Decl α))
     (hnone : declarations.all

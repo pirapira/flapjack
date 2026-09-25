@@ -32,6 +32,22 @@ protected theorem actualProof : True := by trivial
 
 
 class ReviewedSourceComparisonTest(unittest.TestCase):
+    def test_crep_res_var_definition_mismatch_is_in_review_inventory(self):
+        key = ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/crepSemScript.sml", "res_var_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("infinite support", record["reviewer"])
+        self.assertIn(key, MAP["data_declarations"]())
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_pan_empty_locals_definition_mismatch_is_in_review_inventory(self):
         key = (
             "Flapjack/Pancake/Semantics/PanSem.lean",

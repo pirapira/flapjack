@@ -51,6 +51,18 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "No exact finite-map bridge; tag remains withdrawn pending "
         "flapjack-pxn.18.3.7.1.3.1.1.2."
     ),
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "res_var_def",
+        "Codex (source comparison with crepSemScript.sml:163-166: the delete/update "
+        "equations and Nat keys match; PanWordLab (BitVec width) is the single-Word "
+        "word_lab carrier at positive width. However FiniteMap Nat _ is the raw "
+        "unrestricted Nat-to-Option function and admits infinite support, unlike HOL "
+        "num |-> word_lab. Direct HOL rows res_var_delete_hit/res_var_update_hit "
+        "are in crep_res_var_probe.out and sampled by FiniteMapParity. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",

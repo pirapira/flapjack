@@ -92,6 +92,24 @@ DOCUMENTED_MISMATCHES = {
         "carrier bridge. Keep this analogue untagged until the exact-carrier "
         "port is added."
     ),
+    ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolVarW"): (
+        "cakeml/pancake/semantics/crepSemScript.sml",
+        "set_var_def",
+        "Codex (source comparison with crepSemScript.sml:55-57: the clause "
+        "`set_var v w s = s with locals := s.locals |+ (v,w)` matches the "
+        "FUPDATE on the Nat key, and PanWordLab (BitVec width) is the single-Word "
+        "word_lab carrier at positive width. However the quantified whole-state "
+        "carrier CrepHolState (BitVec width) stores locals/code as unrestricted "
+        "Nat-to-Option and FunName-to-Option functions that admit infinite "
+        "support, a strict superset of HOL's finite maps. names_as_string cannot "
+        "authorize that carrier (the key is not an mlstring), and no NameRanged "
+        "byte witness applies to a state result. Direct HOL rows set_var_hit / "
+        "set_var_keeps_other / set_var_fields_preserved are in "
+        "crep_local_updates_probe.out and sampled by the localBase examples in "
+        "Flapjack/Test/CrepGlobalShapeParity.lean:227-269. No exact "
+        "finite-support carrier; tag remains withdrawn pending "
+        "flapjack-pxn.18.3.7.1.3.1.1.3.1."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",

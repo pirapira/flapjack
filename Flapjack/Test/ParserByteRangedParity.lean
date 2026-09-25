@@ -343,5 +343,28 @@ example : Flapjack.Parser.PTreesSafe Flapjack.Parser.gEqOps :=
 example : Flapjack.Parser.PTreesSafe Flapjack.Parser.gRet :=
   Flapjack.Parser.gRet_treesSafe
 
+/-- `ShapeNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShape fuel) :=
+  Flapjack.Parser.gShape_treesSafe fuel
+
+/-- `ShapeCombNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapeComb fuel) :=
+  Flapjack.Parser.gShapeComb_treesSafe fuel
+
+/-- `ShapedIdentNT` is tree-safe at every fuel. -/
+example (fuel : Nat) : Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapedIdent fuel) :=
+  Flapjack.Parser.gShapedIdent_treesSafe fuel
+
+/-- `ParamListNT`/`FieldNameListNT` are tree-safe at every fuel. -/
+example (nonterminal : Flapjack.Parser.Nonterminal) (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gShapedIdentList nonterminal fuel) :=
+  Flapjack.Parser.gShapedIdentList_treesSafe nonterminal fuel
+
+/-- Fuel exhaustion fails safely. -/
+example (message : String) :
+    Flapjack.Parser.PTreesSafe
+      (Flapjack.Parser.P.fail (α := Flapjack.Parser.P.Trees) message) :=
+  Flapjack.Parser.PTreesSafe.fail message
+
 
 end Flapjack.Test.ParserByteRangedParity

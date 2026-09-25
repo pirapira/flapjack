@@ -687,5 +687,69 @@ theorem gRet_treesSafe : PTreesSafe gRet := by
     (fun name hname => PTreesSafe.consume_bind (PTreesSafe.pure name hname) .assignT "=")
 
 
+theorem PTreesSafe.fail (message : String) :
+    PTreesSafe (P.fail (α := P.Trees) message) :=
+  PTreesSafe.of_stateSafe (α := P.Trees) (PStateToksSafe.fail (α := P.Trees) message)
+
+set_option maxHeartbeats 2000000 in
+theorem grammarBlock1_treesSafe :
+    ∀ fuel, PTreesSafe (gShape fuel) ∧ PTreesSafe (gShapeComb fuel) ∧
+      PTreesSafe (gShapedIdent fuel) := by
+  intro fuel
+  induction fuel using Nat.strongRecOn with
+  | ind n ih =>
+    cases n with
+    | zero =>
+      refine ⟨?_, ?_, ?_⟩ <;> simp only [gShape, gShapeComb, gShapedIdent] <;>
+        exact PTreesSafe.fail fuelExhausted
+    | succ m =>
+      obtain ⟨hS, hC, hI⟩ := ih m (by omega)
+      refine ⟨?_, ?_, ?_⟩
+      · simp only [gShape]
+        refine PTreesSafe.orElse' keepInt_treesSafe ?_
+        refine PTreesSafe.orElse' ?_ keepIdent_treesSafe
+        refine PTreesSafe.bind (consume_treesSafe .lCurT "{") (fun open' ho => ?_)
+        refine PTreesSafe.bind hC (fun inner hi => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .rCurT "}") (fun close hc => ?_)
+        exact PTreesSafe.pure (open' ++ inner ++ close)
+          (TreesByteRanged.append (TreesByteRanged.append ho hi) hc)
+      · simp only [gShapeComb]
+        refine subtree_treesSafe .shapeComb ?_
+        refine PTreesSafe.bind hS (fun first hf => ?_)
+        refine PTreesSafe.bind (rptHere_treesSafe (PTreesSafe.consume_bind hS .commaT ","))
+          (fun rest hr => ?_)
+        exact PTreesSafe.pure (first ++ rest) (TreesByteRanged.append hf hr)
+      · simp only [gShapedIdent]
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine PTreesSafe.bind hS (fun shape hs => ?_)
+          refine PTreesSafe.bind keepIdent_treesSafe (fun name hn => ?_)
+          exact PTreesSafe.pure (shape ++ name) (TreesByteRanged.append hs hn)
+        · refine PTreesSafe.bind
+            (defaultLeaf_treesSafe .defaultShT (by simp [TokenNameByteRanged]))
+            (fun shape hs => ?_)
+          refine PTreesSafe.bind keepIdent_treesSafe (fun name hn => ?_)
+          exact PTreesSafe.pure (shape ++ name) (TreesByteRanged.append hs hn)
+
+theorem gShape_treesSafe : ∀ fuel, PTreesSafe (gShape fuel) :=
+  fun fuel => (grammarBlock1_treesSafe fuel).1
+
+theorem gShapeComb_treesSafe : ∀ fuel, PTreesSafe (gShapeComb fuel) :=
+  fun fuel => (grammarBlock1_treesSafe fuel).2.1
+
+theorem gShapedIdent_treesSafe : ∀ fuel, PTreesSafe (gShapedIdent fuel) :=
+  fun fuel => (grammarBlock1_treesSafe fuel).2.2
+
+theorem gShapedIdentList_treesSafe (nonterminal : Nonterminal) (fuel : Nat) :
+    PTreesSafe (gShapedIdentList nonterminal fuel) := by
+  simp only [gShapedIdentList]
+  refine subtree_treesSafe nonterminal ?_
+  refine PTreesSafe.bind (gShapedIdent_treesSafe fuel) (fun first hf => ?_)
+  refine PTreesSafe.bind
+    (rptHere_treesSafe
+      (PTreesSafe.consume_bind (gShapedIdent_treesSafe fuel) .commaT ","))
+    (fun rest hr => ?_)
+  exact PTreesSafe.pure (first ++ rest) (TreesByteRanged.append hf hr)
+
+
 
 end Flapjack.Parser

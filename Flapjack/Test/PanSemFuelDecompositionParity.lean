@@ -77,6 +77,19 @@ example :
   simp only [panSemProgFuel]
   omega
 
+/-- The body selected from the nonempty state-owned code map gets a DecCall
+    callee budget derived from the enclosing canonical fuel. -/
+example :
+    panSemCodeEvaluateFuel
+        { sampleState with clock := decPanClock sampleState.clock, locals := fun _ => none }
+        (Prog.skip : Prog Nat)
+      ≤ panSemCodeEvaluateFuel sampleState
+          (.decCall "r" Shape.one "f" [] (Prog.skip : Prog Nat)) - 2 := by
+  apply panSemCodeEvaluateFuel_decCall_callee_le sampleState "r" Shape.one "f"
+    [] Prog.skip Prog.skip (fun _ => none) [("p", Shape.one)] Shape.one
+    (by decide) ?_
+  simp [sampleState, sampleCode, panSemCodeLookup, lookupInfo]
+
 /-- A 64-bit source state, to exercise the Call dispatch decomposition with the
     production RV64 context. -/
 private def sampleRiscvState : PanSemState W64 (FfiState Unit) :=
@@ -161,6 +174,7 @@ def runChecks : IO Bool := do
   IO.println "PASS PanSem fuel decomposition: canonical Call callee fuel = canonical - 2"
   IO.println "PASS PanSem fuel decomposition: canonical Call handler fuel = canonical - 2"
   IO.println "PASS PanSem fuel decomposition: canonical DecCall continuation fuel = canonical - 1"
+  IO.println "PASS PanSem fuel decomposition: state-owned DecCall callee fuel = canonical - 2"
   IO.println "PASS PanSem fuel decomposition: canonical Call dispatches at canonical - 1"
   IO.println "PASS PanSem fuel decomposition: canonical Call decomposition exposes body at canonical - 2"
   pure true

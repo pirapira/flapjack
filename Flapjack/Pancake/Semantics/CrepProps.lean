@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.Pancake.Semantics.CrepSem
 
 /-!
@@ -483,6 +484,14 @@ does not repair that identifier-carrier mismatch. -/
 theorem map_var_crepExpVars_eqW {width : Nat} [NeZero width] (names : List Nat) :
     (names.map (CrepExp.var (α := BitVec width))).flatMap crepExpVarsW = names :=
   map_var_crepExpVars_eq names
+
+/-! Exact expression-carrier corollary of HOL
+    `crepProps$length_load_shape_eq_shape` (`crepPropsScript.sml:30`). -/
+@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_shape_eq_shape"]
+theorem length_loadShapeHOLW {width : Nat} [NeZero width]
+    (count : Nat) (address : BitVec width) (value : CrepExpHOL width) :
+    (loadShapeBytesHOLW address count value).length = count := by
+  induction count generalizing address <;> simp [loadShapeBytesHOLW, *]
 
 theorem length_loadShape_eq_shapeW {width : Nat} [NeZero width]
     (count : Nat) (address : BitVec width) (value : CrepExp (BitVec width)) :

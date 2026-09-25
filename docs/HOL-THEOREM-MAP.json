@@ -1666,7 +1666,7 @@
   {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "load_shape_def",
-    "lean_path": "Flapjack/Pancake/CrepLang/Exp.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
     "lean_name": "loadShapeBytesHOLW",
     "statement_status": "reviewed_exact",
     "reviewer": "Source-reviewed against crepLangScript.sml:82-86. Exact carrier is CrepExpHOL width, with BitVec width and [NeZero width]; recursion preserves both HOL branches (address=0w uses Load e, otherwise Load (Op Add [e; Const address])) and advances by width/8 bytes_in_word, with count=0 returning []. The production CrepExp helper remains untagged; loadShapeBytesHOLW_toProduction proves its width wrapper agrees after decoding. Direct HOL rows in scripts/hol-probes/crep_load_shape_probe.out are exercised in Flapjack/Test/CrepeLoadShapeParity.lean."

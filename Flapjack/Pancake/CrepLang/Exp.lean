@@ -140,14 +140,6 @@ def loadShapeBytesHOLW {width : Nat} [NeZero width]
         (address + BitVec.ofNat width (width / 8)) count value
 termination_by count
 
-/-! Exact expression-carrier corollary of `crepProps$length_load_shape_eq_shape`
-    (`cakeml/pancake/semantics/crepPropsScript.sml:30`). -/
-@[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_shape_eq_shape"]
-theorem length_loadShapeHOLW {width : Nat} [NeZero width]
-    (count : Nat) (address : BitVec width) (value : CrepExpHOL width) :
-    (loadShapeBytesHOLW address count value).length = count := by
-  induction count generalizing address <;> simp [loadShapeBytesHOLW, *]
-
 /-- The executed production width wrapper agrees with exact HOL
     `load_shape_def` after decoding its exact `CrepExpHOL` result. -/
 theorem loadShapeBytesHOLW_toProduction {width : Nat} [NeZero width]

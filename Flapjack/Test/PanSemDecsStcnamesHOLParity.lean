@@ -1,4 +1,4 @@
-import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
+import Flapjack.Pancake.Proofs.PanToCrep
 
 /-!
 # Parity checks for the exact `decs_stcnames` port

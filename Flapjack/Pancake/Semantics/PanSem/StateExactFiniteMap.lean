@@ -27,19 +27,17 @@
   representation statement only and does not authorize changed quantifiers,
   hypotheses, results, `BEq` side conditions, or word-model differences.
 
-  Four helper definitions have now passed their case-by-case review and carry
+  Five helper definitions have passed their case-by-case review and carry
   `@[hol ...]` with that qualifier: `decClockHOLFinite` (`dec_clock_def`),
-  `fixClockHOLFinite` (`fix_clock_def`), `lookupKvarHOLFinite` (`lookup_kvar_def`)
-  and `emptyLocalsHOLFinite` (`empty_locals_def`).  `setKvarHOLFinite` stays
-  untagged: HOL `set_kvar_def` routes through `set_var`/`set_global` whose bodies
-  are the canonical `HolFiniteMapExact.update`, while the Lean body builds the
-  update pointwise (no `LawfulBEq MlS`).  The broad-carrier helpers over
-  `PanSemStateExact` (`StateExact.lean`) remain the `documented_mismatch`
-  analogues.  Work tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.4`.
-
-  Nothing here is tagged `@[hol]` yet: this is representation infrastructure for
-  the exact-carrier rebuild tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`; the
-  tag qualifier itself is `flapjack-pxn.18.3.7.1.3.1.1.2.4`.
+  `fixClockHOLFinite` (`fix_clock_def`), `lookupKvarHOLFinite` (`lookup_kvar_def`),
+  `emptyLocalsHOLFinite` (`empty_locals_def`) and `setKvarHOLFinite`
+  (`set_kvar_def`).  `setKvarHOLFinite` routes through the untagged canonical-
+  update wrappers `setVarHOLFinite`/`setGlobalHOLFinite`, which use
+  `HolFiniteMapExact.update` (`FUPDATE`) exactly like HOL `set_var`/`set_global`;
+  the `MlS` `BEq`/`LawfulBEq` instances required by `update` are declared below.
+  The broad-carrier helpers over `PanSemStateExact` (`StateExact.lean`) remain the
+  `documented_mismatch` analogues.  Work tracked by
+  `flapjack-pxn.18.3.7.1.3.1.1.2.4`.
 -/
 
 import Flapjack.Pancake.Semantics.PanSem.StateExactFinite
@@ -58,6 +56,33 @@ theorem HolFiniteMapExact.ext {α β : Type} {left right : HolFiniteMapExact α 
   simp only at h
   subst h
   rfl
+
+/-- `MlString` only derives `DecidableEq`; the canonical `FUPDATE`-based finite-map
+    operations need a `BEq`/`LawfulBEq` instance, so boolean equality is the
+    decidability test.  Declared here as representation infrastructure (additive:
+    `MlS` had no `BEq` instance before). -/
+instance : BEq MlS where
+  beq left right := decide (left = right)
+
+instance : LawfulBEq MlS where
+  eq_of_beq h := of_decide_eq_true h
+
+/-- Reading `HolFiniteMapExact.update` (`FUPDATE`) pointwise.  The canonical
+    update's `if name == current` is the same test as the pointwise
+    `if current = name` used by the broad `set_var`/`set_global` mirrors. -/
+theorem HolFiniteMapExact.lookup_update_pointwise {α β : Type} [BEq α] [LawfulBEq α]
+    [DecidableEq α] (map : HolFiniteMapExact α β) (name : α) (value : β) :
+    (map.update (name, value)).lookup =
+      fun current => if current = name then some value else map.lookup current := by
+  funext current
+  by_cases h : current = name
+  · subst h
+    simp [HolFiniteMapExact.update, FUPDATE]
+  · have hbeq : (name == current) = false := by
+      cases hb : (name == current) with
+      | true => exact absurd (beq_iff_eq.mp hb) (fun hc => h hc.symm)
+      | false => rfl
+    simp [HolFiniteMapExact.update, FUPDATE, hbeq, h]
 
 /-- Finite-support mirror of `PanSemStateExact`.  The four map-shaped
     components are `HolFiniteMapExact` values, i.e. finite support holds by
@@ -213,47 +238,39 @@ def lookupKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
       lookupKvarHOLExact kind name state.toExact := by
   cases kind <;> rfl
 
-/-- Finite-support mirror of `setKvarHOLExact`.  The updated component keeps a
-    finite support by consing the written key onto the old support.
+/-- HOL `set_var_def` (`cakeml/pancake/semantics/panSemScript.sml:398-401`):
+    `set_var v value s = s with locals := s.locals |+ (v,value)`.  The `|+`
+    (FUPDATE) is the canonical `HolFiniteMapExact.update` on the finite-support
+    carrier.  Untagged canonical-update wrapper used by the tagged
+    `setKvarHOLFinite`; the carrier's map fields are recorded there by the
+    `fmap_as_finite_support` qualifier. -/
+def setVarHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (name : MlS) (value : ValueHOL width) (state : PanSemStateFiniteExact width σ) :
+    PanSemStateFiniteExact width σ :=
+  { state with locals := state.locals.update (name, value) }
 
-    NOT tagged: HOL `set_kvar_def`
-    (`cakeml/pancake/semantics/panSemScript.sml:408-413`) routes through
-    `set_var`/`set_global`, whose bodies are `s.locals |+ (v,value)` i.e. the
-    canonical `HolFiniteMapExact.update` (`FUPDATE`).  The Lean body instead
-    builds the updated map pointwise with an explicit `if current = name`, so it
-    is only propositionally equal to `HolFiniteMapExact.update`; the canonical
-    update-based body is unavailable because `MlS` does not provide
-    `[BEq MlS]`/`[LawfulBEq MlS]`.  Retagging therefore needs either
-    `setVarHOLFinite`/`setGlobalHOLFinite` with the canonical update or a
-    `LawfulBEq MlS` instance; tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+/-- HOL `set_global_def` (`cakeml/pancake/semantics/panSemScript.sml:403-406`):
+    `set_global v value s = s with globals := s.globals |+ (v,value)`, i.e. the
+    canonical `HolFiniteMapExact.update` on the `globals` component. -/
+def setGlobalHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (name : MlS) (value : ValueHOL width) (state : PanSemStateFiniteExact width σ) :
+    PanSemStateFiniteExact width σ :=
+  { state with globals := state.globals.update (name, value) }
+
+/-- HOL `set_kvar_def` (`cakeml/pancake/semantics/panSemScript.sml:408-413`):
+    `set_kvar vk v value s = case vk of Local => set_var v value s
+    | Global => set_global v value s`.  Body-exact over `PanSemStateFiniteExact`
+    via the canonical-update wrappers above.  The `locals`/`globals`/`code`/
+    `eshapes` fields are the canonical finite-map representation, recorded by the
+    `fmap_as_finite_support` qualifier. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_kvar_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def setKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (value : ValueHOL width)
     (state : PanSemStateFiniteExact width σ) : PanSemStateFiniteExact width σ :=
   match kind with
-  | .local =>
-      { state with
-        locals :=
-          { lookup := fun current =>
-              if current = name then some value else state.locals.lookup current
-            finiteSupport := by
-              obtain ⟨keys, hkeys⟩ := state.locals.finiteSupport
-              refine ⟨name :: keys, ?_⟩
-              intro key hkey
-              by_cases h : key = name
-              · rw [← h]; exact List.mem_cons_self
-              · exact List.mem_cons_of_mem name (hkeys key (by simpa [h] using hkey)) } }
-  | .global =>
-      { state with
-        globals :=
-          { lookup := fun current =>
-              if current = name then some value else state.globals.lookup current
-            finiteSupport := by
-              obtain ⟨keys, hkeys⟩ := state.globals.finiteSupport
-              refine ⟨name :: keys, ?_⟩
-              intro key hkey
-              by_cases h : key = name
-              · rw [← h]; exact List.mem_cons_self
-              · exact List.mem_cons_of_mem name (hkeys key (by simpa [h] using hkey)) } }
+  | .local => setVarHOLFinite name value state
+  | .global => setGlobalHOLFinite name value state
 
 /-- The finite-support keyed-variable write is compatible with the broad exact
     one. -/
@@ -262,7 +279,13 @@ def setKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) :
     (setKvarHOLFinite kind name value state).toExact =
       setKvarHOLExact kind name value state.toExact := by
-  cases kind <;> rfl
+  cases kind
+  · simp only [setKvarHOLFinite, setVarHOLFinite, setKvarHOLExact,
+      PanSemStateFiniteExact.toExact]
+    rw [HolFiniteMapExact.lookup_update_pointwise]
+  · simp only [setKvarHOLFinite, setGlobalHOLFinite, setKvarHOLExact,
+      PanSemStateFiniteExact.toExact]
+    rw [HolFiniteMapExact.lookup_update_pointwise]
 
 /-- HOL `empty_locals_def` (`cakeml/pancake/semantics/panSemScript.sml:437-439`):
     `empty_locals s = s with locals := FEMPTY`.  The cleared `locals` is the

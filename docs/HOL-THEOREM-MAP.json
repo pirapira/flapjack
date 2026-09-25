@@ -1755,6 +1755,20 @@
     "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-6nn.2) HOL new_main_name_def (pan_globalsScript.sml:224): new_main_name decls = fresh_name «main» (MAP FST (functions decls)). Lean globalNewMainName matches clause-for-clause (freshNameHOL is the exact fresh_name port; globalFunctionNames is MAP FST (functions decls)). Reviewed under names_as_string: name: byte-observable (the generated entry-point name crosses the compiler boundary and is byte-safe via the same-module holMlStringWitness_globalNewMainName). Direct HOL rows in pan_globals_new_main_name_probe.out."
   },
   {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fresh_name_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "freshNameHOL",
+    "statement_status": "reviewed_names_as_string",
+    "names_as_string": [
+      "name"
+    ],
+    "names_as_string_boundary": [
+      "name"
+    ],
+    "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-6nn.4) HOL fresh_name_def (pan_globalsScript.sml:55): fresh_name name names = if MEM name names then fresh_name (strcat name «'») names else name. Lean freshNameHOL has the same clauses (∈ = list/String equality, ++ = strcat one-character append); HOL's strlen/MAX_SET termination measure versus Lean maxNameLength is non-operational and String.length occurs only there, so the sole operational difference is the String/mlstring carrier. Reviewed under names_as_string: name: byte-observable (the generated name crosses the compiler boundary; the same-module holMlStringWitness_freshNameHOL gives NameRanged (freshNameHOL name names) from the NameRanged name premise, and the executed path seeds are the empty string, vn' and main). The names list is used only for membership equality. Direct HOL rows in pan_globals_fresh_name_probe.out."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "fperm_name_cong",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",

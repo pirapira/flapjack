@@ -268,15 +268,31 @@ theorem length_le_maxNameLength {name : String} {names : List String}
         exact Nat.le_max_left _ _
       · exact Nat.le_trans (ih htail) (Nat.le_max_right _ _)
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake's `fresh_name`
-    (`pan_globalsScript.sml:55`): while the candidate is already a member of
-    `names`, append one apostrophe and retry.  Termination follows HOL's own
-    measure: appending a character strictly increases the length, bounded above
-    by the maximum name length. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over production
--- `String` names, while HOL `pan_globalsScript.sml` keys `fresh_name` by
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Qualified HOL port of Cake's `fresh_name` (`pan_globalsScript.sml:55`):
+    while the candidate is already a member of `names`, append one apostrophe
+    and retry.  The Lean clauses match HOL's exactly --
+    `if name ∈ names then freshNameHOL (name ++ "'") names else name` versus
+    `if MEM name names then fresh_name (strcat name «'») names else name` --
+    with `∈` being `String`/list equality and `++`/`strcat` the same
+    one-character append.  Termination is proved with a Flapjack-specific
+    measure (`maxNameLength`); HOL uses a `strlen`/`MAX_SET` measure, but the
+    measure is not operational, and `String.length`/`strlen` occur only there,
+    never in the result.  The sole operational difference is the name carrier:
+    production `String` versus HOL `mlstring`.
+
+    `name` is byte-observable: the generated name crosses the compiler
+    boundary, and the same-module witness `holMlStringWitness_freshNameHOL`
+    establishes `NameRanged (freshNameHOL name names)` from the input premise
+    `NameRanged name` (only apostrophes are appended).  The executed path
+    supplies byte-ranged seeds: `globalCompile` uses `freshNameHOL "" names` and
+    `freshNameHOL "vn'" (resultName :: names)`, and `globalNewMainName` uses the
+    literal `"main"`.  The `names` list is used only for membership equality,
+    never inspected, so it is not a byte-observable identifier.  Direct HOL rows
+    are in `scripts/hol-probes/pan_globals_fresh_name_probe.out`; Lean rows and
+    the byte-rangedness guard are in
+    `Flapjack/Test/PanGlobalsNameByteRangedParity.lean`. -/
+@[hol "cakeml/pancake/pan_globalsScript.sml" "fresh_name_def"
+  (names_as_string := [name]) (names_as_string_boundary := [name])]
 def freshNameHOL (name : String) (names : List String) : String :=
   if name ∈ names then freshNameHOL (name ++ "'") names else name
 termination_by 1 + maxNameLength names - name.length

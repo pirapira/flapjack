@@ -197,8 +197,12 @@ represented by the reviewed canonical Lean translation `HolFiniteMapExact`
 (a `lookup` function plus a `finiteSupport` proposition). Every named field must
 be declared by ONE owning carrier structure in the same module, whose field
 types use `HolFiniteMapExact`; a raw function-backed `α → Option β` map is
-ineligible, and fields split across several structures are rejected. The module
-must contain the checked canonical witness `holFmapAsFiniteSupportWitness`,
+ineligible, and fields split across several structures are rejected. When a
+module declares several structures with the same field names (for example a
+broad state and its finite-support counterpart), the tagged declaration's own
+carrier disambiguates: the owner must be named in that declaration's signature.
+The module must contain the checked canonical witness
+`holFmapAsFiniteSupportWitness`,
 whose statement names that owning structure and states a real `toX`/`ofX`
 roundtrip between it and its broad counterpart (a bare `State -> Broad -> State`
 arrow, or an unrelated counterpart mention, is rejected; the broad counterpart

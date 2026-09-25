@@ -3,21 +3,27 @@ EXACT CARRIER EXPRESSIONS (flapjack-pxn.18.3.6.9.15).
 
 Function-backed rendering of HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`,
 identical to `pan_itreeSemScript.sml:79`) over `PanSemStateExact`, the exact
-`ExpHOL` syntax, and the exact `ValueHOL` values. `PanSemStateExact` currently
-admits arbitrary lookup functions instead of HOL finite-map fields, so this
-definition has no `@[hol]` tag.
+`ExpHOL` syntax, and the exact `ValueHOL` values. `PanSemStateExact` admits
+arbitrary lookup functions instead of HOL finite-map fields, so this
+`evalHOLExact` carries no `@[hol]` tag. The exact finite-support rendering lives
+in `Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean` as
+`PanSemStateFiniteExact.evalHOLFinite`, delegates here through `toExact`, and
+carries the qualified `eval_def` tag (`fmap_as_finite_support :=
+[locals, globals, code, eshapes]`, manifest status
+`reviewed_fmap_as_finite_support`); its clause-shaped equations are in
+`EvalFinite.lean`.
 
-Source review (flapjack-dlc.120) confirms the tag stays withdrawn: all fifteen
-clauses and every used subcarrier match --- `MlS`/`ExpHOL`/`ValueHOL`/`ShapeHOL`/
+Source review (flapjack-dlc.120) confirms all fifteen clauses and every used
+subcarrier match --- `MlS`/`ExpHOL`/`ValueHOL`/`ShapeHOL`/
 `StructContextExact` carriers, `HolWordLab` memory, `memaddrs` as a `Prop` for
 HOL's `'a word set`, `[NeZero width]` for HOL's positive `dimindex`, and the
-Lean-only `[DecidablePred state.memaddrs]` decidability evidence. The blocking
-mismatch is the state carrier: HOL `locals`/`globals` are finite maps
+Lean-only `[DecidablePred state.memaddrs]` decidability evidence. The one
+carrier caveat is the state: HOL `locals`/`globals` are finite maps
 `varname |-> 'a v`, while `PanSemStateExact.locals`/`globals` are unrestricted
 `MlS → Option _` functions, a strict superset admitting infinite support. The
-evaluator is faithful only on the finite-support subcarrier; the exact
-finite-map state replacement (`flapjack-pxn.18.3.7.1.3.1.1.2`; audit
-`flapjack-pxn.18.3.7.1.3.1.2`) must land before the `eval_def` tag is restored.
+qualified `eval_def` tag is therefore placed on the finite-support rendering
+over `PanSemStateFiniteExact` (audit `flapjack-pxn.18.3.7.1.3.1.2`;
+`flapjack-pxn.18.3.7.1.3.1.1.2`), not on this raw-function rendering.
 Every lookup is `=`-keyed (`MlString` derives
 `DecidableEq`); the shape
 comparisons go through `shapeEqHOL` (whose `= true` reading is proved exact in
@@ -56,11 +62,10 @@ under `OPT_MMAP eval`) finds no separate Lean declaration: HOL `eval` carries th
 whole `panSem$state`, whereas this rendering reads none of `state.clock`,
 `state.code`, or `state.eshapes`, so all five invariances are consequences of the
 clauses above (the list forms through `evalListHOLExact`, the `OPT_MMAP` rendering)
-and are simply not stated yet.  They stay untagged together with the evaluator
-because the blocking mismatch is the `PanSemStateExact` `locals`/`globals`/`code`/
-`eshapes` carrier (unrestricted `MlS → Option _` functions instead of HOL finite
-maps) -- not those individual fields.  Restoration of the invariance lemmas over
-the faithful finite-support state is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`;
+and are simply not stated yet.  Their exact analogues read this raw-function
+`PanSemStateExact` carrier, so they remain untagged; restating them over the
+faithful finite-support rendering (`PanSemStateFiniteExact`, the carrier of the
+qualified `evalHOLFinite` tag) is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`;
 these dispositions are recorded by beads `flapjack-4ac.4.40`, `.41`, `.43`, `.44`.
 
 The recursive `evaluate` dispatcher over this evaluator is separate and not yet
@@ -75,8 +80,9 @@ finds no statement-exact Lean declaration.  The HOL statement reads the exact
 `eval` (`eval_def`) together with the exact `panLang$var_exp`
 (`panLangScript.sml:253-270`), whose input is the word-indexed `exp` with
 `mlstring` names and whose result is `mlstring list`.  The Lean analogue of the
-evaluator is this untagged `evalHOLExact` (blocked on the
-`PanSemStateExact` raw-function state carrier, see above), and the analogue of
+evaluator is this raw-function `evalHOLExact` (whose faithful finite-support
+rendering `evalHOLFinite` in `StateExactFiniteMap.lean` carries the qualified
+`eval_def` tag, see above), and the analogue of
 `var_exp` is the untagged String-backed `expLocalVars`
 (`Flapjack/Pancake/PanLang.lean:1380`, whose HOL tag is withdrawn for the same
 carrier reason).  Both sides of the implication are therefore expressible only
@@ -120,7 +126,10 @@ def lookupFieldHOL {width : Nat} [NeZero width] (name : MlS) :
 
 mutual
   /-- Function-backed rendering of HOL `eval`; untagged because its state
-      contains unrestricted functions in place of HOL finite maps. -/
+      contains unrestricted functions in place of HOL finite maps.  The
+      faithful finite-support rendering `PanSemStateFiniteExact.evalHOLFinite`
+      in `StateExactFiniteMap.lean` delegates here and carries the qualified
+      `eval_def` tag. -/
   def evalHOLExact {width : Nat} {σ : Type} [NeZero width]
       (state : PanSemStateExact width σ) [DecidablePred state.memaddrs] :
       ExpHOL width → Option (ValueHOL width)

@@ -101,4 +101,43 @@ theorem crepSimpExpCorrect1CrepSemHOLStateSource
   rw [hCodeId] at hSource
   exact hSource
 
+/-- Production-runtime all-positive-width `simp_exp_correct1` support over the
+HOL-shaped state carrier and exact HOL expression syntax. The evaluator in
+the premise and conclusion is `evalCrepRuntimeExp`; the source state is
+projected to its expression-observable fields and then represented by the
+canonical `Fin width` word model. This remains untagged because that
+projection fixes code/FFI observations and does not establish the native HOL
+state/evaluator or arbitrary `finite_index` correspondence. -/
+theorem crepSimpExpCorrect1CrepSemHOLStateRuntime
+    {width : Nat} [NeZero width] {σ : Type}
+    (update : MlString × (List Nat × CrepProgHOL width) →
+      List Nat × CrepProgHOL width)
+    (state : CrepSemHOLState width σ)
+    (expression : CrepExpHOL width)
+    (_result : HolWordLab width)
+    (h : (evalCrepRuntimeExp
+      state.toExpressionEvaluatorState.toHolWordBitsRuntime
+      (crepExpHOLToSourceBits expression)).map PanWordLab.word ≠ none) :
+    (evalCrepRuntimeExp
+      (state.mapc update).toExpressionEvaluatorState.toHolWordBitsRuntime
+      (crepSimpExp
+        (fun n => bitVecToHolWordBits (BitVec.ofNat width n))
+        (crepExpHOLToSourceBits expression))).map PanWordLab.word =
+    (evalCrepRuntimeExp
+      state.toExpressionEvaluatorState.toHolWordBitsRuntime
+      (crepExpHOLToSourceBits expression)).map PanWordLab.word := by
+  rw [CrepSemHOLState.toExpressionEvaluatorState_mapc]
+  let projected := state.toExpressionEvaluatorState
+  have hCodeId :
+      crepArithHolWordBitsMapCode
+        (fun pair : FunName × (List Nat × CrepProg (Fin width → Bool)) => pair.2)
+        projected = projected := by
+    cases projected
+    simp [crepArithHolWordBitsMapCode]
+  have hPres := crepSimpExpCorrect1HolWordBits
+    (f := fun pair : FunName × (List Nat × CrepProg (Fin width → Bool)) => pair.2)
+    projected (crepExpHOLToSourceBits expression) h
+  rw [hCodeId] at hPres
+  exact hPres
+
 end Flapjack

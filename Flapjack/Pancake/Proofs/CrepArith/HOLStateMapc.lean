@@ -282,6 +282,15 @@ theorem CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState
   · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_baseAddress state
   · exact CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState_topAddress state
 
+/-- The canonical `Fin width` finite-word runtime adapter is definitionally
+the existing HOL-word-bits runtime adapter on this exact state. -/
+theorem CrepSemHOLState.toHolFiniteWordRuntime_instFin_eq_toHolWordBitsRuntime
+    {width : Nat} [NeZero width] {σ : Type}
+    (state : CrepHolState (Fin width → Bool) σ) :
+    state.toHolFiniteWordRuntime (instFinHolFiniteDimension (width := width)) =
+    state.toHolWordBitsRuntime := by
+  rfl
+
 /-- Full all-width evaluator transport from the exact-state expression
 projection to production `evalCrepRuntimeExp`, related to the direct BitVec
 HOL-state evaluator. This still uses canonical `Fin width`; it does not claim
@@ -291,13 +300,13 @@ theorem evalCrepRuntimeExp_exactCrepSemHOLState_projection
     (state : CrepSemHOLState width σ)
     (expression : CrepExp (Fin width → Bool)) :
     evalCrepRuntimeExp
-      (state.toExpressionEvaluatorState.toHolFiniteWordRuntime
-        (instFinHolFiniteDimension (width := width))) expression =
+      (state.toExpressionEvaluatorState.toHolWordBitsRuntime) expression =
     (evalCrepHolExp state.toBitVecEvaluatorState
       (mapCrepExpWord
         (holWordToBitVec (instFinHolFiniteDimension (width := width)))
         expression)).map
-    (bitVecToHolWord (instFinHolFiniteDimension (width := width))) := by
+      (bitVecToHolWord (instFinHolFiniteDimension (width := width))) := by
+  rw [← CrepSemHOLState.toHolFiniteWordRuntime_instFin_eq_toHolWordBitsRuntime]
   calc
     _ = evalCrepHolFiniteDimensionExp
           (instFinHolFiniteDimension (width := width))

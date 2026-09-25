@@ -186,6 +186,35 @@ theorem callFfi_extCall_return_lengthFailure {σ : Type} (state : FfiState σ) (
         hres.symm.trans ho
       exact absurd hc (by simp)
 
+/-- Production `callFfi` on a nonempty external call whose oracle returns a matching length. -/
+theorem callFfi_extCall_success {σ : Type} (state : FfiState σ) (name : String)
+    (hne : name ≠ "") (configuration bytes : List UInt8) (nextState : σ)
+    (nextBytes : List UInt8)
+    (ho : state.oracle (.extCall name) state.state configuration bytes = .returned nextState nextBytes)
+    (hlen : nextBytes.length = bytes.length) :
+    callFfi state (.extCall name) configuration bytes =
+      .returned { state with
+          state := nextState
+          ioEvents := state.ioEvents ++
+            [{ name := .extCall name, configuration := configuration,
+               bytes := bytes.zip nextBytes }] } nextBytes := by
+  unfold callFfi
+  split
+  · rename_i h
+    exact absurd h (by simpa only [FfiName.extCall.injEq] using hne)
+  · split
+    · rename_i ns nb hres
+      have hc : FfiOracleResult.returned ns nb = FfiOracleResult.returned nextState nextBytes :=
+        hres.symm.trans ho
+      injection hc with hns hnb
+      subst hns
+      subst hnb
+      rw [if_pos (by simpa using hlen)]
+    · rename_i holOutcome hres
+      have hc : FfiOracleResult.final holOutcome = FfiOracleResult.returned nextState nextBytes :=
+        hres.symm.trans ho
+      exact absurd hc (by simp)
+
 /-- Under `FfiStateRel`, a nonempty external call that the oracle finalises agrees. -/
 theorem callFfi_extCall_oracleFinal_bridge {σ : Type} (state : FfiState σ)
     (holState : HolFfiState σ) (hrel : FfiStateRel state holState) (name : String)

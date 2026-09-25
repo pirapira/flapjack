@@ -9,6 +9,7 @@ import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Pancake.Semantics.PanSem
+import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanProps
@@ -4502,5 +4503,20 @@ theorem isWfShapeExactHOL_length_flatten {width : Nat} [NeZero width]
   · have hpos : 0 < sizeOfShapeHOL (shapeOfHOLExact value) := Nat.pos_of_ne_zero hz
     rw [hpositive hpos]
     exact flattenHOL_length_eq_sizeOfShapeHOL value hwf
+
+/-- Exact port of HOL `decs_stcnames_lemma` (`pan_to_crepProofScript.sml:4963-4969`):
+a declaration list containing only function or exception declarations leaves the
+structure context unchanged. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "decs_stcnames_lemma"]
+theorem decsStcnamesHOLExact_of_functions_or_exnDecls {width : Nat} [NeZero width]
+    (context : StructContextExact) (code : List (DeclHOL width))
+    (h : code.all (fun declaration =>
+      isFunctionHOL declaration || isExnDeclHOL declaration) = true) :
+    decsStcnamesHOLExact (width := width) context code = some context := by
+  induction code generalizing context with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration <;>
+        simp_all [decsStcnamesHOLExact, isFunctionHOL, isExnDeclHOL]
 
 end Flapjack

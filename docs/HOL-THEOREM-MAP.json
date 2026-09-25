@@ -10258,6 +10258,30 @@
     "reviewer": "flapjack-deepseek (source comparison)"
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_exn_decl_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isExnDeclHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.5.77): exact port of HOL `is_exn_decl_def` (`panLangScript.sml:239-242`): `true` only for `ExnDecl`, `false` for `Decl`/`Function`/`Name`. Operates on the exact `DeclHOL width` carrier."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_function_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isFunctionHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.5.77): exact port of HOL `is_function_def` (`panLangScript.sml:314-317`): `true` only for `Function`, `false` for `Decl`/`ExnDecl`/`Name`. Operates on the exact `DeclHOL width` carrier."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "decs_stcnames_lemma",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "decsStcnamesHOLExact_of_functions_or_exnDecls",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.5.77): exact port of HOL `decs_stcnames_lemma` (`pan_to_crepProofScript.sml:4963-4969`). HOL `EVERY (λd. is_function d ∨ is_exn_decl d) code ⇒ decs_stcnames ctxt code = SOME ctxt` is rendered as `code.all (fun d => isFunctionHOL d || isExnDeclHOL d) = true ⇒ decsStcnamesHOLExact context code = some context` over the exact `DeclHOL width`/`StructContextExact` carriers, reusing `decsStcnamesHOLExact` (tagged `decs_stcnames_def`, `panSemScript.sml:839`). `List.all`/`Bool` mirror `EVERY`, and `some` mirrors `SOME`."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "shape_of_val",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",

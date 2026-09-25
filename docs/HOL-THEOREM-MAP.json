@@ -5027,6 +5027,14 @@
     "reviewer": "Codex (Flapjack support: excludes unreachable zero fallback for valid field index)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "compFieldHOL_mem_of_index_lt",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only proof helper for exact-carrier memCompFieldHOLExact; no separate HOL declaration."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "mem_comp_field",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",

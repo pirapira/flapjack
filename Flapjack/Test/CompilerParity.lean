@@ -342,6 +342,7 @@ import Flapjack.Test.SptreeOrderParity
 import Flapjack.Test.WordSimpSeqAssocParity
 import Flapjack.Test.RiscVFarTransferParity
 import Flapjack.Test.FfiHOLParity
+import Flapjack.Test.FfiBridgeParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -953,6 +954,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.CrepSemTotalClockLeavesParity.runChecks,
     Flapjack.Test.FfiHOLParity.runChecks,
     Flapjack.Test.CrepSemTotalAssignParity.runChecks,
+    Flapjack.Test.FfiBridgeParity.runChecks,
     Flapjack.Test.CrepSemTotalStoreParity.runChecks,
     Flapjack.Test.CrepSemTotalShMemParity.runChecks
     ].mapM id

@@ -9,11 +9,16 @@ Reproduces the original-HOL oracle rows in
 `ValueHOL`/`resVarHOLExact` carriers, and applies each of the four tagged
 lemmas `shapeOfHOLExact_val`, `resVarHOLExact_flookup`,
 `resVarHOLExact_flookup_of_ne`, `resVarHOLExact_flookup_some_eq_lookup`.
+It also reproduces the rows in
+`scripts/hol-probes/pan_props_size_with_ctxt_probe.out` (`ssc_one`,
+`ssc_comb2`, `ssc_nested`, `ssc_wf_one`, `ssc_wf_nested`, `ssc_eq_one`,
+`ssc_eq_nested`) and applies the tagged `sizeOfShapeWithContextHOL_eq`.
 -/
 
 namespace Flapjack.Test.PanPropsShapeResVarParity
 
 open Flapjack
+open Flapjack.Pancake.PanLang
 
 /-- The faithful HOL `mlstring` of a source string. -/
 abbrev ml (s : String) : Flapjack.Pancake.PanLang.MlS :=
@@ -91,13 +96,52 @@ theorem resVar_flookup_some_eq_lookup_fixture
     lc' v = some value :=
   resVarHOLExact_flookup_some_eq_lookup lc lc' v value h
 
+-- HOL `ssc_one = 1`.
+def sizeWithCtxtOne : Nat :=
+  sizeOfShapeWithContextHOL ([] : StructContextExact) ShapeHOL.one
+
+-- HOL `ssc_comb2 = 2`.
+def sizeWithCtxtComb2 : Nat :=
+  sizeOfShapeWithContextHOL ([] : StructContextExact) (.comb [.one, .one])
+
+-- HOL `ssc_nested = 3`.
+def sizeWithCtxtNested : Nat :=
+  sizeOfShapeWithContextHOL ([] : StructContextExact) (.comb [.one, .comb [.one, .one]])
+
+-- HOL `ssc_wf_one = T` / `ssc_wf_nested = T`.
+def wfOne : Bool :=
+  isWfShapeExactHOL ([] : StructContextExact) ShapeHOL.one
+
+def wfNested : Bool :=
+  isWfShapeExactHOL ([] : StructContextExact) (.comb [.one, .comb [.one, .one]])
+
+-- HOL `ssc_eq_one = T` / `ssc_eq_nested = T`.
+def sizeEqOne : Bool :=
+  sizeWithCtxtOne == sizeOfShapeHOL ShapeHOL.one
+
+def sizeEqNested : Bool :=
+  sizeWithCtxtNested == sizeOfShapeHOL (.comb [.one, .comb [.one, .one]])
+
+/-- Combined parity check: the seven direct HOL `size_of_sh_with_ctxt` rows. -/
+def sizeWithCtxtGuard : Bool :=
+  (sizeWithCtxtOne == 1) && (sizeWithCtxtComb2 == 2) && (sizeWithCtxtNested == 3) &&
+    wfOne && wfNested && sizeEqOne && sizeEqNested
+
+#guard sizeWithCtxtGuard
+
+/-- Fixture: HOL `size_of_sh_with_ctxt_eq` (`panPropsScript.sml:184`). -/
+theorem sizeWithCtxt_fixture (shape : ShapeHOL) (context : StructContextExact)
+    (h : isWfShapeExactHOL ([] : StructContextExact) shape = true) :
+    sizeOfShapeWithContextHOL context shape = sizeOfShapeHOL shape :=
+  sizeOfShapeWithContextHOL_eq shape context h
+
 def runChecks : IO Bool := do
-  if shapeResVarGuard then
+  if shapeResVarGuard && sizeWithCtxtGuard then
     IO.println
-      "PASS exact panProps shape_of_val / FLOOKUP_pan_res_var (5 HOL rows)"
+      "PASS exact panProps shape_of_val / FLOOKUP_pan_res_var / size_of_sh_with_ctxt (12 HOL rows)"
     pure true
   else
-    IO.println "FAIL exact panProps shape/res_var lemmas"
+    IO.println "FAIL exact panProps shape/res_var/size lemmas"
     pure false
 
 end Flapjack.Test.PanPropsShapeResVarParity

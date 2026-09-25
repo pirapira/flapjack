@@ -1675,3 +1675,19 @@ run_probe pan_common_props_fm_update_diff_vars_probeScript.sml pan_common_props_
   fmdv_eq_1 fmdv_lhs_absent \
   "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The panProps size_of_sh_with_ctxt_eq probe observes that a context-free
+# well-formed shape has the same with-context size as its plain size_of_shape
+# size (panPropsScript.sml:184, using panLang size_of_sh_with_ctxt/size_of_shape).
+run_probe pan_props_size_with_ctxt_probeScript.sml pan_props_size_with_ctxt_probe.out \
+  ssc_one ssc_eq_nested \
+  "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"
+
+# The panSem vshapes_args_rel_imp_eq_len_MAP probe observes the exact
+# LIST_REL (λvshape arg. SND vshape = shape_of arg) vshapes args relation and
+# its LENGTH / MAP SND / MAP shape_of consequences (panSemScript.sml:740).
+run_probe pan_sem_vshapes_args_rel_probeScript.sml pan_sem_vshapes_args_rel_probe.out \
+  vra_one vra_map_two \
+  "$cake_dir/pancake/semantics/panSemScript.sml" \
+  "$cake_dir/pancake/semantics"

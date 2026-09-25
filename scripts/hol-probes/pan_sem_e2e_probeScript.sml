@@ -859,4 +859,75 @@ val _ = print_eval "annot_clause"
           locals := FEMPTY; structs := []; clock := 5 |>)) of
       (res,s') => (res, s'.clock)``
 
+val semantics_decls_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY; globals := FEMPTY; structs := []; code := FEMPTY;
+      eshapes := FEMPTY; clock := 5 |>):((8),unit) panSem$state``
+
+val _ = print_eval "semantics_decls_bad_struct"
+  ``panSem$semantics_decls ^semantics_decls_state «main»
+      [panLang$Name «S» [(«f», panLang$Named «Missing»)]]``
+
+val _ = print_eval "semantics_decls_bad_function"
+  ``panSem$semantics_decls ^semantics_decls_state «main»
+      [panLang$Function <|
+         name := «f»; inline := F; export := F;
+         params := [(«x», panLang$Named «Missing»)];
+         body := panLang$Skip; return := panLang$One |>]``
+
+val _ = print_eval "semantics_decls_bad_exception"
+  ``panSem$semantics_decls ^semantics_decls_state «main»
+      [panLang$ExnDecl «E» (panLang$Named «Missing»)]``
+
+val ivs_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («x», ValWord (7w:8 word));
+      globals := FEMPTY |+ («g», ValWord (9w:8 word));
+      clock := 5 |>):((8),unit) panSem$state``
+
+val ivs_clock_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («x», ValWord (7w:8 word));
+      globals := FEMPTY |+ («g», ValWord (9w:8 word));
+      clock := 9 |>):((8),unit) panSem$state``
+
+val ivs_memory_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («x», ValWord (7w:8 word));
+      globals := FEMPTY |+ («g», ValWord (9w:8 word));
+      memory := (\a. Word (a:8 word)); clock := 5 |>):((8),unit) panSem$state``
+
+val _ = print_eval "kvar_simps_set_local"
+  ``panSem$set_kvar Local «x» (ValWord (3w:8 word)) ^ivs_state =
+    panSem$set_var «x» (ValWord (3w:8 word)) ^ivs_state``
+
+val _ = print_eval "kvar_simps_lookup_local"
+  ``panSem$lookup_kvar Local «x» ^ivs_state = SOME (ValWord (7w:8 word))``
+
+val _ = print_eval "is_valid_value_clock_update"
+  ``panSem$is_valid_value ^ivs_clock_state Local «x» (ValWord (7w:8 word)) =
+    panSem$is_valid_value ^ivs_state Local «x» (ValWord (7w:8 word))``
+
+val _ = print_eval "is_valid_value_memory_update"
+  ``panSem$is_valid_value ^ivs_memory_state Local «x» (ValWord (7w:8 word)) =
+    panSem$is_valid_value ^ivs_state Local «x» (ValWord (7w:8 word))``
+
+val _ = print_eval "kvar_defs_set_kvar_local"
+  ``panSem$set_kvar Local «x» (ValWord (3w:8 word)) ^ivs_state =
+    panSem$set_var «x» (ValWord (3w:8 word)) ^ivs_state``
+
+val _ = print_eval "kvar_defs_set_global_update"
+  ``FLOOKUP (panSem$set_global «g» (ValWord (3w:8 word)) ^ivs_state).globals «g»
+      = SOME (ValWord (3w:8 word)) /\
+    FLOOKUP (panSem$set_global «g» (ValWord (3w:8 word)) ^ivs_state).locals «x»
+      = SOME (ValWord (7w:8 word))``
+
+val _ = print_eval "kvar_defs_lookup_global"
+  ``panSem$lookup_kvar Global «g» ^ivs_state = SOME (ValWord (9w:8 word))``
+
+val _ = print_eval "kvar_defs_is_valid_value"
+  ``panSem$is_valid_value ^ivs_state Local «x» (ValWord (7w:8 word)) =
+    (panSem$shape_of (ValWord (7w:8 word)) =
+     panSem$shape_of (ValWord (7w:8 word)))``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

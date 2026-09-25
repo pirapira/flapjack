@@ -4481,6 +4481,38 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "kvar_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "kvar_simps",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem kvar_simps (panSemScript.sml:422-429) is the four-conjunct simplification set_kvar Local/Global = set_var/set_global plus lookup_kvar Local/Global = FLOOKUP locals/globals; rendered over the exact MlString-keyed PanSemStateExact with the tagged exact setKvar/setVar/setGlobal/lookupKvar ports; direct HOL EVAL rows kvar_simps_set_local and kvar_simps_lookup_local in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "is_valid_value_simps",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem is_valid_value_simps (panSemScript.sml:476-487) is the two Local/Global clauses of is_valid_value whose RHS is case FLOOKUP s.locals/globals v of SOME w => shape_of value = shape_of w | NONE => F; rendered over the exact carrier with HOL Boolean shape equality as the Bool shapeEqHOL (bridge shapeEqHOL_eq_true); direct rows is_valid_value_local_shape/is_valid_value_global_shape/is_valid_value_mismatch/is_valid_value_missing in pan_sem_is_valid_value_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "is_valid_value_simps2",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateSimpExact.lean",
+    "lean_name": "is_valid_value_simps2",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem is_valid_value_simps2 (panSemScript.sml:489-500) is the eight-conjunct invariance of is_valid_value and lookup_kvar under updating clock, ffi, code or memory; rendered over the exact MlString-keyed PanSemStateExact record updates; direct HOL EVAL rows is_valid_value_clock_update and is_valid_value_memory_update in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "kvar_defs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateDefsExact.lean",
+    "lean_name": "kvar_defs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem kvar_defs (panSemScript.sml:502-503) is LIST_CONJ [set_var_def,set_global_def,set_kvar_def,is_valid_value_def,lookup_kvar_def], rendered as the five-way conjunction of those accessor equations over the exact MlString-keyed PanSemStateExact carrier, reusing the tagged setVar/setGlobal/setKvar/lookupKvar/isValidValue ports and the shapeEqHOL bridge; direct HOL rows kvar_defs_set_kvar_local/kvar_defs_set_global_update/kvar_defs_lookup_global/kvar_defs_is_valid_value in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "lookup_kvar_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "lookupKvarHOLExact",
@@ -9534,5 +9566,21 @@
     "lean_name": "fm_update_diff_vars",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL pan_commonPropsScript.sml:780 states a <> b ==> fm |+ (a,a') |+ (b,b') |+ (a,a') |+ (b,b'') = fm |+ (a,a') |+ (b,b'') over fmap; the Lean theorem is the same FUPDATE chain over FiniteMap with the distinct-key hypothesis, and the oracle rows fmdv_eq_1/fmdv_eq_2/fmdv_eq_3/fmdv_lhs_a/fmdv_lhs_b/fmdv_lhs_absent in scripts/hol-probes/pan_common_props_fm_update_diff_vars_probe.out are reproduced by Flapjack/Test/PanCommonPropsZipDisjointParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "size_of_sh_with_ctxt_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "sizeOfShapeWithContextHOL_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against panPropsScript.sml:184 `!sh sctxt. is_wf_shape_nil sh ==> size_of_sh_with_ctxt sctxt sh = size_of_shape sh`; HOL is_wf_shape_nil is the overload is_wf_shape [], here rendered as isWfShapeExactHOL [] shape = true over ShapeHOL/StructContextExact with the exact tagged sizeOfShapeWithContextHOL/sizeOfShapeHOL definitions; oracle rows ssc_one/ssc_comb2/ssc_nested/ssc_wf_one/ssc_wf_nested/ssc_eq_one/ssc_eq_nested in scripts/hol-probes/pan_props_size_with_ctxt_probe.out reproduced by Flapjack/Test/PanPropsShapeResVarParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "vshapes_args_rel_imp_eq_len_MAP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/DecCallExact.lean",
+    "lean_name": "vshapesArgsRel_imp_eq_len_MAP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against panSemScript.sml:740 `!vshapes args. LIST_REL (\\vshape arg. SND vshape = shape_of arg) vshapes args ==> LENGTH vshapes = LENGTH args /\\ MAP SND vshapes = MAP shape_of args`; exact carriers vshapes : List (MlS # ShapeHOL), args : List (ValueHOL width), shape_of = shapeOfHOLExact (tagged shape_of_def); HOL LIST_REL carried by the propositional ListRel because this core has no List.Forall2; oracle rows vra_one/vra_two/vra_bad/vra_len_one/vra_map_two in scripts/hol-probes/pan_sem_vshapes_args_rel_probe.out reproduced by Flapjack/Test/PanSemDecCallExactParity.lean)"
   }
 ]

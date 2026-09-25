@@ -805,7 +805,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval",
     "statement_status": "documented_mismatch",
-    "reviewer": "Uses an implicit HolFiniteDimension instance for an arbitrary word-index carrier and exact finite-map, MlString, CrepProgHOL, CrepExpHOL, set-domain, HolFfiState, expression, mapc-update, and word_lab result carriers. The non-NONE premise is the only success binder (no extra result witness); the proof derives any induction witness internally. The source evaluator still transports through the dimension and word-operation adapter; its identity with HOL's selected finite_index instance and native crepSem$eval remains open. No @[hol] tag."
+    "reviewer": "Uses an implicit HolFiniteDimension instance for an arbitrary word-index carrier and exact finite-map, MlString, CrepProgHOL, CrepExpHOL, set-domain, HolFfiState, expression, mapc-update, and word_lab result carriers. The unused result binder follows HOL's ! s exp v shape. The source evaluator still transports through the dimension and word-operation adapter; its identity with HOL's selected finite_index instance and native crepSem$eval remains open. No @[hol] tag."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

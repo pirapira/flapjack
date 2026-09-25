@@ -1563,7 +1563,8 @@ carriers. The state retains finite-map locals/globals/code, the HOL
 finite-index enumeration.
 Expressions and word-lab results are transported between the exact
 `CrepExpHOL`/`BitVec` syntax and the dimension-indexed `ι → Bool` source
-evaluator. This remains untagged because that source evaluator's dimension
+evaluator. The unused result binder is retained to match HOL's `! s exp v`
+shape. This remains untagged because that source evaluator's dimension
 and word-operation adapters have not yet been proved identical to HOL's
 implicit `finite_index` instances and native `crepSem$eval`. -/
 theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
@@ -1574,6 +1575,7 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
     (state : CrepSemHOLFiniteState ι
       (List Nat × CrepProgHOL dimension.width) σ)
     (expression : CrepExpHOL dimension.width)
+    (_result : PanWordLab (ι → Bool))
     (h : evalCrepHolFiniteWordSourceExpWordLab dimension
       state.toSourceEvaluatorState
       (mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)) ≠ none) :

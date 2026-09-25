@@ -2915,6 +2915,28 @@ theorem evalCrepHolFiniteWordSourceExpWordLab_crepOp_eq_crepOpCrepWord
       (evalCrepHolFiniteWordSourceExp_crepOp_eq_crepOpCrepWord
         dimension state left right leftValue rightValue hLeft hRight)
 
+/-- The source evaluator's `Op` clause routes a successfully evaluated
+    operand list through the tagged HOL `word_op_def` port, preserving the
+    `word_lab` wrapper and converting the result back to the finite-index
+    word carrier. This is a primitive evaluator bridge; it does not identify
+    the complete source evaluator with a native HOL finite-index instance. -/
+theorem evalCrepHolFiniteWordSourceExpWordLab_op_eq_wordOpHOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : BinOp)
+    (expressions : List (CrepExp (ι → Bool))) (values : List (ι → Bool))
+    (hValues : expressions.mapM
+      (evalCrepHolFiniteWordSourceExp dimension state) = some values) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.op operator expressions)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+    (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+      PanWordLab.word := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp only [evalCrepHolFiniteWordSourceExp, Option.bind_eq_bind, hValues,
+    Option.bind_some]
+  simp [holFiniteWordSourceMemoryModel, mapCrepHolWordLab,
+    holWordToBitVec_bitVecToHolWord, Option.map_map, Function.comp_def]
+
 /-- Complete HOL `word_lab` result view of the explicitly finite-index
     source evaluator. Since `word_lab` has only the `Word` constructor, this
     is the corresponding `Option (PanWordLab word)` encoding. -/

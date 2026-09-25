@@ -684,4 +684,55 @@ theorem flattenHOL_length_eq_sizeOfShapeHOL {width : Nat} [NeZero width]
     (flattenHOL v).length = sizeOfShapeHOL (shapeOfHOLExact v) :=
   lengthFlattenHOL_eq_sizeOfShapeHOL v h
 
+/-! ## Exact `functions` append/filter lemmas over the exact declaration carrier
+
+`panPropsScript.sml:1496-1516` groups three list identities about the
+`panLang$functions` projection and the `is_function`/`is_decl` predicates.  The
+exact Lean counterparts are `functionsHOL` (tagged `functions_def`),
+`isDeclHOL` (tagged `is_decl_def`) and `isFunctionHOL` (tagged
+`is_function_def`), all over the reviewed `List (DeclHOL width)` carrier, so
+these statements transfer clause for clause with no extra hypotheses.  HOL's
+`functions_eq_FILTER` (`panPropsScript.sml:1487`, bead `flapjack-4ac.4.80`) is
+deliberately excluded: its `MAP` carries an `ARB` fallback whose rendering is
+not yet reviewed (see `functions_eq_filterMap` in `Flapjack/Pancake/PanSimp.lean`
+and the note in `Flapjack/Pancake/Proofs/PanGlobals.lean`). -/
+
+/-- Exact port of HOL `panProps$functions_append`
+    (`panPropsScript.sml:1496`): the function table of a concatenation is the
+    concatenation of the function tables. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "functions_append"]
+theorem functionsHOL_append {width : Nat} [NeZero width]
+    (prog1 prog2 : List (DeclHOL width)) :
+    functionsHOL (prog1 ++ prog2) = functionsHOL prog1 ++ functionsHOL prog2 := by
+  induction prog1 with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration <;> simp [functionsHOL, ih]
+
+/-- Exact port of HOL `panProps$functions_FILTER`
+    (`panPropsScript.sml:1502`): filtering a program to its function
+    declarations leaves the function table unchanged. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "functions_FILTER"]
+theorem functionsHOL_filter_isFunction {width : Nat} [NeZero width]
+    (prog : List (DeclHOL width)) :
+    functionsHOL (prog.filter isFunctionHOL) = functionsHOL prog := by
+  induction prog with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [functionsHOL, isFunctionHOL, List.filter_cons, ih]
+
+/-- Exact port of HOL `panProps$functions_FILTER'`
+    (`panPropsScript.sml:1510`): a program filtered to its value declarations
+    has an empty function table. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "functions_FILTER'"]
+theorem functionsHOL_filter_isDecl {width : Nat} [NeZero width]
+    (prog : List (DeclHOL width)) :
+    functionsHOL (prog.filter isDeclHOL) = [] := by
+  induction prog with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      cases declaration <;>
+        simp [functionsHOL, isDeclHOL, List.filter_cons, ih]
+
 end Flapjack

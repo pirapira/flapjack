@@ -16,6 +16,12 @@ experimental `list_as_array` qualifier records HOL list fields represented by
 Lean arrays, e.g. `@[hol "...Script.sml" "dec_deg_def"
 (list_as_array := [degrees])]`. It does not authorize a qualified tag until a
 checked same-module representation lemma and checker gate exist. The
+`list_as_list` qualifier names HOL list variables represented by Lean `List`
+binders, e.g. `@[hol "...Script.sml" "dropWhile_eq_cons_IMP"
+(list_as_list := [xs, ys])]`. It records only this carrier/API mapping; the
+checker requires each identifier to be a Lean `List` binder, while source
+review compares operations, bounds, and the full theorem statement. It does not
+authorize changed conclusions or out-of-range behavior.
 `names_as_string` qualifier records a narrowly reviewed HOL `mlstring` name
 represented by Lean `String`. Its identifiers can name parameters or other
 uses, not just structure fields, e.g.
@@ -75,6 +81,11 @@ structure HolRef where
       the witness premises. The reference checker validates this shape; it does
       not independently prove source-to-Lean semantic correspondence. -/
   listAsArray : Array String := #[]
+  /-- HOL list variables represented by same-shaped Lean `List` binders. The
+      checker requires each identifier to name a binder of `List` type. This
+      records only the carrier/API mapping; it does not authorize differences
+      in hypotheses, bounds, conclusions, or behavior. -/
+  listAsList : Array String := #[]
   /-- Lean identifiers whose `String` carrier represents HOL `mlstring` names.
       Identifiers need not be structure fields. The manifest reviewer
       classifies each as equality/map-key-only or byte-observable. For a
@@ -102,19 +113,22 @@ open Lean
 
 declare_syntax_cat holQualifier
 syntax "(" "list_as_array" ":=" "[" ident,+ "]" ")" : holQualifier
+syntax "(" "list_as_list" ":=" "[" ident,+ "]" ")" : holQualifier
 syntax "(" "names_as_string" ":=" "[" ident,+ "]" ")" : holQualifier
 syntax "(" "names_as_string_boundary" ":=" "[" ident,+ "]" ")" : holQualifier
 syntax "(" "fmap_as_finite_support" ":=" "[" ident,+ "]" ")" : holQualifier
 syntax (name := hol) "hol " str str (num)? holQualifier* : attr
 
 private def checkedHolRef (path name : String) (line? : Option Nat := none)
-    (listAsArray namesAsString namesAsStringBoundary fmapAsFiniteSupport : Array String := #[]) : CoreM HolRef := do
+    (listAsArray listAsList namesAsString namesAsStringBoundary fmapAsFiniteSupport : Array String := #[]) : CoreM HolRef := do
   unless path.startsWith "cakeml/" && path.endsWith ".sml" do
     throwError "@[hol]: path must be a repository-relative `cakeml/...Script.sml` file, got {path}"
   if name.isEmpty || name.any Char.isWhitespace then
     throwError "@[hol]: declaration name must be a single HOL identifier, got {repr name}"
   if listAsArray.toList.eraseDups.length != listAsArray.size then
     throwError "@[hol]: list_as_array fields must be distinct"
+  if listAsList.toList.eraseDups.length != listAsList.size then
+    throwError "@[hol]: list_as_list identifiers must be distinct"
   if namesAsString.toList.eraseDups.length != namesAsString.size then
     throwError "@[hol]: names_as_string identifiers must be distinct"
   if namesAsStringBoundary.toList.eraseDups.length != namesAsStringBoundary.size then
@@ -123,12 +137,14 @@ private def checkedHolRef (path name : String) (line? : Option Nat := none)
     throwError "@[hol]: names_as_string_boundary identifiers must also appear in names_as_string"
   if fmapAsFiniteSupport.toList.eraseDups.length != fmapAsFiniteSupport.size then
     throwError "@[hol]: fmap_as_finite_support fields must be distinct"
-  pure { path, name, line?, listAsArray, namesAsString, namesAsStringBoundary, fmapAsFiniteSupport }
+  pure { path, name, line?, listAsArray, listAsList, namesAsString, namesAsStringBoundary, fmapAsFiniteSupport }
 
 private def parseHolQualifier (stx : Syntax) : CoreM (String × Array String) := do
   match stx with
   | `(holQualifier| (list_as_array := [$fields:ident,*])) =>
       pure ("list_as_array", fields.getElems.map (fun field => field.getId.eraseMacroScopes.toString))
+  | `(holQualifier| (list_as_list := [$fields:ident,*])) =>
+      pure ("list_as_list", fields.getElems.map (fun field => field.getId.eraseMacroScopes.toString))
   | `(holQualifier| (names_as_string := [$names:ident,*])) =>
       pure ("names_as_string", names.getElems.map (fun field => field.getId.eraseMacroScopes.toString))
   | `(holQualifier| (names_as_string_boundary := [$names:ident,*])) =>
@@ -140,22 +156,24 @@ private def parseHolQualifier (stx : Syntax) : CoreM (String × Array String) :=
 private def parseHolRefAttribute (stx : Syntax) : CoreM HolRef := do
   let parse path name line? qualifiers := do
     let mut listAsArray : Array String := #[]
+    let mut listAsList : Array String := #[]
     let mut namesAsString : Array String := #[]
     let mut namesAsStringBoundary : Array String := #[]
     let mut fmapAsFiniteSupport : Array String := #[]
     for qualifier in qualifiers do
       let (kind, fields) ← parseHolQualifier qualifier
       if kind == "list_as_array" then listAsArray := listAsArray ++ fields
+      else if kind == "list_as_list" then listAsList := listAsList ++ fields
       else if kind == "names_as_string" then namesAsString := namesAsString ++ fields
       else if kind == "names_as_string_boundary" then namesAsStringBoundary := namesAsStringBoundary ++ fields
       else fmapAsFiniteSupport := fmapAsFiniteSupport ++ fields
-    checkedHolRef path name line? listAsArray namesAsString namesAsStringBoundary fmapAsFiniteSupport
+    checkedHolRef path name line? listAsArray listAsList namesAsString namesAsStringBoundary fmapAsFiniteSupport
   match stx with
   | `(attr| hol $path:str $name:str $line:num $qualifiers:holQualifier*) =>
       parse path.getString name.getString (some line.getNat) qualifiers
   | `(attr| hol $path:str $name:str $qualifiers:holQualifier*) =>
       parse path.getString name.getString none qualifiers
-  | _ => throwError "@[hol]: expected `hol \"<cakeml path>\" \"<HOL declaration name>\" [line] [(list_as_array := [fields])] [(names_as_string := [fields])]`"
+  | _ => throwError "@[hol]: expected `hol \"<cakeml path>\" \"<HOL declaration name>\" [line] [(list_as_array := [fields])] [(list_as_list := [names])] [(names_as_string := [fields])]`"
 
 initialize holRefAttribute : ParametricAttribute HolRef ←
   registerParametricAttribute {
@@ -167,13 +185,15 @@ initialize holRefAttribute : ParametricAttribute HolRef ←
 private def HolRef.qualifierSuffix (ref : HolRef) : String :=
   let listAsArray := if ref.listAsArray.isEmpty then "" else
     s!" (list_as_array := [{String.intercalate ", " ref.listAsArray.toList}])"
+  let listAsList := if ref.listAsList.isEmpty then "" else
+    s!" (list_as_list := [{String.intercalate ", " ref.listAsList.toList}])"
   let namesAsString := if ref.namesAsString.isEmpty then "" else
     s!" (names_as_string := [{String.intercalate ", " ref.namesAsString.toList}])"
   let namesAsStringBoundary := if ref.namesAsStringBoundary.isEmpty then "" else
     s!" (names_as_string_boundary := [{String.intercalate ", " ref.namesAsStringBoundary.toList}])"
   let fmapAsFiniteSupport := if ref.fmapAsFiniteSupport.isEmpty then "" else
     s!" (fmap_as_finite_support := [{String.intercalate ", " ref.fmapAsFiniteSupport.toList}])"
-  listAsArray ++ namesAsString ++ namesAsStringBoundary ++ fmapAsFiniteSupport
+  listAsArray ++ listAsList ++ namesAsString ++ namesAsStringBoundary ++ fmapAsFiniteSupport
 
 /-! Parser regressions for the original syntax, each qualifier alone, and both
 qualifiers together. These elaborate temporary syntax values only; they do not
@@ -182,7 +202,7 @@ run_cmd do
   let plainSyntax ← `(attr| hol "cakeml/pancake/panLangScript.sml" "varname" 7)
   let plain ← Lean.Elab.Command.liftCoreM (parseHolRefAttribute plainSyntax)
   unless plain.line? == some 7 && plain.listAsArray.isEmpty && plain.namesAsString.isEmpty &&
-      plain.namesAsStringBoundary.isEmpty do
+      plain.listAsList.isEmpty && plain.namesAsStringBoundary.isEmpty do
     throwError "@[hol] unqualified syntax regression"
   let listSyntax ← `(attr| hol "cakeml/pancake/panLangScript.sml" "varname" (list_as_array := [fields]))
   let listRef ← Lean.Elab.Command.liftCoreM (parseHolRefAttribute listSyntax)
@@ -194,6 +214,12 @@ run_cmd do
   unless namesRef.listAsArray.isEmpty && namesRef.namesAsString == #["name"] &&
       namesRef.namesAsStringBoundary.isEmpty do
     throwError "@[hol] names_as_string syntax regression"
+  let listAsListSyntax ← `(attr| hol "cakeml/pancake/panPropsScript.sml"
+    "dropWhile_eq_cons_IMP" (list_as_list := [xs, ys]))
+  let listAsListRef ← Lean.Elab.Command.liftCoreM (parseHolRefAttribute listAsListSyntax)
+  unless listAsListRef.listAsList == #["xs", "ys"] &&
+      HolRef.qualifierSuffix listAsListRef == " (list_as_list := [xs, ys])" do
+    throwError "@[hol] list_as_list syntax or #hol_refs output regression"
   let bothSyntax ← `(attr| hol "cakeml/pancake/panLangScript.sml" "varname"
     9 (list_as_array := [fields]) (names_as_string := [name, fieldName]))
   let both ← Lean.Elab.Command.liftCoreM (parseHolRefAttribute bothSyntax)
@@ -245,6 +271,15 @@ run_cmd do
     catch _ => pure true
   unless fmapDuplicateRejected do
     throwError "@[hol] duplicate fmap_as_finite_support fields must be rejected"
+  let listAsListDuplicateSyntax ← `(attr| hol "cakeml/pancake/panPropsScript.sml"
+    "dropWhile_eq_cons_IMP" (list_as_list := [xs, xs]))
+  let listAsListDuplicateRejected ← Lean.Elab.Command.liftCoreM do
+    try
+      let _ ← parseHolRefAttribute listAsListDuplicateSyntax
+      pure false
+    catch _ => pure true
+  unless listAsListDuplicateRejected do
+    throwError "@[hol] duplicate list_as_list identifiers must be rejected"
 
 /-- The HOL cross-reference attached to `declName`, if any. -/
 def HolRef.get? (env : Environment) (declName : Name) : Option HolRef :=

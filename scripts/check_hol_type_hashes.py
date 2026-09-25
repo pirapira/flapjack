@@ -46,7 +46,7 @@ def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
             raise ValueError(f"Lean export line {line_number} has non-string fields {non_string}")
     qualifiers = record.get("qualifiers", {})
     allowed_qualifiers = {
-        "list_as_array", "names_as_string", "names_as_string_boundary",
+        "list_as_array", "list_as_list", "names_as_string", "names_as_string_boundary",
         "fmap_as_finite_support",
     }
     if not isinstance(qualifiers, dict) or not set(qualifiers) <= allowed_qualifiers:
@@ -118,6 +118,7 @@ def lock_records(
         if record.get("statement_status") not in {
             "reviewed_exact",
             "reviewed_list_as_array",
+            "reviewed_list_as_list",
             "reviewed_names_as_string",
             "reviewed_list_as_array_names_as_string",
             "reviewed_fmap_as_finite_support",
@@ -141,9 +142,13 @@ def lock_records(
             "names_as_string_boundary": list(record.get("names_as_string_boundary", ())),
             "fmap_as_finite_support": list(record.get("fmap_as_finite_support", ())),
         }
+        list_as_list = list(record.get("list_as_list", ()))
+        if list_as_list:
+            qualifiers["list_as_list"] = list_as_list
         exported_qualifiers = item.get("qualifiers", {})
-        if any(exported_qualifiers.get(key, []) != value
-               for key, value in qualifiers.items()):
+        if (any(exported_qualifiers.get(key, []) != value
+                for key, value in qualifiers.items())
+                or exported_qualifiers.get("list_as_list", []) != list_as_list):
             raise ValueError(
                 f"{record['lean_path']}:{record['lean_name']}: manifest qualifiers "
                 "differ from elaborated @[hol] exporter"

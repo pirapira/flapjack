@@ -2802,7 +2802,8 @@ theorem evalCrepHolFiniteWordSourceExpWordLab_load32_eq_panMemLoad32HOL
       state.bigEndian (holWordToBitVec dimension address)).map
         (fun value => PanWordLab.word
           (BitVec.ofNat dimension.width value.toNat)) := by
-  simpa [Option.map_map, Function.comp_def, mapCrepHolWordLab] using
+  simpa [Option.map_map, Function.comp_def, mapCrepHolWordLab,
+    holWordToBitVec_bitVecToHolWord] using
     congrArg (Option.map PanWordLab.word)
       (evalCrepHolFiniteWordSourceExp_load32_eq_panMemLoad32HOL
         dimension state addressExpression address hAddress)
@@ -3074,6 +3075,33 @@ theorem evalCrepHolFiniteWordSourceExp_cmp_eq_wordCmpHOL
   simp [evalCrepHolFiniteWordSourceExp, hLeft, hRight,
     holFiniteWordSourceMemoryModel]
 
+/-- Complete `word_lab` result form of the source `Cmp` equation above. The
+    source result, after its outer HOL `Word` constructor and finite-index
+    transport, is exactly the tagged HOL `word_cmp` result embedded by the
+    `eval_def` clause. The complete evaluator/state correspondence remains
+    open, so this primitive adapter is untagged. -/
+theorem evalCrepHolFiniteWordSourceExpWordLab_cmp_eq_wordCmpHOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : Cmp)
+    (left right : CrepExp (ι → Bool)) (leftValue rightValue : ι → Bool)
+    (hLeft : evalCrepHolFiniteWordSourceExp dimension state left =
+      some leftValue)
+    (hRight : evalCrepHolFiniteWordSourceExp dimension state right =
+      some rightValue) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.cmp operator left right)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+    some (PanWordLab.word
+      (Compiler.Encoders.Asm.wordCmpResultHOL operator
+        (holWordToBitVec dimension leftValue)
+        (holWordToBitVec dimension rightValue))) := by
+  simpa [Option.map_map, Function.comp_def, mapCrepHolWordLab,
+    holWordToBitVec_bitVecToHolWord] using
+    congrArg (Option.map PanWordLab.word)
+      (congrArg (Option.map (holWordToBitVec dimension))
+        (evalCrepHolFiniteWordSourceExp_cmp_eq_wordCmpHOL
+          dimension state operator left right leftValue rightValue hLeft hRight))
+
 /-! Adapter equation for the source `Shift` evaluator primitive. It exposes
     HOL `word_sh_def` directly after successful child evaluations and retains
     its `Option` failure behavior for out-of-range shifts. The source
@@ -3095,6 +3123,32 @@ theorem evalCrepHolFiniteWordSourceExp_shift_eq_wordShiftHOL
   letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
   simp [evalCrepHolFiniteWordSourceExp, hLeft, hRight,
     holFiniteWordSourceMemoryModel]
+
+/-- Complete `word_lab` result form of the source `Shift` equation above. The
+    option result from tagged HOL `word_sh_def`, including shift failure, is
+    preserved after the source `Word` wrapper and finite-index transport. The
+    whole evaluator/state correspondence remains open, so this adapter is
+    untagged. -/
+theorem evalCrepHolFiniteWordSourceExpWordLab_shift_eq_wordShiftHOL
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : Shift)
+    (left right : CrepExp (ι → Bool)) (leftValue rightValue : ι → Bool)
+    (hLeft : evalCrepHolFiniteWordSourceExp dimension state left =
+      some leftValue)
+    (hRight : evalCrepHolFiniteWordSourceExp dimension state right =
+      some rightValue) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.shift operator left right)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      (wordShiftHOL operator (holWordToBitVec dimension leftValue)
+      (holWordToBitVec dimension rightValue).toNat).map
+        PanWordLab.word := by
+  simpa [Option.map_map, Function.comp_def, mapCrepHolWordLab,
+    holWordToBitVec_bitVecToHolWord] using
+    congrArg (Option.map PanWordLab.word)
+      (congrArg (Option.map (holWordToBitVec dimension))
+        (evalCrepHolFiniteWordSourceExp_shift_eq_wordShiftHOL
+          dimension state operator left right leftValue rightValue hLeft hRight))
 
 /-! Adapter equation for the list-valued source `Op` clause. Once the source
     subexpressions evaluate to `values`, the clause is exactly HOL

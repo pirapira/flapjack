@@ -3,6 +3,7 @@ import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanStatic
 import Flapjack.Pancake.PanLang.Shape
+import Flapjack.Pancake.CrepLang.Exp
 
 /-!
 Executable expression lowering from Flapjack to Crepe.
@@ -56,12 +57,37 @@ def cexpHeads {β : Type u} : List (List β) → Option (List β)
       | _, none => none
       | expression :: _, some heads => some (expression :: heads)
 
+/-- Exact HOL `comp_field_def` (`cakeml/pancake/pan_to_crepScript.sml:28-32`)
+    over the MlString-backed `ShapeHOL` carrier and the positive-width
+    `CrepExpHOL`.
+
+    HOL returns `([Const 0w], One)` on an empty shape list, takes
+    `size_of_shape sh` expressions for index `0`, and otherwise skips
+    `size_of_shape sh` expressions and decrements the index. The Lean word
+    width is the HOL word index (`BitVec width` with `[NeZero width]`), the
+    zero literal is `CrepExpHOL.const 0`, and `sizeOfShapeHOL` is the already
+    tagged `size_of_shape_def` over `ShapeHOL`. All constructor arities and
+    field types match. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_field_def"]
+def compFieldHOL {width : Nat} [NeZero width] (index : Nat) :
+    List Flapjack.Pancake.PanLang.ShapeHOL →
+      List (CrepExpHOL width) →
+        List (CrepExpHOL width) × Flapjack.Pancake.PanLang.ShapeHOL
+  | [], _ => ([.const (0 : BitVec width)], .one)
+  | shape :: shapes, expressions =>
+      if index = 0 then
+        (expressions.take (Flapjack.Pancake.PanLang.sizeOfShapeHOL shape), shape)
+      else
+        compFieldHOL (index - 1) shapes
+          (expressions.drop (Flapjack.Pancake.PanLang.sizeOfShapeHOL shape))
+
 /-- Flapjack-specific analogue of HOL `comp_field_def`. This implementation
     uses production `Shape`, whose named fields are Lean `String`, and a
     generic word carrier `α`; HOL `shape` names are `mlstring` and the result
     `crepLang$exp` is indexed by a positive word width. It is therefore not an
-    exact HOL declaration and intentionally has no tag until both carriers are
-    represented exactly. -/
+    exact HOL declaration and intentionally has no tag. The exact carrier port
+    `compFieldHOL` over `ShapeHOL`/`CrepExpHOL` is tagged above, and
+    `compileField_map_codecs` is the kernel bridge from this executed helper. -/
 def compileField [OfNat α 0] (index : Nat) :
     List Shape → List (CrepExp α) → List (CrepExp α) × Shape
   | [], _ => ([.const 0], .one)
@@ -249,6 +275,43 @@ theorem retVarHOL_shapeToHOL (shape : Shape) (names : List Nat) :
       Flapjack.Pancake.PanLang.sizeOfShapeHOL, Shape.shapeSize]
     simp only [sizeOfShapesHOL_shapeToHOL fields]
   | named name => simp [retVarHOL, retVar, Flapjack.Pancake.PanLang.shapeToHOL]
+
+/-- Narrow kernel bridge: mapping the production `compileField` result into
+    the exact carriers agrees with `compFieldHOL`. The production helper is
+    still the executed one; textual routing of the executed expression lowering
+    through the exact carrier is tracked separately (`flapjack-pxn.18.3.5.8.11`). -/
+theorem compileField_map_codecs {width : Nat} [NeZero width] (index : Nat)
+    (shapes : List Shape) (expressions : List (CrepExp (BitVec width))) :
+    (compileField (α := BitVec width) index shapes expressions).1.map crepExpToHOL
+        = (compFieldHOL index (shapes.map Flapjack.Pancake.PanLang.shapeToHOL)
+            (expressions.map crepExpToHOL)).1
+    ∧ Flapjack.Pancake.PanLang.shapeToHOL
+        (compileField (α := BitVec width) index shapes expressions).2
+        = (compFieldHOL index (shapes.map Flapjack.Pancake.PanLang.shapeToHOL)
+            (expressions.map crepExpToHOL)).2 := by
+  induction shapes generalizing index expressions with
+  | nil =>
+      rw [compileField.eq_1]
+      simp only [List.map_nil]
+      rw [compFieldHOL.eq_1]
+      simp [crepExpToHOL.eq_1, Flapjack.Pancake.PanLang.shapeToHOL]
+  | cons shape shapes ih =>
+      by_cases h : index = 0
+      · rw [compileField.eq_2]
+        simp only [List.map_cons]
+        rw [compFieldHOL.eq_2]
+        simp only [if_pos h]
+        constructor
+        · rw [sizeOfShapeHOL_shapeToHOL, ← List.map_take]
+        · trivial
+      · rw [compileField.eq_2]
+        simp only [List.map_cons]
+        rw [compFieldHOL.eq_2]
+        simp only [if_neg h]
+        rw [sizeOfShapeHOL_shapeToHOL]
+        rw [← List.map_drop]
+        exact ih (index - 1) (expressions.drop (Shape.shapeSize shape))
+
 
 /-! Flapjack-only helper modeled on the commented-out `shape_vars_def` text
     (`cakeml/pancake/pan_to_crepScript.sml:319-324`); HOL does not define this

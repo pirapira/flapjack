@@ -1448,6 +1448,14 @@
     "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-pxn.18.3.5.8.9): ret_var's three clauses (pan_to_crepScript.sml:114-119) are ret_var One ns = oHD ns, ret_var (Comb sh) ns = if size_of_shape (Comb sh) = 1 then oHD ns else NONE, and ret_var (Named sh) ns = NONE. HOL oHD (HOL/src/list/src/listScript.sml:5474) is exactly List.head?, and Lean sizeOfShapeHOL is the tagged size_of_shape_def over ShapeHOL (panLangScript.sml:174). retVarHOL is stated over the exact MlString-backed ShapeHOL carrier with matching constructor arities and field types; the Named name is carried exactly as an MlString and then discarded by the function. Direct HOL rows are in scripts/hol-probes/ret_var_probe.out; Lean exact-carrier rows and the retVarHOL_shapeToHOL kernel bridge to production retVar are checked in Flapjack/Test/RetVarParity.lean. Production retVar stays untagged."
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "comp_field_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "compFieldHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-pxn.18.3.5.8.11): comp_field's two clauses (pan_to_crepScript.sml:28-32) are comp_field i [] es = ([Const 0w], One) and comp_field i (sh::shs) es = if i = 0 then (TAKE (size_of_shape sh) es, sh) else comp_field (i-1) shs (DROP (size_of_shape sh) es). compFieldHOL is stated over the exact MlString-backed ShapeHOL carrier and the positive-width CrepExpHOL (BitVec width, [NeZero width]); sizeOfShapeHOL is the tagged size_of_shape_def over ShapeHOL and the zero literal is CrepExpHOL.const 0. All constructor arities and field types match. Direct HOL-EVAL rows for first/second/fallback/empty/short are in scripts/hol-probes/comp_field_probe.out, reproduced over the exact carrier in Flapjack/Test/CompFieldParity.lean. Production compileField stays untagged; compileField_map_codecs is the kernel bridge mapping its result into the exact carriers."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",

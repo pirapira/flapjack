@@ -1440,6 +1440,14 @@
     "reviewer": "Codex (direct HOL type probe and source comparison at pan_to_crepScript.sml:19-26): HOL infers cexp_heads as α list list -> α list option because the definition only inspects lists. Lean cexpHeads has the same arbitrary-element type; production uses it at β := CrepExp α. Inferred type is recorded in scripts/hol-probes/cexp_heads_probe.out; direct HOL-EVAL list rows are checked in CexpHeadsParity.lean."
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "wrap_rt_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "wrapRtHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison at pan_to_crepScript.sml:131-136): HOL wrap_rt n = case n of NONE => NONE | SOME (One,[]) => NONE | m => m over the mlstring-named shape; Lean wrapRtHOL has the identical three clauses over the exact MlString-backed ShapeHOL carrier. Narrow codec bridge wrapRtHOL_map_shapeToHOL relates production wrapRt. Direct HOL rows none/empty_one/one_word/comb_empty/named in scripts/hol-probes/wrap_rt_probe.out; replayed on ShapeHOL and production in Flapjack/Test/WrapRtParity.lean."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",

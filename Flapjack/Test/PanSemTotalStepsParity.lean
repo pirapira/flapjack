@@ -4,9 +4,11 @@ import Flapjack.Test.PanValueFfiSemantics
 /-!
 # Parity for the total statement-clause assembly steps
 
-Exercises `panSemTotalExprStep` and the `Assign`/`Return`/`Raise` total clause
-helpers from `Flapjack/Pancake/Semantics/PanSem/TotalSteps.lean` on a concrete
-RV64 source state:
+Exercises `panSemTotalExprStep`, the `Assign`/`Return`/`Raise` clause helpers,
+and the partial recursive dispatcher from
+`Flapjack/Pancake/Semantics/PanSem/TotalSteps.lean` on a concrete RV64 source
+state. Its `Dec` cases bind the initializer for the body, propagate the body's
+control result, and restore either a shadowed value or an absent local:
 
 * `Assign` to a bound local succeeds (HOL's normal completion, i.e. `NONE`) and
   updates the binding; `Assign` to an absent local is `SOME Error` with the state
@@ -249,6 +251,12 @@ def isBreakResult (result : Option (PanSemHOLResult Word64)) : Bool :=
   | some .break => true
   | _ => false
 
+/-- `Continue` result check. -/
+def isContinueResult (result : Option (PanSemHOLResult Word64)) : Bool :=
+  match result with
+  | some .continue => true
+  | _ => false
+
 /-- Partial total-evaluate dispatcher on a clock leaf: `Skip` completes normally. -/
 def partialSkipGuard : Bool :=
   isNoneResult (panSemTotalEvaluatePartial (fun _ _ => none) stepsState .skip).1
@@ -269,6 +277,21 @@ def partialDecGuard : Bool :=
     (.dec "x" Shape.one (.const (BitVec.ofNat 64 9)) (.return (.var .local "x")))
   isReturnedWord 9 result.1 && wordAt result.2.locals "x" 7
 
+/-- Dec propagates body control results while restoring a previously absent
+    binding, matching HOL's `res_var` behavior for `FLOOKUP s.locals x = NONE`.
+    The direct oracle rows are `dec_missing_local_break` and
+    `dec_missing_local_continue`. -/
+def partialDecMissingBindingControlGuard : Bool :=
+  let state := { stepsState with locals := fun _ => none }
+  let broken := panSemTotalEvaluatePartial (fun _ _ => none) state
+    (.dec "x" Shape.one (.const (BitVec.ofNat 64 9)) .break)
+  let continued := panSemTotalEvaluatePartial (fun _ _ => none) state
+    (.dec "x" Shape.one (.const (BitVec.ofNat 64 9)) .continue)
+  isBreakResult broken.1 && broken.2.clock == state.clock &&
+    (broken.2.locals "x").isNone &&
+    isContinueResult continued.1 && continued.2.clock == state.clock &&
+    (continued.2.locals "x").isNone
+
 /-- A not-yet-assembled clause (`Seq`) returns `SOME Error` unchanged. -/
 def partialSeqGuard : Bool :=
   isErrorResult (panSemTotalEvaluatePartial (fun _ _ => none) stepsState
@@ -276,7 +299,7 @@ def partialSeqGuard : Bool :=
 
 def partialEvaluateGuard : Bool :=
   partialSkipGuard && partialBreakGuard && partialAssignGuard &&
-    partialDecGuard && partialSeqGuard
+    partialDecGuard && partialDecMissingBindingControlGuard && partialSeqGuard
 
 /-- Deterministic mapped-read/write oracle returning eight zero bytes. -/
 def shMemTestFfi : FfiState Unit :=
@@ -619,6 +642,7 @@ def stepsGuard : Bool :=
 
 #eval stepsGuard
 #guard stepsGuard
+#guard partialDecMissingBindingControlGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then

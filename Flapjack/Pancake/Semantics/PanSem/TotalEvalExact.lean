@@ -16,12 +16,11 @@ nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 `Primitive`, the three stores, `ShMemLoad`, `ShMemStore`, `Break`, `Continue`,
 `Return`, `Raise`, `Tick`, `ExtCall`, and `Annot`.
 
-The outer `Option` means that a constructor has no assembled clause in this
-fragment; it is distinct from the inner HOL result option. The nonrecursive
-dispatcher leaves `Dec`, `Seq`, `If`, `While`, `Call`, and `DecCall` open. The
-recursive evaluator below assembles `Dec`, `Seq`, `If`, `Call`, and `DecCall`;
-`While` and other unsupported clauses remain explicit gaps. This file does
-not claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
+The outer `Option` means that a constructor has no assembled clause in the
+nonrecursive dispatcher; it is distinct from the inner HOL result option. The
+recursive evaluator below assembles `Dec`, `Seq`, `If`, `Call`, and `DecCall`.
+`While` and other unsupported clauses remain explicit gaps. This file does not
+claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
 -/
 
 namespace Flapjack

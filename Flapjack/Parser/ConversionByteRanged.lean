@@ -1,5 +1,6 @@
 import Flapjack.Parser.ByteRanged
 import Flapjack.Parser.Conversion
+import Flapjack.Pancake.PanLang.Shape
 
 /-!
 Byte-rangedness of the concrete parse tree and of the first conversion step.
@@ -68,5 +69,95 @@ theorem convFfiIdent_byteRanged {tree : ParseTree} {name : String}
       cases token <;> simp_all [ParseTreeByteRanged, TokenNameByteRanged]
   | nd nonterminal children locs =>
       simp [convFfiIdent, ParseTree.destTok] at h
+
+open Flapjack.Pancake.PanLang
+
+theorem convDefaultShape_byteRanged {tree : ParseTree} {shape : Shape}
+    (h : convDefaultShape tree = some shape) : ShapeByteRanged shape := by
+  unfold convDefaultShape at h
+  split at h
+  · rename_i t ht
+    simp only [Option.some.injEq] at h
+    subst h
+    simp [ShapeByteRanged]
+  · simp at h
+
+theorem argsNT_byteRanged {tree : ParseTree} {nt : Nonterminal} {children : List ParseTree}
+    (ht : ParseTreeByteRanged tree) (h : tree.argsNT nt = some children) :
+    ∀ c ∈ children, ParseTreeByteRanged c := by
+  cases tree with
+  | lf tok loc => simp [ParseTree.argsNT] at h
+  | nd n ch loc =>
+      simp only [ParseTree.argsNT] at h
+      split at h
+      · rename_i heq
+        simp only [Option.some.injEq] at h
+        subst h
+        simp only [ParseTreeByteRanged] at ht
+        exact ht
+      · simp at h
+
+mutual
+  theorem convShape_byteRanged : ∀ (fuel : Nat) (tree : ParseTree),
+      ParseTreeByteRanged tree → ∀ shape, convShape fuel tree = some shape → ShapeByteRanged shape
+    | 0, _, _, _, h => by simp [convShape] at h
+    | fuel + 1, tree, ht, shape, h => by
+        simp only [convShape] at h
+        split at h
+        · rename_i d hd
+          simp only [Option.some.injEq] at h
+          subst h
+          exact convDefaultShape_byteRanged hd
+        · split at h
+          · rename_i v hv
+            split at h
+            · simp at h
+            · split at h
+              · simp only [Option.some.injEq] at h; subst h; simp [ShapeByteRanged]
+              · simp only [Option.some.injEq] at h; subst h
+                simp only [ShapeByteRanged]
+                intro c hc
+                simp only [List.mem_replicate] at hc
+                obtain ⟨-, rfl⟩ := hc
+                simp [ShapeByteRanged]
+          · split at h
+            · rename_i name hn
+              simp only [Option.some.injEq] at h
+              subst h
+              simpa [ShapeByteRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged ht hn
+            · split at h
+              · rename_i children hc
+                simp only [Option.map_eq_some_iff] at h
+                obtain ⟨shapes, hs, rfl⟩ := h
+                simp only [ShapeByteRanged]
+                intro s hmem
+                exact convShapeList_byteRanged fuel children
+                  (argsNT_byteRanged ht hc) shapes hs s hmem
+              · simp at h
+  theorem convShapeList_byteRanged : ∀ (fuel : Nat) (trees : List ParseTree),
+      (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ shapes,
+      convShape.convShapeList fuel trees = some shapes → ∀ s ∈ shapes, ShapeByteRanged s
+    | fuel, [], _, shapes, h => by
+        unfold convShape.convShapeList at h
+        simp only [Option.some.injEq] at h
+        subst h
+        intro s hs
+        simp at hs
+    | fuel, tree :: trees, ht, shapes, h => by
+        cases htree : convShape fuel tree with
+        | none => simp [convShape.convShapeList, htree] at h
+        | some shape =>
+            simp [convShape.convShapeList, htree] at h
+            cases hrec : convShape.convShapeList fuel trees with
+            | none => simp [hrec] at h
+            | some shapes' =>
+                simp only [hrec, Option.bind_some, Option.some.injEq] at h
+                rw [← h]
+                intro s hs
+                rw [List.mem_cons] at hs
+                rcases hs with rfl | htail
+                · exact convShape_byteRanged fuel tree (ht tree (by simp)) _ htree
+                · exact convShapeList_byteRanged fuel trees (fun t hmem => ht t (by simp [hmem])) shapes' hrec s htail
+end
 
 end Flapjack.Parser

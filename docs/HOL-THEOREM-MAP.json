@@ -1664,6 +1664,19 @@
     "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
   },
   {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_name_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "globalRenameFunctionName",
+    "statement_status": "reviewed_names_as_string",
+    "names_as_string": [
+      "source",
+      "target",
+      "name"
+    ],
+    "reviewer": "Codex (source comparison) HOL fperm_name_def (pan_globalsScript.sml:184): if f = h then g else if g = h then f else h. Lean globalRenameFunctionName matches clause-for-clause. Reviewed under names_as_string: source: equality/map-key-only, target: equality/map-key-only, name: equality/map-key-only. No byte-observable use, so no boundary witness. Direct HOL rows in pan_globals_fperm_name_probe.out."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "fperm_name_cong",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",

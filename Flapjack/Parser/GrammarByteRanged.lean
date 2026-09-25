@@ -751,5 +751,191 @@ theorem gShapedIdentList_treesSafe (nonterminal : Nonterminal) (fuel : Nat) :
   exact PTreesSafe.pure (first ++ rest) (TreesByteRanged.append hf hr)
 
 
+theorem subtree_rptBind_treesSafe (nt : Nonterminal) {gFirst gOps gTail : P P.Trees}
+    (hFirst : PTreesSafe gFirst) (hOps : PTreesSafe gOps) (hTail : PTreesSafe gTail) :
+    PTreesSafe (P.subtree nt (do
+      let first ← gFirst
+      let rest ← P.rptHere (do let _ ← gOps; gTail)
+      pure (first ++ rest))) := by
+  refine subtree_treesSafe nt ?_
+  refine PTreesSafe.bind hFirst (fun first hf => ?_)
+  refine PTreesSafe.bind (rptHere_treesSafe (PTreesSafe.bind hOps (fun _ _ => hTail))) (fun rest hr => ?_)
+  exact PTreesSafe.pure (first ++ rest) (TreesByteRanged.append hf hr)
+
+theorem subtree_rptChain_treesSafe (nt : Nonterminal) {gX gOps : P P.Trees}
+    (hX : PTreesSafe gX) (hOps : PTreesSafe gOps) :
+    PTreesSafe (P.subtree nt (do
+      let first ← gX
+      let rest ← P.rptHere (do let op ← gOps; let next ← gX; pure (op ++ next))
+      pure (first ++ rest))) := by
+  refine subtree_treesSafe nt ?_
+  refine PTreesSafe.bind hX (fun first hf => ?_)
+  refine PTreesSafe.bind (rptHere_treesSafe (PTreesSafe.bind hOps (fun op ho => PTreesSafe.bind hX (fun next hn => PTreesSafe.pure (op ++ next) (TreesByteRanged.append ho hn))))) (fun rest hr => ?_)
+  exact PTreesSafe.pure (first ++ rest) (TreesByteRanged.append hf hr)
+
+theorem subtree_tryChain_treesSafe (nt : Nonterminal) {gX gOps : P P.Trees}
+    (hX : PTreesSafe gX) (hOps : PTreesSafe gOps) :
+    PTreesSafe (P.subtree nt (do
+      let first ← gX
+      let rest ← P.tryRule (do let op ← gOps; let right ← gX; pure (op ++ right))
+      pure (first ++ rest))) := by
+  refine subtree_treesSafe nt ?_
+  refine PTreesSafe.bind hX (fun first hf => ?_)
+  refine PTreesSafe.bind (tryRule_treesSafe (PTreesSafe.bind hOps (fun op ho => PTreesSafe.bind hX (fun right hn => PTreesSafe.pure (op ++ right) (TreesByteRanged.append ho hn))))) (fun rest hr => ?_)
+  exact PTreesSafe.pure (first ++ rest) (TreesByteRanged.append hf hr)
+
+set_option maxHeartbeats 8000000 in
+theorem grammarBlock2_treesSafe :
+    ∀ fuel,
+      PTreesSafe (gExp fuel) ∧ PTreesSafe (gEBoolAnd fuel) ∧
+      PTreesSafe (gEEq fuel) ∧ PTreesSafe (gECmp fuel) ∧
+      PTreesSafe (gELoad fuel) ∧ PTreesSafe (gELoadByte fuel) ∧
+      PTreesSafe (gELoad32 fuel) ∧ PTreesSafe (gEOr fuel) ∧
+      PTreesSafe (gEXor fuel) ∧ PTreesSafe (gEAnd fuel) ∧
+      PTreesSafe (gEShift fuel) ∧ PTreesSafe (gEAdd fuel) ∧
+      PTreesSafe (gEMul fuel) ∧ PTreesSafe (gENot fuel) ∧
+      PTreesSafe (gEField fuel) ∧ PTreesSafe (gEBase fuel) ∧
+      PTreesSafe (gRawStruct fuel) ∧ PTreesSafe (gNmdStruct fuel) ∧
+      PTreesSafe (gNmdFieldList fuel) ∧ PTreesSafe (gNmdField fuel) ∧
+      PTreesSafe (gArgList fuel) := by
+  intro fuel
+  induction fuel using Nat.strongRecOn with
+  | ind n ih =>
+    cases n with
+    | zero =>
+      refine ⟨?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_⟩ <;>
+        simp only [gExp, gEBoolAnd, gEEq, gECmp, gELoad, gELoadByte, gELoad32, gEOr,
+          gEXor, gEAnd, gEShift, gEAdd, gEMul, gENot, gEField, gEBase, gRawStruct,
+          gNmdStruct, gNmdFieldList, gNmdField, gArgList] <;>
+        exact PTreesSafe.fail fuelExhausted
+    | succ m =>
+      obtain ⟨hExp, hBAnd, hEEq, hECmp, hELoad, hELoadByte, hELoad32, hEOr, hEXor,
+        hEAnd, hEShift, hEAdd, hEMul, hENot, hEField, hEBase, hRaw, hNmd, hNmdList,
+        hNmdField, hArgList⟩ := ih m (by omega)
+      refine ⟨?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_⟩
+      · simp only [gExp]
+        exact subtree_rptBind_treesSafe .exp hBAnd (consume_treesSafe .boolOrT "||") hBAnd
+      · simp only [gEBoolAnd]
+        exact subtree_rptBind_treesSafe .eBoolAnd hEEq (consume_treesSafe .boolAndT "&&") hEEq
+      · simp only [gEEq]
+        exact subtree_tryChain_treesSafe .eEq hECmp gEqOps_treesSafe
+      · simp only [gECmp]
+        exact subtree_tryChain_treesSafe .eCmp hELoad gCmpOps_treesSafe
+      · simp only [gELoad]
+        refine PTreesSafe.orElse' ?_ hELoadByte
+        refine subtree_treesSafe .eLoad ?_
+        refine PTreesSafe.bind (consumeKw_treesSafe .ldsK "lds") (fun _ _ => ?_)
+        refine PTreesSafe.bind (gShape_treesSafe m) (fun shape hs => ?_)
+        refine PTreesSafe.bind hELoadByte (fun address ha => ?_)
+        exact PTreesSafe.pure (shape ++ address) (TreesByteRanged.append hs ha)
+      · simp only [gELoadByte]
+        refine PTreesSafe.orElse' ?_ hELoad32
+        refine subtree_treesSafe .eLoadByte ?_
+        exact PTreesSafe.bind (consumeKw_treesSafe .ld8K "ld8") (fun _ _ => hELoad32)
+      · simp only [gELoad32]
+        refine PTreesSafe.orElse' ?_ hEOr
+        refine subtree_treesSafe .eLoad32 ?_
+        exact PTreesSafe.bind (consumeKw_treesSafe .ld32K "ld32") (fun _ _ => hEOr)
+      · simp only [gEOr]
+        exact subtree_rptChain_treesSafe .eOr hEXor (keepExact_treesSafe .orT "|")
+      · simp only [gEXor]
+        exact subtree_rptChain_treesSafe .eXor hEAnd (keepExact_treesSafe .xorT "^")
+      · simp only [gEAnd]
+        exact subtree_rptChain_treesSafe .eAnd hEShift (keepExact_treesSafe .andT "&")
+      · simp only [gEShift]
+        exact subtree_rptChain_treesSafe .eShift hEAdd gShiftOps_treesSafe
+      · simp only [gEAdd]
+        exact subtree_rptChain_treesSafe .eAdd hEMul gAddOps_treesSafe
+      · simp only [gEMul]
+        exact subtree_rptChain_treesSafe .eMul hENot gMulOps_treesSafe
+      · simp only [gENot]
+        refine subtree_treesSafe .eNot ?_
+        refine PTreesSafe.bind (tryRule_treesSafe (keepExact_treesSafe .notT "!")) (fun negated hn => ?_)
+        refine PTreesSafe.bind hEField (fun operand ho => ?_)
+        exact PTreesSafe.pure (negated ++ operand) (TreesByteRanged.append hn ho)
+      · simp only [gEField]
+        exact subtree_rptBind_treesSafe .eField hEBase (consume_treesSafe .dotT ".") (PTreesSafe.orElse' keepNat_treesSafe keepIdent_treesSafe)
+      · simp only [gEBase]
+        refine PTreesSafe.orElse' ?_ ?_
+        · refine PTreesSafe.bind (consume_treesSafe .lParT "(") (fun _ _ => ?_)
+          refine PTreesSafe.bind hExp (fun inner hi => ?_)
+          refine PTreesSafe.bind (consume_treesSafe .rParT ")") (fun _ _ => ?_)
+          exact PTreesSafe.pure inner hi
+        · refine PTreesSafe.orElse' (keepKw_treesSafe .trueK "true") ?_
+          refine PTreesSafe.orElse' (keepKw_treesSafe .falseK "false") ?_
+          refine PTreesSafe.orElse' hRaw ?_
+          refine PTreesSafe.orElse' hNmd ?_
+          refine PTreesSafe.orElse' (keepKw_treesSafe .baseK "@base") ?_
+          refine PTreesSafe.orElse' (keepKw_treesSafe .biwK "@biw") ?_
+          refine PTreesSafe.orElse' (keepKw_treesSafe .topK "@top") ?_
+          exact PTreesSafe.orElse' keepInt_treesSafe keepIdent_treesSafe
+      · simp only [gRawStruct]
+        refine subtree_treesSafe .rawStruct ?_
+        refine PTreesSafe.bind (consume_treesSafe .lessT "<") (fun _ _ => ?_)
+        refine PTreesSafe.bind hArgList (fun fields hf => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .greaterT ">") (fun _ _ => ?_)
+        exact PTreesSafe.pure fields hf
+      · simp only [gNmdStruct]
+        refine subtree_treesSafe .nmdStruct ?_
+        refine PTreesSafe.bind keepIdent_treesSafe (fun name hn => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .lessT "<") (fun _ _ => ?_)
+        refine PTreesSafe.bind hNmdList (fun fields hf => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .greaterT ">") (fun _ _ => ?_)
+        exact PTreesSafe.pure (name ++ fields) (TreesByteRanged.append hn hf)
+      · simp only [gNmdFieldList]
+        exact subtree_rptBind_treesSafe .nmdFieldList hNmdField (consume_treesSafe .commaT ",") hNmdField
+      · simp only [gNmdField]
+        refine subtree_treesSafe .nmdField ?_
+        refine PTreesSafe.bind keepIdent_treesSafe (fun name hn => ?_)
+        refine PTreesSafe.bind (consume_treesSafe .assignT "=") (fun _ _ => ?_)
+        refine PTreesSafe.bind hExp (fun value hv => ?_)
+        exact PTreesSafe.pure (name ++ value) (TreesByteRanged.append hn hv)
+      · simp only [gArgList]
+        exact subtree_rptBind_treesSafe .argList hExp (consume_treesSafe .commaT ",") hExp
+
+
+theorem gExp_treesSafe (fuel : Nat) : PTreesSafe (gExp fuel) :=
+  (grammarBlock2_treesSafe fuel).1
+theorem gEBoolAnd_treesSafe (fuel : Nat) : PTreesSafe (gEBoolAnd fuel) :=
+  (grammarBlock2_treesSafe fuel).2.1
+theorem gEEq_treesSafe (fuel : Nat) : PTreesSafe (gEEq fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.1
+theorem gECmp_treesSafe (fuel : Nat) : PTreesSafe (gECmp fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.1
+theorem gELoad_treesSafe (fuel : Nat) : PTreesSafe (gELoad fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.1
+theorem gELoadByte_treesSafe (fuel : Nat) : PTreesSafe (gELoadByte fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.1
+theorem gELoad32_treesSafe (fuel : Nat) : PTreesSafe (gELoad32 fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.1
+theorem gEOr_treesSafe (fuel : Nat) : PTreesSafe (gEOr fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.1
+theorem gEXor_treesSafe (fuel : Nat) : PTreesSafe (gEXor fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.1
+theorem gEAnd_treesSafe (fuel : Nat) : PTreesSafe (gEAnd fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.1
+theorem gEShift_treesSafe (fuel : Nat) : PTreesSafe (gEShift fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.1
+theorem gEAdd_treesSafe (fuel : Nat) : PTreesSafe (gEAdd fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.1
+theorem gEMul_treesSafe (fuel : Nat) : PTreesSafe (gEMul fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.1
+theorem gENot_treesSafe (fuel : Nat) : PTreesSafe (gENot fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.2.1
+theorem gEField_treesSafe (fuel : Nat) : PTreesSafe (gEField fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+theorem gEBase_treesSafe (fuel : Nat) : PTreesSafe (gEBase fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+theorem gRawStruct_treesSafe (fuel : Nat) : PTreesSafe (gRawStruct fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+theorem gNmdStruct_treesSafe (fuel : Nat) : PTreesSafe (gNmdStruct fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+theorem gNmdFieldList_treesSafe (fuel : Nat) : PTreesSafe (gNmdFieldList fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+theorem gNmdField_treesSafe (fuel : Nat) : PTreesSafe (gNmdField fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+theorem gArgList_treesSafe (fuel : Nat) : PTreesSafe (gArgList fuel) :=
+  (grammarBlock2_treesSafe fuel).2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2
+
 
 end Flapjack.Parser

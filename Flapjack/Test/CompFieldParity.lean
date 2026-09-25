@@ -94,6 +94,18 @@ example :
   intro expression hmem
   exact compileField_mem_or_zero 2 [.one] [.const 4] expression hmem
 
+/-- Executable-exception evidence (bead `flapjack-pxn.18.3.5.8.12`): decoding the
+    exact `compFieldHOL` result recovers the executed `compileField` expressions. -/
+example :
+    ((compFieldHOL (width := 8) 1
+        (List.map Flapjack.Pancake.PanLang.shapeToHOL
+          [Flapjack.Shape.one, Flapjack.Shape.comb [Flapjack.Shape.one, Flapjack.Shape.one]])
+        (List.map crepExpToHOL [.const 1, .const 2, .const 3])).1).map crepExpOfHOL
+      = (compileField (α := BitVec 8) 1
+          [Flapjack.Shape.one, Flapjack.Shape.comb [Flapjack.Shape.one, Flapjack.Shape.one]]
+          [.const 1, .const 2, .const 3]).1 :=
+  compileField_map_compFieldHOL 1 _ _
+
 def runChecks : IO Bool := do
   if parityGuard then
     IO.println "PASS comp_field first/second/fallback"

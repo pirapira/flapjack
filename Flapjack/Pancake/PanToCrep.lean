@@ -81,13 +81,37 @@ def compFieldHOL {width : Nat} [NeZero width] (index : Nat) :
         compFieldHOL (index - 1) shapes
           (expressions.drop (Flapjack.Pancake.PanLang.sizeOfShapeHOL shape))
 
-/-- Flapjack-specific analogue of HOL `comp_field_def`. This implementation
-    uses production `Shape`, whose named fields are Lean `String`, and a
-    generic word carrier `α`; HOL `shape` names are `mlstring` and the result
-    `crepLang$exp` is indexed by a positive word width. It is therefore not an
-    exact HOL declaration and intentionally has no tag. The exact carrier port
-    `compFieldHOL` over `ShapeHOL`/`CrepExpHOL` is tagged above, and
-    `compileField_map_codecs` is the kernel bridge from this executed helper. -/
+/-- Flapjack-specific explicit executable exception for the reviewed HOL port
+    `compFieldHOL` (`comp_field_def`).
+
+    `compileField` is the helper the executed RISC-V compiler
+    (`compileProgRiscV` → `compileProgHOL` → `compileExpHOL` → `.rField`) runs.
+    The reviewed exact definition is `compFieldHOL` over the MlString-backed
+    `ShapeHOL` and the positive-width `CrepExpHOL`; `compileField` instead
+    carries production `Shape` (String-backed `named` fields; `Shape` also has
+    no word width) and the generic `CrepExp α` element type, which is why it is
+    not tagged `@[hol]`.
+
+    Routing the executed path through `compFieldHOL` would need codecs on the
+    whole shape/expression lists at every `.rField` node, and — because
+    `compFieldHOL` requires `[NeZero width]` and `CrepExpHOL width` while
+    `compileExpHOL`/`compileProgHOL`/`compileProgRiscV` are generic in `α` — it
+    would also require width-indexing that whole compiler chain (duplicating the
+    large `compileProgHOL` equation/codeRel proof surface, tracked by
+    `flapjack-pxn.18.3.5.3.1.2`). That is a materially larger and hotter
+    computation than the direct structural helper, so AGENTS.md permits keeping
+    this executable implementation with the exact relationship recorded below
+    (bead `flapjack-pxn.18.3.5.8.12`).
+
+    Exact relationship, kernel-checked on all inputs:
+    `compileField_map_codecs` maps every production result into the exact
+    carriers and shows it equals `compFieldHOL`; `compileField_map_compFieldHOL`
+    and `compileField_shape_compFieldHOL` decode in the other direction (the
+    latter under the reachable-input `ShapeByteRanged` hypothesis). Executable
+    evidence: the direct HOL-EVAL rows in `scripts/hol-probes/comp_field_probe.out`
+    are reproduced by `Flapjack/Test/CompFieldParity.lean`, and the executed
+    `compileExpHOL (.rField …)` row is checked in
+    `Flapjack/Test/CompileExpParity.lean` (`flapjack-pxn.18.3.5.8.11`). -/
 def compileField [OfNat α 0] (index : Nat) :
     List Shape → List (CrepExp α) → List (CrepExp α) × Shape
   | [], _ => ([.const 0], .one)
@@ -279,8 +303,9 @@ theorem retVarHOL_shapeToHOL (shape : Shape) (names : List Nat) :
 
 /-- Narrow kernel bridge: mapping the production `compileField` result into
     the exact carriers agrees with `compFieldHOL`. The production helper is
-    still the executed one; routing the executed expression lowering through
-    the exact carrier is tracked by `flapjack-pxn.18.3.5.8.12`. -/
+    still the executed one; the AGENTS-compliant executable exception (with
+    the material-performance reason and executable evidence) is documented
+    beside `compileField` (bead `flapjack-pxn.18.3.5.8.12`). -/
 theorem compileField_map_codecs {width : Nat} [NeZero width] (index : Nat)
     (shapes : List Shape) (expressions : List (CrepExp (BitVec width))) :
     (compileField (α := BitVec width) index shapes expressions).1.map crepExpToHOL
@@ -312,6 +337,52 @@ theorem compileField_map_codecs {width : Nat} [NeZero width] (index : Nat)
         rw [sizeOfShapeHOL_shapeToHOL]
         rw [← List.map_drop]
         exact ih (index - 1) (expressions.drop (Shape.shapeSize shape))
+
+/-- Decode direction of `compileField_map_codecs`, expression half: decoding the
+    exact `compFieldHOL` result recovers the executed `compileField` expressions
+    on every input. -/
+theorem compileField_map_compFieldHOL {width : Nat} [NeZero width] (index : Nat)
+    (shapes : List Shape) (expressions : List (CrepExp (BitVec width))) :
+    ((compFieldHOL index (shapes.map Flapjack.Pancake.PanLang.shapeToHOL)
+        (expressions.map crepExpToHOL)).1).map crepExpOfHOL
+      = (compileField (α := BitVec width) index shapes expressions).1 := by
+  rw [← (compileField_map_codecs index shapes expressions).1, List.map_map]
+  have hmap :
+      List.map (crepExpOfHOL ∘ crepExpToHOL)
+          (compileField (α := BitVec width) index shapes expressions).1
+        = List.map id
+          (compileField (α := BitVec width) index shapes expressions).1 :=
+    List.map_congr_left (fun expression _ => crepExpOfHOL_crepExpToHOL expression)
+  rw [List.map_id] at hmap
+  exact hmap
+
+/-- Decode direction of `compileField_map_codecs`, shape half: on the reachable
+    byte-ranged production inputs, decoding the exact `compFieldHOL` shape
+    recovers the executed `compileField` shape. -/
+theorem compileField_shape_compFieldHOL {width : Nat} [NeZero width] (index : Nat)
+    (shapes : List Shape) (expressions : List (CrepExp (BitVec width)))
+    (hshapes : ∀ shape ∈ shapes, Flapjack.Pancake.PanLang.ShapeByteRanged shape) :
+    Flapjack.Pancake.PanLang.shapeOfHOL
+        (compFieldHOL index (shapes.map Flapjack.Pancake.PanLang.shapeToHOL)
+          (expressions.map crepExpToHOL)).2
+      = (compileField (α := BitVec width) index shapes expressions).2 := by
+  have hbr : Flapjack.Pancake.PanLang.ShapeByteRanged
+      (compileField (α := BitVec width) index shapes expressions).2 := by
+    induction shapes generalizing index expressions with
+    | nil =>
+        rw [compileField.eq_1]
+        simp [Flapjack.Pancake.PanLang.ShapeByteRanged]
+    | cons shape shapes ih =>
+        rw [compileField.eq_2]
+        by_cases h : index = 0
+        · rw [if_pos h]
+          exact hshapes shape List.mem_cons_self
+        · rw [if_neg h]
+          exact ih (index - 1) (expressions.drop (Shape.shapeSize shape))
+            (fun s hs => hshapes s (List.mem_cons_of_mem shape hs))
+  have h := (compileField_map_codecs (width := width) index shapes expressions).2
+  rw [← h]
+  exact Flapjack.Pancake.PanLang.shapeOfHOL_shapeToHOL _ hbr
 
 
 /-! Flapjack-only helper modeled on the commented-out `shape_vars_def` text

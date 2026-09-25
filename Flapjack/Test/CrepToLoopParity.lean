@@ -758,8 +758,9 @@ example : rtVar (fun _ : Bool => none : FiniteMap Bool Nat) (some true) 1 2 = 3 
 example : rtVars (fun _ : Bool => none : FiniteMap Bool Nat) [true] 2 = [3] := by
   simp [rtVars, FLOOKUP]
 
-/-- HOL `mem_lookup_fromalist_some` oracle rows (`ml_*` in
-    `scripts/hol-probes/crep_to_loop_mem_lookup_probe.out`). -/
+/-- Association-list analogue of HOL `mem_lookup_fromalist_some` oracle rows
+    (`ml_*` in `scripts/hol-probes/crep_to_loop_mem_lookup_probe.out`). The
+    sptree `fromAList` theorem itself remains unported. -/
 example : ([(1, 7), (2, 9)] : List (Nat × Nat)).lookup 2 = some 9 :=
   memLookupFromAListSome (n := 2) (x := 9) (by decide) (by decide)
 

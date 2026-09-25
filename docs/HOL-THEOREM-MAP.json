@@ -8757,7 +8757,7 @@
     "hol_name": "copy_ret_def",
     "lean_name": "copyRet",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_def` at word_to_stackScript.sml:443-451 - let n = num_stack_ret k vs; n=0 -> kont else Seq (copy_ret_aux k (if is_handle then f + handler_slots perf else f) n) (SeqStackFree n kont). Uses the already-ported num_stack_ret/handler_slots/seqStackFree, exact over the shared-word carrier ProgM alpha; HOL-EVAL rows cr_zero=T/cr_plain=T/cr_handle=T reproduced by copyRetParityGuard.)"
+    "reviewer": "flapjack-deepseek-three (2026-09-25: matches HOL `copy_ret_def` at word_to_stackScript.sml:443-451 - let n = num_stack_ret k vs; n=0 -> kont else Seq (copy_ret_aux k (if is_handle then f + handler_slots perf else f) n) (SeqStackFree n kont). Uses the already-ported num_stack_ret/handler_slots/seqStackFree. Corrected 2026-09-25 by flapjack-deepseek-two (bead flapjack-pxn.18.5.15.3.17): HOL `copy_ret` keeps the return-value list `vs` as an independent `num list` carrier (only `LENGTH vs` is used), so the Lean signature is now `{α β : Type} ... (vs : List β) (kont : ProgM α)`. HOL-EVAL rows cr_zero=T/cr_plain=T/cr_handle=T (with vs=[10;20;30] : num list against a 64-bit prog) reproduced by copyRetParityGuard and the β=Nat independent-carrier fixture copyRetIndependentGuard.)"
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
@@ -8902,14 +8902,6 @@
     "lean_name": "crepToLoopLocalsRelHOL_cutset_prop",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against locals_rel_cutset_prop at crep_to_loopProofScript.sml:239-249; HOL subspt cset cset' rendered as the pointwise implication (forall n, live n = true -> live' n = true) and sptree locals/domain rendered extensionally as in crepToLoopLocalsRelHOL; the two source-local obligations are reconciled by FLOOKUP functionality on ctxt.vars; direct HOL-EVAL rows cutset_* in scripts/hol-probes/crep_to_loop_locals_cutset_probe.out reproduced by Lean guard in Flapjack/Test/CrepToLoopParity.lean)"
-  },
-  {
-    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
-    "hol_name": "mem_lookup_fromalist_some",
-    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
-    "lean_name": "memLookupFromAListSome",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (exact port of crep_to_loopProofScript.sml:3813 mem_lookup_fromalist_some: ALL_DISTINCT (MAP FST xs) /\\ MEM (n,x) xs ==> lookup n (fromAList xs) = SOME x). HOL sptree fromAList/lookup on a duplicate-free association list is rendered as List.lookup on that list (equivalently FLOOKUP of the standard alist->finite-map encoding); key type fixed to num and ALL_DISTINCT -> Nodup. Direct HOL-EVAL rows ml_hit/ml_miss/ml_distinct=T reproduced by the Lean guard in Flapjack/Test/CrepToLoopParity.lean."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/labSemScript.sml",

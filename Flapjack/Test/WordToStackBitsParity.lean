@@ -606,23 +606,40 @@ def copyRetParityGuard : Bool :=
   copyRetProgBEq (copyRetAux (α := BitVec 64) 3 2 2)
     (smSeq (smLoad 3 1) (smSeq (smStore 3 3)
       (smSeq (smLoad 3 0) (smSeq (smStore 3 2) smSkip)))) &&
-  copyRetProgBEq (copyRet (α := BitVec 64) false false (2, 7, 9) [] smSkip) smSkip &&
-  copyRetProgBEq (copyRet (α := BitVec 64) false false (2, 7, 9) [10, 20, 30] smSkip)
+  copyRetProgBEq (copyRet (α := BitVec 64) (β := BitVec 64) false false (2, 7, 9) [] smSkip) smSkip &&
+  copyRetProgBEq (copyRet (α := BitVec 64) (β := BitVec 64) false false (2, 7, 9) [10, 20, 30] smSkip)
     (smSeq
       (smSeq (smLoad 2 1) (smSeq (smStore 2 8)
         (smSeq (smLoad 2 0) (smSeq (smStore 2 7) smSkip))))
       (smSeq (smFree 2) smSkip)) &&
-  copyRetProgBEq (copyRet (α := BitVec 64) false true (2, 7, 9) [10, 20, 30] smSkip)
+  copyRetProgBEq (copyRet (α := BitVec 64) (β := BitVec 64) false true (2, 7, 9) [10, 20, 30] smSkip)
     (smSeq
       (smSeq (smLoad 2 1) (smSeq (smStore 2 11)
         (smSeq (smLoad 2 0) (smSeq (smStore 2 10) smSkip))))
       (smSeq (smFree 2) smSkip))
 
+/-- HOL `copy_ret_def` is polymorphic in the return-value list (`num_stack_ret k
+    vs` only measures `LENGTH vs`), so `vs` must be an independent carrier from
+    the `ProgM` carrier of `kont`.  The direct HOL oracle rows `cr_plain`/
+    `cr_handle` instantiate `vs : num list` against a `64 stackLang$prog`
+    continuation; this fixture pins the same independence on the Lean side with
+    `β = Nat` and `α = BitVec 64`. -/
+def copyRetIndependentGuard : Bool :=
+  copyRetProgBEq
+    (copyRet (α := BitVec 64) (β := Nat) false false (2, 7, 9) [10, 20, 30] smSkip)
+    (smSeq
+      (smSeq (smLoad 2 1) (smSeq (smStore 2 8)
+        (smSeq (smLoad 2 0) (smSeq (smStore 2 7) smSkip))))
+      (smSeq (smFree 2) smSkip))
+
 #eval copyRetParityGuard
 #guard copyRetParityGuard
+#guard copyRetIndependentGuard
 
 example : copyRetAux (α := BitVec 64) 3 2 0 = .skip := rfl
-example : copyRet (α := BitVec 64) false false (2, 7, 9) [] .skip = .skip := rfl
+example : copyRet (α := BitVec 64) (β := BitVec 64) false false (2, 7, 9) [] .skip = .skip := rfl
+example : copyRet (α := BitVec 64) (β := Nat) false false (2, 7, 9) [] .skip =
+    (copyRet (α := BitVec 64) (β := Nat) false false (2, 7, 9) [] .skip) := rfl
 
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
@@ -632,6 +649,7 @@ def runChecks : IO Bool := do
     chunkToBitmapParityGuard && writeBitmapParityGuard && insertBitmapParityGuard &&
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
-    stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard)
+    stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard &&
+    copyRetIndependentGuard)
 
 end Flapjack.Test.WordToStackBitsParity

@@ -512,16 +512,14 @@ def crepToLoopMakeFuncsHOL [BEq α] [LawfulBEq α] {β γ : Type}
 
 /-! ## Association-list lookup
 
-`crep_to_loopProofScript.sml`'s `mem_lookup_fromalist_some` (`:3813`): a member
-of a duplicate-free association list is returned by looking up its key in the
-`fromAList` tree.  HOL `sptree$fromAList`/`lookup` on a duplicate-free list is
-rendered as `List.lookup` on that list (equivalently `FLOOKUP` of the standard
-alist→finite-map encoding), and `ALL_DISTINCT (MAP FST xs)` as
-`(entries.map Prod.fst).Nodup`; the key type is fixed to `num` as in HOL. -/
+`crep_to_loopProofScript.sml`'s `mem_lookup_fromalist_some` (`:3813`) concludes
+`lookup n (fromAList xs) = SOME x` for an HOL sptree. The helper below instead
+concludes `List.lookup n xs = some x`. Although that is useful for association
+lists, it is not the HOL theorem: `fromAList` has not yet been ported. The exact
+sptree statement is tracked by bead `flapjack-b0s`. -/
 
-/-- Exact port of HOL `mem_lookup_fromalist_some`
-    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:3813`). -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "mem_lookup_fromalist_some"]
+/-- Flapjack-only association-list lemma. It is not HOL's
+    `mem_lookup_fromalist_some`, whose conclusion uses sptree `fromAList`. -/
 theorem memLookupFromAListSome {β : Type} [BEq Nat] [LawfulBEq Nat]
     {entries : List (Nat × β)} {n : Nat} {x : β}
     (hnodup : (entries.map Prod.fst).Nodup) (hmem : (n, x) ∈ entries) :

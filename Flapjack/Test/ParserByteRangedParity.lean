@@ -389,5 +389,26 @@ example (fuel : Nat) :
   ⟨(Flapjack.Parser.grammarBlock2_treesSafe fuel).1,
     Flapjack.Parser.gArgList_treesSafe fuel⟩
 
+/-- `tryDefault` preserves tree-safety. -/
+example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PTreesSafe p)
+    (token : Flapjack.Parser.Token) (h : Flapjack.Parser.TokenNameByteRanged token) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.tryDefault p token) :=
+  Flapjack.Parser.tryDefault_treesSafe hp token h
+
+/-- Store-form and shared-load/store rules are tree-safe at every fuel. -/
+example (nonterminal : Flapjack.Parser.Nonterminal) (keyword : Flapjack.Parser.Keyword)
+    (described : String) (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe
+      (Flapjack.Parser.gStoreForm nonterminal keyword described fuel) :=
+  Flapjack.Parser.gStoreForm_treesSafe nonterminal keyword described fuel
+
+/-- The call/ext-call/dec-call rules are tree-safe at every fuel. -/
+example (fuel : Nat) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.gCall fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gExtCall fuel) ∧
+      Flapjack.Parser.PTreesSafe (Flapjack.Parser.gDecCallHead fuel) :=
+  ⟨Flapjack.Parser.gCall_treesSafe fuel, Flapjack.Parser.gExtCall_treesSafe fuel,
+    Flapjack.Parser.gDecCallHead_treesSafe fuel⟩
+
 
 end Flapjack.Test.ParserByteRangedParity

@@ -523,6 +523,22 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_op_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-dimension recursive Op evaluator bridge using the recursive child relations and exact list mapM correspondence, then the tagged HOL word_op primitive. It is not the complete arbitrary finite_index eval_def relation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExps_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-dimension List.mapM relation for source and direct evaluators; it preserves list failure and order and serves as the recursive HOL Op dependency, without claiming the complete native eval_def relation."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepHolFiniteWordSourceExp_const_toHolEval",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only all-dimension Const evaluator bridge to the direct BitVec state evaluator, preserving the full word_lab wrapper; arbitrary HOL finite_index identity remains unproved."

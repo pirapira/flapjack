@@ -354,6 +354,119 @@ theorem evalCrepHolFiniteWordSourceExp_var_toHolEval
           CrepHolState.toHolFiniteBitVecState, hLocal, mapCrepHolWordLab,
           panTheWord]
 
+/-- List evaluation preserves the pointwise finite-word/BitVec evaluator
+relation. This is the recursion needed by the HOL `Op` clause's `OPT_MMAP`;
+it retains both list failure and successful result order. -/
+theorem evalCrepHolFiniteWordSourceExps_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (expressions : List (CrepExp (ι → Bool)))
+    (hEach : ∀ expression, expression ∈ expressions →
+      (evalCrepHolFiniteWordSourceExp dimension state expression).map
+        (holWordToBitVec dimension) =
+      evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+        (mapCrepExpWord (holWordToBitVec dimension) expression)) :
+    ((expressions.mapM (evalCrepHolFiniteWordSourceExp dimension state)).map
+      (List.map (holWordToBitVec dimension))) =
+    (expressions.map (mapCrepExpWord (holWordToBitVec dimension))).mapM
+      (evalCrepHolExp (state.toHolFiniteBitVecState dimension)) := by
+  induction expressions with
+  | nil => simp
+  | cons head tail ih =>
+      have hHead := hEach head (by simp)
+      have hTail : ∀ expression, expression ∈ tail →
+          (evalCrepHolFiniteWordSourceExp dimension state expression).map
+            (holWordToBitVec dimension) =
+          evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+            (mapCrepExpWord (holWordToBitVec dimension) expression) := by
+        intro expression hmem
+        exact hEach expression (by simp [hmem])
+      cases hSource : evalCrepHolFiniteWordSourceExp dimension state head with
+      | none =>
+          have hNative : evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+              (mapCrepExpWord (holWordToBitVec dimension) head) = none := by
+            simpa [hSource] using hHead.symm
+          simp [List.mapM_cons, hSource, hNative]
+      | some value =>
+          have hNative : evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+              (mapCrepExpWord (holWordToBitVec dimension) head) =
+                some (holWordToBitVec dimension value) := by
+            simpa [hSource] using hHead.symm
+          calc
+            _ = Option.map
+                  (fun values => holWordToBitVec dimension value ::
+                    List.map (holWordToBitVec dimension) values)
+                  (tail.mapM (evalCrepHolFiniteWordSourceExp dimension state)) := by
+                    cases hSourceTailEval :
+                      tail.mapM (evalCrepHolFiniteWordSourceExp dimension state) <;>
+                      simp [List.mapM_cons, hSource, hSourceTailEval]
+            _ = Option.map
+                  (fun values => holWordToBitVec dimension value :: values)
+                  (Option.map (List.map (holWordToBitVec dimension))
+                    (tail.mapM
+                      (evalCrepHolFiniteWordSourceExp dimension state))) := by
+                    simp [Option.map_map, Function.comp_def]
+            _ = Option.map
+                  (fun values => holWordToBitVec dimension value :: values)
+                  ((tail.map (mapCrepExpWord (holWordToBitVec dimension))).mapM
+                    (evalCrepHolExp
+                      (state.toHolFiniteBitVecState dimension))) := by
+                    rw [ih hTail]
+            _ = _ := by
+              cases hTailEval :
+                  ((tail.map (mapCrepExpWord (holWordToBitVec dimension))).mapM
+                    (evalCrepHolExp
+                      (state.toHolFiniteBitVecState dimension))) <;>
+                simp [hTailEval, hNative]
+
+/-- All-dimension recursive `Op` constructor correspondence. The sole
+recursive hypothesis relates each operand evaluation; the list helper above
+preserves `mapM` failure/order and the source clause then routes through the
+same tagged HOL `word_op` primitive as the direct evaluator. -/
+theorem evalCrepHolFiniteWordSourceExp_op_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : BinOp)
+    (expressions : List (CrepExp (ι → Bool)))
+    (hChildren : ∀ expression, expression ∈ expressions →
+      (evalCrepHolFiniteWordSourceExp dimension state expression).map
+        (holWordToBitVec dimension) =
+      evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+        (mapCrepExpWord (holWordToBitVec dimension) expression)) :
+    ((evalCrepHolFiniteWordSourceExp dimension state (.op operator expressions)).map
+        PanWordLab.word).map (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension)
+        (.op operator (expressions.map (mapCrepExpWord (holWordToBitVec dimension)))) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  have hMapM := evalCrepHolFiniteWordSourceExps_toHolEval
+    dimension state expressions hChildren
+  cases hSourceValues :
+      expressions.mapM (evalCrepHolFiniteWordSourceExp dimension state) with
+  | none =>
+      have hNativeValues :
+          (expressions.map (mapCrepExpWord (holWordToBitVec dimension))).mapM
+            (evalCrepHolExp (state.toHolFiniteBitVecState dimension)) = none := by
+        simpa [hSourceValues] using hMapM.symm
+      simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+        evalCrepHolExp, hSourceValues, hNativeValues]
+  | some values =>
+      have hNativeValues :
+          (expressions.map (mapCrepExpWord (holWordToBitVec dimension))).mapM
+            (evalCrepHolExp (state.toHolFiniteBitVecState dimension)) =
+              some (values.map (holWordToBitVec dimension)) := by
+        simpa [hSourceValues] using hMapM.symm
+      calc
+        ((evalCrepHolFiniteWordSourceExp dimension state
+          (.op operator expressions)).map PanWordLab.word).map
+            (mapCrepHolWordLab (holWordToBitVec dimension)) =
+          (wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+            PanWordLab.word :=
+              evalCrepHolFiniteWordSourceExpWordLab_op_eq_wordOpHOL
+                dimension state operator expressions values hSourceValues
+        _ = evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension)
+              (.op operator
+                (expressions.map (mapCrepExpWord (holWordToBitVec dimension)))) := by
+              simp [evalCrepHolExpWordLab, evalCrepHolExp, hNativeValues]
+
 /-- All-dimension `LoadGlob` constructor correspondence to the direct BitVec
 state evaluator. This preserves the exact global lookup, including misses,
 under the finite-word-to-BitVec representation. It is Flapjack support, not a

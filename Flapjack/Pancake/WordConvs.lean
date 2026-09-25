@@ -400,9 +400,13 @@ def noShareInstSubprogs {width : Nat} (program : WordLangProg (BitVec width)) : 
     (fun q => q ≠ .shareInst wordLangArbMemOp 0 (.var 0))
     program
 
-/-- HOL `wordConvs$good_handlers_def`: every handler label in the program equals
-the enclosing code-table label `n`.  Purely structural (no `num_set`). -/
-@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "good_handlers_def"]
+/-- Flapjack structural check corresponding to HOL
+`wordConvs$good_handlers_def`: every handler label in the program equals the
+enclosing code-table label `n`. This remains untagged because it takes
+`WordLangProg`, whose loop cut sets use `FiniteMap Nat Unit` rather than HOL's
+`unit spt`, and whose FFI name field is `String` rather than HOL `mlstring`.
+The predicate does not inspect those fields, and its direct behavior matches
+the checked-in HOL oracle, but the full input carrier is not exact. -/
 def goodHandlers {width : Nat} (n : Nat) : WordLangProg (BitVec width) -> Bool
   | .call returns _ _ handler =>
       match returns with

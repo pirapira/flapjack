@@ -508,11 +508,26 @@ private theorem shapeSizeWithContext_fold_drop
       rw [← hsize]
       exact htail
 
-/-- Exact size-preservation theorem used by HOL's `mem_load_conversion`
+/-- Size-preservation theorem for the Lean port of HOL's `mem_load_conversion`
     (`pan_structsProofScript.sml:512`). It compares Cake's context-sensitive
-    shape size before and after `compile_shape`; Lean's extra `shapedFields`
-    cache is not inspected. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    shape size before and after the production `structCompileShapeWF`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag).
+-- HOL `size_of_compile_shape` (`pan_structsProofScript.sml:512`) is stated over
+-- `stcname`/`fldname` = `mlstring` and applies `compile_shape` to the fields
+-- projection `MAP (λ(nm,info). (nm, info.fields)) ctxt`, i.e. a context
+-- `(stcname # (fldname # shape) list) list` with neither `size` nor the
+-- production cache. This theorem instead quantifies the production
+-- `StructContext = List (StructName × StructInfo)`, where `StructName`/
+-- `FieldName` = `String` and `StructInfo` carries the extra production-only
+-- `shapedFields` cache, and it passes the full cache-augmented `StructInfo` to
+-- `structCompileShapeWF` rather than HOL's fields projection. The carrier arity
+-- and context term therefore differ beyond name representation, so the
+-- `(names_as_string := ...)` qualifier does not apply and the tag stays
+-- withdrawn. Faithful MlString/ShapeHOL port: `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`). Direct HOL evidence:
+-- `scripts/hol-probes/pan_structs_compile_exp_correct_probe.out`
+-- (`size_of_compile_shape_comb`); Lean fixture
+-- `Flapjack.Test.PanStructsCompileShapeParity`.
 theorem structCompileShapeWF_size
     (context : StructContext) (shape : Shape)
     (hshape : isWfShape context shape = true) (hok : structInfosOk context) :

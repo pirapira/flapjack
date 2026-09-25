@@ -1298,13 +1298,13 @@ theorem evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab
   simp [evalCrepHolFiniteWordSourceExpWordLab,
     evalCrepRuntimeExp_sourceWord_eq]
 
-/-- Relate the production evaluator's direct `word_lab` result API to the
-all-width source evaluator over the exact finite-state carrier. This avoids
-recovering the HOL result through a caller-side `Option.map PanWordLab.word`.
-It remains untagged: `evalCrepRuntimeExpWordLab` still delegates recursive
-evaluation to the bare production evaluator and its runtime hooks, so this
-equation does not identify that implementation with native HOL
-`crepSem$eval`. -/
+/-- Relate Flapjack's direct `word_lab`-result evaluator core to the all-width
+source evaluator over the exact finite-state carrier. This avoids recovering
+the result through a caller-side `Option.map PanWordLab.word`. It remains
+untagged: `evalCrepRuntimeExpWordLab` still delegates recursive evaluation to
+the bare runtime evaluator and its hooks, so this equation does not identify
+that helper with native HOL `crepSem$eval` or claim it as the compiler's
+production path. -/
 theorem evalCrepRuntimeExpWordLab_CrepSemHOLFiniteStateSource
     {ι codeEntry σ : Type} [dimension : HolFiniteDimension ι]
     (state : CrepSemHOLFiniteState ι codeEntry σ)
@@ -1329,13 +1329,13 @@ theorem evalCrepRuntimeExpWordLab_CrepSemHOLFiniteStateSource
         evalCrepRuntimeExp_CrepSemHOLFiniteStateSourceWordLab state expression
 
 /-- HOL-result-shaped all-width support for `simp_exp_correct1` over the
-exact finite-state carrier, using the production `word_lab` evaluator API on
-both sides. The theorem keeps the successful-evaluation premise, code-only
-`mapc` update, `n2w` simplifier image, and complete `Option word_lab`
-equality. It remains untagged because the production `word_lab` core still
-uses the bare evaluator's runtime hooks, and no theorem identifies those
-operations or the explicit finite-index adapter with native HOL
-`crepSem$eval`. -/
+exact finite-state carrier, using Flapjack's direct `word_lab`-result
+evaluator core on both sides. The theorem keeps the successful-evaluation
+premise, code-only `mapc` update, `n2w` simplifier image, and complete
+`Option word_lab` equality. It remains untagged because the word_lab core
+still uses the bare runtime evaluator's hooks, and no theorem identifies that
+helper or the explicit finite-index adapter with native HOL `crepSem$eval`.
+This is not a claim about the evaluator path called by `flapjack-compile`. -/
 theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceRuntimeWordLabCore
     {ι codeEntry σ : Type} [dimension : HolFiniteDimension ι]
     (update : MlString × codeEntry → codeEntry)

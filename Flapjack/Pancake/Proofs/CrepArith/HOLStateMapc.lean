@@ -1380,7 +1380,6 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
     (state : CrepSemHOLFiniteState ι
       (List Nat × CrepProgHOL dimension.width) σ)
     (expression : CrepExpHOL dimension.width)
-    (_result : PanWordLab (ι → Bool))
     (h : evalCrepHolFiniteWordSourceExpWordLab dimension
       state.toSourceEvaluatorState
       (mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)) ≠ none) :
@@ -1392,6 +1391,7 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
     evalCrepHolFiniteWordSourceExpWordLab dimension
       state.toSourceEvaluatorState
       (mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)) := by
+  obtain ⟨result, _hResult⟩ := Option.ne_none_iff_exists'.mp h
   let source := state.toSourceEvaluatorState
   let sourceExpression :=
     mapCrepExpWord (bitVecToHolWord dimension) (crepExpOfHOL expression)
@@ -1406,7 +1406,7 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
   have hPreserved := crepSimpExpCorrect1HolFiniteWordSourceEvalClass
     (dimension := dimension)
     (f := fun pair : FunName × (List Nat × CrepProg (ι → Bool)) => pair.2)
-    source sourceExpression _result h
+    source sourceExpression result h
   rw [hSourceUpdate] at hPreserved
   rw [CrepSemHOLFiniteState.toSourceEvaluatorState_mapc]
   exact hPreserved
@@ -1430,7 +1430,6 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateRuntime
     (state : CrepSemHOLFiniteState ι
       (List Nat × CrepProgHOL dimension.width) σ)
     (expression : CrepExpHOL dimension.width)
-    (_result : PanWordLab (ι → Bool))
     (h : (evalCrepRuntimeExp
       (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
       (mapCrepExpWord (bitVecToHolWord dimension)

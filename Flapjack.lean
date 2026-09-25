@@ -61,6 +61,7 @@ import Flapjack.Pancake.Semantics.PanSem.ReturnRaiseExact
 import Flapjack.Pancake.Semantics.PanSem.EvalExact
 import Flapjack.Pancake.Semantics.PanSem.StoreExact
 import Flapjack.Pancake.Semantics.PanSem.TickShMemExact
+import Flapjack.Pancake.Semantics.PanSem.ExtCallExact
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 import Flapjack.Pancake.Semantics.PanSem.ShMemExact
 import Flapjack.Pancake.Semantics.PanSem.DeclContextExact

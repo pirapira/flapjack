@@ -67,4 +67,7 @@ store32_clause_hit=(NONE,Word 0x11223344w)
 storebyte_clause_hit=(NONE,Word 171w)
 tick_clock_zero=(SOME TimeOut,NONE,0)
 tick_clock_positive=(NONE,SOME (ValWord 7w),4)
+extcall_clause_returned=(NONE,Word (set_byte 0w 66w 171w F))
+extcall_clause_bad_read=(SOME Error,Word 171w)
+extcall_clause_final=(T,NONE)
 pan_sem_e2e_done=0

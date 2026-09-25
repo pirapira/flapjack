@@ -2937,6 +2937,28 @@ theorem evalCrepHolFiniteWordSourceExpWordLab_op_eq_wordOpHOL
   simp [holFiniteWordSourceMemoryModel, mapCrepHolWordLab,
     holWordToBitVec_bitVecToHolWord, Option.map_map, Function.comp_def]
 
+/-- The recursive source `Load` clause transports to the tagged width-indexed
+    HOL `mem_load_def`: it checks the same address domain and returns the same
+    complete `word_lab` cell after converting the finite-index word state to
+    `BitVec`. This remains adapter support because the surrounding recursive
+    evaluator and its finite-index dictionary are not identified with native
+    HOL `crepSem$eval`. -/
+theorem evalCrepHolFiniteWordSourceExpWordLab_load_eq_memLoadCrepHolW
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (addressExpression : CrepExp (ι → Bool)) (address : ι → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp dimension state
+      addressExpression = some address) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.load addressExpression)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+    memLoadCrepHolW (holWordToBitVec dimension address)
+      (CrepHolState.toHolFiniteBitVecState dimension state) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp [evalCrepHolFiniteWordSourceExp, hAddress, memLoadCrepHolW,
+    CrepHolState.toHolFiniteBitVecState, mapCrepHolWordLab, panTheWord,
+    bitVecToHolWord_holWordToBitVec]
+
 /-- Complete HOL `word_lab` result view of the explicitly finite-index
     source evaluator. Since `word_lab` has only the `Word` constructor, this
     is the corresponding `Option (PanWordLab word)` encoding. -/

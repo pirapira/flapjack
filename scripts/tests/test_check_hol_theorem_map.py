@@ -48,7 +48,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertNotIn(key, inventory)
 
-    def test_compile_prog_withdrawal_and_exact_proof_are_in_review_inventory(self):
+    def test_compile_prog_distinctness_carrier_mismatches_are_documented(self):
         inventory = {
             (record["lean_path"], record["lean_name"]): record
             for record in MAP["build_inventory"]()
@@ -57,15 +57,31 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"),
             inventory,
         )
-        expected = {
-            ("Flapjack/Pancake/Proofs/PanToCrep.lean", "firstCompileProgAllDistinct"):
-                "first_compile_prog_all_distinct",
-        }
-        for key, hol_name in expected.items():
+        documented_mismatches = (
+            "firstCompileProgAllDistinct",
+            "firstCompileToCrepAllDistinct",
+        )
+        for theorem_name in documented_mismatches:
+            key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", theorem_name)
             with self.subTest(key=key):
-                self.assertEqual(inventory[key]["hol_name"], hol_name)
-                self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
-                self.assertEqual(inventory[key]["reviewer"], "Codex (source comparison)")
+                self.assertIsNone(inventory[key]["hol_name"])
+                self.assertEqual(
+                    inventory[key]["statement_status"],
+                    "no_hol_reference_pending_classification",
+                )
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        for theorem_name in documented_mismatches:
+            key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", theorem_name)
+            with self.subTest(review_record=key):
+                self.assertEqual(
+                    manifest_by_key[key]["statement_status"], "documented_mismatch"
+                )
+                self.assertIn("carrier", manifest_by_key[key]["reviewer"])
 
     def test_genlist_vmax_distinct_lists_port_is_in_review_inventory(self):
         inventory = {

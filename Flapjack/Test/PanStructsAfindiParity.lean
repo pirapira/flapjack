@@ -413,6 +413,8 @@ def assocXs : List (String × Nat) := [("a", 1), ("b", 2)]
 
 def assocYs : List (String × Nat) := [("a", 3), ("b", 4)]
 
+def assocYsBool : List (String × Bool) := [("a", true), ("b", false)]
+
 theorem map_fst_eq_lookup_fixture :
     ∃ i, afindi "b" assocXs = some i ∧ afindi "b" assocYs = some i ∧
       i < assocXs.length ∧ i < assocYs.length ∧
@@ -420,9 +422,18 @@ theorem map_fst_eq_lookup_fixture :
       (assocYs[i]?).map Prod.snd = assocYs.lookup "b" :=
   map_fst_eq_lookup assocXs assocYs "b" (by decide) (by decide)
 
+theorem map_fst_eq_lookup_different_value_types_fixture :
+    ∃ i, afindi "b" assocXs = some i ∧ afindi "b" assocYsBool = some i ∧
+      i < assocXs.length ∧ i < assocYsBool.length ∧
+      (assocXs[i]?).map Prod.snd = some 2 ∧
+      (assocYsBool[i]?).map Prod.snd = assocYsBool.lookup "b" :=
+  map_fst_eq_lookup assocXs assocYsBool "b" (by decide) (by decide)
+
 def afindiLookupGuard : Bool :=
   (assocXs.lookup "b" == some 2) &&
     (afindi "b" assocXs == afindi "b" assocYs) &&
+    (assocYsBool.lookup "b" == some false) &&
+    (afindi "b" assocXs == afindi "b" assocYsBool) &&
     (afindi "b" assocXs == some 1)
 
 #eval afindiLookupGuard

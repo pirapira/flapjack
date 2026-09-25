@@ -1621,3 +1621,10 @@ run_probe pan_sem_result_probeScript.sml pan_sem_result_probe.out \
 run_probe pan_sem_mem_store_probeScript.sml pan_sem_mem_store_probe.out \
   ms_hit_lookup mss_second_miss \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The shared-memory probe observes panSem `sh_mem_load`/`sh_mem_store`:
+# nb = 0 in/out of `sh_memaddrs`, byte-aligned nb = 1, an FFI_final outcome
+# clearing locals, and the FFI_return event/state update for both primitives.
+run_probe pan_sem_sh_mem_probeScript.sml pan_sem_sh_mem_probe.out \
+  l_load_hit_local l_store_final_unchanged \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

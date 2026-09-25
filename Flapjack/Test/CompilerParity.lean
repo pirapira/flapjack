@@ -362,6 +362,7 @@ import Flapjack.Test.PanSemIsValWordHOLParity
 import Flapjack.Test.PanSemEmptyLocalsHOLParity
 import Flapjack.Test.PanSemMemStore32HOLParity
 import Flapjack.Test.PanSemMemStoreHOLParity
+import Flapjack.Test.PanSemShMemHOLParity
 import Flapjack.Test.PanSemMemLoadExactParity
 
 /-!
@@ -992,6 +993,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.PanSemEmptyLocalsHOLParity.runChecks,
     Flapjack.Test.PanSemMemStore32HOLParity.runChecks,
     Flapjack.Test.PanSemMemStoreHOLParity.runChecks,
+    Flapjack.Test.PanSemShMemHOLParity.runChecks,
     Flapjack.Test.PanSemMemLoadExactParity.runChecks,
     Flapjack.Test.CrepSemTotalExtCallParity.runChecks
     ].mapM id

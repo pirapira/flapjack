@@ -9302,5 +9302,21 @@
     "lean_name": "panMemStore32HOL",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
-  }
+  },
+{
+  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+  "hol_name": "sh_mem_load_def",
+  "lean_path": "Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
+  "lean_name": "shMemLoadHOLExact",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+  "hol_name": "sh_mem_store_def",
+  "lean_path": "Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
+  "lean_name": "shMemStoreHOLExact",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+}
 ]

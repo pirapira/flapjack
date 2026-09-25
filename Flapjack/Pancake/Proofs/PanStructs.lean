@@ -764,11 +764,16 @@ theorem lookupInfo_fields_nodup [BEq String] [LawfulBEq String] (name : String)
       · rw [if_neg hc] at hlookup
         exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
 
-/-- Exact production-helper translation of HOL `fields_in_order_reorder_noop`
-    (`pan_structsProofScript.sml:218`): selecting fields from compiled
-    expressions in the original field-name order yields the compiled source
-    expressions. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production-carrier analogue of HOL `fields_in_order_reorder_noop`
+    (`pan_structsProofScript.sml:218-239`): selecting compiled fields in the
+    original field-name order yields the compiled source expressions. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the field names, production
+-- StructPassContext, and expression identifiers use unrestricted `String`,
+-- while HOL uses `mlstring` names and its exact expression/context carriers.
+-- The conclusion preserves compiled expression identifiers, so they are
+-- byte-observable; there is no NameRanged premise and `names_as_string` cannot
+-- bridge arbitrary inputs. Exact carrier work is tracked by
+-- flapjack-pxn.18.3.5.8.
 theorem fieldsInOrderReorderNoop [BEq String] [LawfulBEq String]
     (context : StructPassContext) (eflds : List (FieldName × Exp α))
     (infoFields : List (FieldName × Shape))
@@ -910,10 +915,16 @@ theorem dropWhile_map_helper {α β : Type} (P : α → Bool) (Q : β → Bool)
         rw [← h, List.map_cons, List.dropWhile_cons, hQ]
         simp only [Bool.false_eq_true, if_false]
 
-/-- HOL's `old_exp_shapes_eq` (`pan_structsProofScript.sml:679`): the
-    production old-shape list helper equals `MAP` of the production
-    single-expression old-shape function, with no additional premises. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Production-carrier analogue of HOL `old_exp_shapes_eq`
+    (`pan_structsProofScript.sml:679-683`): the production old-shape list
+    helper equals `List.map` of its single-expression helper. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the generic production `Exp α`,
+-- `Shape`, and `StructPassContext` use unrestricted `String` identifiers;
+-- HOL uses its expression/shape carriers with `mlstring` names. In
+-- particular, `NStruct` returns its input name as a named shape, and no
+-- NameRanged premise restricts that byte-observable value. `names_as_string`
+-- cannot bridge arbitrary names; exact-carrier work is tracked by
+-- flapjack-pxn.18.3.5.8.
 theorem structOldExpShapes_eq_map {α : Type} (context : StructPassContext) :
     (structOldExpShape.structOldExpShapes (α := α) context :
       List (Exp α) → List Shape) =

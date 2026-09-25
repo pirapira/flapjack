@@ -3397,7 +3397,7 @@ theorem crepSimpExpCorrect1CrepOpMulHolFiniteWordSourceCase
   have hOriginalSource : evalCrepHolFiniteWordSourceExp dimension state
       (.crepOp .mul [left, right]) = some (leftValue * rightValue) := by
     simp [evalCrepHolFiniteWordSourceExp, hLeftValue, hRightValue,
-      holFiniteWordSourceMul_eq_mul]
+      holFiniteWordSourceCrepOp_eq_crepOpCrep, crepOpCrep]
   change (evalCrepHolFiniteWordSourceExp dimension updated
       (crepSimpExp fromNat (.crepOp .mul [left, right]))).map PanWordLab.word =
     (evalCrepHolFiniteWordSourceExp dimension state

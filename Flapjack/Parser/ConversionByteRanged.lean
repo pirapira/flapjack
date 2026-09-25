@@ -611,5 +611,363 @@ theorem convBinaryExps_byteRanged {width : Nat} (ofInt : Int → BitVec width) (
   intro trees
   exact H trees.length trees rfl
 
+theorem listExpByteRanged_iff {width : Nat} (l : List (Exp (BitVec width))) :
+    ListExpByteRanged l ↔ ∀ e ∈ l, ExpByteRanged e := by
+  induction l with
+  | nil => simp [ListExpByteRanged]
+  | cons e es ih =>
+      constructor
+      · intro h x hx
+        rw [List.mem_cons] at hx
+        rcases hx with rfl | hx
+        · exact h.1
+        · exact (ih.mp h.2) x hx
+      · intro h
+        exact ⟨h e (by simp), ih.mpr (fun x hx => h x (by simp [hx]))⟩
+
+theorem listFieldByteRanged_iff {width : Nat} (l : List (String × Exp (BitVec width))) :
+    ListFieldByteRanged l ↔
+      ∀ p ∈ l, (∀ c ∈ p.1.toList, c.toNat < 256) ∧ ExpByteRanged p.2 := by
+  induction l with
+  | nil => simp [ListFieldByteRanged]
+  | cons p ps ih =>
+      constructor
+      · intro h x hx
+        rw [List.mem_cons] at hx
+        rcases hx with rfl | hx
+        · exact ⟨h.1, h.2.1⟩
+        · exact (ih.mp h.2.2) x hx
+      · intro h
+        have hp := h p (by simp)
+        exact ⟨hp.1, hp.2, ih.mpr (fun x hx => h x (by simp [hx]))⟩
+
+set_option maxHeartbeats 8000000 in
+theorem convExp_byteRanged {width : Nat} (ofInt : Int → BitVec width) :
+    ∀ fuel (tree : ParseTree), ParseTreeByteRanged tree → ∀ e, convExp ofInt fuel tree = some e → ExpByteRanged e := by
+  have H : ∀ fuel, ∀ (tree : ParseTree), ParseTreeByteRanged tree → ∀ e, convExp ofInt fuel tree = some e → ExpByteRanged e := by
+    intro fuel
+    induction fuel using Nat.strongRecOn with
+    | ind n ih =>
+      intro tree ht e h
+      cases n with
+      | zero => rw [convExp.eq_1] at h; simp at h
+      | succ m =>
+        have hH : ∀ g, g ≤ m → ∀ t, ParseTreeByteRanged t → ∀ e, convExp ofInt g t = some e → ExpByteRanged e :=
+          fun g hg => ih g (by omega)
+        cases tree with
+        | lf token locs =>
+          rw [convExp.eq_def] at h
+          split at h
+          · simp at h
+          · simp_all
+          · by_cases hb : (ParseTree.lf token locs).tokcheck (Token.keywordT Keyword.baseK) = true
+            · simp only [hb, if_true] at h; injection h with h; subst h; simp [ExpByteRanged]
+            · simp only [hb] at h
+              by_cases hto : (ParseTree.lf token locs).tokcheck (Token.keywordT Keyword.topK) = true
+              · simp only [hto, if_true] at h; injection h with h; subst h; simp [ExpByteRanged]
+              · simp only [hto] at h
+                by_cases hbi : (ParseTree.lf token locs).tokcheck (Token.keywordT Keyword.biwK) = true
+                · simp only [hbi, if_true] at h; injection h with h; subst h; simp [ExpByteRanged]
+                · simp only [hbi] at h
+                  by_cases htr : (ParseTree.lf token locs).tokcheck (Token.keywordT Keyword.trueK) = true
+                  · simp only [htr, if_true] at h; injection h with h; subst h; simp [ExpByteRanged]
+                  · simp only [htr] at h
+                    by_cases hfa : (ParseTree.lf token locs).tokcheck (Token.keywordT Keyword.falseK) = true
+                    · simp only [hfa, if_true] at h; injection h with h; subst h; simp [ExpByteRanged]
+                    · simp only [hfa] at h
+                      cases hc : convConst ofInt (ParseTree.lf token locs) with
+                      | none =>
+                        simp only [hc] at h
+                        exact convVar_byteRanged ht e h
+                      | some value =>
+                        simp only [hc] at h
+                        injection h with h; subst h
+                        exact convConst_byteRanged ofInt value hc
+        | nd nt children locs =>
+          have ht' : ∀ c ∈ children, ParseTreeByteRanged c := by
+            simpa [ParseTreeByteRanged] using ht
+          cases nt
+          case ind.succ.nd.rawStruct =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons args rest =>
+              cases rest with
+              | cons _ _ => rw [convExp.eq_def] at h; simp at h
+              | nil =>
+                rw [convExp.eq_def] at h
+                cases hc : convArgList ofInt m args with
+                | none => simp [hc] at h
+                | some values =>
+                  simp [hc] at h
+                  subst h
+                  exact (listExpByteRanged_iff values).mpr
+                    (convArgList_byteRanged ofInt m hH args (ht' args (by simp)) values hc)
+          case ind.succ.nd.nmdStruct =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons nameTree rest =>
+              cases rest with
+              | nil => rw [convExp.eq_def] at h; simp at h
+              | cons fieldsTree rest2 =>
+                cases rest2 with
+                | cons _ _ => rw [convExp.eq_def] at h; simp at h
+                | nil =>
+                  rw [convExp.eq_def] at h
+                  cases hn : convIdent nameTree with
+                  | none => simp [hn] at h
+                  | some name =>
+                    cases hf : convFieldList ofInt m fieldsTree with
+                    | none => simp [hn, hf] at h
+                    | some fields =>
+                      simp [hn, hf] at h
+                      subst h
+                      refine ⟨convIdent_byteRanged (ht' nameTree (by simp)) hn, ?_⟩
+                      exact (listFieldByteRanged_iff fields).mpr
+                        (convFieldList_byteRanged ofInt m hH fieldsTree (ht' fieldsTree (by simp)) fields hf)
+          case ind.succ.nd.eField =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons base accessors =>
+              rw [convExp.eq_def] at h
+              cases hb : convExp ofInt m base with
+              | none => simp [hb] at h
+              | some value =>
+                simp only [hb] at h
+                exact convAccessors_byteRanged ofInt m accessors
+                  (fun t hmem => ht' t (by simp [hmem])) value
+                  (ih m (by omega) base (ht' base (by simp)) value hb) e h
+          case ind.succ.nd.eNot =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons operand rest =>
+              cases rest with
+              | cons head rest2 =>
+                cases rest2 with
+                | cons _ _ => rw [convExp.eq_def] at h; simp at h
+                | nil =>
+                  rw [convExp.eq_def] at h
+                  cases hv : convExp ofInt m head with
+                  | none => simp [hv] at h
+                  | some value =>
+                    simp [hv] at h
+                    subst h
+                    have hval := ih m (by omega) head (ht' head (by simp)) value hv
+                    simpa [ExpByteRanged] using hval
+              | nil =>
+                rw [convExp.eq_def] at h
+                exact ih m (by omega) operand (ht' operand (by simp)) e h
+          case ind.succ.nd.eLoadByte =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons address rest =>
+              cases rest with
+              | nil =>
+                rw [convExp.eq_def] at h
+                cases hv : convExp ofInt m address with
+                | none => simp [hv] at h
+                | some value =>
+                  simp [hv] at h
+                  subst h
+                  simpa [ExpByteRanged] using ih m (by omega) address (ht' address (by simp)) value hv
+              | cons _ _ => rw [convExp.eq_def] at h; simp at h
+          case ind.succ.nd.eLoad32 =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons address rest =>
+              cases rest with
+              | nil =>
+                rw [convExp.eq_def] at h
+                cases hv : convExp ofInt m address with
+                | none => simp [hv] at h
+                | some value =>
+                  simp only [hv, Option.map_some, Option.some.injEq] at h
+                  subst h
+                  simpa [ExpByteRanged] using ih m (by omega) address (ht' address (by simp)) value hv
+              | cons _ _ => rw [convExp.eq_def] at h; simp at h
+          case ind.succ.nd.eLoad =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons shapeTree rest =>
+              cases rest with
+              | nil => rw [convExp.eq_def] at h; simp at h
+              | cons address rest2 =>
+                cases rest2 with
+                | cons _ _ => rw [convExp.eq_def] at h; simp at h
+                | nil =>
+                  rw [convExp.eq_def] at h
+                  cases hs : convShape m shapeTree with
+                  | none => simp [hs] at h
+                  | some shape =>
+                    cases hv : convExp ofInt m address with
+                    | none => simp [hs, hv] at h
+                    | some value =>
+                      simp [hs, hv] at h
+                      subst h
+                      exact ⟨convShape_byteRanged m shapeTree (ht' shapeTree (by simp)) shape hs,
+                        ih m (by omega) address (ht' address (by simp)) value hv⟩
+          case ind.succ.nd.eCmp =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons operand rest =>
+              cases rest with
+              | nil =>
+                rw [convExp.eq_def] at h
+                exact ih m (by omega) operand (ht' operand (by simp)) e h
+              | cons opTree rest2 =>
+                cases rest2 with
+                | cons right rest3 =>
+                  cases rest3 with
+                  | cons _ _ => rw [convExp.eq_def] at h; simp at h
+                  | nil =>
+                    rw [convExp.eq_def] at h
+                    exact convComparison_byteRanged ofInt m hH operand opTree right
+                      (ht' operand (by simp)) (ht' opTree (by simp)) (ht' right (by simp)) e h
+                | nil => rw [convExp.eq_def] at h; simp at h
+          case ind.succ.nd.eEq =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons operand rest =>
+              cases rest with
+              | nil =>
+                rw [convExp.eq_def] at h
+                exact ih m (by omega) operand (ht' operand (by simp)) e h
+              | cons opTree rest2 =>
+                cases rest2 with
+                | cons right rest3 =>
+                  cases rest3 with
+                  | cons _ _ => rw [convExp.eq_def] at h; simp at h
+                  | nil =>
+                    rw [convExp.eq_def] at h
+                    exact convComparison_byteRanged ofInt m hH operand opTree right
+                      (ht' operand (by simp)) (ht' opTree (by simp)) (ht' right (by simp)) e h
+                | nil => rw [convExp.eq_def] at h; simp at h
+          case ind.succ.nd.exp =>
+            cases children with
+            | nil =>
+              rw [convExp.eq_def] at h
+              simp [convExpList.eq_1] at h
+              subst h
+              simp [ExpByteRanged, ListExpByteRanged]
+            | cons operand rest =>
+              cases rest with
+              | nil =>
+                rw [convExp.eq_def] at h
+                exact ih m (by omega) operand (ht' operand (by simp)) e h
+              | cons operand2 rest2 =>
+                rw [convExp.eq_def] at h
+                cases hv : convExpList ofInt m (operand :: operand2 :: rest2) with
+                | none => simp [hv] at h
+                | some values =>
+                  simp [hv] at h
+                  subst h
+                  have hts : ∀ t ∈ (operand :: operand2 :: rest2), ParseTreeByteRanged t :=
+                    fun t hmem => ht' t (by simp [hmem])
+                  simpa [ExpByteRanged] using
+                    (listExpByteRanged_iff values).mpr
+                      (convExpList_byteRanged ofInt m hH (operand :: operand2 :: rest2) hts values hv)
+          case ind.succ.nd.eBoolAnd =>
+            cases children with
+            | nil =>
+              rw [convExp.eq_def] at h
+              simp [convExpList.eq_1] at h
+              subst h
+              simp [ExpByteRanged, ListExpByteRanged]
+            | cons operand rest =>
+              cases rest with
+              | nil =>
+                rw [convExp.eq_def] at h
+                exact ih m (by omega) operand (ht' operand (by simp)) e h
+              | cons operand2 rest2 =>
+                rw [convExp.eq_def] at h
+                cases hv : convExpList ofInt m (operand :: operand2 :: rest2) with
+                | none => simp [hv] at h
+                | some values =>
+                  simp [hv] at h
+                  subst h
+                  have hts : ∀ t ∈ (operand :: operand2 :: rest2), ParseTreeByteRanged t :=
+                    fun t hmem => ht' t (by simp [hmem])
+                  have hvals := convExpList_byteRanged ofInt m hH (operand :: operand2 :: rest2) hts values hv
+                  simp only [ExpByteRanged]
+                  exact (listExpByteRanged_iff _).mpr (by
+                    intro x hx
+                    simp only [List.mem_map] at hx
+                    obtain ⟨v, hvmem, rfl⟩ := hx
+                    exact ⟨trivial, hvals v hvmem⟩)
+          case ind.succ.nd.eShift =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons first rest =>
+              rw [convExp.eq_def] at h
+              cases hv : convExp ofInt m first with
+              | none => simp [hv] at h
+              | some value =>
+                simp only [hv] at h
+                exact convShifts_byteRanged ofInt m hH rest
+                  (fun t hmem => ht' t (by simp [hmem])) value
+                  (ih m (by omega) first (ht' first (by simp)) value hv) e h
+          case ind.succ.nd.eOr =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons first rest =>
+              rw [convExp.eq_def] at h
+              cases hv : convExp ofInt m first with
+              | none => simp [hv] at h
+              | some value =>
+                simp only [hv] at h
+                exact convBinaryExps_byteRanged ofInt m hH rest
+                  (fun t hmem => ht' t (by simp [hmem])) value
+                  (ih m (by omega) first (ht' first (by simp)) value hv) e h
+          case ind.succ.nd.eXor =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons first rest =>
+              rw [convExp.eq_def] at h
+              cases hv : convExp ofInt m first with
+              | none => simp [hv] at h
+              | some value =>
+                simp only [hv] at h
+                exact convBinaryExps_byteRanged ofInt m hH rest
+                  (fun t hmem => ht' t (by simp [hmem])) value
+                  (ih m (by omega) first (ht' first (by simp)) value hv) e h
+          case ind.succ.nd.eAnd =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons first rest =>
+              rw [convExp.eq_def] at h
+              cases hv : convExp ofInt m first with
+              | none => simp [hv] at h
+              | some value =>
+                simp only [hv] at h
+                exact convBinaryExps_byteRanged ofInt m hH rest
+                  (fun t hmem => ht' t (by simp [hmem])) value
+                  (ih m (by omega) first (ht' first (by simp)) value hv) e h
+          case ind.succ.nd.eAdd =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons first rest =>
+              rw [convExp.eq_def] at h
+              cases hv : convExp ofInt m first with
+              | none => simp [hv] at h
+              | some value =>
+                simp only [hv] at h
+                exact convBinaryExps_byteRanged ofInt m hH rest
+                  (fun t hmem => ht' t (by simp [hmem])) value
+                  (ih m (by omega) first (ht' first (by simp)) value hv) e h
+          case ind.succ.nd.eMul =>
+            cases children with
+            | nil => rw [convExp.eq_def] at h; simp at h
+            | cons first rest =>
+              rw [convExp.eq_def] at h
+              cases hv : convExp ofInt m first with
+              | none => simp [hv] at h
+              | some value =>
+                simp only [hv] at h
+                exact convPanops_byteRanged ofInt m hH rest
+                  (fun t hmem => ht' t (by simp [hmem])) value
+                  (ih m (by omega) first (ht' first (by simp)) value hv) e h
+          all_goals (rw [convExp.eq_def] at h; try (simp at h))
+  exact H
+
+
 
 end Flapjack.Parser

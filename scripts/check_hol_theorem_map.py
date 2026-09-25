@@ -174,6 +174,41 @@ DOCUMENTED_MISMATCHES = {
         "it. Exact port over List (DeclHOL width) with a reviewed ARB rendering "
         "is tracked by flapjack-4ac.4.109 (gated on flapjack-pxn.18.3.5.8). "
     ),
+    ("Flapjack/Pancake/Semantics/PanProps.lean", "resVarHOLExact_flookup_some_eq_lookup"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "flookup_res_var_some_eq_lookup",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.19; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL flookup_res_var_some_eq_lookup "
+        "(panPropsScript.sml:220-222) is over the varname |-> v finite-map carrier "
+        "with mlstring keys. resVarHOLExact_flookup_some_eq_lookup (PanProps.lean:955) "
+        "keeps the same hypothesis/conclusion and [NeZero width] but quantifies over "
+        "every MlS -> Option (ValueHOL width) function. Exact finite-map route "
+        "HolFiniteMapExact.resVarEq tracked by flapjack-pxn.18.3.7.1.3.1.1.2.4. "
+    ),
+    ("Flapjack/Pancake/Semantics/PanProps.lean", "resVarHOLExact_flookup_of_ne"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "flookup_res_var_diff_eq_org",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.20; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL flookup_res_var_diff_eq_org "
+        "(panPropsScript.sml:228-230) is over the varname |-> v finite-map carrier "
+        "with mlstring keys. resVarHOLExact_flookup_of_ne (PanProps.lean:945) keeps "
+        "the same argument order, n <> m hypothesis, conclusion and [NeZero width] "
+        "but quantifies over every MlS -> Option (ValueHOL width) function. Exact "
+        "finite-map route HolFiniteMapExact.resVarEq tracked by "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.4. "
+    ),
+    ("Flapjack/Pancake/Semantics/PanProps.lean", "resVarHOLExact_flookup"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "FLOOKUP_pan_res_var_thm",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.21; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL FLOOKUP_pan_res_var_thm "
+        "(panPropsScript.sml:236-238) is over the varname |-> v finite-map carrier "
+        "with mlstring keys (panSem$res_var overload of panSemScript.sml:505). "
+        "resVarHOLExact_flookup (PanProps.lean:936) keeps the same quantifiers and "
+        "if-then-else conclusion but quantifies over every MlS -> Option "
+        "(ValueHOL width) function. Exact finite-map route HolFiniteMapExact.resVarEq "
+        "tracked by flapjack-pxn.18.3.7.1.3.1.1.2.4. "
+    ),
     ("Flapjack/PanLocalised.lean", "localisedProg"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
         "localised_prog_def",

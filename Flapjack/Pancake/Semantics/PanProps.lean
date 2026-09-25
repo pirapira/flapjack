@@ -932,7 +932,11 @@ theorem shapeOfHOLExact_val {width : Nat} [NeZero width] (value : HolWordLab wid
 
 /-- Function-backed rendering of HOL `panProps$FLOOKUP_pan_res_var_thm`
     (`panPropsScript.sml:236`). Untagged because HOL's `lc` is a finite map,
-    while this Lean statement quantifies over every `MlS → Option _` function. -/
+    while this Lean statement quantifies over every `MlS → Option _` function.
+    The exact finite-map route is `HolFiniteMapExact.resVarEq` with
+    `lookup_resVarEq_none`/`lookup_resVarEq_some`, whose canonical qualification
+    (the bare-map carrier has no owning structure field) is tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.21`. -/
 theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (m n : MlS) (v : Option (ValueHOL width)) :
@@ -941,7 +945,9 @@ theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
 
 /-- Function-backed rendering of HOL `panProps$flookup_res_var_diff_eq_org`
     (`panPropsScript.sml:228`); untagged because its lookup-function input
-    ranges beyond HOL finite maps. -/
+    ranges beyond HOL finite maps. Exact finite-map route
+    `HolFiniteMapExact.resVarEq`, tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.20`. -/
 theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (n m : MlS) (v : Option (ValueHOL width)) (h : n ≠ m) :
@@ -951,7 +957,9 @@ theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
 
 /-- Function-backed rendering of HOL `panProps$flookup_res_var_some_eq_lookup`
     (`panPropsScript.sml:220`); untagged because the two lookup-function
-    arguments range beyond HOL finite maps. -/
+    arguments range beyond HOL finite maps. Exact finite-map route
+    `HolFiniteMapExact.resVarEq`, tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.19`. -/
 theorem resVarHOLExact_flookup_some_eq_lookup {width : Nat} [NeZero width]
     (lc lc' : MlS → Option (ValueHOL width))
     (v : MlS) (value : ValueHOL width)

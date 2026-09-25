@@ -373,6 +373,29 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
         self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pan_props_res_var_flookup_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        cases = {
+            "resVarHOLExact_flookup_some_eq_lookup": "flookup_res_var_some_eq_lookup",
+            "resVarHOLExact_flookup_of_ne": "flookup_res_var_diff_eq_org",
+            "resVarHOLExact_flookup": "FLOOKUP_pan_res_var_thm",
+        }
+        for lean_name, hol_name in cases.items():
+            key = ("Flapjack/Pancake/Semantics/PanProps.lean", lean_name)
+            record = inventory[key]
+            self.assertEqual(
+                (record["hol_path"], record["hol_name"]),
+                ("cakeml/pancake/semantics/panPropsScript.sml", hol_name),
+            )
+            self.assertEqual(record["statement_status"], "documented_mismatch")
+            self.assertIn("finite-map", record["reviewer"])
+            self.assertIn("flapjack-pxn.18.3.7.1.3.1.1.2.4", record["reviewer"])
+            self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+            self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_global_rename_function_name_polymorphic_hol_mismatch_is_documented(
         self,
     ):

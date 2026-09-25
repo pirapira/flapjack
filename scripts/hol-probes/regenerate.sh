@@ -145,6 +145,11 @@ run_probe pan_structs_mem_load_conversion_probeScript.sml pan_structs_mem_load_c
   mem_load_conversion_named_nested \
   "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
   "$cake_dir/pancake/proofs"
+run_probe pan_structs_shape_context_drop_probeScript.sml pan_structs_shape_context_drop_probe.out \
+  size_sh_with_ctxt_drop_one size_sh_with_ctxt_drop_named \
+  size_sh_with_ctxt_drop_nested_comb \
+  "$cake_dir/pancake/proofs/pan_structsProofScript.sml" \
+  "$cake_dir/pancake/proofs"
 run_probe pan_structs_value_validity_probeScript.sml pan_structs_value_validity_probe.out \
   v_flds_ok_word v_flds_ok_named_match v_flds_ok_named_mismatch \
   v_flds_ok_named_missing v_flds_ok_duplicate_first \

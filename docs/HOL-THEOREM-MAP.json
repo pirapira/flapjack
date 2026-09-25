@@ -9174,5 +9174,13 @@
   "lean_name": "isWfCtxtExactHOL",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+  "hol_name": "isValWord_def",
+  "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+  "lean_name": "isValWordHOL",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

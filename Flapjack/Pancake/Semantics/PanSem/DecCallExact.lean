@@ -1,6 +1,8 @@
 /-
-  Exact HOL-shaped `panSem$lookup_code` and `panSem$evaluate` DecCall clause over
-  the exact `mlstring`-keyed source state.
+  Function-backed `panSem$lookup_code` and callback-parameterised DecCall
+  clause over the `mlstring`-keyed source state. `PanSemStateExact.code` and the
+  helper's `code` parameter are unrestricted functions rather than HOL finite
+  maps, so `lookupCodeHOLExact` is untagged.
 
   `lookup_code_def` (cakeml/pancake/semantics/panSemScript.sml:458-467) looks the
   function name up in the state's code finite map and checks that the formal
@@ -8,9 +10,9 @@
   that each formal's shape matches the corresponding argument's `shape_of`
   (`LIST_REL (λ vshape arg. SND vshape = shape_of arg) vshapes args`); on success
   it returns the body, the locals map `FEMPTY |++ ZIP (MAP FST vshapes,args)`,
-  and the declared return shape.  The exact Lean port lives over the exact
-  carriers (`MlS` funname keys, `ValueHOL` arguments), renders `LIST_REL` as
-  length equality plus a zipped pointwise `shapeEqHOL` (whose `= true` bridge is
+  and the declared return shape. The Lean rendering uses `MlS` funname keys and
+  `ValueHOL` arguments, and renders `LIST_REL` as length equality plus a zipped
+  pointwise `shapeEqHOL` (whose `= true` bridge is
   `shapeEqHOL_eq_true`), and folds the `=`-keyed function update left to right.
 
   The DecCall clause (panSemScript.sml:693-718) evaluates the argument
@@ -31,13 +33,9 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS ShapeHOL ExpHOL ProgHOL)
 
-/-- Exact port of HOL `panSem$lookup_code` (`panSemScript.sml:458-467`) over the
-    exact `mlstring`-keyed code map.  `ALL_DISTINCT (MAP FST vshapes)` is the
-    propositional `Nodup` of the formal-name list, `LIST_REL` is rendered as
-    length equality together with the zipped pointwise shape check, and
-    `FEMPTY |++ ZIP (MAP FST vshapes,args)` as the left-to-right `=`-keyed
-    function update starting from the empty map. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "lookup_code_def"]
+/-- Function-backed rendering of HOL `panSem$lookup_code` (`panSemScript.sml:458-467`).
+    The lookup and argument checks are retained, but this helper is untagged
+    because `code` is an unrestricted function rather than a HOL finite map. -/
 def lookupCodeHOLExact {width : Nat} [NeZero width]
     (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
     (fname : MlS) (arguments : List (ValueHOL width)) :

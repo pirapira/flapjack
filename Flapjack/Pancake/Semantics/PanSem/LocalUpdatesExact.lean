@@ -1,7 +1,7 @@
 import Flapjack.Pancake.Semantics.PanSem.StateExact
 
 /-!
-# Exact `panSem` local/global update helpers over the exact carrier
+# `panSem` local/global update helpers over the function-backed carrier
 
 HOL `panSemScript.sml` provides four small state-update helpers that update the
 `varname`-keyed (`mlstring`) local/global finite maps:
@@ -12,13 +12,14 @@ HOL `panSemScript.sml` provides four small state-update helpers that update the
 * `res_var_def` (`:505-508`):
   `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`
 
-The state carrier here is the exact `PanSemStateExact` (`StateExact.lean`), whose
-`locals`/`globals` are `MlS → Option (ValueHOL width)` maps.  HOL `|+`/`|++`/`\\`
-are `=`-keyed finite-map operations; rendering them as `=`-keyed function
-updates over `MlS` (which has decidable equality) matches HOL, including
-`|++`'s "later duplicate wins" behaviour
-(`finite_mapsTheory.FLOOKUP_FUPDATE_LIST`: `FLOOKUP (m |++ xs) k` uses
-`ALOOKUP (REVERSE xs) k`).
+These definitions are useful function-backed renderings over
+`PanSemStateExact` (`StateExact.lean`), whose `locals`/`globals` are unrestricted
+`MlS → Option (ValueHOL width)` functions. HOL `|+`/`|++`/`\\` operate on
+finite maps. Although the pointwise update behavior agrees on represented
+finite maps (including `|++`'s later-duplicate-wins behavior), these declarations
+quantify over arbitrary functions and therefore are not exact HOL ports. Their
+`@[hol]` tags are withheld pending a state carrier whose fields enforce finite
+support.
 
 Direct HOL oracle rows:
 
@@ -36,31 +37,26 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS)
 
-/-- Exact port of HOL `panSem$set_var` (`panSemScript.sml:398-401`):
-    `set_var v value s = s with locals := s.locals |+ (v,value)`.  `|+` is
-    `FUPDATE`, rendered over the `MlS`-keyed function map with `=`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_var_def"]
+/-- Function-backed analogue of HOL `panSem$set_var` (`panSemScript.sml:398-401`).
+    This retains pointwise FUPDATE behavior, but is untagged: the state admits
+    arbitrary `MlS → Option _` fields rather than HOL finite maps. -/
 def setVarHOLExact {width : Nat} {σ : Type} [NeZero width]
     (name : MlS) (value : ValueHOL width)
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
   { state with
     locals := fun current => if current = name then some value else state.locals current }
 
-/-- Exact port of HOL `panSem$set_global` (`panSemScript.sml:403-406`): the
-    `globals` counterpart of `set_var`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_global_def"]
+/-- Function-backed analogue of HOL `panSem$set_global` (`panSemScript.sml:403-406`);
+    untagged because the state carrier admits non-finite-support maps. -/
 def setGlobalHOLExact {width : Nat} {σ : Type} [NeZero width]
     (name : MlS) (value : ValueHOL width)
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
   { state with
     globals := fun current => if current = name then some value else state.globals current }
 
-/-- Exact port of HOL `panSem$upd_locals` (`panSemScript.sml:431-434`):
-    `upd_locals varargs s = s with locals := FEMPTY |++ varargs`.  `|++` is
-    `FUPDATE_LIST`; the `List.foldl` over the function map applies entries left
-    to right, so a later duplicate overrides an earlier one, and any binding not
-    mentioned is dropped (starting from `FEMPTY`). -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "upd_locals_def"]
+/-- Function-backed analogue of HOL `panSem$upd_locals` (`panSemScript.sml:431-434`).
+    It models FEMPTY followed by FUPDATE_LIST pointwise, but is untagged because
+    its state type is not restricted to finite maps. -/
 def updLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
     (varargs : List (MlS × ValueHOL width))
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
@@ -70,11 +66,9 @@ def updLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
         fun current => if current = entry.1 then some entry.2 else map current)
       (fun _ => none) varargs }
 
-/-- Exact port of HOL `panSem$res_var` (`panSemScript.sml:505-508`):
-    `res_var lc (n, NONE) = lc \\ n` and `res_var lc (n, SOME v) = lc |+ (n,v)`.
-    Rendered over a `MlS`-keyed function map: `NONE` deletes the binding
-    (`FDOMSUB`), `SOME v` updates it (`FUPDATE`), both with `=`. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "res_var_def"]
+/-- Function-backed analogue of HOL `panSem$res_var` (`panSemScript.sml:505-508`).
+    Its delete/update behavior is pointwise, but its function-map input is not
+    the finite-map carrier quantified by HOL, so it is untagged. -/
 def resVarHOLExact {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (entry : MlS × Option (ValueHOL width)) : MlS → Option (ValueHOL width) :=

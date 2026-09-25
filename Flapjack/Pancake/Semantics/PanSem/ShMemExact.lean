@@ -45,14 +45,9 @@ def panWordOfBytesHOL {width : Nat} [NeZero width] (bigEndian : Bool)
       panSetByteHOL address (BitVec.ofNat width byte.toNat)
         (panWordOfBytesHOL bigEndian (address + 1) rest) bigEndian
 
-/-- Exact port of HOL `panSem$sh_mem_load`
-    (`panSemScript.sml:510-527`).  When `nb = 0` the address itself must be in
-    `sh_memaddrs`; otherwise the `byte_align`ed address must be.  The FFI call
-    uses the unaligned address bytes in both cases (`word_to_bytes addr F`).
-    A `FFI_final` outcome yields `SOME (FinalFFI outcome)` with cleared locals;
-    a `FFI_return` installs `set_kvar vk v (ValWord (word_of_bytes F 0w bytes))`
-    and the new ffi state. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "sh_mem_load_def"]
+/-- Function-backed rendering of HOL `sh_mem_load_def` (`panSemScript.sml:510-527`).
+    Kept untagged because its whole-state input admits arbitrary function-valued
+    map fields. -/
 def shMemLoadHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
     (kind : VarKind) (name : MlS) (address : RiscV.Word width) (nb : Nat) :
@@ -78,13 +73,9 @@ def shMemLoadHOLExact {width : Nat} {σ : Type} [NeZero width]
                   ffi := newFfi })
     else (some .error, state)
 
-/-- Exact port of HOL `panSem$sh_mem_store`
-    (`panSemScript.sml:529-547`).  The FFI configuration is the value bytes
-    (`word_to_bytes w F`, truncated to `nb` when `nb ≠ 0`) followed by the
-    address bytes.  On `FFI_final` the state is returned unchanged; on
-    `FFI_return` only `ffi` is updated.  Membership uses the address for
-    `nb = 0` and the `byte_align`ed address otherwise. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "sh_mem_store_def"]
+/-- Function-backed rendering of HOL `sh_mem_store_def` (`panSemScript.sml:529-547`).
+    Kept untagged because its whole-state input admits arbitrary function-valued
+    map fields. -/
 def shMemStoreHOLExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
     (word : RiscV.Word width) (address : RiscV.Word width) (nb : Nat) :

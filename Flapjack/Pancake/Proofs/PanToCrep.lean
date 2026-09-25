@@ -2064,17 +2064,37 @@ theorem evalPanSemStateExpsWfShapeOfStateRel
     panSemBitVec64BytesInWord hlocalsWf hglobalsWf expressions
     (some (panSemBitVec64MemoryAccess source)) values heval'
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake `locals_rel_lookup_ctxt`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:527`). The HOL
-    `OPT_MMAP (FLOOKUP t_locals) ns = SOME (flatten v)` is Lean's `List.mapM`
-    result, and `is_wf_shape_nil` is `isWfShape []` at the translated value
-    shape. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- HOL `locals_rel_lookup_ctxt` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:527-534`):
+    `locals_rel ctxt lcl lcl' /\ FLOOKUP lcl vr = SOME v ==>
+      ?ns. FLOOKUP ctxt.vars vr = SOME (shape_of v,ns) /\
+        LENGTH ns = LENGTH (flatten v) /\
+        OPT_MMAP (FLOOKUP lcl') ns = SOME (flatten v) /\
+        is_wf_shape_nil (shape_of v)`.
+    The Lean statement mirrors the two hypotheses and the four existential
+    conjuncts clause for clause: HOL `OPT_MMAP` becomes the `List.mapM` result
+    `slots.mapM (FLOOKUP targetLocals) = some (...)`, and `shape_of`/`flatten`/
+    `is_wf_shape_nil` become `panValueShape []`/`panValueFlatten`/`isWfShape []`.
+-/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the carriers differ from the HOL
+-- declaration. `locals_rel`/its context is the production `localsRel` over
+-- `PanToCrepProofContext α` (or `PanToCrepHOLContext α`) whose `vars`/`funcs`/`eids`
+-- finite maps are keyed by the production `FunName`/`VarName`/`ExceptionId` = `String`,
+-- and locals carry the production `PanValue α`/`Shape` (`named : String`) over a generic
+-- word `α`; HOL keys names by `funname`/`varname`/`eid` = `mlstring` and uses
+-- `panSem$v`/`shape` (`named : mlstring`) over a positive-width `'a word`. The
+-- production `shape_of`/`flatten`/`is_wf_shape_nil` mirrors are the untagged
+-- `panValueShape`/`panValueFlatten`/`isWfShape`. `names_as_string` cannot authorize
+-- the embedded `PanValue`/`Shape` carriers (identifiers occur inside the local value,
+-- not at the theorem boundary), and no `NameRanged`/`holMlStringWitness_*` byte witness
+-- applies because the conclusion is an existential over slot lists and `localsRel`, not
+-- a name. Oracle evidence: the kernel-checked fixture `localsRelLookupCtxt_fixture`
+-- (`Flapjack/Test/PanToCrepStateRelParity.lean:231`) derives the exact four conjuncts
+-- for a one-word local (`slot [0]`, flattened `[.word 5]`); the local-update/well-formed
+-- behaviour used here is pinned by the HOL-oracle rows of
+-- `scripts/hol-probes/pan_upd_locals_probe.out` (`pan_upd_locals_hit=SOME 7`,
+-- `pan_upd_locals_empty=NONE`) and `scripts/hol-probes/pan_empty_locals_probe.out`.
+-- The exact MlString/value carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem localsRelLookupCtxt
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))
@@ -2264,14 +2284,34 @@ theorem localsRelUpdateExistingValue
     oldValue newValue (panValueShape [] oldValue) slots hrel hsource hcontextOld
     hshape hdistinct
 
-/-- HOL `locals_rel_extend_new_var`: a fresh, well-shaped source local can be
-    allocated in distinct target slots above the old context maximum. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- HOL `locals_rel_extend_new_var` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4179-4186`):
+    a fresh, well-shaped source local can be allocated in distinct target slots
+    above the old context maximum:
+    `locals_rel ct s t /\ is_wf_shape_nil (shape_of v) /\ ALL_DISTINCT ns /\
+      (!x. MEM x ns ==> ct.vmax < x /\ x <= ct.vmax + size_of_shape (shape_of v)) /\
+      LENGTH ns = size_of_shape (shape_of v) ==>
+      locals_rel (ct with <|vars := ct.vars |+ (x,(shape_of v,ns));
+        vmax := ct.vmax + size_of_shape (shape_of v)|>) (s |+ (x,v))
+        (t |++ ZIP(ns, flatten v))`.
+    The Lean statement mirrors the HOL hypothesis set and conclusion clause for
+    clause: `locals_rel`/`is_wf_shape_nil`/`ALL_DISTINCT`/the slot-bounds condition/
+    `LENGTH` become `localsRel`/`isWfShape []`/`slots.Nodup`/`hbounds`/`hlen`, and
+    `shape_of`/`flatten` become `panValueShape []`/`panValueFlatten`.
+-/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the carriers differ from the HOL
+-- declaration. `locals_rel`/its context is the production `localsRel` over
+-- `PanToCrepProofContext α` (or `PanToCrepHOLContext α`) whose `vars`/`funcs`/`eids`
+-- finite maps are keyed by the production `FunName`/`VarName`/`ExceptionId` = `String`,
+-- and locals carry the production `PanValue α`/`Shape` (`named : String`) over a generic
+-- word `α`; HOL keys names by `funname`/`varname`/`eid` = `mlstring` and uses
+-- `panSem$v`/`shape` (`named : mlstring`) over a positive-width `'a word`. The
+-- production `isWfShape`/`panValueShape`/`panValueFlatten` are the untagged production
+-- mirrors of HOL `is_wf_shape_nil`/`shape_of`/`flatten`. `names_as_string` cannot
+-- authorize the embedded `PanValue`/`Shape` carriers (the identifiers occur inside the
+-- local value, not at the theorem boundary), and no `NameRanged`/`holMlStringWitness_*`
+-- byte witness applies because the conclusion is the `localsRel` relation, not a name.
+-- The exact MlString/value carrier is tracked by `flapjack-pxn.18.3.5.8`
+-- (parent `flapjack-pxn.18.3.5.7.2`).
 theorem localsRelExtendNewVar
     (context : PanToCrepProofContext α)
     (sourceLocals : FiniteMap String (PanValue α))

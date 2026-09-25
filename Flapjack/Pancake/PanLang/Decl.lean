@@ -203,7 +203,25 @@ projects the top-level exception declarations of a program in source order,
 returning `(eid, shape)` for each `ExnDecl` and dropping
 `Function`/`Decl`/`Name` entries.  The exception id is an `MlS` and the shape
 uses `ShapeHOL`, so this is an exact word-indexed port (the production
-`exceptionEntries` uses Lean `String` and monomorphic `Shape`). -/
+`exceptionEntries` uses Lean `String` and monomorphic `Shape`).
+
+Executable-path disposition (bead `flapjack-4ac.1.44.1`): the compiled RISC-V
+pipeline extracts exception ids through `crepGetEidsFromDecls`
+(`Flapjack/Pipeline.lean:66`, used by `pipelineCrepeContext` /
+`pipelineCrepeCompileContext` at `:315` / `:324`), which numbers `.exnDecl`
+entries directly and calls neither `exceptionEntries` nor `exceptionsHOL`.
+Production `exceptionEntries` is executed only by the untagged mirror
+`panToCrepGetEidsFromDeclsHOL`
+(`Flapjack/Pancake/PanToCrep/Compile.lean:1131`) inside `compileToCrepHOL`,
+which has no executable caller (the run path uses `compileToCrep` plus
+`panToCrepCompileInlTop`; `compileProgToCrepHOL` appears only in proofs and
+tests). Routing the executable extraction through this reviewed predicate
+additionally needs a total checked codec `declOfHOL ∘ declToHOL = id`, which
+currently holds only under byte-ranged hypotheses (`declOfHOL_declToHOL`), so
+the faithful executable route depends on the MlString/`ShapeHOL` carrier work
+tracked by `flapjack-pxn.18.3.5.8`. The proof-side bridge
+`exceptionsHOL_map_paramOfHOL` already connects the reviewed predicate to the
+production analogue. -/
 @[hol "cakeml/pancake/panLangScript.sml" "exceptions_def"]
 def exceptionsHOL {width : Nat} [NeZero width] :
     List (DeclHOL width) → List (MlS × ShapeHOL)

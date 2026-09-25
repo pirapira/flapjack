@@ -135,13 +135,53 @@ theorem sizeWithCtxt_fixture (shape : ShapeHOL) (context : StructContextExact)
     sizeOfShapeWithContextHOL context shape = sizeOfShapeHOL shape :=
   sizeOfShapeWithContextHOL_eq shape context h
 
+-- HOL `lfs_val = T` / `lfs_two = T` / `lfs_nested = T`.
+def lfsVal : Bool :=
+  (flattenHOL (.val (.word 5) : ValueHOL 64)).length ==
+    sizeOfShapeHOL (shapeOfHOLExact (.val (.word 5) : ValueHOL 64))
+
+/-- A two-field exact struct value. -/
+def structTwo : ValueHOL 64 :=
+  .rStruct [.val (.word 1), .val (.word 2)]
+
+/-- A nested exact struct value. -/
+def structNested : ValueHOL 64 :=
+  .rStruct [.rStruct [.val (.word 1)], .val (.word 2)]
+
+def lfsTwo : Bool :=
+  (flattenHOL structTwo).length == sizeOfShapeHOL (shapeOfHOLExact structTwo)
+
+def lfsNested : Bool :=
+  (flattenHOL structNested).length == sizeOfShapeHOL (shapeOfHOLExact structNested)
+
+-- HOL `lfs_val_len = 1` / `lfs_nested_len = 2`.
+def lfsValLen : Bool := (flattenHOL (.val (.word 5) : ValueHOL 64)).length == 1
+
+def lfsNestedLen : Bool := (flattenHOL structNested).length == 2
+
+-- HOL `lfs_wf_nested = T`.
+def lfsWfNested : Bool :=
+  isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact structNested)
+
+/-- Combined parity check: the six direct HOL `length_flatten` rows. -/
+def lengthFlattenGuard : Bool :=
+  lfsVal && lfsTwo && lfsNested && lfsValLen && lfsNestedLen && lfsWfNested
+
+#guard lengthFlattenGuard
+
+/-- Fixture: HOL `length_flatten_eq_size_of_shape` (`panPropsScript.sml:171`). -/
+theorem lengthFlatten_fixture (v : ValueHOL 64)
+    (h : isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact v) = true) :
+    (flattenHOL v).length = sizeOfShapeHOL (shapeOfHOLExact v) :=
+  flattenHOL_length_eq_sizeOfShapeHOL v h
+
 def runChecks : IO Bool := do
-  if shapeResVarGuard && sizeWithCtxtGuard then
+  if shapeResVarGuard && sizeWithCtxtGuard && lengthFlattenGuard then
     IO.println
-      "PASS exact panProps shape_of_val / FLOOKUP_pan_res_var / size_of_sh_with_ctxt (12 HOL rows)"
+      "PASS exact panProps shape_of_val / FLOOKUP_pan_res_var / size_of_sh_with_ctxt / length_flatten (18 HOL rows)"
     pure true
   else
-    IO.println "FAIL exact panProps shape/res_var/size lemmas"
+    IO.println "FAIL exact panProps shape/res_var/size/length_flatten lemmas"
     pure false
 
 end Flapjack.Test.PanPropsShapeResVarParity

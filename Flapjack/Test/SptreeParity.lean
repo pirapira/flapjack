@@ -18,6 +18,15 @@ private def zeroInserted : NumSet := sptInsert 0 () emptyTree
 /-- Two elements (`0` then `1`) inserted into the empty set. -/
 private def twoInserted : NumSet := sptInsert 1 () zeroInserted
 
+/-- Three elements (`0`, `1`, `2`). -/
+private def threeInserted : NumSet := sptInsert 2 () twoInserted
+
+/-- `0` and `5`. -/
+private def fiveInserted : NumSet := sptInsert 5 () zeroInserted
+
+/-- `0`, `1`, `2`, `3`. -/
+private def fourInserted : NumSet := sptInsert 3 () threeInserted
+
 -- 1. `lookup_ln`
 example : sptLookup 0 emptyTree = none := by simp [emptyTree]
 -- 2. `insert0`
@@ -41,6 +50,20 @@ example : sptIsEmpty zeroInserted = false := by simp [zeroInserted, emptyTree, s
 -- 11. `insert_ovw`
 example : sptLookup 0 (sptInsert 0 () zeroInserted) = some () := by simp [zeroInserted, emptyTree, sptInsert, sptLookup]
 
+-- Enumeration order rows from `scripts/hol-probes/num_set_to_alist_probe.out`.
+-- 12. `toalist_ln`
+example : sptToAList emptyTree = [] := by simp [emptyTree, sptToAList, sptFoldi]
+-- 13. `toalist_zero`
+example : sptToAList zeroInserted = [(0, ())] := by simp [zeroInserted, emptyTree, sptToAList, sptFoldi]
+-- 14. `toalist_two`
+example : sptToAList twoInserted = [(1, ()), (0, ())] := by simp [twoInserted, zeroInserted, emptyTree, sptInsert, sptToAList, sptFoldi, lrNext]
+-- 15. `toalist_three`
+example : sptToAList threeInserted = [(1, ()), (0, ()), (2, ())] := by simp [threeInserted, twoInserted, zeroInserted, emptyTree, sptInsert, sptToAList, sptFoldi, lrNext]
+-- 16. `toalist_five`
+example : sptToAList fiveInserted = [(5, ()), (0, ())] := by simp [fiveInserted, zeroInserted, emptyTree, sptInsert, sptToAList, sptFoldi, lrNext]
+-- 17. `toalist_four`
+example : sptToAList fourInserted = [(3, ()), (1, ()), (0, ()), (2, ())] := by simp [fourInserted, threeInserted, twoInserted, zeroInserted, emptyTree, sptInsert, sptToAList, sptFoldi, lrNext]
+
 /-- Executable mirror of the oracle rows for `#guard`. -/
 private def sptreeGuard : Bool :=
   (sptLookup 0 emptyTree == none) &&
@@ -53,7 +76,13 @@ private def sptreeGuard : Bool :=
     (sptWf twoInserted == true) &&
     (sptIsEmpty emptyTree == true) &&
     (sptIsEmpty zeroInserted == false) &&
-    (sptLookup 0 (sptInsert 0 () zeroInserted) == some ())
+    (sptLookup 0 (sptInsert 0 () zeroInserted) == some ()) &&
+      (sptToAList emptyTree == []) &&
+      (sptToAList zeroInserted == [(0, ())]) &&
+      (sptToAList twoInserted == [(1, ()), (0, ())]) &&
+      (sptToAList threeInserted == [(1, ()), (0, ()), (2, ())]) &&
+      (sptToAList fiveInserted == [(5, ()), (0, ())]) &&
+      (sptToAList fourInserted == [(3, ()), (1, ()), (0, ()), (2, ())])
 
 #eval sptreeGuard
 #guard sptreeGuard
@@ -63,7 +92,7 @@ example (value : Unit) (tree : NumSet) : sptLookup 0 (sptInsert 0 value tree) = 
   sptLookup_sptInsert_zero value tree
 
 def runChecks : IO Bool := do
-  IO.println "PASS exact spt/num_set carrier lookup/insert/wf match all 11 oracle rows"
+  IO.println "PASS exact spt/num_set carrier lookup/insert/wf and toAList enumeration order match the 17 oracle rows"
   pure sptreeGuard
 
 end Flapjack.Test.SptreeParity

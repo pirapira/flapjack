@@ -910,4 +910,138 @@ decreasing_by
     simp_wf
     omega
 
+/-! ## Compositional `While` step (flapjack-pxn.18.4.3.77.10)
+
+HOL `While` (`cakeml/pancake/semantics/panSemScript.sml:625-635`) is a recursive
+loop.  The recursion measure (loop clock plus syntax fuel) lives in the total
+evaluator, so this file records only the post-evaluation composition: given the
+already evaluated condition and continuations for the body and the loop, build
+the HOL outcome/state pair.  The clause is not tagged as HOL's `evaluate_def`
+and `panSemTotalEvaluatePartial` still returns `some Error` for `.while` until
+the recursive measure is available. -/
+
+/-- HOL `While` (`panSemScript.sml:625-635`): a zero condition is a normal
+    completion with the state unchanged; a nonzero condition at clock zero is a
+    timeout with cleared locals; otherwise evaluate the body on
+    `dec_clock state`, clamp the body state's clock (`fix_clock`), and recurse
+    on `Continue` or normal completion, return normally on `Break`, and pass any
+    other outcome through. -/
+def panSemTotalWhileStep [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ))
+    (evaluatedCondition : Option (PanValue α))
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    Option (PanSemHOLResult α) × PanSemState α (FfiState σ) :=
+  match evaluatedCondition with
+  | some (.word word) =>
+      if word = 0 then (none, state)
+      else
+        if state.clock = 0 then
+          (some .timeOut, { state with locals := fun _ => none })
+        else
+          let decremented := { state with clock := state.clock - 1 }
+          let bodyResult := evaluateBody decremented
+          let s1 := panSemFixClock decremented.clock bodyResult.2
+          match bodyResult.1 with
+          | none => recurseWhile s1
+          | some .continue => recurseWhile s1
+          | some .break => (none, s1)
+          | other => (other, s1)
+  | _ => (some .error, state)
+
+@[simp] theorem panSemTotalWhileStep_none [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ))
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalWhileStep state none evaluateBody recurseWhile = (some .error, state) := rfl
+
+@[simp] theorem panSemTotalWhileStep_rStruct [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ)) (fields : List (PanValue α))
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalWhileStep state (some (.rStruct fields)) evaluateBody recurseWhile =
+      (some .error, state) := rfl
+
+@[simp] theorem panSemTotalWhileStep_nStruct [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ)) (name : StructName)
+    (fields : List (FieldName × PanValue α))
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalWhileStep state (some (.nStruct name fields)) evaluateBody recurseWhile =
+      (some .error, state) := rfl
+
+theorem panSemTotalWhileStep_word_zero [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ)) (word : α) (hzero : word = 0)
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalWhileStep state (some (.word word)) evaluateBody recurseWhile =
+      (none, state) := by
+  simp [panSemTotalWhileStep, hzero]
+
+theorem panSemTotalWhileStep_word_timeout [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ)) (word : α) (hzero : word ≠ 0)
+    (hclock : state.clock = 0)
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalWhileStep state (some (.word word)) evaluateBody recurseWhile =
+      (some .timeOut, { state with locals := fun _ => none }) := by
+  simp [panSemTotalWhileStep, hzero, hclock]
+
+/-- The nonzero-condition, nonzero-clock body step. -/
+theorem panSemTotalWhileStep_word_body [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ)) (word : α) (hzero : word ≠ 0)
+    (hclock : state.clock ≠ 0)
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ)) :
+    panSemTotalWhileStep state (some (.word word)) evaluateBody recurseWhile =
+      (let decremented := { state with clock := state.clock - 1 }
+       let bodyResult := evaluateBody decremented
+       let s1 := panSemFixClock decremented.clock bodyResult.2
+       match bodyResult.1 with
+       | none => recurseWhile s1
+       | some .continue => recurseWhile s1
+       | some .break => (none, s1)
+       | other => (other, s1)) := by
+  simp [panSemTotalWhileStep, hzero, hclock]
+
+theorem panSemTotalWhileStep_word_break [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ)) (word : α) (hzero : word ≠ 0)
+    (hclock : state.clock ≠ 0) (s1 : PanSemState α (FfiState σ))
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (hbody : evaluateBody { state with clock := state.clock - 1 } = (some .break, s1)) :
+    panSemTotalWhileStep state (some (.word word)) evaluateBody recurseWhile =
+      (none, panSemFixClock (state.clock - 1) s1) := by
+  rw [panSemTotalWhileStep_word_body state word hzero hclock evaluateBody recurseWhile]
+  simp [hbody]
+
+theorem panSemTotalWhileStep_word_continue [DecidableEq α] [OfNat α 0]
+    (state : PanSemState α (FfiState σ)) (word : α) (hzero : word ≠ 0)
+    (hclock : state.clock ≠ 0) (s1 : PanSemState α (FfiState σ))
+    (evaluateBody : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (recurseWhile : PanSemState α (FfiState σ) →
+      Option (PanSemHOLResult α) × PanSemState α (FfiState σ))
+    (hbody : evaluateBody { state with clock := state.clock - 1 } = (some .continue, s1)) :
+    panSemTotalWhileStep state (some (.word word)) evaluateBody recurseWhile =
+      recurseWhile (panSemFixClock (state.clock - 1) s1) := by
+  rw [panSemTotalWhileStep_word_body state word hzero hclock evaluateBody recurseWhile]
+  simp [hbody]
+
 end Flapjack

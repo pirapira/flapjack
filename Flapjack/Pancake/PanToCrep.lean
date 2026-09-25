@@ -156,11 +156,21 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
 /-! Flapjack-specific analogue of `pan_to_crep$ret_var`
     (`cakeml/pancake/pan_to_crepScript.sml:114-119`).
 
-    A return variable exists only for a one-word shape.  Pancake's `oHD`
-    operation supplies the first flattened destination when one is present.
-    This declaration consumes production `Shape`, whose `Named` field is a
-    Lean `String`; HOL's shape uses an `mlstring` name. The equations mirror
-    HOL, but the input carrier differs, so this declaration is untagged. -/
+    Clause-by-clause the HOL definition is
+    `ret_var One ns = oHD ns`,
+    `ret_var (Comb sh) ns = if size_of_shape (Comb sh) = 1 then oHD ns else NONE`,
+    `ret_var (Named sh) ns = NONE` (comment "should never happen").
+    `oHD` (`HOL/src/list/src/listScript.sml:5474`, `oHD l = case l of [] => NONE
+    | h::_ => SOME h`) is exactly `List.head?`; `Shape.shapeSize` matches
+    `size_of_shape` (`panLangScript.sml:174`) on `one`/`comb`/`named`.
+
+    The production `Shape.Named` payload is a Lean `String` (`StructName`),
+    whereas HOL uses `mlstring`. This function discards that payload. The
+    current `names_as_string` policy classifies observed equality/map-key uses
+    and byte-observable uses, not a discarded nested carrier; therefore this
+    analogue remains untagged pending an exact-carrier port or a reviewed
+    qualifier policy for discarded names. Direct HOL/Lean cases are retained
+    in `ret_var_probe.out` and `RetVarParity.lean`. -/
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?

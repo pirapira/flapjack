@@ -855,6 +855,12 @@ theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
 -- use the production `FunName`/`VarName`/`StructName` = `String`, while HOL
 -- `panLangScript.sml` names are `mlstring`. The exact MlString identifier
 -- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- `resort_decls` has no `String` identifier parameter or use (it only regroups
+-- by constructor), so the reviewed `(names_as_string := ...)` qualifier does not
+-- apply; the only mismatch is the imported `Decl` carrier, so this stays
+-- untagged pending the exact MlString carrier.  Clause/side-condition evidence:
+-- `scripts/hol-probes/pan_globals_resort_decls_probe.out` and
+-- `Flapjack/Test/PanGlobalsResortDeclsParity.lean`.
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++
@@ -972,6 +978,12 @@ theorem holMlStringWitness_globalNewMainName (declarations : List (Decl α)) :
 -- use the production `FunName`/`VarName`/`StructName` = `String`, while HOL
 -- `panLangScript.sml` names are `mlstring`. The exact MlString identifier
 -- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- `dec_shapes` has no `String` identifier parameter or use (it only projects the
+-- constructor shape of each declaration), so the reviewed
+-- `(names_as_string := ...)` qualifier does not apply; this stays untagged
+-- pending the exact MlString carrier.  Clause/side-condition evidence:
+-- `scripts/hol-probes/pan_globals_dec_shapes_probe.out` and
+-- `Flapjack/Test/PanGlobalsDecShapesParity.lean`.
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []
   | .function _ :: declarations => globalDeclShapes declarations

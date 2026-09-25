@@ -912,6 +912,22 @@ class ValidateInventoryTest(unittest.TestCase):
         )
         self.assertIn("flapjack-pxn.18.3.5.8.8", reviewer)
 
+    def test_pan_to_crep_definition_cluster_mismatches_are_documented(self):
+        expected = {
+            "excpRel": "excp_rel_def",
+            "ctxtFc": "ctxt_fc_def",
+            "codeRel": "code_rel_def",
+            "stateRel": "state_rel_def",
+            "localsRel": "locals_rel_def",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", lean_name)
+            self.assertIn(key, MAP["DOCUMENTED_MISMATCHES"])
+            hol_path, got_hol_name, reviewer = MAP["DOCUMENTED_MISMATCHES"][key]
+            self.assertEqual(hol_path, "cakeml/pancake/proofs/pan_to_crepProofScript.sml")
+            self.assertEqual(got_hol_name, hol_name)
+            self.assertIn("flapjack-pxn.18.3.5.8", reviewer)
+
 
 if __name__ == "__main__":
     unittest.main()

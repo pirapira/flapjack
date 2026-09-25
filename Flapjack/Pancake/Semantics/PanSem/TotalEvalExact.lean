@@ -19,8 +19,8 @@ nonrecursive clauses whose exact helpers are available: `Skip`, `Assign`,
 The outer `Option` means that a constructor has no assembled clause in the
 nonrecursive dispatcher; it is distinct from the inner HOL result option. The
 recursive evaluator below assembles `Dec`, `Seq`, `If`, `While`, `Call`, and
-`DecCall`, plus the `Assign` clause whose memory-set fields are proved preserved.
-`Primitive`, stores, `ExtCall`, and ShMem remain explicit gaps.
+`DecCall`, plus the `Assign` and `Primitive` clauses whose memory-set fields
+are proved preserved. Stores, `ExtCall`, and ShMem remain explicit gaps.
 This file does not
 claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
 -/
@@ -111,8 +111,8 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
     results. `If` selects and recursively evaluates one branch. `While` decrements
     the clock before its body and recurses only on normal or Continue outcomes.
     `Dec` installs its binding for the body and restores the prior local afterwards.
-    `Assign` uses the reviewed nonrecursive clause and preserves both memory
-    predicates. `Primitive`, stores, `ExtCall`, and ShMem leaves remain explicit
+    `Assign` and `Primitive` use reviewed nonrecursive clauses and preserve
+    both memory predicates. Stores, `ExtCall`, and ShMem leaves remain explicit
     gaps, so this definition does not claim or tag the full `evaluate_def`. -/
 def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero width] :
     ProgHOL width → PanSemExactEvalContext width σ →
@@ -311,6 +311,32 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
                 · cases kind <;>
                     simp [output, assignStepHOLExact, hEval, hvalid, setKvarHOLExact]
                 · simp [output, assignStepHOLExact, hEval, hvalid]
+          some (output.1, context.withState output.2 hmem hshared)
+      | .primitive name operator arguments =>
+          let output := primitiveStepHOLExact state name operator arguments
+            (fun _ expressions => evalListHOLExact state expressions)
+          have hmem : output.2.memaddrs = state.memaddrs := by
+            cases hEval : evalListHOLExact state arguments with
+            | none => simp [output, primitiveStepHOLExact, hEval]
+            | some values =>
+                cases hPrim : panPrimopHOLExact (width := width) operator values with
+                | none => simp [output, primitiveStepHOLExact, hEval, hPrim]
+                | some value =>
+                    by_cases hvalid : isValidValueHOLExact state .local name value = true
+                    · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid,
+                        setVarHOLExact]
+                    · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid]
+          have hshared : output.2.shMemaddrs = state.shMemaddrs := by
+            cases hEval : evalListHOLExact state arguments with
+            | none => simp [output, primitiveStepHOLExact, hEval]
+            | some values =>
+                cases hPrim : panPrimopHOLExact (width := width) operator values with
+                | none => simp [output, primitiveStepHOLExact, hEval, hPrim]
+                | some value =>
+                    by_cases hvalid : isValidValueHOLExact state .local name value = true
+                    · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid,
+                        setVarHOLExact]
+                    · simp [output, primitiveStepHOLExact, hEval, hPrim, hvalid]
           some (output.1, context.withState output.2 hmem hshared)
       | other =>
           match other with

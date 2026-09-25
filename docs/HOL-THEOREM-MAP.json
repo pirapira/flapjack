@@ -5376,7 +5376,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "codeRelEmptyLocals",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (HOL state field review) Tag withdrawn (Flapjack-specific; not an exact HOL port): statement is keyed by `FunName`/`VarName`/`ExceptionId` = `String` or embeds a `PanToCrepProofContext`/`PanToCrepHOLContext` with `String`-keyed finite maps, while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`; exact MlString carrier tracked by `flapjack-pxn.18.3.5.8`."
+    "reviewer": "Codex (HOL source/type review, flapjack-dlc.80): documented mismatch; tag remains withdrawn. HOL code_rel_def (pan_to_crepProofScript.sml:30-42) relates mlstring-keyed finite maps with HOL prog/crep_prog entries and compile output; code_rel_empty_locals (line 96) updates only the HOL source/target locals fields. Lean codeRelEmptyLocals likewise preserves code fields, but its premise/conclusion use panSemCodeAsLookup and target.code through production codeRel: String keys, production Prog α/CrepProg α, and compileCodeRelProg. The theorem has no NameRanged or same-module byte-witness premise and no proved bridge to the HOL finite-map/syntax carriers. Exact identifier dependency flapjack-pxn.18.3.5.8 plus HOL Prog/Crep compiler-carrier bridges remain open; no qualified tag is justified."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

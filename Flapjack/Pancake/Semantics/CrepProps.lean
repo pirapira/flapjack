@@ -1,5 +1,6 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.Pancake.Semantics.CrepSem
 
 /-!
@@ -102,9 +103,9 @@ theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
     (`cakeml/pancake/semantics/crepPropsScript.sml:30`), stated over the fixed
     `byte$bytes_in_word` stride.  The `CrepBytesInWord` instance supplies the
     fixed byte width, so the explicit quantified variables are HOL's `n a e`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type,
--- while HOL `prog`/`exp` are indexed by the word length.  The exact width-indexed
--- tag is on the corresponding `length_loadShape_eq_shapeW` declaration below.
+-- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type.
+-- HOL's exact expression-carrier theorem is `length_loadShapeHOLW` in
+-- `CrepLang/Exp.lean`; this production helper remains useful for generic code.
 theorem length_loadShape_eq_shape [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (count : Nat) (address : α) (value : CrepExp α) :
     (loadShapeBytes address count value).length = count := by
@@ -484,7 +485,14 @@ theorem map_var_crepExpVars_eqW {width : Nat} [NeZero width] (names : List Nat) 
     (names.map (CrepExp.var (α := BitVec width))).flatMap crepExpVarsW = names :=
   map_var_crepExpVars_eq names
 
+/-! Exact expression-carrier corollary of HOL
+    `crepProps$length_load_shape_eq_shape` (`crepPropsScript.sml:30`). -/
 @[hol "cakeml/pancake/semantics/crepPropsScript.sml" "length_load_shape_eq_shape"]
+theorem length_loadShapeHOLW {width : Nat} [NeZero width]
+    (count : Nat) (address : BitVec width) (value : CrepExpHOL width) :
+    (loadShapeBytesHOLW address count value).length = count := by
+  induction count generalizing address <;> simp [loadShapeBytesHOLW, *]
+
 theorem length_loadShape_eq_shapeW {width : Nat} [NeZero width]
     (count : Nat) (address : BitVec width) (value : CrepExp (BitVec width)) :
     (loadShapeBytesW address count value).length = count := by

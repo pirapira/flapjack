@@ -29,3 +29,11 @@ val _ = print_eval "fallback"
   ``pan_to_crep$comp_field 2
       [One]
       [Const (4w : 8 word)]``;
+val _ = print_eval "empty"
+  ``pan_to_crep$comp_field 0
+      ([] : panLang$shape list)
+      [Const (1w : 8 word)]``;
+val _ = print_eval "short"
+  ``pan_to_crep$comp_field 0
+      [Comb [One; One]]
+      [Const (5w : 8 word)]``;

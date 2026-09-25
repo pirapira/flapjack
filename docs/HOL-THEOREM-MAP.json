@@ -1480,6 +1480,14 @@
     "reviewer": "Codex (source comparison at pan_to_crepScript.sml:131-136): HOL wrap_rt n = case n of NONE => NONE | SOME (One,[]) => NONE | m => m over the mlstring-named shape; Lean wrapRtHOL has the identical three clauses over the exact MlString-backed ShapeHOL carrier. Narrow codec bridge wrapRtHOL_map_shapeToHOL relates production wrapRt. Direct HOL rows none/empty_one/one_word/comb_empty/named in scripts/hol-probes/wrap_rt_probe.out; replayed on ShapeHOL and production in Flapjack/Test/WrapRtParity.lean."
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "comp_field_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "compFieldHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison, bead flapjack-pxn.18.3.5.8.11): comp_field's two clauses (pan_to_crepScript.sml:28-32) are comp_field i [] es = ([Const 0w], One) and comp_field i (sh::shs) es = if i = 0 then (TAKE (size_of_shape sh) es, sh) else comp_field (i-1) shs (DROP (size_of_shape sh) es). compFieldHOL is stated over the exact MlString-backed ShapeHOL carrier and the positive-width CrepExpHOL (BitVec width, [NeZero width]); sizeOfShapeHOL is the tagged size_of_shape_def over ShapeHOL and the zero literal is CrepExpHOL.const 0. All constructor arities and field types match. Direct HOL-EVAL rows for first/second/fallback/empty/short are in scripts/hol-probes/comp_field_probe.out, reproduced over the exact carrier in Flapjack/Test/CompFieldParity.lean. Production compileField stays untagged; compileField_map_codecs is the kernel bridge mapping its result into the exact carriers."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",

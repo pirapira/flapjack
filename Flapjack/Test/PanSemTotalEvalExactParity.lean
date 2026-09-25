@@ -230,6 +230,11 @@ private def recursiveExact
     [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs] :=
   evalPanSemRecursiveCallHOLExact program state
 
+private def recursiveExact8
+    (program : ProgHOL 8) (state : PanSemStateExact 8 Unit)
+    [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs] :=
+  evalPanSemRecursiveCallHOLExact program state
+
 private def primitiveState : PanSemStateExact 64 Unit :=
   { baseState with
     locals := fun name =>
@@ -267,6 +272,19 @@ private def badReadState : PanSemStateExact 8 Unit :=
 private instance : DecidablePred badReadState.memaddrs := fun _ => isFalse id
 
 private instance : DecidablePred badReadState.shMemaddrs := fun _ => isFalse id
+
+private def returnedExtCallState : PanSemStateExact 8 Unit :=
+  PanSemExtCallExactParity.baseState returningFfi memory8 domain8
+
+private instance : DecidablePred returnedExtCallState.memaddrs := by
+  intro address
+  dsimp [returnedExtCallState, PanSemExtCallExactParity.baseState, domain8]
+  infer_instance
+
+private instance : DecidablePred returnedExtCallState.shMemaddrs := by
+  intro address
+  dsimp [returnedExtCallState, PanSemExtCallExactParity.baseState]
+  infer_instance
 
 def skipBreakTickRows : Bool :=
   let skipOk := match exactDispatch .skip baseState with
@@ -372,6 +390,26 @@ def extCallRows : Bool :=
         (match state.memory 0 with
         | .word byte => byte.toNat == 0xAB)
   | none => false
+
+/-! The recursive dispatcher must return the exact ExtCall clause result and
+thread its post-state through the context. These guards reuse the original
+HOL `extcall_clause_returned` and `extcall_clause_bad_read` rows. -/
+def recursiveExtCallRows : Bool :=
+  let program : ProgHOL 8 :=
+    .extCall (ml "x") (.const 0) (.const 2) (.const 0) (.const 2)
+  let returned := recursiveExact8 program returnedExtCallState
+  let badRead := recursiveExact8 program badReadState
+  let returnedOk := match returned with
+    | some (none, state) =>
+        match state.memory 0 with
+        | .word byte => byte.toNat == 0x42
+    | _ => false
+  let badReadOk := match badRead with
+    | some (some .error, state) =>
+        match state.memory 0 with
+        | .word byte => byte.toNat == 0xAB
+    | _ => false
+  returnedOk && badReadOk
 
 def stateOwnedCallRows : Bool :=
   let direct := recursiveExact (.call none (ml "id") [.const 7]) (idCodeState 10)
@@ -690,6 +728,7 @@ def recursiveDecRows : Bool :=
 #guard returnRaiseRows
 #guard sharedMemoryRows
 #guard extCallRows
+#guard recursiveExtCallRows
 #guard stateOwnedCallRows
 #guard stateOwnedCallNegativeRows
 #guard stateOwnedCallDestinationRows
@@ -729,6 +768,9 @@ def runChecks : IO Bool := do
   if extCallRows then
     IO.println "PASS exact-state dispatcher ExtCall bad-read row matches HOL"
   else IO.println "FAIL exact-state dispatcher ExtCall bad-read row matches HOL"
+  if recursiveExtCallRows then
+    IO.println "PASS exact-state recursive ExtCall returned/bad-read rows match HOL"
+  else IO.println "FAIL exact-state recursive ExtCall returned/bad-read rows match HOL"
   if stateOwnedCallRows then
     IO.println "PASS exact-state recursive Call/nested Call/DecCall/handler rows match original HOL"
   else IO.println "FAIL exact-state recursive Call/nested Call/DecCall/handler rows match original HOL"

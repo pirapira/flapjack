@@ -1064,14 +1064,6 @@
     "reviewer": "Codex (source comparison; List.mapM carrier; pointwise function agreement on members implies mapM equality)"
   },
   {
-    "hol_path": "cakeml/pancake/crep_inlineScript.sml",
-    "hol_name": "compile_inl_top_def",
-    "lean_path": "Flapjack/Pancake/CrepInline/Pass.lean",
-    "lean_name": "compileInlTopHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (triple-list boundary, finite-map duplicate order, and direct HOL probes)"
-  },
-  {
     "hol_path": "cakeml/pancake/crepLangScript.sml",
     "hol_name": "assign_ret_def",
     "lean_path": "Flapjack/Pancake/CrepLang.lean",
@@ -9111,100 +9103,100 @@
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   },
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "ffi_outcome",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolFfiOutcome",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "oracle_result",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolOracleResult",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "shmem_op",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolShmemOp",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "ffiname",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolFfiName",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "oracle_function",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolOracleFunction",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "oracle",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolOracle",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "io_event",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolIoEvent",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "final_event",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolFinalEvent",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "ffi_state",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolFfiState",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "initial_ffi_state_def",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "initialHolFfiState",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "ffi_result",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "HolFfiResult",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
-  "hol_name": "call_FFI_def",
-  "lean_path": "Flapjack/FfiHOL.lean",
-  "lean_name": "callFFIHOL",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-}
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "ffi_outcome",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFfiOutcome",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "oracle_result",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolOracleResult",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "shmem_op",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolShmemOp",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "ffiname",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFfiName",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "oracle_function",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolOracleFunction",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "oracle",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolOracle",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "io_event",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolIoEvent",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "final_event",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFinalEvent",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "ffi_state",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFfiState",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "initial_ffi_state_def",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "initialHolFfiState",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "ffi_result",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "HolFfiResult",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
+    "hol_name": "call_FFI_def",
+    "lean_path": "Flapjack/FfiHOL.lean",
+    "lean_name": "callFFIHOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  }
 ]

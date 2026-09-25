@@ -524,6 +524,22 @@ theorem optMmapEqSomeHelper {α β : Type} (f g : α → Option β) :
                     (fun z hz' b hb => hfg z (by simp [hz']) b hb)]
               rfl
 
+/-- Exact port of Cake's `not_mem_map_flat` (`panPropsScript.sml:1035-1039`):
+    an element is absent from the flattening of a mapped list exactly when it
+    is absent from every image. Fully polymorphic with no carrier side
+    condition, matching the HOL statement `~ MEM y (FLAT (MAP f xs)) =
+    (!x. MEM x xs ==> ~ MEM y (f x))`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "not_mem_map_flat"]
+theorem not_mem_map_flatten {α β : Type} (f : α → List β) (xs : List α)
+    (y : β) : y ∉ (xs.map f).flatten ↔ ∀ x, x ∈ xs → y ∉ f x := by
+  simp only [List.mem_flatten, List.mem_map]
+  constructor
+  · intro h x hx hy
+    exact h ⟨f x, ⟨x, hx, rfl⟩, hy⟩
+  · rintro h ⟨ys, hysmem, hy⟩
+    obtain ⟨x, hx, hfx⟩ := hysmem
+    exact h x hx (hfx.symm ▸ hy)
+
 /-- The `MAP SND` view of a field list does not increase `sizeOf`, which
     justifies the well-founded recursion of `panIsWfShapeValueHOL` (HOL's
     `EVERY (is_wf_shape_v sctxt) (MAP SND nm_vs)`). -/

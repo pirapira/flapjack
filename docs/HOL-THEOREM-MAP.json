@@ -3237,12 +3237,12 @@
     "reviewer": "Codex (proof inventory)"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "not_mem_map_flat",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "not_mem_map_flatten",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (proof inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.52). HOL panProps$not_mem_map_flat[local] (panPropsScript.sml:1035-1039) states ~ MEM y (FLAT (MAP f xs)) = (!x. MEM x xs ==> ~ MEM y (f x)). The tagged Lean port not_mem_map_flatten (Flapjack/Pancake/Semantics/PanProps.lean) has the identical fully polymorphic quantifiers f/graph and the equivalent conclusion y not-in (xs.map f).flatten <-> forall x, x in xs -> y not-in f x, with HOL FLAT/MAP/MEM rendered as List.flatten/List.map/List.mem and no carrier side condition. Moved from Proofs/PanSimp.lean to the panPropsScript counterpart module per the HOL-script placement rule."
   },
   {
     "hol_path": null,

@@ -284,6 +284,17 @@ def evaluateSourceDecCallId :=
     (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)]
       (.return (.var .local "answer")) : Prog Word64)
 
+/-- Direct HOL row `deccall_tick_restores_existing_local`: the source code-map
+DecCall returns from `id`, runs a non-Skip Tick continuation, decrements the
+clock twice, and restores the caller's previous `answer` binding. -/
+def evaluateSourceDecCallTick :=
+  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
+    statefulTestHandler
+    ({ emptyPanSourceState 10 sourceIdCode with
+        locals := fun name =>
+          if name == "answer" then some (.word (BitVec.ofNat 64 3)) else none })
+    (.decCall "answer" .one "id" [.const (BitVec.ofNat 64 7)] .tick : Prog Word64)
+
 def evaluateSourceNestedDecCall :=
   panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
     statefulTestHandler
@@ -521,6 +532,14 @@ def observeSourceCallHandlesPairException : Bool :=
 def observeSourceCodeDecCall := isSourceReturnedWord evaluateSourceDecCallId
   (BitVec.ofNat 64 7) 9
 
+def observeSourceDecCallTick : Bool :=
+  match evaluateSourceDecCallTick with
+  | some (.control (.normal locals _ _ _), 8) =>
+      match locals "answer" with
+      | some (.word value) => value == BitVec.ofNat 64 3
+      | _ => false
+  | _ => false
+
 def observeSourceNestedDecCall := isSourceReturnedWord evaluateSourceNestedDecCall
   (BitVec.ofNat 64 7) 8
 
@@ -655,6 +674,7 @@ def observeSourceDecCallBadArgument :=
 #guard observeSourceCallStructFieldRField
 #guard observeSourceCallNestedStructFieldRField
 #guard observeSourceCodeDecCall
+#guard observeSourceDecCallTick
 #guard observeSourceNestedCodeCall
 #guard observeSourceNestedOrdinaryCall
 #guard observeSourceCodePreservedAfterRecursion
@@ -1012,6 +1032,9 @@ def runChecks : IO Bool := do
   else IO.println "FAIL state-owned Call recursively compiles nested records with an RField field like original HOL"
   if observeSourceCodeDecCall then IO.println "PASS state-owned code DecCall matches HOL deccall_code_map_7" else
     IO.println "FAIL state-owned code DecCall matches HOL deccall_code_map_7"
+  if observeSourceDecCallTick then
+    IO.println "PASS state-owned DecCall Tick continuation matches direct HOL clock/local row"
+  else IO.println "FAIL state-owned DecCall Tick continuation matches direct HOL clock/local row"
   if observeSourceNestedDecCall then IO.println "PASS nested state-owned DecCall returns 7 and decrements the HOL clock twice" else
     IO.println "FAIL nested state-owned DecCall returns 7 and decrements the HOL clock twice"
   if observeSourceNestedCodeCall then IO.println "PASS state-owned nested Call and DecCall match HOL recursive oracle" else

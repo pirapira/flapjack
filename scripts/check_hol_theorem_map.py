@@ -115,6 +115,111 @@ DOCUMENTED_MISMATCHES = {
         "declaration bridge for names_as_string. Keep @[hol] withheld pending "
         "exact-carrier work flapjack-pxn.18.3.5.8."
     ),
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "globalsLookup"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "globals_lookup_def",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:435-438: "
+        "the OPT_MMAP/FLOOKUP/GENLIST n2w/size_of_shape(shape_of v) algorithm "
+        "matches clause-for-clause, but HOL inputs are panSem$value/crepSem$state "
+        "while the Lean statement uses production PanValue α with String "
+        "struct/field names, untagged panSemShapeOf/Shape.shapeSize instead of "
+        "HOL shape_of/size_of_shape, and CrepRuntimeState α σ, only a production "
+        "projection of the HOL state. names_as_string cannot authorize the "
+        "value/shape/state carriers, and no NameRanged witness is statable for an "
+        "Option (List (PanWordLab α)) output. Keep @[hol] withheld; exact-carrier "
+        "work flapjack-pxn.18.3.5.8.8.)"
+    ),
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "excpRel"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "excp_rel_def",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:16-23: "
+        "the FDOM-equality plus code-map injectivity statement matches "
+        "clause-for-clause, but Lean quantifies over production "
+        "FiniteMap String α/β while HOL ceids/seids are eid = mlstring finite "
+        "maps. The key carrier is not a name-representation detail and no "
+        "NameRanged premise exists, so names_as_string cannot apply. Keep @[hol] "
+        "withheld pending exact-carrier work flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "ctxtFc"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "ctxt_fc_def",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:25-30: "
+        "the vars/funcs/eids/vmax construction via FUPDATE_LIST/ZIP/withShape/"
+        "MAX_LIST matches, but every finite map is keyed by FunName/VarName/"
+        "ExceptionId = String while HOL keys by funname/varname/eid = mlstring. "
+        "names_as_string cannot authorize keyed-map carriers and no NameRanged "
+        "premise exists. Keep @[hol] withheld pending exact-carrier work "
+        "flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "codeRel"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "code_rel_def",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:32-43: "
+        "the source-FLOOKUP/localised_prog/ctxt_fc/compile shape matches, but "
+        "Lean is generic over the global value type α with String identifiers "
+        "and production finite maps while HOL is word-indexed with funname/"
+        "varname/eid = mlstring. The carrier difference is beyond name "
+        "representation. Keep @[hol] withheld pending exact-carrier work "
+        "flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "stateRel"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "state_rel_def",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:45-69: "
+        "the conjunct layout matches, but Lean uses production PanSemState α "
+        "(FfiState σ)/CrepRuntimeState α σ, reconstructs an optional target "
+        "memory with PanValue.word/panTheWord (a source structure cell is not "
+        "recoverable), fixes s.structs = [] and s.globals = FEMPTY, and keys "
+        "globals by VarName = String, while HOL uses total word_lab memory and "
+        "varname/eid = mlstring. Beyond name representation; keep @[hol] "
+        "withheld pending exact-carrier work flapjack-pxn.18.3.5.8 and the "
+        "state-carrier dependency flapjack-pxn.18.3.7.1.3.)"
+    ),
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "localsRel"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "locals_rel_def",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:71: "
+        "the context-wf/live-variable-recovery/flattened-value/shape-wf clause "
+        "layout matches, but Lean uses production PanToCrepProofContext α, "
+        "FiniteMap String (PanValue α) source locals and FiniteMap Nat "
+        "(PanWordLab α) target locals, while HOL keys by varname/eid = mlstring "
+        "and uses word_lab. Beyond name representation; keep @[hol] withheld "
+        "pending exact-carrier work flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/PanValueEvaluatorStability.lean", "evalPanValueExps_update_local_not_mem"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "update_locals_not_vars_eval_mmap",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:4082-4087: "
+        "single fresh local binding leaves OPT_MMAP (eval) es unchanged; Lean "
+        "evalPanValueExps_update_local_not_mem matches the shape, but is generic "
+        "over the word payload α with Exp α/PanValue α and VarName = String "
+        "functional maps, while HOL is word-indexed with varname = mlstring. "
+        "Beyond name representation; keep @[hol] withheld pending exact-carrier "
+        "work flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/PanValueEvaluatorStability.lean", "evalPanValueExps_update_locals_not_mem"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "opt_mmap_eval_distinct_lists_not_affect",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:3077-3089: "
+        "list binding |++ ZIP (vs,nvals) preserves OPT_MMAP (eval) es under a "
+        "distinct-names premise; Lean evalPanValueExps_update_locals_not_mem "
+        "matches the shape, but is generic over the word payload α with Exp α/"
+        "PanValue α and VarName = String functional maps, while HOL is "
+        "word-indexed with varname = mlstring. Beyond name representation; keep "
+        "@[hol] withheld pending exact-carrier work flapjack-pxn.18.3.5.8.)"
+    ),
+    ("Flapjack/PanValueEvaluatorStability.lean", "evalPanValueExp_update_locals_not_mem"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "eval_distinct_lists_not_affect",
+        "flapjack-ds5 (source comparison with pan_to_crepProofScript.sml:4111-4123: "
+        "list binding |++ ZIP (vs,nvals) preserves eval of one expression when "
+        "the bound names are distinct from var_cexp e; Lean "
+        "evalPanValueExp_update_locals_not_mem matches the shape, but is generic "
+        "over the word payload α with Exp α/PanValue α and VarName = String "
+        "functional maps, while HOL is word-indexed with varname = mlstring. "
+        "Beyond name representation; keep @[hol] withheld pending exact-carrier "
+        "work flapjack-pxn.18.3.5.8.)"
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "is_wf_shape_drop",
@@ -749,6 +854,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "option_ne_none_iff_exists"),
         ("Flapjack/Pancake/Proofs/PanToCrep.lean", "prod_mk_pair_eq_id"),
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact"),
+        ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

@@ -173,6 +173,34 @@ def functionsHOL {width : Nat} [NeZero width] :
   | .exnDecl _ _ :: declarations => functionsHOL declarations
   | .name _ _ :: declarations => functionsHOL declarations
 
+/-- Exact port of HOL `panLang$exceptions` (`panLangScript.sml:328-333`):
+projects the top-level exception declarations of a program in source order,
+returning `(eid, shape)` for each `ExnDecl` and dropping
+`Function`/`Decl`/`Name` entries.  The exception id is an `MlS` and the shape
+uses `ShapeHOL`, so this is an exact word-indexed port (the production
+`exceptionEntries` uses Lean `String` and monomorphic `Shape`). -/
+@[hol "cakeml/pancake/panLangScript.sml" "exceptions_def"]
+def exceptionsHOL {width : Nat} [NeZero width] :
+    List (DeclHOL width) → List (MlS × ShapeHOL)
+  | [] => []
+  | .function _ :: declarations => exceptionsHOL declarations
+  | .decl _ _ _ :: declarations => exceptionsHOL declarations
+  | .exnDecl exceptionName shape :: declarations =>
+      (exceptionName, shape) :: exceptionsHOL declarations
+  | .name _ _ :: declarations => exceptionsHOL declarations
+
+/-- The exact `exceptionsHOL` projects exactly the same `(name, shape)` pairs as
+the production `exceptionEntries` after the carrier bridge `paramOfHOL` /
+`declOfHOL`. -/
+@[simp] theorem exceptionsHOL_map_paramOfHOL {width : Nat} [NeZero width]
+    (declarations : List (DeclHOL width)) :
+    (exceptionsHOL declarations).map paramOfHOL =
+      exceptionEntries (declarations.map declOfHOL) := by
+  induction declarations with
+  | nil => simp [exceptionsHOL, exceptionEntries]
+  | cons d ds ih =>
+    cases d <;> simp [exceptionsHOL, exceptionEntries, declOfHOL, paramOfHOL, ih]
+
 /-! ### Reverse (byte-ranged) roundtrips to production
 
 The forward codecs above recover an exact HOL carrier from any production

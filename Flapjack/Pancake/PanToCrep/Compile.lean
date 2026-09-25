@@ -104,7 +104,7 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-- Exact width-indexed port of `pan_to_crep$compile_exp_def`
+/-- Source-shaped width-indexed counterpart (Flapjack-specific; NOT an exact HOL port) of `pan_to_crep$compile_exp_def`
     (`cakeml/pancake/pan_to_crepScript.sml:39-101`).  HOL's `compile_exp` and
     `context` are indexed by the word type `'a word`
     (`pan_to_crepScript.sml:10-16`) with HOL equality and no typeclass side
@@ -729,7 +729,7 @@ def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
 /-! Legacy list-backed `pan_to_crep$compile` implementation. It is retained
     for list-context analyses, but is not the exact HOL `compile_def` port:
     `CompileContext` admits a caller-supplied width and its maps are `InfoMap`
-    lists. The exact finite-map compiler is `compileProgHOL` below.
+    lists. The finite-map compiler used by the RISC-V specialization is `compileProgHOL` below.
 
     The recursive compiler below keeps CakeML's fallback behavior for
     malformed compiled expressions and preserves the source control-flow
@@ -1036,7 +1036,7 @@ def compileToCrepHOL
     (name, panToCrepVars parameters,
       compFuncHOL functionMap exceptionMap parameters body)
 
-/-! Executable metadata adapter after the exact HOL `compile_to_crep` result.
+/-! Executable metadata adapter after the `compile_to_crep`-shaped result.
 Cake's following Crep passes operate on triples; Flapjack retains the source
 return shape in `CompiledFunction` for its existing downstream interfaces. -/
 def compileToCrepHOLWithMetadata

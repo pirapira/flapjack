@@ -1605,3 +1605,8 @@ run_probe pan_sem_empty_locals_probeScript.sml pan_sem_empty_locals_probe.out \
 run_probe pan_sem_mem_store_32_probeScript.sml pan_sem_mem_store_32_probe.out \
   ms32_aligned ms32_other_cell \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The result probe observes the exact panSem result constructor shapes.
+run_probe pan_sem_result_probeScript.sml pan_sem_result_probe.out \
+  res_error res_distinct \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

@@ -382,8 +382,27 @@ theorem flookupResVarQuant [BEq κ] [LawfulBEq κ]
 
 end
 
-/-- HOL `no_overlap_wrap_rt_some_all_distinct`: a successful wrapped return
-    lookup retains the duplicate-free slot list supplied by `no_overlap`. -/
+/-- Flapjack analogue of HOL `no_overlap_wrap_rt_some_all_distinct`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2461-2468`), which states
+    `no_overlap fm ∧ wrap_rt (FLOOKUP fm r) = SOME (vsh, ns) ⇒ ALL_DISTINCT ns`.
+    The statement shape is preserved (`noOverlap` for `no_overlap`, `wrapRt` for
+    `wrap_rt`, `FLOOKUP` for `FLOOKUP`, `Nodup` for `ALL_DISTINCT`, same
+    hypothesis/conclusion structure), but this declaration is deliberately
+    untagged for substantive carrier differences: `fm` is keyed by
+    `FunName`/`VarName` = `String` and stores the production `Shape` whose
+    `Named` constructor carries a `String`, whereas HOL keys by
+    `varname` = `mlstring` and stores `shape` whose `Named` carries an
+    `mlstring`. The `names_as_string` qualifier cannot authorize the embedded
+    `Shape` carrier, and no same-module `NameRanged` byte witness applies because
+    the conclusion is `slots.Nodup`, a duplicate-freeness fact about a `Nat` list
+    rather than a name. `docs/HOL-THEOREM-MAP.json` classifies this hol_name as
+    `documented_mismatch`; the faithful exact-MlString carrier is tracked by
+    `flapjack-pxn.18.3.5.8`. Oracle evidence for the two conjuncts is indirect:
+    `scripts/hol-probes/pan_common_props_no_overlap_probe.out` pins
+    `no_overlap` (rows `slot_nodup_x`, `slot_nodup_y`, `slots_disjoint`) and
+    `scripts/hol-probes/wrap_rt_probe.out` pins `wrap_rt` (rows `none`,
+    `empty_one`, `one_word`, `comb_empty`, `named`); there is no dedicated probe
+    for this combined theorem. -/
 theorem noOverlapWrapRtNodup
     (fm : FiniteMap String (Shape × List Nat)) (name : String)
     (shape : Shape) (slots : List Nat)
@@ -1958,17 +1977,29 @@ theorem localsRelWfShape
   rw [← panValueIsWf_eq_isWfShape_panValueShape_of_nil [] value rfl]
   exact hshape
 
-/-- HOL `mk_ctxt_imp_locals_rel`: the initial compiler context built from the
-    source function table has an empty variable map and slot bound, so the
-    locals relation holds against any target locals for the empty source
-    locals map. The proof-context record mirrors Cake `mk_ctxt FEMPTY
-    (make_funcs pc) 0 es`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+/-- HOL `mk_ctxt_imp_locals_rel` (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4677-4682`):
+    the initial compiler context built from the source function table has an empty
+    variable map and slot bound, so the locals relation holds against any target
+    locals for the empty source locals map. The proof-context record mirrors Cake
+    `mk_ctxt FEMPTY (make_funcs pc) 0 es`.
+
+    The statement shape is mirrored (`∀ pc lcl es. locals_rel (mk_ctxt …) FEMPTY lcl`
+    becomes a universally quantified `declarations`/`eids`/`locals` with the same
+    `mk_ctxt`-shaped context and conclusion). It is intentionally untagged because
+    the carriers differ from the reviewed exact HOL carriers: this declaration uses
+    the production `Decl α`, `FunName`/`VarName`/`ExceptionId = String`, production
+    `Shape` and `PanToCrepProofContext`, plus `FiniteMap`-valued `eids` and
+    `PanWordLab`-valued `locals`, whereas HOL quantifies an `'a decl list` and
+    `(mlstring,'a word) fmap` with `mlstring` keys and HOL `shape`. It also delegates
+    to the production `panToCrepMakeFuncs`/`infoMapToFiniteMap` rather than HOL
+    `make_funcs`, and carries the executable `[LawfulBEq String]` condition. A
+    `names_as_string` qualifier cannot authorize the `Decl`/`Shape`/value carriers,
+    and no `NameRanged` byte witness applies (`locals_rel` is a relation, not a name).
+    The reviewed exact carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+    `flapjack-pxn.18.3.5.7.2`). `docs/HOL-THEOREM-MAP.json` already records this
+    hol_name as `documented_mismatch`. Evidence:
+    `Flapjack/Test/MkCtxtImpLocalsRelParity.lean` instantiates the theorem against
+    the `mk_ctxt`-shaped `initialContext`. -/
 theorem mkCtxtImpLocalsRel [LawfulBEq String]
     (declarations : List (Decl α)) (eids : FiniteMap String α)
     (locals : FiniteMap Nat (PanWordLab α)) :
@@ -2099,14 +2130,39 @@ theorem localRelGtVmaxPreserved
     exact (Nat.not_lt_of_ge hle) habove
   simp [beq_eq_false_iff_ne.mpr hne]
 
-/-- HOL `local_rel_le_zip_update_preserved`: replacing a source local by a
-    shape-compatible value and writing its flattened words to the associated
-    distinct slots preserves the finite-map locals relation. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL
+    `local_rel_le_zip_update_preserved`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2263-2269`): replacing a
+    source local `x` by a shape-compatible value `v'` and writing its flattened
+    words to the associated distinct slots `ns` preserves `locals_rel`. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port), source-reviewed 2026-09-25:
+-- statement shape is mirrored clause-for-clause: `locals_rel ct l l'` ->
+-- `localsRel context sourceLocals targetLocals`; `FLOOKUP l x = SOME v` ->
+-- `FLOOKUP sourceLocals name = some oldValue`; `FLOOKUP ct.vars x = SOME (sh,ns)`
+-- -> `FLOOKUP context.vars name = some (shape, slots)`; `shape_of v = shape_of v'`
+-- -> `panValueShape [] oldValue = panValueShape [] newValue`; `ALL_DISTINCT ns`
+-- -> `slots.Nodup`; and `locals_rel ct (l |+ (x,v')) (l' |++ ZIP (ns,flatten v'))`
+-- -> `localsRel context (FUPDATE sourceLocals (name,newValue)) (FUPDATE_LIST
+-- targetLocals (slots.zip ((panValueFlatten newValue).map PanWordLab.word)))`.
+-- Carrier mismatch: the Lean statement is keyed by the production identifiers
+-- `FunName`/`VarName`/`ExceptionId` = `String` and embeds a
+-- `PanToCrepProofContext α` whose finite maps are `String`-keyed, while HOL
+-- keys names by `funname`/`varname`/`eid` = `mlstring`; the source-local
+-- carrier is production `PanValue α` (with embedded production `Shape`,
+-- `named : String`) over a generic word `α`, while HOL uses `panSem$v` /
+-- `shape` over a positive-width `'a word` with no typeclass side condition.
+-- `names_as_string` cannot authorize the `PanValue`/`Shape` carriers (the
+-- identifiers occur inside the local value, not at the theorem boundary), and
+-- no `NameRanged` byte witness applies because the conclusion is a `localsRel`
+-- relation. `docs/HOL-THEOREM-MAP.json` already classifies this hol_name as
+-- `documented_mismatch`; the declaration is intentionally untagged.
+-- Evidence: this theorem is exercised by the `Primitive` case of the
+-- compile-correctness proof (`Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean:1801`);
+-- the `flatten`/`shape_of` components have HOL-oracle rows in
+-- `scripts/hol-probes/pan_flatten_probe.out` (`word`/`record`/`named`), and the
+-- accompanying `locals_rel` lemmas (`locals_rel_extend_new_var`,
+-- `locals_rel_lookup_ctxt`) are tracked under the same withdrawn-tag review.
+-- The exact MlString identifier carrier is tracked by
 -- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem localRelLeZipUpdatePreserved
     (context : PanToCrepProofContext α)
@@ -4226,17 +4282,39 @@ theorem compileProgHOL_not_mem_assignedFreeVars
   intro program context x hfresh hx
   exact main (sizeOf program) program rfl context x hfresh hx
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake `not_mem_context_assigned_mem_gt`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1252`): if the context
-    bound holds and no variable's slot list contains `x`, then `x` is not among
-    the assigned free variables of the compiled program.  `ctxt_max` is only
-    needed to match HOL's statement shape (the bound argument uses the
-    freshness hypothesis directly). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
+/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake
+    `not_mem_context_assigned_mem_gt`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1252-1258`):
+    `ctxt_max ctxt.vmax ctxt.vars ∧ (∀ v sh ns'. FLOOKUP ctxt.vars v =
+    SOME (sh, ns') ⇒ ¬ MEM x ns') ∧ x ≤ ctxt.vmax ⇒ ¬ MEM x
+    (assigned_free_vars (compile ctxt p))`. The statement shape is preserved
+    (`ctxtMax` for `ctxt_max`, `FLOOKUP`, `≤`, `∉` for `¬ MEM`, `crepAssignedFreeVars`
+    for `assigned_free_vars`, `compileProgHOL` for `compile`, same hypothesis and
+    conclusion order). `ctxtMax` is retained only to match the HOL hypothesis,
+    although the executable proof path derives the bound from the freshness
+    hypothesis (`x ∉ ns` for the variable lookup), so the argument `_hmax` is
+    unused.
+    This declaration is deliberately untagged: the statement is keyed by the
+    production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (and
+    embeds a `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are
+    `String`-keyed) with the production `Shape` (`Named : String`), while HOL
+    keys names by `funname`/`varname`/`eid` = `mlstring` and uses `shape`
+    (`Named : mlstring`). The `names_as_string` qualifier cannot authorize the
+    embedded `Shape` carrier, and no same-module `NameRanged` byte witness
+    applies because the conclusion is a membership `Prop` over a `Nat`, not a
+    name. `docs/HOL-THEOREM-MAP.json` classifies this hol_name as
+    `documented_mismatch`; the faithful exact-MlString carrier is tracked by
+    `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). Oracle evidence
+    for the statement shape is the worked `example` in
+    `Flapjack/Test/PanToCrepCodeRelParity.lean` (lines 393-405, `freshContext`,
+    slot `5` absent from the compiled `dec`), together with
+    `scripts/hol-probes/crep_assigned_free_vars_probe.out` (rows `skip`,
+    `assign`, `dec_filter`, `seq`, `if_while`, `shmem_fallback`) pinning
+    `assigned_free_vars`; there is no dedicated probe for this combined theorem.
+    The executable workhorse is `compileProgHOL_not_mem_assignedFreeVars`
+    above. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): String-keyed identifiers + production
+-- `Shape` vs HOL `mlstring`/`shape`; exact MlString carrier tracked by
 -- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem notMemContextAssignedMemGt
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]
@@ -4253,17 +4331,45 @@ theorem distinctLists_eq_true_iff {left right : List Nat} :
     distinctLists left right = true ↔ ∀ x ∈ left, x ∉ right := by
   simp [distinctLists, List.all_eq_true, List.contains_eq_mem, decide_eq_false_iff_not]
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of Cake `rewritten_context_unassigned`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1457`): extending the
-    context with the slot list `nvars` for variable `v` (whose previous slot
-    list is `ns`, with `distinct_lists nvars ns`) keeps every slot of `ns`
-    outside the assigned free variables of the compiled program. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+/-- Source-shaped but FLAPJACK-SPECIFIC statement (NOT an exact HOL port), mirroring
+    Cake `rewritten_context_unassigned`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:1457-1468`):
+
+    HOL: `!p nctxt v ctxt ns nvars sh sh'.`
+      `nctxt = ctxt with <| vars := ctxt.vars |+ (v,sh,nvars);`
+      `vmax := ctxt.vmax + size_of_shape sh |> /\`
+      `FLOOKUP ctxt.vars v = SOME (sh',ns) /\ no_overlap ctxt.vars /\`
+      `ctxt_max ctxt.vmax ctxt.vars /\ no_overlap nctxt.vars /\`
+      `ctxt_max nctxt.vmax nctxt.vars /\ distinct_lists nvars ns ==>`
+      `distinct_lists ns (assigned_free_vars (compile nctxt p))`.
+
+    The Lean statement keeps the same hypothesis set and conclusion shape:
+    the context-extension equation `h_nctxt` (via `FUPDATE` and
+    `Shape.shapeSize`), the lookup `h_lookup`, `noOverlap`/`ctxtMax` for both
+    the original and rewritten context, `distinctLists nvars ns = true`, and the
+    conclusion `distinctLists ns (crepAssignedFreeVars (compileProgHOL nctxt program)) = true`.
+
+    Carrier mismatch (why the tag stays withdrawn): the statement is keyed by
+    the production identifiers `FunName`/`VarName`/`ExceptionId` = `String`
+    (embedded in a `PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
+    by the production `Shape` (`named : String`), and by the production
+    `Prog α`/`compileProgHOL`, whereas HOL `pan_to_crepProofScript.sml` keys by
+    `funname`/`varname`/`eid` = `mlstring`, uses HOL `shape`, and compiles the
+    word-indexed `'a prog` with `compile`. The executable-only typeclass
+    arguments `[BEq α] [OfNat α 0] [OfNat α 1] [Add α] [CrepBytesInWord α]`
+    also have no HOL counterpart. `names_as_string` cannot authorize the
+    embedded `Shape`/program carriers, and no `NameRanged` byte witness applies
+    (the conclusion is a `distinctLists` membership predicate over `Nat`, not a
+    name). The statement is recorded as `documented_mismatch` in
+    `docs/HOL-THEOREM-MAP.json` (intentionally untagged), and the exact MlString
+    carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+
+    Oracle evidence: the `rewritten_context_unassigned` statement is exercised
+    by the kernel-checked `example` in `Flapjack/Test/PanToCrepCodeRelParity.lean`
+    (lines 413-429), and the supporting `no_overlap`/`distinct_lists` predicates
+    are pinned by `scripts/hol-probes/pan_common_props_no_overlap_probe.out`
+    (rows `slot_nodup_x`, `slot_nodup_y`, `slots_disjoint`, `distinct_lists_self`,
+    `nested_zip_lookup`); there is no dedicated probe for this combined theorem. -/
 theorem rewrittenContextUnassigned [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     [CrepBytesInWord α]
     (program : Prog α) (nctxt ctxt : PanToCrepHOLContext α) (v : VarName)

@@ -10022,8 +10022,8 @@
     "hol_name": "is_wf_shape_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "isWfShapeExactHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against panLangScript.sml:139-144: ShapeHOL matches the One/Comb/Nam stcname=mlstring datatype, StructContextExact is the `(stcname # struct_info) list`, and structContextLookupHOL implements first-match ALOOKUP using exact MlString equality. isWfShapeExactHOL preserves One=T, Comb=EVERY, Named=case ALOOKUP with SOME=T/NONE=F, with no additional hypotheses or side conditions. The iwf_one/iwf_comb/iwf_named_hit/iwf_named_miss rows from pan_lang_is_wf_shape_probe.out are reproduced by PanLangIsWfShapeParity.lean on exact carriers."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",

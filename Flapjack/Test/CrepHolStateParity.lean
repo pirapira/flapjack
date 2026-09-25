@@ -74,6 +74,25 @@ example : (sampleLocals.resVar (5, some (.word 13))).lookup 5 = some (.word 13) 
 example :
     (HolFiniteMapExact.empty : HolFiniteMapExact Nat (HolWordLab 8)).lookup 3 = none := rfl
 
+/-! ### HOL-equality (`=`) forms for the polymorphic `res_var_def` port
+
+The tagged `resVarEq`/`updateEq`/`eraseEq` use `DecidableEq` (HOL `=`) rather
+than Boolean `BEq`; the rows below mirror the direct HOL rows
+`res_var_delete_hit`/`res_var_update_hit` in `crep_res_var_probe.out`. -/
+
+example : (sampleLocals.resVarEq (5, none)).lookup 5 = none := by decide
+
+example : (sampleLocals.resVarEq (5, none)).lookup 3 = some (.word 7) := by decide
+
+example : (sampleLocals.resVarEq (5, some (.word 13))).lookup 5 = some (.word 13) := by
+  decide
+
+example : (sampleLocals.updateEq (4, .word 21)).lookup 4 = some (.word 21) := by decide
+
+example : (sampleLocals.eraseEq 3).lookup 3 = none := by decide
+
+example : (sampleLocals.eraseEq 3).lookup 5 = some (.word 9) := by decide
+
 /-! ## Kernel-checked projection bridges
 
 Each finite-support state update projects into the executable `CrepHolState`

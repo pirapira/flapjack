@@ -39,6 +39,7 @@ import Flapjack.Pancake.Proofs.PanToCrep.Primop
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
 import Flapjack.Pancake.Semantics.CrepSem.LookupCode
+import Flapjack.Pancake.Semantics.CrepSem.StateExact
 import Flapjack.Pancake.Semantics.CrepSem.Primop
 import Flapjack.Pancake.LoopLang
 import Flapjack.Pancake.Semantics.LoopProps

@@ -453,17 +453,33 @@ theorem mem_crepAssignedFreeVars_call_some_none {α : Type u} (returns : List Na
       x ∈ returns := by
   simp [crepAssignedFreeVars]
 
-/-- Exact HOL `flookup_res_var_distinct_zip_eq` (`crepPropsScript.sml:777`):
+/-- CakeML's `flookup_res_var_distinct_zip_eq` (`crepPropsScript.sml:777`):
     folding `res_var` over the zip of a key list with its values leaves a key
     that is not in the key list untouched. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): HOL quantifies the key type freely, but this
 -- statement requires [BEq α] [LawfulBEq α] because `resVar` uses Boolean key equality.
--- Faithful HOL-equality port tracked by bead flapjack-pxn.18.5.5.19.
+-- The raw function carrier also admits infinite support. Faithful finite-support port tracked by
+-- bead flapjack-pxn.18.5.5.19 / flapjack-pxn.18.3.7.1.3.1.1.3.1.
 theorem flookup_res_var_distinct_zip_eq [BEq α] [LawfulBEq α]
     (xs : List α) (ys : List (Option β)) (fm : FiniteMap α β) (x : α)
     (hlen : xs.length = ys.length) (hx : x ∉ xs) :
     FLOOKUP ((xs.zip ys).foldl resVar fm) x = FLOOKUP fm x :=
   FLOOKUP_foldl_resVar_zip_not_mem xs ys fm x hlen hx
+
+/-- HOL-equality (`=`) form of CakeML's `flookup_res_var_distinct_zip_eq`
+    (`crepPropsScript.sml:777`) over the raw function carrier.  FLAPJACK-SPECIFIC
+    (not an exact HOL port): `DecidableEq` removes the Boolean-`BEq` side
+    condition, but `FiniteMap α β := α → Option β` admits infinite-support
+    inhabitants whereas HOL `α |-> β` is finite-support, so the statement still
+    ranges over functions HOL cannot represent.  Kept untagged; identical raw
+    function endpoints are also an unsound surrogate for HOL `FUPDATE`/`res_var`.
+    Faithful finite-support port tracked by bead
+    `flapjack-pxn.18.3.7.1.3.1.1.3.1` (over `HolFiniteMapExact`). -/
+theorem flookup_res_var_distinct_zip_eq_hol {α : Type} {β : Type} [DecidableEq α]
+    (xs : List α) (ys : List (Option β)) (fm : FiniteMap α β) (x : α)
+    (hlen : xs.length = ys.length) (hx : x ∉ xs) :
+    FLOOKUP ((xs.zip ys).foldl resVarHOL fm) x = FLOOKUP fm x :=
+  FLOOKUP_foldl_resVarHOL_zip_not_mem xs ys fm x hlen hx
 
 /-- Flapjack analogue of Cake `crepProps$dec_clock_simp`
     (`cakeml/pancake/semantics/crepPropsScript.sml:267-278`), kept untagged with

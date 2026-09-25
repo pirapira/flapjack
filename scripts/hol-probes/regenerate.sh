@@ -1579,3 +1579,9 @@ run_probe pan_lang_is_wf_shape_probeScript.sml pan_lang_is_wf_shape_probe.out \
 run_probe pan_sem_shape_of_probeScript.sml pan_sem_shape_of_probe.out \
   so_valword so_wordlab \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The isValWord probe observes the exact boolean `panSem$isValWord` on
+# Val/RStruct/NStruct and on the raw Word payload.
+run_probe pan_sem_is_val_word_probeScript.sml pan_sem_is_val_word_probe.out \
+  is_valword_val is_valword_wordlab \
+  "$cake_dir/pancake/semantics/panSemScript.sml"

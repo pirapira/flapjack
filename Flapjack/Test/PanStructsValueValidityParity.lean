@@ -78,6 +78,33 @@ private def holValueValidityFirstMatchContext : StructContextHOL :=
 private def holValueValidityMatch : PanValue Nat :=
   .nStruct "Pair" [("left", .word 2), ("right", .rStruct [])]
 
+private abbrev ExactName := Flapjack.Basis.Pure.MlString.MlString
+
+private def pairName : ExactName := .implode [80, 97, 105, 114]
+private def outerName : ExactName := .implode [79, 117, 116, 101, 114]
+private def prefixName : ExactName := .implode [80, 114, 101, 102, 105, 120, 79, 110, 108, 121]
+private def leftName : ExactName := .implode [108, 101, 102, 116]
+private def rightName : ExactName := .implode [114, 105, 103, 104, 116]
+private def innerName : ExactName := .implode [105, 110, 110, 101, 114]
+private def tagName : ExactName := .implode [116, 97, 103]
+private def markerName : ExactName := .implode [109, 97, 114, 107, 101, 114]
+
+private def exactNestedContext : Flapjack.Pancake.PanLang.StructContextExact :=
+  [(pairName,
+      { fields := [(leftName, .one), (rightName, .comb [])], size := 2 }),
+   (outerName,
+      { fields := [(innerName, .named pairName), (tagName, .one)], size := 2 })]
+
+private def exactAppendPrefix : Flapjack.Pancake.PanLang.StructContextExact :=
+  [(prefixName, { fields := [(markerName, .one)], size := 1 })]
+
+private def exactNestedValue : ValueHOL 8 :=
+  .nStruct outerName
+    [(innerName,
+      .nStruct pairName
+        [(leftName, .val (.word 2)), (rightName, .rStruct [])]),
+     (tagName, .val (.word 3))]
+
 private def holValueValidityMismatch : PanValue Nat :=
   .nStruct "Pair" [("left", .word 2), ("wrong", .rStruct [])]
 
@@ -176,6 +203,19 @@ example : panValueFldsOk (appendPrefix ++ nestedContext) nestedValue = true := b
       panStructShapeListEqBool, panStructShapeEqBool, panSemShapeOf,
       nestedContext, nestedValue]
   · simp [appendPrefix, nestedContext]
+
+/-- Exact `panSem$v` / `mlstring` regression for the named nonempty-prefix HOL
+    EVAL row `v_flds_ok_append_nonempty_prefix_named`. -/
+example : valueFldsOkHOLExact (exactAppendPrefix ++ exactNestedContext)
+    exactNestedValue = true := by
+  apply valueFldsOkHOLExact_append exactNestedContext exactAppendPrefix exactNestedValue
+  · simp [valueFldsOkHOLExact, valuesFldsOkHOLExact, fieldsFldsOkHOLExact,
+      Flapjack.Pancake.PanLang.structContextLookupHOL, shapeOfHOLExact,
+      shapeEqHOL, shapeEqHOL.shapeEqListHOL, exactNestedContext,
+      exactNestedValue, pairName, outerName, leftName, rightName,
+      innerName, tagName]
+  · simp [exactAppendPrefix, exactNestedContext, prefixName, pairName, outerName,
+      leftName, rightName, innerName, tagName]
 
 /-- `is_wf_shape_v_nested_match` in `pan_structs_value_validity_probe.out`. -/
 example : panIsWfShapeValueHOL nestedContext nestedValue = true := by

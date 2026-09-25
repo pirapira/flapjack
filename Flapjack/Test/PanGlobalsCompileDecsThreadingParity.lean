@@ -468,7 +468,8 @@ theorem executedTopCanonicalAgreement :
 
 /-- The executed fixed-word path computes exactly the polymorphic production
     output; this is the adapter that lets `globalCompileTopCake` route through
-    the tagged `compileDecsCake` without changing observable behavior. -/
+    the untagged, HOL-clause-shaped `compileDecsCake` without changing
+    observable behavior on this production-carrier example. -/
 theorem executedTopAgreement :
     globalCompileTopCake cakeStartDeclarations "main" =
       globalCompileTopForStart (BitVec.ofNat 8 (8 / 8)) (BitVec.ofNat 8)

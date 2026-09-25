@@ -35,7 +35,13 @@ val baseState =
       sh_memaddrs := {};
       ffi := <| oracle := (λn (st:unit) b1 b2. Oracle_final FFI_failed);
                 ffi_state := ();
-                io_events := [] |> |>)``
+                io_events := [] |>;
+      structs := [];
+      code := FEMPTY;
+      eshapes := FEMPTY;
+      be := F;
+      base_addr := 0w;
+      top_addr := 100w |>)``
 
 val nonword =
   ``panLang$ExtCall «f»
@@ -93,3 +99,23 @@ val _ = print_eval "ext_argfail_memory"
   ``(SND (panSem$evaluate (^argfail, ^baseState))).memory (0w:8 word)``
 val _ = print_eval "ext_argfail_ffi_io"
   ``(SND (panSem$evaluate (^argfail, ^baseState))).ffi.io_events``
+val _ = print_eval "ext_argfail_structs"
+  ``(SND (panSem$evaluate (^argfail, ^baseState))).structs``
+val _ = print_eval "ext_argfail_code"
+  ``FLOOKUP (SND (panSem$evaluate (^argfail, ^baseState))).code «f»``
+val _ = print_eval "ext_argfail_eshapes"
+  ``FLOOKUP (SND (panSem$evaluate (^argfail, ^baseState))).eshapes «E»``
+val _ = print_eval "ext_argfail_memaddrs"
+  ``(0w:8 word) IN (SND (panSem$evaluate (^argfail, ^baseState))).memaddrs``
+val _ = print_eval "ext_argfail_sh_memaddrs"
+  ``(0w:8 word) IN (SND (panSem$evaluate (^argfail, ^baseState))).sh_memaddrs``
+val _ = print_eval "ext_argfail_be"
+  ``(SND (panSem$evaluate (^argfail, ^baseState))).be``
+val _ = print_eval "ext_argfail_base_addr"
+  ``(SND (panSem$evaluate (^argfail, ^baseState))).base_addr``
+val _ = print_eval "ext_argfail_top_addr"
+  ``(SND (panSem$evaluate (^argfail, ^baseState))).top_addr``
+val _ = print_eval "ext_argfail_ffi_state"
+  ``(SND (panSem$evaluate (^argfail, ^baseState))).ffi.ffi_state``
+val _ = print_eval "ext_argfail_done"
+  ``0``

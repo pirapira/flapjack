@@ -684,7 +684,7 @@ run_probe pan_sem_return_raise_memory_probeScript.sml pan_sem_return_raise_memor
 # non-word argument and failing byte-read rejections, each returning
 # `SOME Error` with unchanged state.
 run_probe pan_sem_extcall_error_probeScript.sml pan_sem_extcall_error_probe.out \
-  ext_nonword_result ext_argfail_ffi_io \
+  ext_nonword_result ext_argfail_done \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_terminal_probeScript.sml pan_sem_call_terminal_probe.out \
   call_terminal_skip_result call_terminal_continue_param_locals \

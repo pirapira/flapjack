@@ -234,4 +234,44 @@ theorem shMemStoreClauseHOLExact_ok {width : Nat} {σ : Type} [NeZero width]
       shMemStoreHOLExact state bytes addr (nbOpHOL operator) := by
   simp only [shMemStoreClauseHOLExact, haddr, hvalue]
 
+/-- The exact shared-memory load clause changes data/local/FFI fields only; it
+    leaves both memory-domain predicates available to the recursive context. -/
+theorem shMemLoadClauseHOLExact_preservesDomains {width : Nat} {σ : Type}
+    [NeZero width] (state : PanSemStateExact width σ)
+    [DecidablePred state.shMemaddrs]
+    (operator : OpSize) (kind : VarKind) (name : MlS) (address : ExpHOL width)
+    (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width)) :
+    (shMemLoadClauseHOLExact state operator kind name address evalExpression).2.memaddrs =
+        state.memaddrs ∧
+    (shMemLoadClauseHOLExact state operator kind name address evalExpression).2.shMemaddrs =
+        state.shMemaddrs := by
+  constructor
+  · unfold shMemLoadClauseHOLExact shMemLoadHOLExact
+    all_goals (repeat' (first | split))
+    all_goals simp [emptyLocalsHOLExact, setKvarHOLExact]
+    all_goals cases kind <;> rfl
+  · unfold shMemLoadClauseHOLExact shMemLoadHOLExact
+    all_goals (repeat' (first | split))
+    all_goals simp [emptyLocalsHOLExact, setKvarHOLExact]
+    all_goals cases kind <;> rfl
+
+/-- The exact shared-memory store clause leaves both memory-domain predicates
+    unchanged; its successful case only updates the FFI field. -/
+theorem shMemStoreClauseHOLExact_preservesDomains {width : Nat} {σ : Type}
+    [NeZero width] (state : PanSemStateExact width σ)
+    [DecidablePred state.shMemaddrs]
+    (operator : OpSize) (address value : ExpHOL width)
+    (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width)) :
+    (shMemStoreClauseHOLExact state operator address value evalExpression).2.memaddrs =
+        state.memaddrs ∧
+    (shMemStoreClauseHOLExact state operator address value evalExpression).2.shMemaddrs =
+        state.shMemaddrs := by
+  constructor
+  · unfold shMemStoreClauseHOLExact shMemStoreHOLExact
+    all_goals (repeat' (first | split))
+    all_goals simp
+  · unfold shMemStoreClauseHOLExact shMemStoreHOLExact
+    all_goals (repeat' (first | split))
+    all_goals simp
+
 end Flapjack

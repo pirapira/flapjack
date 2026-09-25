@@ -5142,8 +5142,8 @@
     "hol_name": "tlc_def",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "tlc",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds3 (bead flapjack-4ac.5.37) Tag withdrawn: HOL `tlc_def` (pan_to_crepProofScript.sml:2317-2319) returns a finite map to `'a word_lab` (`FEMPTY |++ ZIP (ns, FLAT (MAP flatten args))` with `flatten : 'a v -> 'a word_lab list`), while Lean `tlc` returns `FiniteMap Nat α`, i.e. the raw word payload `α` with the `PanWordLab.word` wrapper dropped; `PanValue` is explicitly not statement-exact (its `.word` stores `α` while HOL `v` stores `'a word_lab`). The keys (`Nat` vs `num`) agree, but the element carrier is a genuine mismatch that no qualifier (`names_as_string`/`list_as_array`) authorizes. The untagged `tlcWordLab` (same file) is the `PanWordLab`-carrying analogue; a faithful exact port over the exact word_lab/MlString carriers is tracked by `flapjack-0lj` (word_lab) and `flapjack-pxn.18.3.5.8` (MlString). Same-file sibling `slc` is untagged for the String-vs-mlstring key mismatch (bead flapjack-4ac.5.36); untagged non-Proofs defs get no manifest entry."
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
@@ -10693,5 +10693,50 @@
   "lean_name": "expHdlHOL",
   "statement_status": "reviewed_exact",
   "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.13.1): HOL exp_hdl_def (cakeml/pancake/pan_to_crepScript.sml:106-112) is exp_hdl fm v = case FLOOKUP fm v of NONE => Skip | SOME (vshp,ns) => nested_seq (MAP2 Assign ns (load_globals 0w (LENGTH ns))). expHdlHOL matches: the finite map is MlString-keyed with ShapeHOL values, the miss branch is Skip, and the hit branch is crepNestedSeqHOL over panMap2 Assign of the flattened word list against loadGlobalsHOL 0w (LENGTH ns), over CrepProgHOL width with [NeZero width]. Constructor arities and field types match HOL (funname mlstring, positive-width word). Direct HOL rows missing/known/three_words/dup_update/dup_list from scripts/hol-probes/exp_hdl_probe.out are replayed on the exact carriers in Flapjack/Test/ExpHdlHOLParity.lean. Kernel bridge crepProgToHOL_expHdlFiniteMap relates the executed String-keyed expHdlFiniteMap under the shape/name codecs. Production expHdlFiniteMap stays untagged; routing the executed handler through the exact function is tracked by flapjack-pxn.18.3.5.8.13."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "dec_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "decClockHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL dec_clock_def panSemScript.sml:441-444 is `dec_clock s = s with clock := s.clock - 1`. decClockHOLFinite matches clause for clause (`{ state with clock := state.clock - 1 }`) over PanSemStateFiniteExact, whose locals/globals/code/eshapes use HolFiniteMapExact, the canonical Lean translation of HOL's `varname |-> _` (canonical witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "fix_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "fixClockHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL fix_clock_def panSemScript.sml:446-449 is `fix_clock old_s (res, new_s) = (res, new_s with clock := if old_s.clock < new_s.clock then old_s.clock else new_s.clock)`. fixClockHOLFinite matches the pair result and clamped clock clause for clause over PanSemStateFiniteExact; the four finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness). Qualifier is representation-only."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "lookup_kvar_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "lookupKvarHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL lookup_kvar_def panSemScript.sml:415-420 is `lookup_kvar vk v s = case vk of Local => FLOOKUP s.locals v | Global => FLOOKUP s.globals v`. lookupKvarHOLFinite matches both branches, with HolFiniteMapExact.lookup as the standard Lean translation of FLOOKUP; the carrier's finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness). Qualifier is representation-only."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "empty_locals_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "emptyLocalsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL empty_locals_def panSemScript.sml:437-439 is `empty_locals s = s with locals := FEMPTY`. emptyLocalsHOLFinite matches, clearing locals to the canonical empty finite map, over PanSemStateFiniteExact whose finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness). Note: a distinct panSem empty_locals_def entry maps to the untagged panEmptyLocals documented-mismatch analogue. Qualifier is representation-only."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "set_kvar_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "setKvarHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.4): HOL set_kvar_def panSemScript.sml:408-413 is `set_kvar vk v value s = case vk of Local => set_var v value s | Global => set_global v value s`, with set_var/set_global being `s with locals/globals := s.locals/globals |+ (v,value)` (FUPDATE). setKvarHOLFinite matches clause for clause via the untagged canonical-update wrappers setVarHOLFinite/setGlobalHOLFinite (HolFiniteMapExact.update = FUPDATE) over PanSemStateFiniteExact, whose finite-map fields are the canonical HolFiniteMapExact translation (witness holFmapAsFiniteSupportWitness in the same module). Qualifier is representation-only; quantifiers/hypotheses/conclusion unchanged."
   }
 ]

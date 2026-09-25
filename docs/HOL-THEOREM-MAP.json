@@ -9582,5 +9582,29 @@
     "lean_name": "vshapesArgsRel_imp_eq_len_MAP",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison against panSemScript.sml:740 `!vshapes args. LIST_REL (\\vshape arg. SND vshape = shape_of arg) vshapes args ==> LENGTH vshapes = LENGTH args /\\ MAP SND vshapes = MAP shape_of args`; exact carriers vshapes : List (MlS # ShapeHOL), args : List (ValueHOL width), shape_of = shapeOfHOLExact (tagged shape_of_def); HOL LIST_REL carried by the propositional ListRel because this core has no List.Forall2; oracle rows vra_one/vra_two/vra_bad/vra_len_one/vra_map_two in scripts/hol-probes/pan_sem_vshapes_args_rel_probe.out reproduced by Flapjack/Test/PanSemDecCallExactParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "all_distinct_take_frop_disjoint",
+    "lean_name": "all_distinct_take_frop_disjoint",
+    "reviewer": "Codex (source comparison; pan_commonPropsScript.sml:534 `ALL_DISTINCT ns /\\ n <= LENGTH ns ==> DISJOINT (set (TAKE n ns)) (set (DROP n ns))` ported over `ListDisjoint`/`Nodup`; oracle row atdd_disjoint in pan_common_props_take_drop_el_zip_probe.out reproduced by PanCommonPropsZipDisjointParity)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "disjoint_not_mem_el",
+    "lean_name": "disjoint_not_mem_el",
+    "reviewer": "Codex (source comparison; pan_commonPropsScript.sml:606 `DISJOINT (set xs) (set ys) /\\ n < LENGTH xs ==> ~MEM (EL n xs) ys` ported over `ListDisjoint`/`GetElem`; oracle rows dne_hit/dne_miss in pan_common_props_take_drop_el_zip_probe.out reproduced by PanCommonPropsZipDisjointParity)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "statement_status": "reviewed_exact",
+    "hol_name": "not_mem_fst_zip_flookup_empty",
+    "lean_name": "not_mem_fst_zip_flookup_empty",
+    "reviewer": "Codex (source comparison; pan_commonPropsScript.sml:575 `~MEM x xs /\\ ALL_DISTINCT xs /\\ LENGTH xs = LENGTH ys ==> FLOOKUP (FEMPTY |++ ZIP (xs,ys)) x = NONE` ported over `FUPDATE_LIST FEMPTY (xs.zip ys)`/`FLOOKUP`; oracle rows nmfz_absent/nmfz_hit in pan_common_props_take_drop_el_zip_probe.out reproduced by PanCommonPropsZipDisjointParity)"
   }
 ]

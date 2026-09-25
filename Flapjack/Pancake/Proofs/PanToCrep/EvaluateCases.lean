@@ -1349,8 +1349,7 @@ theorem panSemEvaluateRiscV64CodeState_callRaiseOneWordException_ofEntry
   unfold panSemEvaluateCodeState panSemEvaluateCodeStateWithFuel
   rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
-    evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    panValueRaiseResult, evalPanValueExpCounted, evalPanValueExp,
+    evalPanValueExpCounted, evalPanValueExp,
     hargs, hcallee, hexception, hclock, panValueShape, panShapeMatches,
     decPanClock]
 
@@ -1409,7 +1408,7 @@ theorem panSemEvaluateRiscV64CodeState_callCatchRaiseOneWord_ofEntry
   rw [show panSemCodeEvaluateFuel state program = tail + 5 from hfuel]
   simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
-    panValueRaiseResult, panValueReturnResult, evalPanValueExpCounted, evalPanValueExp,
+    panValueReturnResult, evalPanValueExpCounted, evalPanValueExp,
     hargs, hcallee, hexception,
     hhandlerLocal, hclock, panValueShape, panShapeMatches, panValueAssignmentValid,
     updatePanValueMap, decPanClock]
@@ -1450,7 +1449,6 @@ theorem panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState
     (hexceptionShape : ∃ shape,
       state.exceptionShapes exception = some shape ∧
       panShapeMatches (panValueShape state.structs exceptionValue) shape = true)
-    (hpayload : panValuePayloadWithinLimit state.structs exceptionValue = true)
     (hhandlerAssignment : panValueAssignmentValid state.structs state.locals
       (fun _ => none) .local handlerVariable exceptionValue = true)
     (hhandlerBody : evalPanValueFfiClockCodeProg context primitive handler
@@ -1480,8 +1478,7 @@ theorem panSemEvaluateRiscV64CodeCall_catchesRaisedBody_ofState
     exceptionValue calleeClock
     (memoryAccess := some (panSemBitVec64MemoryAccess state)) (contracts := none)
     (memoryHandler := none) handlerResult harguments' hcallee hclock
-    calleeRaisedLocals hcalleeBody hexceptionShape (by simp) hpayload
-    hhandlerAssignment (by simp) hhandlerBody
+    calleeRaisedLocals hcalleeBody hexceptionShape hhandlerAssignment hhandlerBody
 
 /-! Lift the source-side raised-handler IH composition to the production
 RISC-V `PanSemState` evaluator. Both body premises use the source Call's
@@ -1523,7 +1520,6 @@ theorem panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState
     (hexceptionShape : ∃ shape,
       state.exceptionShapes exception = some shape ∧
       panShapeMatches (panValueShape state.structs exceptionValue) shape = true)
-    (hpayload : panValuePayloadWithinLimit state.structs exceptionValue = true)
     (hhandlerAssignment : panValueAssignmentValid state.structs state.locals
       (fun _ => none) .local handlerVariable exceptionValue = true)
     (hhandlerBody : evalPanValueFfiClockCodeProg context primitive handler
@@ -1557,7 +1553,7 @@ theorem panSemEvaluateRiscV64CodeState_call_catchesRaisedBody_ofState
     arguments values returnShape body calleeLocals calleeRaisedLocals
     calleeGlobals calleeMemory calleeFfi exceptionValue calleeClock handlerProgram
     handlerResult harguments hcallee hclock hcalleeBody hexceptionShape
-    hpayload hhandlerAssignment hhandlerBody
+    hhandlerAssignment hhandlerBody
   refine ⟨?_, panSemCodeStateAfter_preserves_code state handlerResult⟩
   change panSemEvaluateCodeStateWithMemoryModel context primitive handler
     panSemBitVec64WordModel panSemBitVec64BytesInWord state
@@ -9939,7 +9935,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
       (memoryAccess := some (panSemBitVec64MemoryAccess source)) =
         some (.control (.raised calleeRaisedLocals calleeGlobals calleeMemory calleeFfi
         sourceException payload), calleeClock))
-    (hsourcePayloadWithinLimit : panValuePayloadWithinLimit source.structs payload = true)
     (hsourceHandlerBody : evalPanValueFfiClockCodeProg sourceContext sourcePrimitive
       sourceHandler source.structs source.code source.exceptionShapes source.baseAddress
       source.topAddress panSemBitVec64BytesInWord
@@ -10161,7 +10156,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedPayload_postRelations
     calleeRaisedLocals calleeGlobals calleeMemory calleeFfi payload calleeClock
     handlerProgram sourceResult hsourceArgs hsourceCall hsourceClock
     hsourceCalleeBody ⟨shape, hsourceExceptionShape', hsourceShapeMatch⟩
-    hsourcePayloadWithinLimit hsourceHandlerAssignment hsourceHandlerBody
+    hsourceHandlerAssignment hsourceHandlerBody
   have hsourceCallRun := hsourceRun.1
   have hargumentLength := by
     have hsourceArgsMatch := panSemCodeArgumentsMatch_of_lookup_success source.structs
@@ -10609,8 +10604,6 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
     rw [hdestinations]
     exact crepRuntimeCallInfoValid_functionReturnNamesHOL context.toHOLContext function
       (some (caught, .seq (expHdlFiniteMap context.vars handlerVariableTarget) handlerBody))
-  have hsourcePayload : panValuePayloadWithinLimit source.structs (.word value) = true := by
-    exact panValuePayloadWithinLimit_word source.structs value
   have hsourceHandlerLookup : source.locals handlerVariableTarget = some old := by
     simpa [FLOOKUP] using hsource
   have hsourceHandlerCallLookup : source.locals handlerVariable = some old := by
@@ -10640,8 +10633,7 @@ theorem panSemSourceCall_and_crepTargetCall_catchesRaisedOneWord_postRelations
         handlerVariable sourceExpressions arguments returnShape sourceBody calleeLocals
     calleeRaisedLocals calleeGlobals calleeMemory calleeFfi (.word value) calleeClock
     sourceHandlerBody sourceResult hsourceArguments hsourceCallee hsourceClock
-    hsourceCalleeBody hsourceExceptionShape hsourcePayload
-    hsourceHandlerAssignment hsourceHandlerBodyRun
+    hsourceCalleeBody hsourceExceptionShape hsourceHandlerAssignment hsourceHandlerBodyRun
   subst sourceAfterCallee
   let sourceAfterCallee :=
     { { { { source with globals := calleeGlobals } with memory := calleeMemory }

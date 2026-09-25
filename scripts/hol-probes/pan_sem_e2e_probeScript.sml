@@ -87,6 +87,23 @@ val _ = print_eval "call_assign_local_7"
              locals := FEMPTY |+ (strlit "answer", ValWord (3w:8 word));
              clock := 10 |>)))).locals (strlit "answer"))``
 
+val bad_destination_call_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      code := FEMPTY |+ (strlit "id", ([(strlit "x", panLang$One)],
+        panLang$Return (panLang$Var panLang$Local (strlit "x")), panLang$One));
+      locals := FEMPTY |+ (strlit "answer",
+        RStruct [ValWord (0w:8 word); ValWord (0w:8 word)]);
+      clock := 10 |>)``
+
+val bad_destination_call_program =
+  ``panLang$Call (SOME (SOME (panLang$Local, strlit "answer"), NONE))
+      (strlit "id") [panLang$Const (7w:8 word)]``
+
+val _ = print_eval "call_bad_destination_shape"
+  ``case panSem$evaluate (^bad_destination_call_program,
+      ^bad_destination_call_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals (strlit "answer"))``
+
 val _ = print_eval "call_raises_exception_7"
   ``FST (panSem$evaluate
       (panLang$Call NONE (strlit "raiseE") [],
@@ -186,6 +203,20 @@ val _ = print_eval "deccall_code_map_clock_9"
            («id», ([(«x», panLang$One)],
              panLang$Return (panLang$Var panLang$Local «x»), panLang$One)))))).clock)``
 
+val deccall_existing_local_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («answer», ValWord (3w:8 word));
+      code := FEMPTY |+ («id», ([(«x», panLang$One)],
+        panLang$Return (panLang$Var panLang$Local «x»), panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "deccall_restores_existing_local"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «id» [panLang$Const (7w:8 word)]
+        (panLang$Return (panLang$Var panLang$Local «answer»)),
+       ^deccall_existing_local_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «answer»)``
+
 val _ = print_eval "nested_deccall_code_map_7"
   ``FST (panSem$evaluate
       (panLang$DecCall «answer» panLang$One «f» []
@@ -219,6 +250,49 @@ val _ = print_eval "nested_deccall_code_map_clock_8"
                (panLang$Return (panLang$Var panLang$Local «nested»)),
              panLang$One)) |+
            («g», ([], panLang$Return (panLang$Const (7w:8 word)), panLang$One)))))).clock)``
+
+(* Negative recursive dispatch rows: the callee state is retained on a
+   return-shape error, including its decremented clock and cleared locals. *)
+val bad_call_return_shape_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («keep», ValWord (42w:8 word));
+      code := FEMPTY |+ («bad», ([],
+        panLang$Return (panLang$Const (7w:8 word)), panLang$Comb []));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_call_bad_return_shape"
+  ``case panSem$evaluate (panLang$Call NONE «bad» [],
+      ^bad_call_return_shape_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
+val bad_deccall_declared_shape_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («keep», ValWord (42w:8 word));
+      code := FEMPTY |+ («bad», ([],
+        panLang$Return (panLang$Const (7w:8 word)), panLang$One));
+      clock := 10 |>)``;
+
+val _ = print_eval "recursive_deccall_bad_declared_shape"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» (panLang$Comb []) «bad» [] panLang$Skip,
+       ^bad_deccall_declared_shape_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «keep»)``
+
+val recursive_missing_code_state =
+  ``((ARB:((8),unit) panSem$state) with <|
+      locals := FEMPTY |+ («x», ValWord (7w:8 word));
+      code := FEMPTY; clock := 5 |>)``;
+
+val _ = print_eval "recursive_call_missing_function"
+  ``case panSem$evaluate
+      (panLang$Call NONE «missing» [], ^recursive_missing_code_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
+
+val _ = print_eval "recursive_deccall_missing_function"
+  ``case panSem$evaluate
+      (panLang$DecCall «answer» panLang$One «missing» [] panLang$Skip,
+       ^recursive_missing_code_state) of
+      (res, s') => (res, s'.clock, FLOOKUP s'.locals «x»)``
 
 val _ = print_eval "nested_call_code_map_7"
   ``FST (panSem$evaluate

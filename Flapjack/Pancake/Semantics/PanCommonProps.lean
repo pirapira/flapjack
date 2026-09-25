@@ -491,4 +491,32 @@ theorem fm_update_diff_vars [BEq α] [LawfulBEq α] (fm : FiniteMap α β)
   rw [FUPDATE_comm fm b b' a a' h.symm]
   rw [FUPDATE_FUPDATE_same (FUPDATE fm (a, a')) b b' b'']
 
+/-- Exact port of HOL `all_distinct_take_frop_disjoint`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:534`): the first `n`
+    elements and the remaining suffix of a distinct list are disjoint. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "all_distinct_take_frop_disjoint"]
+theorem all_distinct_take_frop_disjoint {α : Type} (ns : List α) (n : Nat)
+    (h : ns.Nodup) (_hn : n ≤ ns.length) :
+    ListDisjoint (ns.take n) (ns.drop n) :=
+  listDisjoint_take_drop ns n h
+
+/-- Exact port of HOL `disjoint_not_mem_el`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:606`): an element of a
+    list disjoint from another list does not belong to that other list. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "disjoint_not_mem_el"]
+theorem disjoint_not_mem_el {α : Type} (xs ys : List α) (n : Nat)
+    (h : ListDisjoint xs ys) (hn : n < xs.length) :
+    xs[n] ∉ ys :=
+  not_mem_of_listDisjoint_getElem xs ys n h hn
+
+/-- Exact port of HOL `not_mem_fst_zip_flookup_empty`
+    (`cakeml/pancake/semantics/pan_commonPropsScript.sml:575`): updating the
+    empty finite map with `ZIP (xs, ys)` leaves a key outside `xs` unmapped. -/
+@[hol "cakeml/pancake/semantics/pan_commonPropsScript.sml" "not_mem_fst_zip_flookup_empty"]
+theorem not_mem_fst_zip_flookup_empty [BEq α] [LawfulBEq α]
+    (xs : List α) (ys : List β) (x : α)
+    (hnot : x ∉ xs) (_hdistinct : xs.Nodup) (hlen : xs.length = ys.length) :
+    FLOOKUP (FUPDATE_LIST FEMPTY (xs.zip ys)) x = none := by
+  rw [FLOOKUP_FUPDATE_LIST_zip_not_mem xs ys FEMPTY x hlen hnot, FLOOKUP_empty]
+
 end Flapjack

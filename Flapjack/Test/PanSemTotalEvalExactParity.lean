@@ -1,9 +1,12 @@
 import Flapjack.Pancake.Semantics.PanSem.TotalEvalExact
 import Flapjack.Test.PanSemExtCallExactParity
 
-/-! Direct original-HOL rows for the exact-state nonrecursive dispatcher.
-    The source rows are in `scripts/hol-probes/pan_sem_e2e_probe.out`; recursive
-    constructors remain marked unsupported by this clause fragment. -/
+/-! Direct original-HOL rows for the exact-state PanSem dispatcher fragment.
+    Call/DecCall cases correspond to `call_code_map_7`,
+    `recursive_call_code_map_7`, `deccall_code_map_7`,
+    `nested_deccall_code_map_7`, and recursive timeout rows in
+    `scripts/hol-probes/pan_sem_e2e_probe.out`; matching exception handling
+    corresponds to `call_handles_exception_7`. -/
 
 namespace Flapjack.Test.PanSemTotalEvalExactParity
 
@@ -35,6 +38,148 @@ private instance : DecidablePred baseState.memaddrs := fun address =>
   if h : address = 0 then isTrue h else isFalse h
 
 private instance : DecidablePred baseState.shMemaddrs := fun _ => isFalse id
+
+private def idCodeState (clock : Nat) : PanSemStateExact 64 Unit :=
+  { baseState with
+    code := fun name =>
+      if name = ml "id" then
+        some ([(ml "x", .one)], .return (.var .local (ml "x")), .one)
+      else if name = ml "raiseE" then
+        some ([], .raise (ml "E") (.const 7), .one)
+      else none
+    locals := fun name =>
+      if name = ml "ev" then some (.val (.word 0)) else baseState.locals name
+    clock := clock }
+
+private def existingLocalDecCallState (clock : Nat) : PanSemStateExact 64 Unit :=
+  { idCodeState clock with
+    locals := fun name =>
+      if name = ml "answer" then some (.val (.word 3))
+      else (idCodeState clock).locals name }
+
+private instance (clock : Nat) : DecidablePred (idCodeState clock).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (idCodeState clock).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (existingLocalDecCallState clock).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (existingLocalDecCallState clock).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
+
+private def nestedCallCodeState (clock : Nat) : PanSemStateExact 64 Unit :=
+  { baseState with
+    code := fun name =>
+      if name = ml "f" then
+        some ([], .decCall (ml "nested") .one (ml "g") []
+          (.return (.var .local (ml "nested"))), .one)
+      else if name = ml "g" then
+        some ([], .return (.const 7), .one)
+      else none
+    clock := clock }
+
+private instance (clock : Nat) : DecidablePred (nestedCallCodeState clock).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (nestedCallCodeState clock).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
+
+private def nestedDecCallCodeState (clock : Nat) : PanSemStateExact 64 Unit :=
+  { baseState with
+    code := fun name =>
+      if name = ml "f" then
+        some ([], .decCall (ml "nested") .one (ml "g") []
+          (.return (.var .local (ml "nested"))), .one)
+      else if name = ml "g" then
+        some ([], .return (.const 7), .one)
+      else none
+    clock := clock }
+
+private instance (clock : Nat) : DecidablePred (nestedDecCallCodeState clock).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (nestedDecCallCodeState clock).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
+
+private def recursiveCallCodeState (clock : Nat) : PanSemStateExact 64 Unit :=
+  { baseState with
+    code := fun name =>
+      if name = ml "loop" then some ([], .call none (ml "loop") [], .one)
+      else none
+    clock := clock }
+
+private instance (clock : Nat) : DecidablePred (recursiveCallCodeState clock).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (recursiveCallCodeState clock).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
+
+private def recursiveDecCallCodeState (clock : Nat) : PanSemStateExact 64 Unit :=
+  { baseState with
+    code := fun name =>
+      if name = ml "loop" then
+        some ([], .decCall (ml "nested") .one (ml "loop") [] .skip, .one)
+      else none
+    clock := clock }
+
+private def badReturnCodeState (clock : Nat) (returnShape : Flapjack.Pancake.PanLang.ShapeHOL) :
+    PanSemStateExact 64 Unit :=
+  { baseState with
+    locals := fun name => if name = ml "keep" then some (.val (.word 42)) else none
+    code := fun name =>
+      if name = ml "bad" then
+        some ([], .return (.const 7), returnShape)
+      else none
+    clock := clock }
+
+private instance (clock : Nat) : DecidablePred (recursiveDecCallCodeState clock).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (recursiveDecCallCodeState clock).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
+
+private instance (clock : Nat) (returnShape : Flapjack.Pancake.PanLang.ShapeHOL) :
+    DecidablePred (badReturnCodeState clock returnShape).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) (returnShape : Flapjack.Pancake.PanLang.ShapeHOL) :
+    DecidablePred (badReturnCodeState clock returnShape).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
+
+private def recursiveExact
+    (program : ProgHOL 64) (state : PanSemStateExact 64 Unit)
+    [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs] :=
+  evalPanSemRecursiveCallHOLExact program state
 
 private def primitiveState : PanSemStateExact 64 Unit :=
   { baseState with
@@ -159,13 +304,101 @@ def extCallRows : Bool :=
         | .word byte => byte.toNat == 0xAB)
   | none => false
 
-/-- The outer `none` is the documented fragment gap, not HOL `SOME Error`. -/
+def stateOwnedCallRows : Bool :=
+  let direct := recursiveExact (.call none (ml "id") [.const 7]) (idCodeState 10)
+  let nested := recursiveExact (.call none (ml "f") []) (nestedCallCodeState 10)
+  let handlerInfo := some (none,
+    some (ml "E", ml "ev", .return (.var .local (ml "ev"))))
+  let handled := recursiveExact (.call handlerInfo (ml "raiseE") []) (idCodeState 10)
+  let directOk := match direct with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 7 && post.clock == 9 && (post.locals (ml "x")).isNone
+    | _ => false
+  let nestedOk := match nested with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 7 && post.clock == 8
+    | _ => false
+  let handlerOk := match handled with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 7 && post.clock == 9
+    | _ => false
+  directOk && nestedOk && handlerOk
+
+def stateOwnedCallNegativeRows : Bool :=
+  let mismatchedReturn := recursiveExact (.call none (ml "bad") [])
+    (badReturnCodeState 10 (.comb []))
+  match mismatchedReturn with
+  | some (some .error, post) => post.clock == 9 && (post.locals (ml "keep")).isNone
+  | _ => false
+
+def stateOwnedLookupErrorRows : Bool :=
+  let missingCall := recursiveExact (.call none (ml "missing") []) baseState
+  let missingDecCall := recursiveExact
+    (.decCall (ml "answer") .one (ml "missing") [] .skip) baseState
+  let callOk := match missingCall with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  let decCallOk := match missingDecCall with
+    | some (some .error, post) => post.clock == 5 && localWord post "x" == some 7
+    | _ => false
+  callOk && decCallOk
+
+def stateOwnedDecCallRows : Bool :=
+  let direct := recursiveExact
+    (.decCall (ml "answer") .one (ml "id") [.const 7]
+      (.return (.var .local (ml "answer")))) (idCodeState 10)
+  let nested := recursiveExact
+    (.decCall (ml "answer") .one (ml "f") []
+      (.return (.var .local (ml "answer")))) (nestedDecCallCodeState 10)
+  let directOk := match direct with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 7 && post.clock == 9
+    | _ => false
+  let nestedOk := match nested with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 7 && post.clock == 8
+    | _ => false
+  let restoresExistingLocal := recursiveExact
+    (.decCall (ml "answer") .one (ml "id") [.const 7]
+      (.return (.var .local (ml "answer")))) (existingLocalDecCallState 10)
+  let restoreOk := match restoresExistingLocal with
+    | some (some (.returned (.val (.word value))), post) =>
+        value.toNat == 7 && post.clock == 9 && localWord post "answer" == some 3
+    | _ => false
+  directOk && nestedOk && restoreOk
+
+def stateOwnedDecCallNegativeRows : Bool :=
+  let mismatchedDeclaredShape := recursiveExact
+    (.decCall (ml "answer") (.comb []) (ml "bad") [] .skip)
+    (badReturnCodeState 10 .one)
+  match mismatchedDeclaredShape with
+  | some (some .error, post) => post.clock == 9 && (post.locals (ml "keep")).isNone
+  | _ => false
+
+def stateOwnedTimeoutRows : Bool :=
+  let call := recursiveExact (.call none (ml "loop") [])
+    (recursiveCallCodeState 2)
+  let decCall := recursiveExact
+    (.decCall (ml "answer") .one (ml "loop") [] .skip)
+    (recursiveDecCallCodeState 2)
+  let callTimeout := match call with
+    | some (some .timeOut, post) => post.clock == 0 && (post.locals (ml "x")).isNone
+    | _ => false
+  let decCallTimeout := match decCall with
+    | some (some .timeOut, post) => post.clock == 0 && (post.locals (ml "x")).isNone
+    | _ => false
+  callTimeout && decCallTimeout
+
+/-! The outer `none` is the documented fragment gap, not HOL `SOME Error`. -/
 def recursiveGapRows : Bool :=
-  let seqOpen := exactDispatch (.seq .skip .skip) baseState
-  let callOpen := exactDispatch (.call none (ml "f") []) baseState
-  let decCallOpen := exactDispatch
-    (.decCall (ml "x") .one (ml "f") [] .skip) baseState
-  seqOpen.isNone && callOpen.isNone && decCallOpen.isNone
+  let seqOpen := evalPanSemRecursiveCallHOLExact (.seq .skip .skip) baseState
+  let ifOpen := evalPanSemRecursiveCallHOLExact (.ite (.const 1) .skip .skip) baseState
+  let decOpen := evalPanSemRecursiveCallHOLExact
+    (.dec (ml "y") .one (.const 1) .skip) baseState
+  let assignOpen := evalPanSemRecursiveCallHOLExact
+    (.assign .local (ml "x") (.const 2)) baseState
+  let whileOpen := evalPanSemRecursiveCallHOLExact (.while (.const 1) .skip) baseState
+  seqOpen.isNone && ifOpen.isNone && decOpen.isNone && assignOpen.isNone && whileOpen.isNone
 
 #guard skipBreakTickRows
 #guard assignPrimitiveRows
@@ -173,6 +406,12 @@ def recursiveGapRows : Bool :=
 #guard returnRaiseRows
 #guard sharedMemoryRows
 #guard extCallRows
+#guard stateOwnedCallRows
+#guard stateOwnedCallNegativeRows
+#guard stateOwnedLookupErrorRows
+#guard stateOwnedDecCallRows
+#guard stateOwnedDecCallNegativeRows
+#guard stateOwnedTimeoutRows
 #guard recursiveGapRows
 
 def runChecks : IO Bool := do
@@ -194,10 +433,31 @@ def runChecks : IO Bool := do
   if extCallRows then
     IO.println "PASS exact-state dispatcher ExtCall bad-read row matches HOL"
   else IO.println "FAIL exact-state dispatcher ExtCall bad-read row matches HOL"
+  if stateOwnedCallRows then
+    IO.println "PASS exact-state recursive Call/nested Call/DecCall/handler rows match original HOL"
+  else IO.println "FAIL exact-state recursive Call/nested Call/DecCall/handler rows match original HOL"
+  if stateOwnedCallNegativeRows then
+    IO.println "PASS exact-state recursive Call rejects a callee return-shape mismatch with the callee state"
+  else IO.println "FAIL exact-state recursive Call rejects a callee return-shape mismatch with the callee state"
+  if stateOwnedLookupErrorRows then
+    IO.println "PASS exact-state recursive Call/DecCall missing-code errors preserve the caller state"
+  else IO.println "FAIL exact-state recursive Call/DecCall missing-code errors preserve the caller state"
+  if stateOwnedDecCallRows then
+    IO.println "PASS exact-state recursive DecCall and nested DecCall match original HOL"
+  else IO.println "FAIL exact-state recursive DecCall and nested DecCall match original HOL"
+  if stateOwnedDecCallNegativeRows then
+    IO.println "PASS exact-state recursive DecCall rejects a declared return-shape mismatch with the callee state"
+  else IO.println "FAIL exact-state recursive DecCall rejects a declared return-shape mismatch with the callee state"
+  if stateOwnedTimeoutRows then
+    IO.println "PASS exact-state recursive Call/DecCall timeout clocks match original HOL"
+  else IO.println "FAIL exact-state recursive Call/DecCall timeout clocks match original HOL"
   if recursiveGapRows then
-    IO.println "PASS exact-state dispatcher leaves recursive clauses explicitly open"
-  else IO.println "FAIL exact-state dispatcher leaves recursive clauses explicitly open"
+    IO.println "PASS exact-state dispatcher keeps unassembled constructors explicitly open"
+  else IO.println "FAIL exact-state dispatcher keeps unassembled constructors explicitly open"
   pure (skipBreakTickRows && assignPrimitiveRows && storeRows && returnRaiseRows &&
-    sharedMemoryRows && extCallRows && recursiveGapRows)
+    sharedMemoryRows && extCallRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
+    stateOwnedLookupErrorRows &&
+    stateOwnedDecCallRows && stateOwnedDecCallNegativeRows &&
+    stateOwnedTimeoutRows && recursiveGapRows)
 
 end Flapjack.Test.PanSemTotalEvalExactParity

@@ -197,6 +197,15 @@ their equations to `panModelReadByte`/`panModelRead32`, are in
 and remain untagged until its operations are related to HOL's word-derived
 `byte_align`, `get_byte`, `aligned`, and `word_of_bytes` for arbitrary finite
 dimensions.
+The direct width-1 row `load32_unaligned_width1_address1=NONE` was refreshed
+with `HOL4=/home/zksecurity/HOL CAKEML=/home/zksecurity/flapjack2/cakeml
+HOL_PROBE_ONLY=pan_fixed_load_probeScript.sml scripts/hol-probes/regenerate.sh`
+against matching CakeML source commit `857f0d98da8f8a3580f3442338e697809308ede`.
+It exposes a mismatch in the current tagged `panMemLoad32HOL`: its word-sized
+shift amount truncates literal 2 to zero at width one, so the Lean fixture
+records that this definition accepts address 1. This fixture documents a
+review hold, not a passing HOL parity claim; change it to equality with the
+direct oracle after the tagged definition is repaired.
 `word_byte_memory_probeScript.sml` is run from HOL4's built
 `src/n-bit/.hol/objs` directory and probes `byteTheory` directly, so it does not
 depend on built CakeML Pancake theories. Refresh it with

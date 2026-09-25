@@ -84,6 +84,17 @@ def load32HitWidth8 : Option (Word 8) :=
   panModelRead32 word8Model word8Domain word8Memory
     word8BytesInWord (BitVec.ofNat 8 0) false
 
+/-! Width-one oracle hold: the direct HOL row
+`load32_unaligned_width1_address1` is `NONE` because `aligned 2` rejects
+address 1. The current tagged `panMemLoad32HOL` instead interprets literal 2
+as a one-bit shift amount (zero), so this fixture records the mismatch and
+must be changed to equality when that HOL port is repaired. -/
+def word1Address1 : Word 1 := BitVec.ofNat 1 1
+def taggedLoad32Width1 : Option (Word 32) :=
+  panMemLoad32HOL
+    (fun _ => HolWordLab.word (BitVec.ofNat 1 1))
+    (fun _ => True) false word1Address1
+
 /-! HOL `byte_align_def` is `align (LOG2 (dimindex DIV 8))`, while the
 RISC-V target rounds down by the supplied `bytesInWord`. For a 24-bit word,
 HOL therefore uses exponent `LOG2 3 = 1` and aligns address 5 to 4; the
@@ -188,6 +199,7 @@ example :
 #guard load32DomainMiss == originalLoad32DomainMiss
 #guard byteHitWidth8 == some (BitVec.ofNat 8 0xa5)
 #guard load32HitWidth8 == some (BitVec.ofNat 8 0xa5)
+#guard taggedLoad32Width1.isSome
 #guard holByteAlignWidth24Address5 == BitVec.ofNat 24 4
 #guard riscvByteAlignWidth24Address5 == BitVec.ofNat 24 3
 #guard holByteAlignWidth24Address5 != riscvByteAlignWidth24Address5

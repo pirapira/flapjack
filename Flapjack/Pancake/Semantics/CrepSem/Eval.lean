@@ -2,6 +2,7 @@ import Flapjack.Pancake.Semantics.CrepRuntimeTarget
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.WordLang
+import Flapjack.Pancake.Semantics.CrepSem.WordAlignment
 
 /-!
 # Pancake Crepe expression evaluation
@@ -1478,6 +1479,20 @@ theorem holFiniteWordSourceAligned_eq_holW2N {ι : Type u}
   change decide (holFiniteWordW2N dimension address %
     (2 ^ Nat.log2 alignment) = 0) = _
   rw [holFiniteWordW2N_eq_SBitSum]
+
+/-! HOL `aligned 2` is the natural-number shift test (shifts by two bits),
+    while the currently tagged `panMemLoad32HOL` elaborates its literal as a
+    word-sized shift amount and differs at width one. This theorem records
+    only the source/HOL natural-shift equivalence. -/
+theorem holFiniteWordSourceAligned4_eq_natShiftGuard {ι : Type u}
+    (dimension : HolFiniteDimension ι) (address : ι → Bool) :
+    holFiniteWordSourceAligned dimension 4 address =
+      decide ((((holWordToBitVec dimension address) >>> (2 : Nat)) <<< (2 : Nat)) =
+        holWordToBitVec dimension address) := by
+  change decide ((holWordToBitVec dimension address).toNat %
+      (2 ^ Nat.log2 4) = 0) = _
+  rw [show Nat.log2 4 = 2 by decide]
+  exact bitVecAligned4_decide_eq_shiftGuard (holWordToBitVec dimension address)
 
 def holFiniteWordSourceWordOfBytes {ι : Type u}
     (dimension : HolFiniteDimension ι) (bigEndian : Bool)

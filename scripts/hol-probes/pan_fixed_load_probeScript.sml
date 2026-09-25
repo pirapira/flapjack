@@ -58,6 +58,9 @@ val _ = print_eval "byte_hit_width8"
 val _ = print_eval "load32_hit_width8"
   ``mem_load_32 (\a : 8 word. Word (0xa5w : 8 word))
       {0w} F 0w``
+val _ = print_eval "load32_unaligned_width1_address1"
+  ``mem_load_32 (\a : 1 word. Word (1w : 1 word))
+      UNIV F (1w : 1 word)``
 val _ = print_eval "byte_align_width24_address5"
   ``byte_align (5w : 24 word)``
 val _ = print_eval "byte_load_width24_address5"

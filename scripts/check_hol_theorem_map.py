@@ -123,6 +123,18 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/PanLocalised.lean", "localisedProg"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "localised_prog_def",
+        "flapjack-ds4 (source comparison, bead flapjack-4ac.4.74; FLAPJACK-SPECIFIC, "
+        "documented_mismatch). HOL panProps$localised_prog (panPropsScript.sml:1380-1406) "
+        "is polymorphic over the 'a prog carrier whose identifiers are mlstring; this "
+        "definition is over the production Prog α carrier (PanLang.lean:316) whose "
+        "FunName/ExceptionId/StructName are Lean String. The @[hol] tag was withdrawn for "
+        "the carrier mismatch. Exact MlString/width-indexed port: localisedProgHOL over "
+        "ProgHOL width in Flapjack/Pancake/Semantics/PanProps.lean. Faithful replacement "
+        "depends on flapjack-pxn.18.3.5.8 (MlString carriers). "
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "fieldsInOrderReorderNoop"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "fields_in_order_reorder_noop",
@@ -1065,8 +1077,13 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isDecl"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact_shapeOfHOLExact"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "panPrimopHOLExact_isWfShapeValueHOLExact"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedExpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "namelessExpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedProgHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
     }

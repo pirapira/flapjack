@@ -11,8 +11,16 @@ def localisedExp (expression : Exp α) : Prop :=
   expGlobalVars expression = []
 
 /-- HOL's source localisation predicate. In particular, calls with a global
-    destination are not localised, even when their arguments are local. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_prog_def"]
+    destination are not localised, even when their arguments are local.
+
+    FLAPJACK-SPECIFIC (not an exact HOL port). HOL `panProps$localised_prog`
+    (`panPropsScript.sml:1380-1406`) is polymorphic over `'a prog`, whose
+    identifiers are `mlstring`; this definition is over the production
+    `Prog α` carrier (`PanLang.lean:316`), whose `FunName`/`ExceptionId`/
+    `StructName` are Lean `String`. The exact MlString/width-indexed port is
+    `Flapjack.Pancake.Semantics.PanProps.localisedProgHOL` over `ProgHOL width`
+    (bead flapjack-4ac.4.74). The `@[hol]` tag was withdrawn for the carrier
+    mismatch; faithful replacement depends on flapjack-pxn.18.3.5.8. -/
 def localisedProg : Prog α → Prop
   | .skip | .break | .continue | .tick | .annot _ _ => True
   | .dec _ _ value body => localisedExp value ∧ localisedProg body

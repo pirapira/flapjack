@@ -68,8 +68,8 @@
     "hol_name": "localised_prog_def",
     "lean_path": "Flapjack/PanLocalised.lean",
     "lean_name": "localisedProg",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.74; FLAPJACK-SPECIFIC, documented_mismatch). HOL panProps$localised_prog (panPropsScript.sml:1380-1406) is polymorphic over the `'a prog` carrier whose identifiers are mlstring; this definition is over the production `Prog α` carrier (PanLang.lean:316) whose FunName/ExceptionId/StructName are Lean String, a genuinely different carrier. The `@[hol]` tag was withdrawn. Exact MlString/width-indexed port: localisedProgHOL over `ProgHOL width` in Flapjack/Pancake/Semantics/PanProps.lean. Faithful replacement depends on flapjack-pxn.18.3.5.8 (MlString carriers)."
   },
   {
     "hol_path": "cakeml/compiler/backend/backend_commonScript.sml",
@@ -10315,6 +10315,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "pan_primop_is_wf_shape_v",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "panPrimopHOLExact_isWfShapeValueHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.14; exact HOL panProps$pan_primop_is_wf_shape_v (panPropsScript.sml:162): !sctxt pop args value. pan_primop pop args = SOME value ==> is_wf_shape_v sctxt value. Lean `{width : Nat} [NeZero width] (context : StructContextExact) (operator : PrimOp) (values : List (ValueHOL width)) (value : ValueHOL width) (h : panPrimopHOLExact operator values = some value) : isWfShapeValueHOLExact context value = true`; BOTH pan_primop and is_wf_shape_v are the already-reviewed exact ports panPrimopHOLExact (panSemScript.sml:196) and isWfShapeValueHOLExact (panPropsScript.sml:24), the Bool predicate rendered as = true, no extra hypotheses; [NeZero width] models HOL's positive word dimension. Proof by case analysis on the pan_primop match. Direct HOL rows pan_primop_* in pan_sem_pan_primop_probe.out; parity examples in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "every_exp_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "everyExpHOL",
@@ -10328,6 +10336,35 @@
     "lean_name": "expsOfHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.69; exact HOL panProps$exps_of (panPropsScript.sml:1336-1358). Lean `expsOfHOL {width : Nat} [NeZero width] : ProgHOL width → List (ExpHOL width)` transcribes every HOL clause in order: Raise -> [e], Dec -> e :: exps_of p, Seq -> p ++ q, If -> e :: (exps_of p ++ exps_of q), While -> e :: exps_of p, Call NONE -> es, Call (SOME(_,SOME(_,_,ep))) -> es ++ exps_of ep, Call (SOME(_,NONE)) -> es, DecCall -> es ++ exps_of p, Store/Store32/StoreByte -> [e1,e2], Return -> [e], ExtCall -> [e1,e2,e3,e4], Assign -> [e], Primitive -> es, ShMemLoad -> [e], ShMemStore -> [e1,e2], and default -> []. Carriers are the exact `ProgHOL width`/`ExpHOL width`; [NeZero width] represents HOL's positive word dimension; no extra hypotheses. Source only, since no panLang exps_of probe exists; parity rows over ProgHOL 64 in Flapjack/Test/PanPropsExpsOfParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "localised_exp_real_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "localisedExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.70; exact HOL panProps$localised_exp (panPropsScript.sml:1362-1364). Lean `localisedExpHOL {width : Nat} [NeZero width] : ExpHOL width \u2192 Bool := everyExpHOL (fun e => match e with | .var .local _ => true | .var .global _ => false | _ => true)`. HOL defines `localised_exp = every_exp (\\e. case e of Var tp _ => tp = Local | _ => T)`; the only rejecting pattern is a global variable. Carrier is exact MlString/width-indexed ExpHOL width; [NeZero width] models HOL's positive word dimension. Direct rows: everyExp parity (Flapjack/Test/PanPropsEveryExpParity.lean) and Flapjack/Test/PanPropsLocalisedParity.lean."
+  },{
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "nameless_exp_real_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "namelessExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.72; exact HOL panProps$nameless_exp (panPropsScript.sml:1371-1373). Lean `namelessExpHOL {width : Nat} [NeZero width] : ExpHOL width \u2192 Bool := everyExpHOL (fun e => match e with | .nstruct _ _ => false | .nfield _ _ => false | _ => true)`. HOL defines `nameless_exp = every_exp (\\e. case e of NStruct _ _ => F | NField _ _ => F | _ => T)`; structural name introduction is rejected. Carrier exact over ExpHOL width; [NeZero width] models HOL's positive word dimension. Parity: Flapjack/Test/PanPropsLocalisedParity.lean."
+  },{
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "localised_prog_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "localisedProgHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.74; exact HOL panProps$localised_prog (panPropsScript.sml:1380-1406) over the MlString/width-indexed ProgHOL width carrier, clause for clause: skip/break/continue/tick/annot true; Dec/Seq/If/While/Store/Store32/StoreByte/ExtCall/Return/ShmMemStore/ShmMemLoad as in HOL; Call conjoins `EVERY localised_exp args` (rendered everyExpListHOL localisedExpHOL), the optional handler body, and rejects a global destination; DecCall; Assign Local/Global; Primitive. `localised_exp` is the exact tagged localisedExpHOL. Carrier exact; [NeZero width] models HOL's positive word dimension. Parity: Flapjack/Test/PanPropsLocalisedParity.lean. The production String-carrier `Flapjack.localisedProg` (PanLocalised.lean) remains untagged documented_mismatch."
+  },{
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "opt_mmap_eq_some_helper",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "optMmapEqSomeHelper",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.89; exact HOL [local] helper panProps$opt_mmap_eq_some_helper (panPropsScript.sml:1575-1582): `OPT_MMAP f xs = SOME zs /\\ (!x. MEM x xs ==> !y. f x = SOME y ==> g x = SOME y) ==> OPT_MMAP g xs = SOME zs`. Lean `optMmapEqSomeHelper {\u03b1 \u03b2} (f g : \u03b1 \u2192 Option \u03b2) : \u2200 xs zs, xs.mapM f = some zs \u2192 (\u2200 x \u2208 xs, \u2200 y, f x = some y \u2192 g x = some y) \u2192 xs.mapM g = some zs`. HOL OPT_MMAP is the repository's List.mapM for Option (cf. tagged OPT_MMAP_MEM_IMP); the statement is fully polymorphic, so no carrier side condition. Parity: Flapjack/Test/PanPropsLocalisedParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",

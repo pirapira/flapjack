@@ -4473,6 +4473,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "fix_clock_IMP_LESS_EQ",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ClockExact.lean",
+    "lean_name": "fixClockHOLExact_IMP_LESS_EQ",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem fix_clock_IMP_LESS_EQ (panSemScript.sml:451-457) is !x. fix_clock s x = (res,s1) ==> s1.clock <= s.clock, universally quantified in the old state s, the result res of any type, the new state s1 and the pair x; over the exact MlString-keyed PanSemStateExact carrier and with no extra hypotheses; verified via the untagged fixClockHOLExact_clock_le and the build-checked fixture in PanSemClockExactParity)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "lookup_kvar_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "lookupKvarHOLExact",
@@ -4550,6 +4558,14 @@
     "lean_name": "lookupCodeHOLExact",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL lookup_code (panSemScript.sml:458-467) over the exact mlstring-keyed code map: MlS funname key, ValueHOL arguments, ALL_DISTINCT (MAP FST vshapes) as propositional Nodup, LIST_REL as length equality plus zipped pointwise shapeEqHOL (bridge shapeEqHOL_eq_true), and FEMPTY |++ ZIP (MAP FST vshapes,args) as the left-to-right =-keyed function update; direct rows lookup_code_ok/bad_arg/dup_param in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "evaluate_decls_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/EvaluateDeclsExact.lean",
+    "lean_name": "evaluateDeclsHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL panSemScript.sml:814-837 evaluate_decls_def clauses [] / Name / Decl (eval under locals:=FEMPTY, requires sh = shape_of res, binds globals |+ (v,res)) / Function (EVERY is_wf_shape o SND params and is_wf_shape return, binds code |+ (name,(params,body,return))) / ExnDecl (requires eshapes lookup = NONE and is_wf_shape, binds eshapes |+ (eid,sh)); exact MlString-keyed PanSemStateExact with tagged evalHOLExact/isWfShapeExactHOL/shapeEqHOL; direct HOL rows in scripts/hol-probes/pan_evaluate_decls_probe.out reproduced by Flapjack/Test/PanSemEvaluateDeclsExactParity.lean)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -9510,5 +9526,13 @@
     "lean_name": "crepExpVars_of_mem_loadShapeW",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL crepPropsScript.sml:215. Uses the exact loadShapeBytes port of load_shape_def with the fixed stride bytes_in_word, width-indexed over CrepExp (BitVec width); var_cexp is crepExpVars. Oracle row vels in scripts/hol-probes/crep_props_assigned_vars_probe.out, reproduced by Flapjack/Test/CrepPropsAssignedVarsParity.lean.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
+    "hol_name": "fm_update_diff_vars",
+    "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",
+    "lean_name": "fm_update_diff_vars",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL pan_commonPropsScript.sml:780 states a <> b ==> fm |+ (a,a') |+ (b,b') |+ (a,a') |+ (b,b'') = fm |+ (a,a') |+ (b,b'') over fmap; the Lean theorem is the same FUPDATE chain over FiniteMap with the distinct-key hypothesis, and the oracle rows fmdv_eq_1/fmdv_eq_2/fmdv_eq_3/fmdv_lhs_a/fmdv_lhs_b/fmdv_lhs_absent in scripts/hol-probes/pan_common_props_fm_update_diff_vars_probe.out are reproduced by Flapjack/Test/PanCommonPropsZipDisjointParity.lean)"
   }
 ]

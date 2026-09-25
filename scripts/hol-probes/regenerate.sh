@@ -1667,3 +1667,11 @@ run_probe crep_props_assigned_vars_probeScript.sml crep_props_assigned_vars_prob
   avnda vels \
   "$cake_dir/pancake/semantics/crepPropsScript.sml" \
   "$cake_dir/pancake/semantics"
+
+# The pan_commonProps fm_update_diff_vars probe observes that updating a finite
+# map at `a`, then a distinct `b`, then `a`, then `b` collapses to one update
+# at each key (pan_commonPropsScript.sml:780).
+run_probe pan_common_props_fm_update_diff_vars_probeScript.sml pan_common_props_fm_update_diff_vars_probe.out \
+  fmdv_eq_1 fmdv_lhs_absent \
+  "$cake_dir/pancake/semantics/pan_commonPropsScript.sml" \
+  "$cake_dir/pancake/semantics"

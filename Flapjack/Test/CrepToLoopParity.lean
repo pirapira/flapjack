@@ -879,4 +879,65 @@ example {α : Type} (a : Nat) (b : α) (tree : Spt α) :
     sptInsert a b (sptInsert a b tree) = sptInsert a b tree :=
   sptInsert_insert_eq a b tree
 
+/-- HOL `list_insert_insert` oracle rows (`lii_*` in
+    `scripts/hol-probes/crep_to_loop_list_insert2_probe.out`): moving a lone
+    `insert` across `list_insert` preserves the tree both for a non-member and a
+    member key, and the inserted key reads back while neighbours and absent keys
+    are unchanged. -/
+example :
+    sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet)) =
+      sptListInsert [3, 4] (sptInsert 5 () (Spt.ln : NumSet)) :=
+  sptListInsert_insert 5 [3, 4] (Spt.ln : NumSet)
+
+example :
+    sptInsert 3 () (sptListInsert [3, 4] (Spt.ln : NumSet)) =
+      sptListInsert [3, 4] (sptInsert 3 () (Spt.ln : NumSet)) :=
+  sptListInsert_insert 3 [3, 4] (Spt.ln : NumSet)
+
+example :
+    sptLookup 5 (sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet))) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 4 (sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet))) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 7 (sptInsert 5 () (sptListInsert [3, 4] (Spt.ln : NumSet))) = none := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+/-- HOL `list_insert_append` oracle rows (`lia_*` in
+    `scripts/hol-probes/crep_to_loop_list_insert2_probe.out`): inserting a
+    concatenation equals inserting the two lists in turn, with each member
+    present and an absent key still missing. -/
+example :
+    sptListInsert ([3, 4] ++ [5, 6]) (Spt.ln : NumSet) =
+      sptListInsert [3, 4] (sptListInsert [5, 6] (Spt.ln : NumSet)) :=
+  sptListInsert_append [3, 4] [5, 6] (Spt.ln : NumSet)
+
+example :
+    sptLookup 6 (sptListInsert ([3, 4] ++ [5, 6]) (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 3 (sptListInsert ([3, 4] ++ [5, 6]) (Spt.ln : NumSet)) = some () := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+example :
+    sptLookup 7 (sptListInsert ([3, 4] ++ [5, 6]) (Spt.ln : NumSet)) = none := by
+  simp [sptLookup, sptInsert, sptListInsert]
+
+/-- HOL `list_insert_insert` (`crep_to_loopProofScript.sml:406`): a lone
+    `insert` may be moved to the front of `list_insert` when it keeps the same
+    key and unit value. -/
+example (x : Nat) (xs : List Nat) (tree : NumSet) :
+    sptInsert x () (sptListInsert xs tree) = sptListInsert xs (sptInsert x () tree) :=
+  sptListInsert_insert x xs tree
+
+/-- HOL `list_insert_append` (`crep_to_loopProofScript.sml:414`): inserting a
+    concatenated key list equals inserting the two lists in turn. -/
+example (xs ys : List Nat) (tree : NumSet) :
+    sptListInsert (xs ++ ys) tree = sptListInsert xs (sptListInsert ys tree) :=
+  sptListInsert_append xs ys tree
+
 end Flapjack.Test.CrepToLoopParity

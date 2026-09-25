@@ -7465,6 +7465,38 @@
     "reviewer": "Width-indexed BitVec word port for every positive width: Mul on exactly two words returns their product and every other operator/arity returns none, matching crepSem$crep_op_def. The generic arbitrary-alpha production helper is untagged and definitionally equal on BitVec carriers."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "dec_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean",
+    "lean_name": "decClockCrepSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause HOL dec_clock_def (crepSemScript.sml:145-148) over the finite-support CrepSemHOLState carrier: locals/globals/code are HolFiniteMapExact (finite support by type), so the whole-state quantification matches HOL finite maps; the word dimension is the canonical positive BitVec width model (NeZero width), the same representation accepted for word_lab and crepLang$prog. Direct HOL rows crep_dec_clock_simp_probe.out (clock becomes 4, globals/be/top_addr unchanged)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "fix_clock_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean",
+    "lean_name": "fixClockCrepSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause HOL fix_clock_def (crepSemScript.sml:150-152) over the finite-support CrepSemHOLState carrier: the result is polymorphic in the unconstrained res component and only the clock is clamped to the old clock when it is lower. Direct HOL rows crep_fix_clock_probe.out (old 5/new 9 clamps to 5, old 5/new 3 stays 3, locals preserved)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "fix_clock_IMP_LESS_EQ",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean",
+    "lean_name": "fixClockCrepSemHOL_IMP_LESS_EQ",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause HOL fix_clock_IMP_LESS_EQ (crepSemScript.sml:155-158) over the finite-support CrepSemHOLState carrier: for any step pair, if fix_clock returns (res, s1) then s1.clock <= s.clock. No extra hypotheses beyond HOL."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "mem_load_def",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean",
+    "lean_name": "memLoadCrepSemHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Clause-for-clause HOL mem_load_def (crepSemScript.sml:48-51) over the finite-support CrepSemHOLState carrier: a total word -> word_lab memory guarded by the memaddrs set (rendered as a Prop with a DecidablePred instance), returning SOME of the cell in-domain and NONE otherwise. Direct HOL rows crep_mem_load_probe.out (valid SOME Word 7, invalid NONE, wider domain SOME Word 7)."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",

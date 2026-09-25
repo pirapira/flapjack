@@ -88,22 +88,6 @@
     "reviewer": "Codex (placed in the asm counterpart; compared all eight source constructors, signed and unsigned order, tests, and negations against word_cmp_def and crep_eval_cmp_rv64_probe.out)"
   },
   {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "flatten_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
-    "lean_name": "panSemFlattenHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison with one-constructor word_lab)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "pan_primop_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/Primop.lean",
-    "lean_name": "panPrimopHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source cases and direct HOL-EVAL oracle)"
-  },
-  {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "crep_primop_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Primop.lean",

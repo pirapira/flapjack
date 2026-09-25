@@ -623,7 +623,7 @@ run_probe pan_sem_assign_memory_probeScript.sml pan_sem_assign_memory_probe.out 
 # The DecCall probe observes the successful continuation, the wrong-shape
 # rejection, the failing-callee rejection, and the unknown-function rejection.
 run_probe pan_sem_deccall_error_probeScript.sml pan_sem_deccall_error_probe.out \
-  deccall_ok_result nested_deccall_bad_shape_parameter \
+  deccall_ok_result nested_deccall_bad_shape_state_exact \
   "$cake_dir/pancake/semantics/panSemScript.sml" \
   "$cake_dir/pancake/semantics"
 # The Call argument probe observes that a failing argument rejects the call

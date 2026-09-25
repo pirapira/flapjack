@@ -63,6 +63,8 @@ val baseState = ``(^s with <| clock := 5;
 
 val errState = ``(^baseState with code := ^errCode)``;
 val nestedState = ``(^baseState with <| clock := 10; code := ^nestedCode |>)``;
+val nestedExpectedState = ``(^nestedState with <| clock := 8;
+  locals := FEMPTY |+ (strlit "p", ValWord (42w:8 word)) |>)``;
 
 val _ = print_eval "deccall_ok_result"
   ``FST (panSem$evaluate
@@ -100,3 +102,7 @@ val _ = print_eval "nested_deccall_bad_shape_parameter"
   ``FLOOKUP (SND (panSem$evaluate
       (panLang$DecCall (strlit "answer") (panLang$Named (strlit "Other")) (strlit "bad")
         [panLang$Const (42w:8 word)] panLang$Skip, ^nestedState))).locals (strlit "p")``;
+val _ = print_eval "nested_deccall_bad_shape_state_exact"
+  ``SND (panSem$evaluate
+      (panLang$DecCall (strlit "answer") (panLang$Named (strlit "Other")) (strlit "bad")
+        [panLang$Const (42w:8 word)] panLang$Skip, ^nestedState)) = ^nestedExpectedState``;

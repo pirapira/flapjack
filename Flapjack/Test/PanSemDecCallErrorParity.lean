@@ -105,7 +105,10 @@ def nestedBadShapeResult := decCallEvaluate 10 nestedBadShapeCode nestedBadShape
 
 /- Exact equality of the complete source post-state. This checks the whole
     local function, globals, memory, FFI, clock, code, structs, domains, and
-    source addresses carried by `PanSemState`, not selected map lookups. -/
+    source addresses carried by `PanSemState`, not selected map lookups. The
+    direct HOL probe also EVALs a Boolean comparison of its entire returned
+    `SND` against the corresponding `nestedState` update; the oracle row is
+    `nested_deccall_bad_shape_state_exact=T`. -/
 set_option linter.unusedSimpArgs false in
 theorem nestedBadShapeResultExact : nestedBadShapeResult = some
     ((.control (.error nestedBadShapeLocals (fun _ => none) (fun _ => none)

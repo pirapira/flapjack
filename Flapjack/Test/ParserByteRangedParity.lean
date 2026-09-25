@@ -330,5 +330,18 @@ example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PT
 example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PTreesSafe p) :
     Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.rptHere p) :=
   Flapjack.Parser.rptHere_treesSafe hp
+/-- `consume` contributes no tree and preserves the token invariant. -/
+example (expected : Flapjack.Parser.Token) (described : String) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.consume expected described) :=
+  Flapjack.Parser.consume_treesSafe expected described
+
+/-- The `==`/`!=` operator rule is tree-safe. -/
+example : Flapjack.Parser.PTreesSafe Flapjack.Parser.gEqOps :=
+  Flapjack.Parser.gEqOps_treesSafe
+
+/-- The `RetNT` rule is tree-safe. -/
+example : Flapjack.Parser.PTreesSafe Flapjack.Parser.gRet :=
+  Flapjack.Parser.gRet_treesSafe
+
 
 end Flapjack.Test.ParserByteRangedParity

@@ -495,6 +495,36 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
             self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pansem_mem_and_shmem_alt_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        cases = {
+            ("Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean",
+             "panMemLoad32HOL_eq_alt"):
+                ("mem_load_32_alt", "flapjack-pxn.18.3.6.9.27"),
+            ("Flapjack/Pancake/Semantics/PanSem/MemStore32Alt.lean",
+             "panMemStore32HOL_eq_alt"):
+                ("mem_store_32_alt", "flapjack-pxn.18.3.6.9.29"),
+            ("Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
+             "shMemLoadHOLExact"):
+                ("sh_mem_load_def", "flapjack-pxn.18.3.7.1.3.1.1.2.5"),
+            ("Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
+             "shMemStoreHOLExact"):
+                ("sh_mem_store_def", "flapjack-pxn.18.3.7.1.3.1.1.2.5"),
+        }
+        for key, (hol_name, dep) in cases.items():
+            record = inventory[key]
+            self.assertEqual(
+                (record["hol_path"], record["hol_name"]),
+                ("cakeml/pancake/semantics/panSemScript.sml", hol_name),
+            )
+            self.assertEqual(record["statement_status"], "documented_mismatch")
+            self.assertIn(dep, record["reviewer"])
+            self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+            self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_global_rename_function_name_polymorphic_hol_mismatch_is_documented(
         self,
     ):

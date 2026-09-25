@@ -292,6 +292,50 @@ DOCUMENTED_MISMATCHES = {
         "a HOL finite map. Exact finite-support replacement tracked by "
         "flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3). "
     ),
+    ("Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean", "panMemLoad32HOL_eq_alt"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "mem_load_32_alt",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.13; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL mem_load_32_alt "
+        "(panSemScript.sml:108-135) restates mem_load_32 for an arbitrary 'a word "
+        "memory. panMemLoad32HOL_eq_alt (MemLoad32Alt.lean:163) proves the same "
+        "OR/shift form but is width-64-specialized (RiscV.Word 64) and the byte "
+        "codec get_byte lives in HOL stdlib outside the cakeml submodule. Exact "
+        "arbitrary-width port tracked by flapjack-pxn.18.3.6.9.27. "
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/MemStore32Alt.lean", "panMemStore32HOL_eq_alt"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "mem_store_32_alt",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.22; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL mem_store_32_alt "
+        "(panSemScript.sml:344-378) restates mem_store_32 with shifted-byte writes "
+        "for an arbitrary 'a word memory. panMemStore32HOL_eq_alt "
+        "(MemStore32Alt.lean:124) proves the same agreement but only for RiscV.Word 64, "
+        "and get_byte/set_byte live in HOL stdlib. Exact arbitrary-width port tracked "
+        "by flapjack-pxn.18.3.6.9.29. "
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean", "shMemLoadHOLExact"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "sh_mem_load_def",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.42; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL sh_mem_load (panSemScript.sml:510-527) "
+        "calls call_FFI on s.ffi and updates set_kvar/empty_locals over panSem$state "
+        "finite maps. shMemLoadHOLExact (ShMemExact.lean:51) keeps the same branches "
+        "and returns but its PanSemStateExact input admits arbitrary function-valued "
+        "map fields. Exact finite-support replacement tracked by "
+        "flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3). "
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean", "shMemStoreHOLExact"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "sh_mem_store_def",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.43; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL sh_mem_store "
+        "(panSemScript.sml:529-547) calls call_FFI with word_to_bytes and updates the "
+        "ffi field over panSem$state finite maps. shMemStoreHOLExact (ShMemExact.lean:79) "
+        "keeps the same branches and returns but its PanSemStateExact input admits "
+        "arbitrary function-valued map fields. Exact finite-support replacement tracked "
+        "by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3). "
+    ),
     ("Flapjack/Pancake/Semantics/PanProps.lean", "resVarHOLExact_flookup_some_eq_lookup"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
         "flookup_res_var_some_eq_lookup",

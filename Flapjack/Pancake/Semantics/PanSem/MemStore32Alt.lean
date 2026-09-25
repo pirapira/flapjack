@@ -15,7 +15,8 @@ import Flapjack.Pancake.Semantics.PanSem.MemLoad32Alt
     arbitrary word width while this port is specialized to `RiscV.Word 64`
     (`MemLoad32Alt.lean`'s `mem_load_32_alt` carries the same caveat), and the
     underlying `get_byte`/`set_byte` live in HOL's standard library outside the
-    CakeML repository. -/
+    CakeML repository. The exact arbitrary-width port is tracked by
+    `flapjack-pxn.18.3.6.9.29`. -/
 
 namespace Flapjack
 

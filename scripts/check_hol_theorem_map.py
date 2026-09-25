@@ -72,6 +72,17 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Proofs/PanStructs.lean", "structInfosOk"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "struct_infos_ok_def",
+        "flapjack-main and flapjack-seven-luna (source comparison with "
+        "pan_structsProofScript.sml:68-76: four predicate clauses match, but "
+        "HOL uses mlstring names and a fields/size-only struct_info, while "
+        "production StructContext uses String identifiers and StructInfo "
+        "adds a shapedFields cache. The different record/context carriers "
+        "cannot be covered by names_as_string. Keep the analogue untagged "
+        "pending exact-carrier work flapjack-pxn.18.3.5.8.)"
+    ),
     ("Flapjack/Pancake/PanGlobals.lean", "compileProgCake"): (
         "cakeml/pancake/pan_globalsScript.sml",
         "compile_def",

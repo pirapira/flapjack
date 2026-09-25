@@ -4456,7 +4456,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structInfosOk",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (P0 source review: the four predicate clauses correspond to HOL's distinct field names, distinct structure names, suffix shape well-formedness, and context-based size; there are no extra hypotheses. It remains untagged because HOL's (stcname # struct_info) list uses mlstring identifiers and a fields/size-only record, while this production StructContext uses String for struct, field, and Named-shape identifiers and cache-augmented StructInfo with shapedFields. The body also uses production String equality/lookups. names_as_string cannot account for the distinct context/record carrier; use exact MlS/ShapeHOL/StructContextExact carriers for a faithful counterpart. See the declaration-local note and exact-carrier dependency flapjack-pxn.18.3.5.8. No byte-observable identifier output or executable behavior is established by this invariant."
+    "reviewer": "flapjack-main and flapjack-seven-luna (source comparison with pan_structsProofScript.sml:68-76: four predicate clauses match, but HOL uses mlstring names and a fields/size-only struct_info, while production StructContext uses String identifiers and StructInfo adds a shapedFields cache. The different record/context carriers cannot be covered by names_as_string. Keep the analogue untagged pending exact-carrier work flapjack-pxn.18.3.5.8.)"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

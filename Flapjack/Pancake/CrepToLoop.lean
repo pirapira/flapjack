@@ -230,12 +230,12 @@ def progIf [OfNat α 0] [OfNat α 1]
        (.assign condition (.const (0 : α)))
        (loopListInsert [condition, rightRegister] live)]
 
-/-- Width-indexed exact HOL port of `crep_to_loop$prog_if`
-    (`prog_if_def`, `crep_to_loopScript.sml:34`). The HOL statement is indexed
-    by the word length (`Const 1w`/`Const 0w` are `'a word`), while the generic
-    `progIf` above is polymorphic in the element type; the wrapper carries
-    `[NeZero width]` because HOL word types have positive `dimindex`. The
-    generic `progIf` stays untagged.
+/-- Width-specialized Flapjack analogue of `crep_to_loop$prog_if`
+    (`prog_if_def`, `crep_to_loopScript.sml:34`). The word expressions have the
+    right positive-width carrier, but the result uses production `LoopProg`,
+    whose `ffi` constructor stores Lean `String` instead of HOL `mlstring`; this
+    declaration is therefore intentionally untagged. `HolLoopProg` is the exact
+    program carrier.
 
     Executed-path tracking (AGENTS porting rule): production does not call
     `progIf`; the `.cmp` case of `loopCompileExp` inlines the identical
@@ -243,7 +243,6 @@ def progIf [OfNat α 0] [OfNat α 1]
     with the same `loopListInsert` live set), and it is generic over the word
     element type, so it cannot call this width-indexed wrapper without the
     deferred width-indexing migration (`flapjack-pxn.18.3.5.3.1`). -/
-@[hol "cakeml/pancake/crep_to_loopScript.sml" "prog_if_def"]
 def progIfW {width : Nat} [NeZero width]
     (operator : Cmp) (first second : List (LoopProg (BitVec width)))
     (left right : LoopExp (BitVec width)) (condition rightRegister : Nat)

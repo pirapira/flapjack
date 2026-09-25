@@ -332,6 +332,28 @@ theorem evalCrepRuntimeExp_exactCrepSemHOLState_projection
       simp [evalCrepHolFiniteDimensionExp,
         CrepSemHOLState.toExpressionEvaluatorState_toHolFiniteBitVecState]
 
+/-- All-dimension `Var` constructor correspondence from the explicit
+finite-index source evaluator to the exact BitVec state evaluator. This uses
+the state's actual local lookup and transports the complete `Option word`
+result; it introduces no successful-evaluation premise. It is Flapjack
+evaluator support, not a standalone HOL declaration: the selected
+`HolFiniteDimension` remains a representation witness. -/
+theorem evalCrepHolFiniteWordSourceExp_var_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (name : Nat) :
+    ((evalCrepHolFiniteWordSourceExp dimension state (.var name)).map
+        PanWordLab.word).map (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension) (.var name) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  cases hLocal : state.locals name with
+  | none => simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+      evalCrepHolExp, CrepHolState.toHolFiniteBitVecState, hLocal]
+  | some cell => cases cell with
+      | word value => simp [evalCrepHolFiniteWordSourceExp,
+          evalCrepHolExpWordLab, evalCrepHolExp,
+          CrepHolState.toHolFiniteBitVecState, hLocal, mapCrepHolWordLab,
+          panTheWord]
+
 /-- The all-width finite-word source `Load32` clause over the exact HOL-shaped
 state reduces to the tagged HOL `mem_load_32_def` port on its direct BitVec
 projection. This isolates the memory cell, domain, and endian fields from the

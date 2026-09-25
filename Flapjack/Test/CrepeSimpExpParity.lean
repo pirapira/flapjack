@@ -361,6 +361,31 @@ example :
       evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.var 0) :=
   evalCrepRuntimeExp_finiteDimension_var boolWordDimension boolDimensionHolState 0
 
+/-- The arbitrary-index source evaluator's full `Word` result agrees with the
+direct BitVec state evaluator through a noncanonical Bool-index dimension,
+for both a local hit and a local miss. -/
+example :
+    ((evalCrepHolFiniteWordSourceExp boolWordDimension
+      boolDimensionHolState (.var 0)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec boolWordDimension)) =
+      evalCrepHolExpWordLab
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (.var 0) :=
+  evalCrepHolFiniteWordSourceExp_var_toHolEval
+    boolWordDimension boolDimensionHolState 0
+
+example :
+    ((evalCrepHolFiniteWordSourceExp boolWordDimension
+      { boolDimensionHolState with locals := fun _ => none }
+      (.var 0)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec boolWordDimension)) =
+      evalCrepHolExpWordLab
+        ({ boolDimensionHolState with locals := fun _ => none }
+          |>.toHolFiniteBitVecState boolWordDimension)
+        (.var 0) :=
+  evalCrepHolFiniteWordSourceExp_var_toHolEval
+    boolWordDimension { boolDimensionHolState with locals := fun _ => none } 0
+
 example :
     evalCrepRuntimeExp
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.loadGlob 0) =

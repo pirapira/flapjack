@@ -491,6 +491,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_var_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-dimension Var evaluator bridge from the explicit finite-word source evaluator to the exact BitVec state evaluator; it preserves lookup failure/success without premises, but does not identify arbitrary HOL finite_index instances with the chosen dimension."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepSemHOLStateSource_load32_eq_memLoad32HOL",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only Load32 clause transport for the all-width source evaluator to the tagged mem_load_32_def port over the direct BitVec projection; the enclosing recursive eval_def relation remains open."

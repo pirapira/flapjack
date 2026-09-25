@@ -4,6 +4,7 @@ import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanStatic
 import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.CrepLang.Exp
+import Flapjack.Pancake.CrepLang.Prog
 
 /-!
 Executable expression lowering from Flapjack to Crepe.
@@ -179,6 +180,84 @@ def expHdl {α : Type u} [BEq String]
 theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
     expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
+
+/-! Exact-carrier port of `pan_to_crep$exp_hdl`
+    (`cakeml/pancake/pan_to_crepScript.sml:106-112`).
+
+    HOL's equations are
+    `exp_hdl fm v = case FLOOKUP fm v of
+      | NONE => Skip
+      | SOME (vshp, ns) => nested_seq (MAP2 Assign ns (load_globals 0w (LENGTH ns)))`.
+    The exact Lean statement uses the faithful `MlString`-keyed finite map, the
+    `mlstring`-backed `ShapeHOL`, and the width-indexed `CrepProgHOL` with
+    `[NeZero width]`, so every carrier matches HOL. The executed production
+    helper `expHdlFiniteMap` stays untagged (it keys by `VarName = String`); the
+    narrow kernel bridge `crepProgToHOL_expHdlFiniteMap` relates the two through
+    the codecs on every byte-ranged name. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
+def expHdlHOL {width : Nat} [NeZero width]
+    (fm : FiniteMap Flapjack.Pancake.PanLang.MlS
+      (Flapjack.Pancake.PanLang.ShapeHOL × List Nat))
+    (v : Flapjack.Pancake.PanLang.MlS) : CrepProgHOL width :=
+  match FLOOKUP fm v with
+  | none => .skip
+  | some (_, names) =>
+      crepNestedSeqHOL
+        (panMap2 (fun destination source => .assign destination source)
+          names (loadGlobalsHOL (0 : BitVec 5) names.length))
+
+/-- Codec from the production `String`-keyed finite map to the exact
+    `MlString`-keyed HOL finite map. Names are encoded by the total
+    `MlString.ofString`, and each stored shape by `shapeToHOL`; the flattened
+    word lists are unchanged. Flapjack-only representation bridge. -/
+def finiteMapToHOL (fm : FiniteMap String (Shape × List Nat)) :
+    FiniteMap Flapjack.Pancake.PanLang.MlS
+      (Flapjack.Pancake.PanLang.ShapeHOL × List Nat) :=
+  fun key =>
+    (fm (Flapjack.Basis.Pure.MlString.toStringOfBytes key)).map
+      (fun pair => (Flapjack.Pancake.PanLang.shapeToHOL pair.1, pair.2))
+
+/-- Cake's `MAP2` commutes with the program/expression codecs: mapping the
+    production assignment list into the exact carriers equals assigning over the
+    mapped value list. -/
+theorem panMap2_assign_map {width : Nat} [NeZero width]
+    (names : List Nat) (values : List (CrepExp (BitVec width))) :
+    (panMap2
+        (fun destination source =>
+          (CrepProg.assign destination source : CrepProg (BitVec width)))
+        names values).map crepProgToHOL
+      = panMap2
+          (fun destination source =>
+            (CrepProgHOL.assign destination source : CrepProgHOL width))
+          names (values.map crepExpToHOL) := by
+  induction names generalizing values with
+  | nil => simp [panMap2]
+  | cons name names ih =>
+      cases values with
+      | nil => simp [panMap2]
+      | cons value values => simp [panMap2, crepProgToHOL, ih]
+
+/-- Narrow kernel bridge: on every byte-ranged variable name, encoding the
+    production finite map and running the exact `expHdlHOL` agrees with the
+    `crepProgToHOL` image of the executed `expHdlFiniteMap`. The production
+    helper remains the executed one; routing the executed handler setup through
+    the exact carrier is tracked by `flapjack-pxn.18.3.5.8.13`. -/
+theorem crepProgToHOL_expHdlFiniteMap {width : Nat} [NeZero width]
+    (fm : FiniteMap String (Shape × List Nat)) (v : String)
+    (hv : ∀ c ∈ v.toList, c.toNat < 256) :
+    crepProgToHOL (expHdlFiniteMap (α := BitVec width) fm v)
+      = expHdlHOL (finiteMapToHOL fm)
+          (Flapjack.Basis.Pure.MlString.ofString v) := by
+  unfold expHdlFiniteMap expHdlHOL finiteMapToHOL
+  simp only [FLOOKUP]
+  rw [Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes v hv]
+  cases h : fm v with
+  | none => simp [crepProgToHOL]
+  | some pair =>
+      obtain ⟨shape, names⟩ := pair
+      simp only [Option.map_some]
+      rw [crepProgToHOL_crepNestedSeqHOL, panMap2_assign_map,
+        crepExpMapToHOL_loadGlobals]
 
 /-! Flapjack-specific analogue of `pan_to_crep$ret_var`
     (`cakeml/pancake/pan_to_crepScript.sml:114-119`).

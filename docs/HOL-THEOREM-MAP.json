@@ -9334,5 +9334,29 @@
     "lean_name": "shMemStoreHOLExact",
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
+    "hol_name": "assigned_vars_seq_split",
+    "lean_path": "Flapjack/Pancake/LoopLive.lean",
+    "lean_name": "loopAssignedVars_seqW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assigned_vars_seq_split at loopPropsScript.sml:890: HOL !q p. assigned_vars (Seq p q) = assigned_vars p ++ assigned_vars q; loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
+    "hol_name": "assigned_vars_nested_seq_split",
+    "lean_path": "Flapjack/Pancake/LoopLive.lean",
+    "lean_name": "loopAssignedVars_nestedSeq_appendW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assigned_vars_nested_seq_split at loopPropsScript.sml:880: HOL !p q. assigned_vars (nested_seq (p ++ q)) = assigned_vars (nested_seq p) ++ assigned_vars (nested_seq q); loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
+    "hol_name": "assigned_vars_nested_assign",
+    "lean_path": "Flapjack/Pancake/LoopLive.lean",
+    "lean_name": "loopAssignedVars_loopAssignPairsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assigned_vars_nested_assign at loopPropsScript.sml:897: HOL !xs ys. LENGTH xs = LENGTH ys ==> assigned_vars (nested_seq (MAP2 Assign xs ys)) = xs; HOL MAP2 Assign xs ys rendered as loopAssignPairs xs ys; loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
   }
 ]

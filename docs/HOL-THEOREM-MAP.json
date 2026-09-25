@@ -9326,5 +9326,53 @@
     "lean_name": "loopAssignedVars_mapIdxAssign",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (statement compared against assigned_vars_MAPi_Assign at crep_to_loopProofScript.sml:355: HOL !les offset. assigned_vars (nested_seq (MAPi (\\n. loopLang$Assign (n + offset)) les)) = GENLIST ($+ offset) (LENGTH les); loopLang assigned_vars/nested_seq rendered as the untagged loopAssignedVars/loopNestedSeq ports, HOL MAPi rendered literally as List.mapIdx and GENLIST ($+ offset) as (List.range les.length).map (fun n => n + offset); width-indexed over List (LoopExp (BitVec width)) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; the untagged bridge loopAssignPairs_loopTempNames_eq_mapIdx relates mapIdx to the loopAssignPairs/loopTempNames numbering. Direct HOL-EVAL rows avma_nil/avma_one/avma_two/avma_three/avma_offset_zero in scripts/hol-probes/crep_to_loop_assigned_vars_mapidx_probe.out reproduced by the width-indexed examples in Flapjack/Test/LoopAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "sh_mem_load_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
+    "lean_name": "shMemLoadHOLExact",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "sh_mem_store_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
+    "lean_name": "shMemStoreHOLExact",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
+    "hol_name": "assigned_vars_seq_split",
+    "lean_path": "Flapjack/Pancake/LoopLive.lean",
+    "lean_name": "loopAssignedVars_seqW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assigned_vars_seq_split at loopPropsScript.sml:890: HOL !q p. assigned_vars (Seq p q) = assigned_vars p ++ assigned_vars q; loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
+    "hol_name": "assigned_vars_nested_seq_split",
+    "lean_path": "Flapjack/Pancake/LoopLive.lean",
+    "lean_name": "loopAssignedVars_nestedSeq_appendW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assigned_vars_nested_seq_split at loopPropsScript.sml:880: HOL !p q. assigned_vars (nested_seq (p ++ q)) = assigned_vars (nested_seq p) ++ assigned_vars (nested_seq q); loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/loopPropsScript.sml",
+    "hol_name": "assigned_vars_nested_assign",
+    "lean_path": "Flapjack/Pancake/LoopLive.lean",
+    "lean_name": "loopAssignedVars_loopAssignPairsW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against assigned_vars_nested_assign at loopPropsScript.sml:897: HOL !xs ys. LENGTH xs = LENGTH ys ==> assigned_vars (nested_seq (MAP2 Assign xs ys)) = xs; HOL MAP2 Assign xs ys rendered as loopAssignPairs xs ys; loopLang assigned_vars/nested_seq/Seq rendered as the untagged loopAssignedVars/loopNestedSeq ports; width-indexed over LoopProg (BitVec width) with [NeZero width] because HOL word types have positive dimindex, generic-alpha loopLang stays untagged; direct HOL-EVAL rows in scripts/hol-probes/loop_props_assigned_vars_probe.out reproduced by the width-indexed fixture in Flapjack/Test/LoopAssignedVarsParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "decs_stcnames_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/DeclContextExact.lean",
+    "lean_name": "decsStcnamesHOLExact",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
   }
 ]

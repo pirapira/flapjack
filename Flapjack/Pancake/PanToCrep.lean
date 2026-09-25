@@ -51,7 +51,12 @@ def cexpHeads : List (List (CrepExp α)) → Option (List (CrepExp α))
       | _, none => none
       | expression :: _, some heads => some (expression :: heads)
 
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "comp_field_def"]
+/-- Flapjack-specific analogue of HOL `comp_field_def`. This implementation
+    uses production `Shape`, whose named fields are Lean `String`, and a
+    generic word carrier `α`; HOL `shape` names are `mlstring` and the result
+    `crepLang$exp` is indexed by a positive word width. It is therefore not an
+    exact HOL declaration and intentionally has no tag until both carriers are
+    represented exactly. -/
 def compileField [OfNat α 0] (index : Nat) :
     List Shape → List (CrepExp α) → List (CrepExp α) × Shape
   | [], _ => ([.const 0], .one)
@@ -143,12 +148,14 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
     expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
 
-/-! Faithful port of `pan_to_crep$ret_var` from
-    `cakeml/pancake/pan_to_crepScript.sml:114-119`.
+/-! Flapjack-specific analogue of `pan_to_crep$ret_var`
+    (`cakeml/pancake/pan_to_crepScript.sml:114-119`).
 
     A return variable exists only for a one-word shape.  Pancake's `oHD`
-    operation supplies the first flattened destination when one is present. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_var_def"]
+    operation supplies the first flattened destination when one is present.
+    This declaration consumes production `Shape`, whose `Named` field is a
+    Lean `String`; HOL's shape uses an `mlstring` name. The equations mirror
+    HOL, but the input carrier differs, so this declaration is untagged. -/
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?
@@ -170,12 +177,14 @@ def shapeVars (shapes : List Shape) (values : List α) : List (Shape × List α)
       (shape, values.take (Shape.shapeSize shape)) ::
         shapeVars rest (values.drop (Shape.shapeSize shape))
 
-/-! Faithful port of `pan_to_crep$ret_hdl` from
-    `cakeml/pancake/pan_to_crepScript.sml:122-127`.
+/-! Flapjack-specific analogue of `pan_to_crep$ret_hdl`
+    (`cakeml/pancake/pan_to_crepScript.sml:122-127`).
 
     Only a multi-word `Comb` needs a handler that copies the returned global
-    words into its flattened local destinations. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_hdl_def"]
+    words into its flattened local destinations. It uses production `Shape`
+    with String-backed named fields and generic `CrepProg α`; HOL uses
+    `mlstring`-named shapes and a word-width-indexed program. It is untagged
+    until those carriers are aligned. -/
 def retHdl [OfNat α 0] [OfNat α 1] [Add α]
     (shape : Shape) (names : List Nat) : CrepProg α :=
   match shape with
@@ -185,12 +194,13 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
       else .skip
   | .named _ => .skip
 
-/-! Faithful port of `pan_to_crep$wrap_rt` from
-    `cakeml/pancake/pan_to_crepScript.sml:131-136`.
+/-! Flapjack-specific analogue of `pan_to_crep$wrap_rt`
+    (`cakeml/pancake/pan_to_crepScript.sml:131-136`).
 
     The empty one-word return slot is normalized to no return slot; every
-    other option is preserved unchanged. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "wrap_rt_def"]
+    other option is preserved unchanged. The production `Shape` nested in the
+    option uses String-backed named fields, while HOL uses `mlstring`; the
+    equations match but the carriers do not, so this declaration is untagged. -/
 def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
   | none => none
   | some (.one, []) => none

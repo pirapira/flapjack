@@ -16,7 +16,7 @@ future exact `evaluate_def` port, not the port itself, and it uses the RV64
 production word carrier.
 
 The expression evaluation reuses `evalPanSemStateExp`, whose executed-path
-agreement with the tagged exact `evalHOL` is proved in
+agreement with the untagged `evalHOL` reference evaluator is established in
 `Flapjack/Pancake/Semantics/PanSemStateEval.lean`.
 -/
 

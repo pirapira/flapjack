@@ -112,9 +112,9 @@ def isAtomInGroup (c : Char) : Bool := "=<>|&+".toList.contains c
 
 /-- ASCII range tests matching HOL `string$isDigit`/`isLower`/`isUpper`/`isAlpha`/`isAlphaNum`
     (`HOL/src/string/stringScript.sml:74-95`). The original Pancake lexer operates on
-    `char list` where HOL `char` has exactly 256 values, so a byte >= 128 is neither a
-    letter nor a digit; Lean's Unicode `Char.isAlpha`/`isDigit`/`isAlphanum` would wrongly
-    accept such codepoints and later truncate them in `MlString.ofString`. -/
+    `char list` where HOL `char` ranges over byte values. These explicit range checks
+    implement those HOL character classes directly; they do not rely on host-language
+    character classification or on the later `MlString.ofString` conversion. -/
 def isDigitAscii (c : Char) : Bool := decide (48 ≤ c.toNat ∧ c.toNat ≤ 57)
 
 def isLowerAscii (c : Char) : Bool := decide (97 ≤ c.toNat ∧ c.toNat ≤ 122)

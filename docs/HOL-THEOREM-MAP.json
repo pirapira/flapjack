@@ -1305,14 +1305,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
-    "hol_name": "lookup_code_def",
-    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/LookupCode.lean",
-    "lean_name": "lookupCodeHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (statement-exact port of crepSemScript.sml:76-84 lookup_code_def over the MlString funname key carrier and width-indexed HolWordLab values: on SOME (parameters, body) with parameters.length = args.length ∧ parameters.Nodup it returns SOME (body, FEMPTY |++ ZIP (parameters, args)), else NONE, matching the HOL FLOOKUP/LENGTH/ALL_DISTINCT case structure; the len argument is retained unused as in HOL). Kernel-checked production bridge lookupCodeHOL_prodToExact transports the production String-keyed code map through toStringOfBytes and PanWordLab.toHolWordLab, proving the exact lookup equals production lookupCrepHolCode on the transported inputs; production executable lookupCrepRuntimeCode still uses the String key carrier (documented representation blocker, parent flapjack-pxn.18.3.5.8). Direct HOL oracle rows lookup_code_valid/missing/arity/duplicate in scripts/hol-probes/crep_lookup_code_probe.out, reproduced in Flapjack/Test/CrepLookupCodeHOLParity.lean. Carrier requires positive width ([NeZero width])."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "dec_clock_def",
     "lean_path": "Flapjack/Pancake/Semantics/CrepSem.lean",
     "lean_name": "decCrepHolClockW",

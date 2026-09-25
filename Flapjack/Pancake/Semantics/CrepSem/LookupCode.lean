@@ -19,9 +19,14 @@ relationship to the production definition.
 
 namespace Flapjack
 
-/-- The exact `lookup_code` code-map carrier: HOL `funname |-> (varname list # 'a crepLang$prog)`
-(`crepSemScript.sml:17,23`), with `funname = mlstring` and the word-indexed
-program. -/
+/-- The `lookup_code` code-map carrier: HOL `funname |-> (varname list # 'a crepLang$prog)`
+(`crepSemScript.sml:17,23`), with the HOL `funname = mlstring` key and the word-indexed
+program.  NOT YET EXACT: the map key is the faithful MlString carrier, but the
+stored code value `CrepProg (BitVec width)` still uses `FunName := String` for its
+`call`/`extCall` names (`Flapjack/Pancake/CrepLang.lean:60-62`), whereas HOL
+`crepLang$prog.Call`/`ExtCall` carry `funname = mlstring`.  The exact code-value
+carrier is tracked by `flapjack-4w9.1`; the exact lookup statement by
+`flapjack-4w9.2`. -/
 abbrev CrepCodeMapExact (width : Nat) : Type :=
   Flapjack.Basis.Pure.MlString.MlString → Option (List Nat × CrepProg (BitVec width))
 
@@ -29,13 +34,20 @@ abbrev CrepCodeMapExact (width : Nat) : Type :=
 abbrev CrepLocalsExact (width : Nat) : Type :=
   FiniteMap Nat (HolWordLab width)
 
-/-- Statement-exact port of HOL `crepSem$lookup_code_def`
-(`crepSemScript.sml:76-84`): look the function up by its `mlstring` name, require
-a duplicate-free declared parameter list of the same length as the supplied
-`word_lab` argument list, and return the body together with the finite map
-`FEMPTY |++ ZIP (parameters, args)`.  The `len` argument is retained from the
-HOL signature, where the definition does not inspect it. -/
-@[hol "cakeml/pancake/semantics/crepSemScript.sml" "lookup_code_def"]
+/-- Structural port of HOL `crepSem$lookup_code_def` (`crepSemScript.sml:76-84`):
+look the function up by its `mlstring` name, require a duplicate-free declared
+parameter list of the same length as the supplied `word_lab` argument list, and
+return the body together with the finite map `FEMPTY |++ ZIP (parameters, args)`.
+The `len` argument is retained from the HOL signature, where the definition does
+not inspect it.
+
+NOT TAGGED (coordinator review HOLD on `f1e2a00be`, bead `flapjack-4w9`): the map
+key and the `word_lab` argument/local carriers are exact, but the code value's
+`CrepProg.call`/`.extCall` names are `FunName := String`, while HOL
+`crepLang$prog.Call`/`ExtCall` carry `funname = mlstring`, so the transitive
+code-value carrier is not exact.  The useful kernel-checked production bridge
+below is kept, but no `@[hol]` tag is claimed.  Exact carrier: `flapjack-4w9.1`;
+exact tagged statement: `flapjack-4w9.2`; executable routing: `flapjack-4w9.3`. -/
 def lookupCodeHOL {width : Nat} [NeZero width]
     (code : CrepCodeMapExact width)
     (fname : Flapjack.Basis.Pure.MlString.MlString)

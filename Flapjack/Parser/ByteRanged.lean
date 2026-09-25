@@ -138,4 +138,57 @@ theorem drop_one_stringByteRanged {s : String} (h : StringByteRanged s) :
     StringByteRanged (String.ofList (s.toList.drop 1)) :=
   stringByteRanged_ofList (charsByteRanged_drop h 1)
 
+/-- A value found by the ordered token-table lookup is an entry of that table. -/
+theorem lookupTable_mem {α : Type} {t : List (String × α)} {s : String} {v : α}
+    (h : lookupTable t s = some v) : (s, v) ∈ t := by
+  induction t with
+  | nil => simp [lookupTable] at h
+  | cons head tail ih =>
+      obtain ⟨key, value⟩ := head
+      simp only [lookupTable] at h
+      by_cases hc : s == key
+      · rw [if_pos hc] at h
+        have hs : s = key := by simpa using hc
+        have hv : value = v := by simpa using h
+        subst hs; subst hv; simp
+      · rw [if_neg hc] at h
+        exact List.mem_cons_of_mem _ (ih h)
+
+/-- Every token in the symbolic table carries no identifier name. -/
+theorem symbolTable_ok : ∀ p ∈ symbolTable, TokenNameByteRanged p.2 := by
+  simp [symbolTable, TokenNameByteRanged]
+
+/-- `getToken` never returns a name-carrying token. -/
+theorem getToken_nameByteRanged (s : String) : TokenNameByteRanged (getToken s) := by
+  unfold getToken
+  split
+  · rename_i token heq
+    exact symbolTable_ok (s, token) (lookupTable_mem heq)
+  · exact trivial
+
+/-- A byte-ranged string yields a byte-ranged `getKeyword` result: keyword and
+    error tokens carry no name, while the fallback is `s` or `drop 1 s`. -/
+theorem getKeyword_nameByteRanged (s : String) (h : StringByteRanged s) :
+    TokenNameByteRanged (getKeyword s) := by
+  unfold getKeyword
+  split
+  · rename_i k heq
+    exact trivial
+  · by_cases hz : s == ""
+    · rw [if_pos hz]; exact trivial
+    · rw [if_neg hz]
+      by_cases hf : (2 ≤ s.length && s.front == '@') = true
+      · rw [if_pos hf]; exact drop_one_stringByteRanged h
+      · rw [if_neg hf]; exact h
+
+/-- Byte-rangedness is preserved by atom-to-token conversion. -/
+theorem tokenOfAtom_nameByteRanged {a : Atom} (h : AtomNameByteRanged a) :
+    TokenNameByteRanged (tokenOfAtom a) := by
+  cases a with
+  | numberA value => exact trivial
+  | wordA text => exact getKeyword_nameByteRanged text h
+  | symA text => exact getToken_nameByteRanged text
+  | errA message => exact trivial
+  | annotCommentA text => exact trivial
+
 end Flapjack.Parser

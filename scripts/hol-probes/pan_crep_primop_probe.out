@@ -4,3 +4,7 @@ pan_invalid=NONE
 crep_valid=SOME [8; 0]
 crep_overflow=SOME [0; 1]
 crep_invalid=NONE
+crep_zero_args=NONE
+crep_four_args=NONE
+crep_nonzero_carry=SOME [0; 1]
+crep_primop_done=0

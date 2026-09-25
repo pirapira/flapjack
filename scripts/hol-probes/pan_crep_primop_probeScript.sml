@@ -44,3 +44,14 @@ val _ = print_eval "crep_overflow"
 val _ = print_eval "crep_invalid"
   ``crepSem$crep_primop AddCarry
       [Word (3w : 8 word); Word 4w]``;
+val _ = print_eval "crep_zero_args"
+  ``crepSem$crep_primop AddCarry []``;
+val _ = print_eval "crep_four_args"
+  ``crepSem$crep_primop AddCarry
+      [Word (3w : 8 word); Word 4w; Word 2w; Word 0w]``;
+val _ = print_eval "crep_nonzero_carry"
+  ``OPTION_MAP (MAP (w2n o panSem$theWord))
+      (crepSem$crep_primop AddCarry
+        [Word (255w : 8 word); Word 0w;
+         Word 7w])``;
+val _ = print_eval "crep_primop_done" ``0``;

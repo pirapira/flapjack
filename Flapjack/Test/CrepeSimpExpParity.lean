@@ -579,6 +579,62 @@ private theorem constSourceCaseIH {ι : Type} {σ : Type}
   intro source result h
   exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase f source value result h
 
+/-! The hard all-width `Crepop Mul` constructor case is instantiated over a
+    four-bit HOL word carrier. The original HOL probe records the same
+    `mul_const` shift rewrite (`mul_eight_shape`); this local fixture checks
+    the source evaluator before and after simplification and applies the named
+    case theorem using only the `Var` and `Const` constructor hypotheses. -/
+example :
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 4))
+      (crepArithHolFiniteDimensionMapCode (fun (_, entry) => entry)
+        (holWordBitsVarState4 holBits4))
+      (crepSimpExp
+        (fun n => bitVecToHolWord
+          (instFinHolFiniteDimension (width := 4))
+          (BitVec.ofNat (HolFiniteDimension.width (Fin 4)) n))
+        (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))])) =
+    evalCrepHolFiniteWordSourceExpWordLab
+      (instFinHolFiniteDimension (width := 4))
+      (holWordBitsVarState4 holBits4)
+      (.crepOp .mul [.var 2, .const (bitVecToHolWordBits (BitVec.ofNat 4 2))]) := by
+  let dimension := instFinHolFiniteDimension (width := 4)
+  let source := holWordBitsVarState4 holBits4
+  let fromNat := fun n => bitVecToHolWord dimension
+    (BitVec.ofNat (HolFiniteDimension.width (Fin 4)) n)
+  let left : CrepExp (Fin 4 → Bool) := .var 2
+  let right : CrepExp (Fin 4 → Bool) :=
+    .const (bitVecToHolWordBits (BitVec.ofNat 4 2))
+  let f : FunName × (List Nat × CrepProg (Fin 4 → Bool)) →
+      List Nat × CrepProg (Fin 4 → Bool) := fun (_, entry) => entry
+  have hsuccess : evalCrepHolFiniteWordSourceExpWordLab dimension source
+      (.crepOp .mul [left, right]) ≠ none := by
+    simp [evalCrepHolFiniteWordSourceExpWordLab,
+      evalCrepHolFiniteWordSourceExp, source, left, right,
+      holWordBitsVarState4, holFiniteWordSourceMul_eq_mul]
+  have ih : ∀ (subexpression : CrepExp (Fin 4 → Bool)),
+      subexpression ∈ [left, right] →
+      ∀ (state : CrepHolState (Fin 4 → Bool) Unit)
+        (_value : PanWordLab (Fin 4 → Bool)),
+        evalCrepHolFiniteWordSourceExpWordLab dimension state subexpression ≠ none →
+        evalCrepHolFiniteWordSourceExpWordLab dimension
+          (crepArithHolFiniteDimensionMapCode f state)
+          (crepSimpExp fromNat subexpression) =
+        evalCrepHolFiniteWordSourceExpWordLab dimension state subexpression := by
+    intro subexpression hmem state value hvalue
+    simp only [List.mem_cons] at hmem
+    rcases hmem with hleft | htail
+    · subst subexpression
+      exact crepSimpExpCorrect1VarHolFiniteWordSourceCase
+        f state 2 value hvalue
+    · rcases htail with hright | hnil
+      · subst subexpression
+        exact crepSimpExpCorrect1ConstHolFiniteWordSourceCase
+          f state (bitVecToHolWordBits (BitVec.ofNat 4 2)) value hvalue
+      · cases hnil
+  exact crepSimpExpCorrect1CrepOpMulHolFiniteWordSourceCase
+    (dimension := dimension) f source left right (.word holBits4) hsuccess ih
+
 example (address : BitVec 5) (value : Fin 4 → Bool) :
     evalCrepHolFiniteWordSourceExp
       (instFinHolFiniteDimension (width := 4))

@@ -105,7 +105,7 @@ theorem loadShape_length [BEq α] [OfNat α 0] [Add α]
     fixed byte width, so the explicit quantified variables are HOL's `n a e`. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): generic over the word element type.
 -- HOL's exact expression-carrier theorem is `length_loadShapeHOLW` in
--- `CrepLang/Exp.lean`; this production helper remains useful for generic code.
+-- this module below; this production helper remains useful for generic code.
 theorem length_loadShape_eq_shape [BEq α] [OfNat α 0] [Add α] [CrepBytesInWord α]
     (count : Nat) (address : α) (value : CrepExp α) :
     (loadShapeBytes address count value).length = count := by

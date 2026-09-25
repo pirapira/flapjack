@@ -467,6 +467,196 @@ theorem evalCrepHolFiniteWordSourceExp_op_toHolEval
                 (expressions.map (mapCrepExpWord (holWordToBitVec dimension)))) := by
               simp [evalCrepHolExpWordLab, evalCrepHolExp, hNativeValues]
 
+/-- All-dimension recursive `Cmp` constructor correspondence. The two child
+evaluations are related individually; source `word_cmp` then agrees with the
+direct evaluator's comparison result. This is Flapjack support, not a claim
+about the complete native HOL `eval_def` relation. -/
+theorem evalCrepHolFiniteWordSourceExp_cmp_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : Cmp)
+    (left right : CrepExp (ι → Bool))
+    (hLeft : (evalCrepHolFiniteWordSourceExp dimension state left).map
+      (holWordToBitVec dimension) =
+        evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left))
+    (hRight : (evalCrepHolFiniteWordSourceExp dimension state right).map
+      (holWordToBitVec dimension) =
+        evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) right)) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.cmp operator left right)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension)
+        (.cmp operator (mapCrepExpWord (holWordToBitVec dimension) left)
+          (mapCrepExpWord (holWordToBitVec dimension) right)) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  cases hSourceLeft : evalCrepHolFiniteWordSourceExp dimension state left with
+  | none =>
+      have hNativeLeft : evalCrepHolExp
+          (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left) = none := by
+        simpa [hSourceLeft] using hLeft.symm
+      simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+        evalCrepHolExp, hSourceLeft, hNativeLeft]
+  | some leftValue =>
+      have hNativeLeft : evalCrepHolExp
+          (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left) =
+            some (holWordToBitVec dimension leftValue) := by
+        simpa [hSourceLeft] using hLeft.symm
+      cases hSourceRight : evalCrepHolFiniteWordSourceExp dimension state right with
+      | none =>
+          have hNativeRight : evalCrepHolExp
+              (state.toHolFiniteBitVecState dimension)
+              (mapCrepExpWord (holWordToBitVec dimension) right) = none := by
+            simpa [hSourceRight] using hRight.symm
+          simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+            evalCrepHolExp, hSourceLeft, hSourceRight, hNativeLeft,
+            hNativeRight]
+      | some rightValue =>
+          have hNativeRight : evalCrepHolExp
+              (state.toHolFiniteBitVecState dimension)
+              (mapCrepExpWord (holWordToBitVec dimension) right) =
+                some (holWordToBitVec dimension rightValue) := by
+            simpa [hSourceRight] using hRight.symm
+          calc
+            _ = some (PanWordLab.word
+                  (Compiler.Encoders.Asm.wordCmpResultHOL operator
+                    (holWordToBitVec dimension leftValue)
+                    (holWordToBitVec dimension rightValue))) :=
+              evalCrepHolFiniteWordSourceExpWordLab_cmp_eq_wordCmpHOL
+                dimension state operator left right leftValue rightValue
+                hSourceLeft hSourceRight
+            _ = _ := by
+              simp [evalCrepHolExpWordLab, evalCrepHolExp, hNativeLeft,
+                hNativeRight, wordCmpResultHOL_eq_evalPanCmp]
+
+/-- All-dimension recursive `Shift` constructor correspondence, including
+out-of-range failure in the complete `Option word_lab` result. Its only
+premises are the two recursive child relations. -/
+theorem evalCrepHolFiniteWordSourceExp_shift_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : Shift)
+    (left right : CrepExp (ι → Bool))
+    (hLeft : (evalCrepHolFiniteWordSourceExp dimension state left).map
+      (holWordToBitVec dimension) =
+        evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left))
+    (hRight : (evalCrepHolFiniteWordSourceExp dimension state right).map
+      (holWordToBitVec dimension) =
+        evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) right)) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.shift operator left right)).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension)
+        (.shift operator (mapCrepExpWord (holWordToBitVec dimension) left)
+          (mapCrepExpWord (holWordToBitVec dimension) right)) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  cases hSourceLeft : evalCrepHolFiniteWordSourceExp dimension state left with
+  | none =>
+      have hNativeLeft : evalCrepHolExp
+          (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left) = none := by
+        simpa [hSourceLeft] using hLeft.symm
+      simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+        evalCrepHolExp, hSourceLeft, hNativeLeft]
+  | some leftValue =>
+      have hNativeLeft : evalCrepHolExp
+          (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left) =
+            some (holWordToBitVec dimension leftValue) := by
+        simpa [hSourceLeft] using hLeft.symm
+      cases hSourceRight : evalCrepHolFiniteWordSourceExp dimension state right with
+      | none =>
+          have hNativeRight : evalCrepHolExp
+              (state.toHolFiniteBitVecState dimension)
+              (mapCrepExpWord (holWordToBitVec dimension) right) = none := by
+            simpa [hSourceRight] using hRight.symm
+          simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+            evalCrepHolExp, hSourceLeft, hSourceRight, hNativeLeft,
+            hNativeRight]
+      | some rightValue =>
+          have hNativeRight : evalCrepHolExp
+              (state.toHolFiniteBitVecState dimension)
+              (mapCrepExpWord (holWordToBitVec dimension) right) =
+                some (holWordToBitVec dimension rightValue) := by
+            simpa [hSourceRight] using hRight.symm
+          calc
+            _ = (wordShiftHOL operator
+                  (holWordToBitVec dimension leftValue)
+                  (holWordToBitVec dimension rightValue).toNat).map
+                    PanWordLab.word :=
+              evalCrepHolFiniteWordSourceExpWordLab_shift_eq_wordShiftHOL
+                dimension state operator left right leftValue rightValue
+                hSourceLeft hSourceRight
+            _ = _ := by
+              simp [evalCrepHolExpWordLab, evalCrepHolExp, hNativeLeft,
+                hNativeRight, wordShiftHOL_eq_evalPanShiftFull]
+
+/-- All-dimension recursive `CrepOp.mul` constructor correspondence. The
+source primitive is routed through the tagged `crep_op_def`; the direct
+evaluator computes the same wrapped product after the two child relations.
+This does not by itself establish the native HOL state/evaluator relation. -/
+theorem evalCrepHolFiniteWordSourceExp_crepOpMul_toHolEval
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ)
+    (left right : CrepExp (ι → Bool))
+    (hLeft : (evalCrepHolFiniteWordSourceExp dimension state left).map
+      (holWordToBitVec dimension) =
+        evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left))
+    (hRight : (evalCrepHolFiniteWordSourceExp dimension state right).map
+      (holWordToBitVec dimension) =
+        evalCrepHolExp (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) right)) :
+    ((evalCrepHolFiniteWordSourceExp dimension state
+      (.crepOp .mul [left, right])).map PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec dimension)) =
+      evalCrepHolExpWordLab (state.toHolFiniteBitVecState dimension)
+        (.crepOp .mul [mapCrepExpWord (holWordToBitVec dimension) left,
+          mapCrepExpWord (holWordToBitVec dimension) right]) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  cases hSourceLeft : evalCrepHolFiniteWordSourceExp dimension state left with
+  | none =>
+      have hNativeLeft : evalCrepHolExp
+          (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left) = none := by
+        simpa [hSourceLeft] using hLeft.symm
+      simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+        evalCrepHolExp, hSourceLeft, hNativeLeft]
+  | some leftValue =>
+      have hNativeLeft : evalCrepHolExp
+          (state.toHolFiniteBitVecState dimension)
+          (mapCrepExpWord (holWordToBitVec dimension) left) =
+            some (holWordToBitVec dimension leftValue) := by
+        simpa [hSourceLeft] using hLeft.symm
+      cases hSourceRight : evalCrepHolFiniteWordSourceExp dimension state right with
+      | none =>
+          have hNativeRight : evalCrepHolExp
+              (state.toHolFiniteBitVecState dimension)
+              (mapCrepExpWord (holWordToBitVec dimension) right) = none := by
+            simpa [hSourceRight] using hRight.symm
+          simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExpWordLab,
+            evalCrepHolExp, hSourceLeft, hSourceRight, hNativeLeft,
+            hNativeRight]
+      | some rightValue =>
+          have hNativeRight : evalCrepHolExp
+              (state.toHolFiniteBitVecState dimension)
+              (mapCrepExpWord (holWordToBitVec dimension) right) =
+                some (holWordToBitVec dimension rightValue) := by
+            simpa [hSourceRight] using hRight.symm
+          calc
+            _ = (crepOpCrepWord (width := dimension.width) .mul
+                  [holWordToBitVec dimension leftValue,
+                   holWordToBitVec dimension rightValue]).map PanWordLab.word :=
+              evalCrepHolFiniteWordSourceExpWordLab_crepOp_eq_crepOpCrepWord
+                dimension state left right leftValue rightValue
+                hSourceLeft hSourceRight
+            _ = _ := by
+              simp [crepOpCrepWord, evalCrepHolExpWordLab,
+                evalCrepHolExp, hNativeLeft, hNativeRight]
+
 /-- All-dimension `LoadGlob` constructor correspondence to the direct BitVec
 state evaluator. This preserves the exact global lookup, including misses,
 under the finite-word-to-BitVec representation. It is Flapjack support, not a

@@ -474,6 +474,82 @@ example :
     [.const boolDimensionWord, .const boolDimensionOne] hChildren
 
 example :
+    ((evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+      (.cmp .equal (.const boolDimensionWord) (.const boolDimensionWord))).map
+        PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec boolWordDimension)) =
+      evalCrepHolExpWordLab
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (.cmp .equal (.const (holWordToBitVec boolWordDimension boolDimensionWord))
+          (.const (holWordToBitVec boolWordDimension boolDimensionWord))) := by
+  have hChild : (evalCrepHolFiniteWordSourceExp boolWordDimension
+      boolDimensionHolState (.const boolDimensionWord)).map
+        (holWordToBitVec boolWordDimension) =
+      evalCrepHolExp
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (mapCrepExpWord (holWordToBitVec boolWordDimension)
+          (.const boolDimensionWord)) := by
+    simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExp, mapCrepExpWord]
+  simpa [mapCrepExpWord] using evalCrepHolFiniteWordSourceExp_cmp_toHolEval
+    boolWordDimension boolDimensionHolState .equal (.const boolDimensionWord)
+    (.const boolDimensionWord) hChild hChild
+
+/-- At width one, shifting by the word value one fails in both evaluators;
+the bridge therefore preserves the full `Option` failure case too. -/
+example :
+    ((evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+      (.shift .lsl (.const boolDimensionWord) (.const boolDimensionWord))).map
+        PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec boolWordDimension)) =
+      evalCrepHolExpWordLab
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (.shift .lsl
+          (.const (holWordToBitVec boolWordDimension boolDimensionWord))
+          (.const (holWordToBitVec boolWordDimension boolDimensionWord))) := by
+  have hChild : (evalCrepHolFiniteWordSourceExp boolWordDimension
+      boolDimensionHolState (.const boolDimensionWord)).map
+        (holWordToBitVec boolWordDimension) =
+      evalCrepHolExp
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (mapCrepExpWord (holWordToBitVec boolWordDimension)
+          (.const boolDimensionWord)) := by
+    simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExp, mapCrepExpWord]
+  simpa [mapCrepExpWord] using evalCrepHolFiniteWordSourceExp_shift_toHolEval
+    boolWordDimension boolDimensionHolState .lsl (.const boolDimensionWord)
+    (.const boolDimensionWord) hChild hChild
+
+example :
+    ((evalCrepHolFiniteWordSourceExp boolWordDimension boolDimensionHolState
+      (.crepOp .mul [.const boolDimensionWord, .const boolDimensionOne])).map
+        PanWordLab.word).map
+        (mapCrepHolWordLab (holWordToBitVec boolWordDimension)) =
+      evalCrepHolExpWordLab
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (.crepOp .mul
+          [.const (holWordToBitVec boolWordDimension boolDimensionWord),
+           .const (holWordToBitVec boolWordDimension boolDimensionOne)]) := by
+  have hLeft : (evalCrepHolFiniteWordSourceExp boolWordDimension
+      boolDimensionHolState (.const boolDimensionWord)).map
+        (holWordToBitVec boolWordDimension) =
+      evalCrepHolExp
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (mapCrepExpWord (holWordToBitVec boolWordDimension)
+          (.const boolDimensionWord)) := by
+    simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExp, mapCrepExpWord]
+  have hRight : (evalCrepHolFiniteWordSourceExp boolWordDimension
+      boolDimensionHolState (.const boolDimensionOne)).map
+        (holWordToBitVec boolWordDimension) =
+      evalCrepHolExp
+        (boolDimensionHolState.toHolFiniteBitVecState boolWordDimension)
+        (mapCrepExpWord (holWordToBitVec boolWordDimension)
+          (.const boolDimensionOne)) := by
+    simp [evalCrepHolFiniteWordSourceExp, evalCrepHolExp, mapCrepExpWord]
+  simpa [mapCrepExpWord] using
+    evalCrepHolFiniteWordSourceExp_crepOpMul_toHolEval
+      boolWordDimension boolDimensionHolState
+      (.const boolDimensionWord) (.const boolDimensionOne) hLeft hRight
+
+example :
     evalCrepRuntimeExp
         (boolDimensionHolState.toHolFiniteWordRuntime boolWordDimension) (.loadGlob 0) =
       evalCrepHolFiniteDimensionExp boolWordDimension boolDimensionHolState (.loadGlob 0) :=

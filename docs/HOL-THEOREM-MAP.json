@@ -531,6 +531,30 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_cmp_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-dimension recursive Cmp evaluator bridge over the two child relations and tagged HOL word_cmp operation; native arbitrary finite_index eval_def correspondence remains open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_shift_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only all-dimension recursive Shift evaluator bridge preserving shift failure and the complete Option word_lab result; the native arbitrary finite_index eval_def correspondence remains open."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteWordSourceExp_crepOpMul_toHolEval",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only recursive CrepOp.mul source/direct evaluator correspondence using both recursive child relations and tagged crep_op_def; it does not establish native arbitrary finite_index eval_def correspondence."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepHolFiniteWordSourceExps_toHolEval",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only all-dimension List.mapM relation for source and direct evaluators; it preserves list failure and order and serves as the recursive HOL Op dependency, without claiming the complete native eval_def relation."

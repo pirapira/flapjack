@@ -47,6 +47,18 @@ values.  The mutual list helpers `evalListHOLExact`/`evalListFieldsHOLExact` and
 (`word_op_def`), `panOpHOL` (`pan_op_def`), `wordCmpHOL` (`word_cmp_def`) and
 `wordShiftHOL` (`word_sh_def`).
 
+Direct source review of the HOL state-invariance cluster
+`panPropsScript.sml:644 eval_upd_clock_eq` (`eval (t with clock := ck) e = eval t e`)
+and `:654 eval_upd_code_eq` finds no separate Lean declaration: HOL `eval` carries
+the whole `panSem$state`, whereas this rendering reads neither `state.clock` nor
+`state.code`, so both invariances are consequences of the clauses above and are
+simply not stated yet.  They stay untagged together with the evaluator because the
+blocking mismatch is the `PanSemStateExact` `locals`/`globals` carrier (unrestricted
+`MlS → Option _` functions instead of HOL finite maps) -- not the clock or code
+fields.  Restoration of the invariance lemmas over the faithful finite-support
+state is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`; this disposition is recorded
+by bead `flapjack-4ac.4.40`.
+
 The recursive `evaluate` dispatcher over this evaluator is separate and not yet
 assembled.  Direct original-HOL rows are in
 `scripts/hol-probes/pan_eval_probe.out` and are reproduced by

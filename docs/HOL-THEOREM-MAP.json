@@ -373,7 +373,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDest2Exp_eq_shift",
     "statement_status": "documented_mismatch",
-    "reviewer": "Fixed-width RiscV.Word n support only; HOL dest_2exp_thm quantifies over its polymorphic word type. No @[hol] tag until the finite-index generic theorem is proved."
+    "reviewer": "All-positive-width support now also covers the canonical Fin width -> Bool carrier and natural-exponent shift. Still documented_mismatch: Lean uses an explicit Fin index, while HOL uses its implicit finite_index type/instance; no @[hol] tag until that carrier correspondence is established."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -718,6 +718,14 @@
     "lean_name": "crepDest2ExpHolFiniteDimension_eq_shift",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Finite-dimension support for dest_2exp_thm after transporting word_lsl through an explicit Lean enumeration; no HOL tag until that enumeration is related to finite_index"
+  },
+  {
+    "hol_path": "cakeml/pancake/crep_arithScript.sml",
+    "hol_name": "dest_2exp_thm",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepDest2ExpHolWordBits_eq_lsl_support",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-positive-width support over Fin width -> Bool; kept untagged because HOL uses its implicit finite_index carrier and the explicit Fin representation has not been identified with that instance."
   },
   {
     "hol_path": null,

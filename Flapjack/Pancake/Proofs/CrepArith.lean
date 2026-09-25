@@ -765,6 +765,26 @@ theorem crepDest2Exp_eq_shift {n : Nat} [NeZero n] (word : RiscV.Word n)
   rw [Nat.mod_eq_of_lt (Nat.pow_lt_pow_right (by decide) hbound)] at hword'
   simpa [Nat.shiftLeft_eq, Nat.one_mul] using hword'
 
+/-- All-width support for HOL `dest_2exp_thm` over the canonical word carrier.
+    `Fin width → Bool` is the numeric-index presentation of one HOL word
+    dimension, and the result transports `word_lsl 1w exponent` through the
+    proved bitwise `BitVec` equivalence. This remains untagged: the theorem's
+    carrier uses an explicit `Fin width` index instead of HOL's implicit
+    `finite_index` type and instance, so the polymorphic HOL statement has not
+    yet been identified with this canonical presentation. -/
+theorem crepDest2ExpHolWordBits_eq_lsl_support {width : Nat} [NeZero width]
+    (word : Fin width → Bool) (exponent : Nat)
+    (h : crepDest2Exp 0 word = some exponent) :
+    word = bitVecToHolWordBits
+      (BitVec.shiftLeft (1 : BitVec width) exponent) := by
+  have hBits : crepDest2Exp 0 (holWordBitsToBitVec word) = some exponent := by
+    rw [← crepDest2Exp_holWordBits 0 word]
+    exact h
+  have hShift := crepDest2Exp_eq_shift (holWordBitsToBitVec word)
+    exponent hBits
+  apply holWordBitsToBitVec_injective
+  simpa only [holWordBitsToBitVec_bitVecToHolWordBits] using hShift
+
 /-- Fixed-width support instance of HOL `dest_2exp_bound'`. The HOL result
     quantifies over any word type and concludes `exponent < dimindex`; this
     theorem fixes `RiscV.Word n` and is not a faithful tagged port. -/

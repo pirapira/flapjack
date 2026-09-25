@@ -664,6 +664,14 @@
     "reviewer": "Flapjack support for HOL simp_exp_correct1 over arbitrary finite-index words and exact finite-map/set state fields, with opaque code entries. Evaluation still uses the explicit HolFiniteDimension source projection; native crepSem eval_def, HOL program/FFI carriers, and their representation relations remain unproved, so the declaration is untagged."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1ConstCaseBitVecSupport",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Const-case support: the HOL simp_exp fallback and eval Const clauses agree, but this helper evaluates through the width-indexed CrepSemHOLState.toBitVecEvaluatorState projection rather than native arbitrary-index crepSem eval_def and returns PanWordLab (BitVec width) rather than HOL HolWordLab. It is not claimed as a port of simp_exp_correct1; native evaluator/state correspondence and the assembled theorem remain open."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "eval_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

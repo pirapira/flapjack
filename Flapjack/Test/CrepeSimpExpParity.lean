@@ -1618,4 +1618,18 @@ example :
       simp [evalCrepHolFiniteWordSourceExpWordLab,
         evalCrepHolFiniteWordSourceExp]
 
+/-! The Const branch of simp_exp_correct1 leaves the direct HOL `eval_const`
+row unchanged. The theorem is all-positive-width support; this fixture pins
+its 64-bit instance to `crep_eval_probe.out`. -/
+example :
+    evalCrepHolExpWordLab (crepSemLoadState64.toBitVecEvaluatorState)
+      (crepSimpExp (BitVec.ofNat 64) (.const (BitVec.ofNat 64 5))) =
+      some (.word (BitVec.ofNat 64 5)) := by
+  have h := crepSimpExpCorrect1ConstCaseBitVecSupport
+    (update := fun pair : Flapjack.Basis.Pure.MlString.MlString ×
+      (List Nat × CrepProgHOL 64) => pair.2)
+    crepSemLoadState64 (BitVec.ofNat 64 5) (.word (BitVec.ofNat 64 5))
+    (by simp [evalCrepHolExpWordLab, evalCrepHolExp])
+  simpa [evalCrepHolExpWordLab, evalCrepHolExp] using h
+
 end Flapjack.Test.CrepeSimpExpParity

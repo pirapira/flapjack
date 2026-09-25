@@ -1738,4 +1738,26 @@ theorem evalCrepRuntimeExp_toBitVecEvaluatorState_topAddr
   simp [evalCrepRuntimeExp, CrepSemHOLState.toBitVecEvaluatorState,
     CrepHolState.toRuntime, PanWordLab.toHolWordLab]
 
+/-- Flapjack support for the Const branch of HOL's local `simp_exp_correct1`
+(`cakeml/pancake/proofs/crep_arithProofScript.sml:111`). The constant branch
+reduces to the expected equality over the width-indexed BitVec evaluator. This
+helper is untagged: its evaluator passes through
+`CrepSemHOLState.toBitVecEvaluatorState`, whose relation to native arbitrary-
+index HOL `crepSem$eval` has not been proved, and its result uses
+`PanWordLab (BitVec width)` instead of HOL's `HolWordLab width`. It does not
+claim even the isolated case as a port of the native evaluator theorem. -/
+theorem crepSimpExpCorrect1ConstCaseBitVecSupport
+    {width : Nat} [NeZero width] {σ : Type}
+    (update : MlString × (List Nat × CrepProgHOL width) →
+      List Nat × CrepProgHOL width)
+    (state : CrepSemHOLState width σ)
+    (constant : BitVec width) (_result : PanWordLab (BitVec width))
+    (_h : evalCrepHolExpWordLab state.toBitVecEvaluatorState
+      (.const constant) ≠ none) :
+    evalCrepHolExpWordLab (state.mapc update).toBitVecEvaluatorState
+        (crepSimpExp (BitVec.ofNat width) (.const constant)) =
+      evalCrepHolExpWordLab state.toBitVecEvaluatorState (.const constant) := by
+  rw [CrepSemHOLState.toBitVecEvaluatorState_mapc]
+  simp [evalCrepHolExpWordLab, evalCrepHolExp, crepSimpExp.eq_11]
+
 end Flapjack

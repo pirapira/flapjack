@@ -29,8 +29,9 @@ evaluate (Raise eid e, s) =
   | _ => (SOME Error, s)
 ```
 
-`emptyLocalsHOLExact` is the exact port over the exact, `mlstring`-keyed
-`PanSemStateExact` carrier and therefore carries the `empty_locals_def` tag.
+The exact `empty_locals_def` port `emptyLocalsHOLExact` over the exact,
+`mlstring`-keyed `PanSemStateExact` carrier lives in
+`Flapjack/Pancake/Semantics/PanSem/StateExact.lean` and is reused here.
 The two clause steps `returnStepHOLExact` / `raiseStepHOLExact` are
 callback-parameterised partial-evaluator infrastructure (the embedded `eval`
 is a parameter), so they are deliberately **untagged**: there is no full
@@ -43,14 +44,6 @@ and `shapeEqHOL`.  Direct original-HOL rows are reproduced by
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS ExpHOL)
-
-/-- Exact port of HOL `panSem$empty_locals`
-(`cakeml/pancake/semantics/panSemScript.sml:398-401`): clear the local map and
-leave every other field untouched. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "empty_locals_def"]
-def emptyLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
-  { state with locals := fun _ => none }
 
 /-- The `Return` clause of HOL `evaluate_def`
 (`cakeml/pancake/semantics/panSemScript.sml:625-627`): evaluate the returned
@@ -89,10 +82,6 @@ def raiseStepHOLExact {width : Nat} {σ : Type} [NeZero width]
           else (some .error, state)
       | none => (some .error, state)
   | none => (some .error, state)
-
-@[simp] theorem emptyLocalsHOLExact_locals {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) :
-    (emptyLocalsHOLExact state).locals = fun _ => none := rfl
 
 theorem returnStepHOLExact_eval_error {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateExact width σ) (expression : ExpHOL width)

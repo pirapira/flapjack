@@ -467,6 +467,14 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "CrepSemHOLState.toHolFiniteWordRuntime_instFin_eq_toHolWordBitsRuntime",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-only definitional equality between the canonical Fin width runtime adapter and existing word-bits runtime adapter."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "crepHolState_eq_of_fields",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only record extensionality helper for CrepHolState; it has no HOL theorem counterpart."

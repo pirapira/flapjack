@@ -184,10 +184,13 @@ theorem crepDestConst_eq_const {α : Type} (expression : CrepExp α)
     expression = .const value := by
   cases expression <;> simp_all [crepDestConst]
 
-/-- Exact width-indexed port of CakeML's `dest_const_thm`
-    (`crep_arithProofScript.sml:64`) over HOL's expression carrier
-    `CrepExpHOL`. `[NeZero width]` supplies HOL's nonempty word dimension.
-    The generic production AST helper above remains untagged. -/
+/-- Exact port of CakeML's `dest_const_thm` (`crep_arithProofScript.sml:64`).
+    `width` ranges over every positive HOL word dimension. `BitVec width` is
+    the canonical `Fin width → Bool` representation; any HOL finite word
+    index of cardinality `width` is related by reindexing, and this theorem
+    only inverts the root constructor. The generic production helper above
+    remains untagged because it accepts arbitrary `α`, not just a HOL word
+    carrier. -/
 @[hol "cakeml/pancake/proofs/crep_arithProofScript.sml" "dest_const_thm"]
 theorem crepDestConstHOL_eq_const {width : Nat} [NeZero width]
     (expression : CrepExpHOL width)

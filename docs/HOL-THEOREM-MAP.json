@@ -261,7 +261,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConst_eq_const",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged Flapjack support over arbitrary alpha, broader than HOL's word-typed expression/value. The exact width-indexed theorem over CrepExpHOL is crepDestConstHOL_eq_const."
+    "reviewer": "Untagged Flapjack support over arbitrary alpha, broader than HOL's word-typed expression/value. The exact width-polymorphic HOL carrier theorem is crepDestConstHOL_eq_const."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -269,7 +269,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstHolWord_eq_const",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged support over generic CrepExp (Fin width → Bool), not HOL's exact CrepExpHOL syntax carrier. The exact width-indexed theorem over CrepExpHOL is crepDestConstHOL_eq_const."
+    "reviewer": "Untagged support over generic CrepExp (Fin width -> Bool), not HOL's exact CrepExpHOL syntax carrier. The width-polymorphic tagged theorem over CrepExpHOL is crepDestConstHOL_eq_const."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -277,7 +277,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstHOL_eq_const",
     "statement_status": "reviewed_exact",
-    "reviewer": "Exact width-indexed statement over CrepExpHOL/BitVec width with NeZero width, matching HOL's word-typed expression, successful dest_const premise, and Const conclusion."
+    "reviewer": "Exact width-polymorphic statement over CrepExpHOL/BitVec width with NeZero width. Every positive finite HOL word dimension is represented by its cardinality and canonical Fin/BitVec encoding; the constructor inversion is invariant under reindexing."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
@@ -285,7 +285,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepDestConstWord_eq_const",
     "statement_status": "documented_mismatch",
-    "reviewer": "Untagged BitVec-width support specialization used by RISC-V simp proofs. The HOL-polymorphic word-carrier theorem is crepDestConstHolWord_eq_const above."
+    "reviewer": "Untagged BitVec-width support specialization used by RISC-V simp proofs. The width-polymorphic HOL-carrier theorem is crepDestConstHOL_eq_const."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",

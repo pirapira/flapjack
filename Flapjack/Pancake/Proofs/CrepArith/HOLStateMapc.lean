@@ -453,6 +453,79 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSource
   rw [hCodeId] at hPres
   exact hPres
 
+/-- Arbitrary-index finite-state `Load` clause for the source evaluator,
+matching the `Load` branch of HOL `crepSem$eval_def`
+(`crepSemScript.sml:93-98`) and its `mem_load_def` dependency. It retains the
+recursive address evaluation, exact total-memory field, address-domain test,
+and complete `Option word_lab` result. It stays untagged because evaluation is
+still transported through the explicit `HolFiniteDimension` source adapter;
+the complete native HOL evaluator/state relation remains open. -/
+theorem evalCrepHolFiniteStateSource_load
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ)
+    (addressExpression : CrepExp (ι → Bool)) (address : ι → Bool)
+    (hAddress : evalCrepHolFiniteWordSourceExp dimension
+      state.toSourceEvaluatorState addressExpression = some address) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.load addressExpression) =
+    if state.toSourceEvaluatorState.memaddrs address then
+      some (state.memory address) else none := by
+  let projected := state.toSourceEvaluatorState
+  change (evalCrepHolFiniteWordSourceExp dimension projected
+      (.load addressExpression)).map PanWordLab.word =
+    if projected.memaddrs address then some (state.memory address) else none
+  rw [evalCrepHolFiniteWordSourceExp, hAddress]
+  simp [panTheWord, projected,
+    CrepSemHOLFiniteState.toSourceEvaluatorState]
+  cases hMemory : state.memory address with
+  | word value =>
+      by_cases hDomain : decide (state.memaddrs address) = true <;>
+        simp [hDomain]
+
+/-- Arbitrary-index finite-state `Const` case from HOL
+`crepSem$eval_def` (`crepSemScript.sml:91`). The entire word_lab wrapper is
+preserved. This remains untagged with the enclosing evaluator because its
+word type is interpreted through the explicit finite-dimension adapter. -/
+theorem evalCrepHolFiniteStateSource_const
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) (value : ι → Bool) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.const value) =
+    some (.word value) := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp]
+
+/-- Arbitrary-index finite-state `Var` case from HOL
+`crepSem$eval_def` (`crepSemScript.sml:92`). It returns the exact finite-map
+lookup, including lookup failure, with no success premise. It remains untagged
+because the enclosing evaluator still uses an explicit finite-dimension
+projection. -/
+theorem evalCrepHolFiniteStateSource_var
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) (name : Nat) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.var name) =
+    state.locals.lookup name := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp,
+    CrepSemHOLFiniteState.toSourceEvaluatorState,
+    panTheWord, Function.comp_def]
+
+/-- Arbitrary-index finite-state `LoadGlob` case from HOL
+`crepSem$eval_def` (`crepSemScript.sml:111`). It returns the exact finite-map
+global lookup, including a miss. This stays untagged because the enclosing
+evaluator/state still use the explicit finite-dimension projection. -/
+theorem evalCrepHolFiniteStateSource_loadGlob
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ) (address : BitVec 5) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.loadGlob address) =
+    state.globals.lookup address := by
+  simp [evalCrepHolFiniteWordSourceExpWordLab,
+    evalCrepHolFiniteWordSourceExp,
+    CrepSemHOLFiniteState.toSourceEvaluatorState,
+    panTheWord, Function.comp_def]
+
 /-- Production-runtime all-positive-width `simp_exp_correct1` support over the
 HOL-shaped state carrier and exact HOL expression syntax. The evaluator in
 the premise and conclusion is `evalCrepRuntimeExp`; the source state is

@@ -520,6 +520,38 @@
     "reviewer": "Flapjack support for HOL simp_exp_correct1 over arbitrary finite-index words and exact finite-map/set state fields, with opaque code entries. Evaluation still uses the explicit HolFiniteDimension source projection; native crepSem eval_def, HOL program/FFI carriers, and their representation relations remain unproved, so the declaration is untagged."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_load",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Load case over the arbitrary-index finite-map state: the recursive address result, memory cell, and domain branch match eval_def/mem_load_def, but evaluation is still through an explicit HolFiniteDimension projection and the whole evaluator/state correspondence is not proved."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_const",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Const clause over arbitrary finite-index words; its full Word wrapper agrees with eval_def, but this evaluator uses the explicit HolFiniteDimension source adapter rather than native HOL state/eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_var",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged Var clause returns the exact locals finite-map lookup, including failure, but evaluates through the explicit HolFiniteDimension source adapter rather than native HOL state/eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_loadGlob",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged LoadGlob clause returns the exact globals finite-map lookup, including failure, but evaluates through the explicit HolFiniteDimension source adapter rather than native HOL state/eval."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",

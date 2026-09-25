@@ -72,6 +72,23 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/PanGlobals.lean", "compileProgCake"): (
+        "cakeml/pancake/pan_globalsScript.sml",
+        "compile_def",
+        "Codex (source comparison with pan_globalsScript.sml:69-149: the "
+        "constructor equations, including the global Call/DecCall lowering, "
+        "were compared branch-by-branch. The Lean definition consumes and "
+        "returns production Prog (BitVec width) with String identifiers and "
+        "CakeContext.globals : FiniteMap String (Shape × BitVec width); HOL "
+        "compile consumes/returns ProgHOL width with MlString identifiers and "
+        "context.globals : mlstring |-> shape # word. No byte-range premise "
+        "constrains the arbitrary String inputs, and names_as_string cannot "
+        "bridge the program/context carriers. Direct HOL rows in "
+        "pan_globals_compile_probe.out cover local/global/missing assignments, "
+        "seq, global load, and handled global destination. Keep this useful "
+        "source analogue untagged pending the exact-carrier compile port "
+        "(flapjack-pxn.18.3.5.8)."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "set_globals_def",

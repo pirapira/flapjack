@@ -1343,7 +1343,7 @@ run_probe word_convs_alloc_conventions_probeScript.sml word_convs_alloc_conventi
 # The labProps probe pins `line_ok_pre`/`all_enc_ok_pre` and the concrete
 # `cbw_to_asm` mapping at an 8-bit configuration.
 run_probe lab_props_line_ok_pre_probeScript.sml lab_props_line_ok_pre_probe.out \
-  line_ok_asm_skip cbw_to_asm_sharemem \
+  line_ok_asm_skip all_enc_ok_empty \
   "$cake_dir/compiler/backend/semantics/labPropsScript.sml" \
   "$cake_dir/compiler/backend/semantics"
 

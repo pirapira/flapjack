@@ -2297,6 +2297,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "exp_ids_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "expIdsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.33): HOL exp_ids_def (cakeml/pancake/panLangScript.sml:222-231) is the recursive exception-identifier collector over the word-indexed prog; a Call with metadata SOME(_, SOME(e,_,ep)) contributes e and the identifiers of ep, all other forms contribute nothing. expIdsHOL matches clause-for-clause over the exact ProgHOL/MlS carrier; the checked bridge expIdsHOL_map_toStringOfBytes relates it to the production Flapjack.expIds (direct routing unavailable because production is polymorphic over Prog α with String identifiers). Direct HOL-EVAL rows empty/raise/sequence/dec/conditional_loop/call_handler/fallback in scripts/hol-probes/pan_lang_exp_ids_probe.out are replayed in Flapjack/Test/PanExpIdsParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "global_var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "globalVarExpHOL",
@@ -8314,7 +8322,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
     "lean_name": "compileArgsHOL_eval_flatten_of_compileExpRel",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only compile_args bridge that projects target evaluation from the full per-expression compile_exp_val_rel-shaped IH; the argument list result is derived without a separate target-evaluation premise. It does not prove the expression IH or the complete Call theorem."
+    "reviewer": "Flapjack-only list adapter, not HOL compile_exp_val_rel. Source review of pan_to_crepProofScript.sml:130-395 records the mismatch: HOL is width-polymorphic over ExpHOL/word_lab values/ShapeHOL and HOL panSem/crepSem states with mlstring finite-map relations; this helper uses production String/Shape/Exp/PanValue and RV64 PanSemState/CrepRuntimeState/CrepExp carriers. It also consumes a stronger four-part per-expression heach premise and proves only the list-evaluation conclusion, while existing case lemmas are constructor subsets. No HOL tag is claimed. Faithful replacement flapjack-4ac.5.81 depends on exact compiler/context beads flapjack-pxn.18.3.5.8.8/.13 and exact state relation flapjack-pxn.18.3.7.1.3.1. compile_exp direct-output probes do not cover this evaluation theorem."
   },
   {
     "hol_path": null,
@@ -10670,6 +10678,30 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_is_wf_shape_v",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExact_isWfShapeValueHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.11; exact HOL panProps$mem_load_is_wf_shape_v (panPropsScript.sml:90-108): the triple conjunction (!sh adr dm m stcs v. mem_load sh adr dm m stcs = SOME v ==> is_wf_shape_v stcs v) /\\ (!shs ... mem_loads ... = SOME vs ==> EVERY (is_wf_shape_v stcs) vs) /\\ (!flds ... mem_load_flds ... = SOME nm_vs ==> EVERY (is_wf_shape_v stcs) (MAP SND nm_vs)). Lean `{width : Nat} [NeZero width]` returns the same triple conjunction, with each conjunct quantifying `(shape) (address) (domain) [DecidablePred domain] (memory) (context) (value)` inside the conjunct to match HOL's literal binder order `!sh adr dm m stcs v.`, over the already-reviewed exact ports memLoadHOLExact/memLoadsHOLExact/memLoadFldsHOLExact (panSemScript.sml mem_load_def/mem_loads_def/mem_load_flds_def) and isWfShapeValueHOLExact/isWfShapeValuesHOLExact (panPropsScript.sml is_wf_shape_v_def); the HOL EVERY folds are the Bool list predicates, and the named-hit case lifts the field-list predicate through the tagged isWfShapeValueHOLExact_drop (is_wf_shape_v_drop). No extra hypotheses beyond [DecidablePred domain], which renders HOL's memory domain predicate; [NeZero width] models HOL's positive word dimension. Direct HOL mem_load rows one_hit/one_miss/comb_hit/named_hit/named_suffix_blocked in pan_mem_load_probe.out and ml_one_hit/ml_one_miss/ml_comb/ml_named_hit/ml_named_miss/ml_comb_offset in pan_sem_mem_load_exact_probe.out; the wf conjunct is source-only (no dedicated probe). Parity examples in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_loads_some_shape_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExact_shape_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.17; exact HOL panProps$mem_loads_some_shape_eq (panPropsScript.sml:194): the triple conjunction (!sh adr dm m stcs v. mem_load sh adr dm m stcs = SOME v ==> shape_of v = sh) /\\ (!shs ... mem_loads ... = SOME vs ==> MAP shape_of vs = shs) /\\ (!flds ... mem_load_flds ... = SOME vs ==> MAP (shape_of o SND) vs = MAP SND flds). Lean `{width : Nat} [NeZero width]` returns the same triple conjunction, with each conjunct quantifying `(shape/shapes/fields) (address) (domain) [DecidablePred domain] (memory) (context) (value/values)` inside the conjunct to match HOL's literal binder order `!sh adr dm m stcs v.`, over the exact memLoadHOLExact/memLoadsHOLExact/memLoadFldsHOLExact carriers and shapeOfHOLExact (panSemScript.sml shape_of_def); HOL MAP is Lean List.map, `shape_of o SND` is `fun pair => shapeOfHOLExact pair.2`, and the named-hit case reduces to the identity via shapeOfHOLExact's .nStruct clause. No extra hypotheses beyond [DecidablePred domain]; [NeZero width] models HOL's positive word dimension. Direct HOL mem_load rows one_hit/comb_hit/named_hit in pan_mem_load_probe.out and ml_* in pan_sem_mem_load_exact_probe.out; the shape-equality conjunct is source-only. Parity examples in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_some_shape_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExact_some_shapeOf_eq",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.18; exact HOL panProps$mem_load_some_shape_eq (panPropsScript.sml:212): !sh adr dm m stcs v. mem_load sh adr dm m stcs = SOME v ==> shape_of v = sh, proved in HOL by metis_tac[mem_loads_some_shape_eq]. Lean `{width : Nat} [NeZero width] (shape : ShapeHOL) (address : BitVec width) (domain : BitVec width → Prop) [DecidablePred domain] (memory : BitVec width → HolWordLab width) (context : StructContextHOLM) (value : ValueHOL width) (h : memLoadHOLExact shape address domain memory context = some value) : shapeOfHOLExact value = shape` follows HOL's literal binder order `!sh adr dm m stcs v.` and is exactly the first conjunct of the tagged memLoadHOLExact_shape_eq (mem_loads_some_shape_eq); no extra hypotheses. [NeZero width] models HOL's positive word dimension. Direct HOL mem_load rows one_hit/named_hit in pan_mem_load_probe.out; parity example in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "every_exp_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "everyExpHOL",
@@ -11146,5 +11178,24 @@
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.5): HOL eval_def panSemScript.sml:209-283 ported over PanSemStateFiniteExact (locals/globals/code/eshapes are HolFiniteMapExact, the canonical Lean translation of HOL's `|->`, canonical witness holFmapAsFiniteSupportWitness in the same module). The body delegates through toExact to the reviewed exact evaluator and does NOT syntactically present HOL's clause-shaped body; each of the fifteen clauses was reviewed against the HOL source and is exposed by the clause-shaped equations in Flapjack/Pancake/Semantics/PanSem/EvalFinite.lean. Qualifier is representation-only."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "exp_hdl_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/ExpHdlExact.lean",
+    "lean_name": "expHdlExact",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "vars"
+    ],
+    "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.13.2): HOL exp_hdl_def (pan_to_crepScript.sml:106-112) quantifies over a finite map varname |-> (shape # num list). expHdlExact reads its input through PanToCrepVarsExact.vars, a HolFiniteMapExact MlS (ShapeHOL × List Nat) (the canonical Lean translation of HOL's `|->`), and reproduces the HOL equations clause-for-clause: miss = Skip, hit = crepNestedSeqHOL (panMap2 Assign ns (loadGlobalsHOL 0w ns.length)). Canonical witness holFmapAsFiniteSupportWitness is in the same module. The raw-map expHdlHOL keeps its withdrawn tag (bead flapjack-2s5); expHdlExact_eq_expHdlHOL is the kernel consumer bridge to it, and scripts/hol-probes/exp_hdl_probe.out rows are replayed by Flapjack/Test/ExpHdlHOLParity.lean. The qualifier is representation-only and does not change the quantifiers, side conditions, or conclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "dropWhile_eq_cons_IMP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "dropWhileEqConsImp",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (direct source comparison with panPropsScript.sml:74-86: the dropWhile P xs = y::ys premise and all four conclusion clauses are preserved. Under n < LENGTH xs, HOL EL n xs = y is equivalent to Lean xs[n]? = some y; DROP maps to List.drop, and HOL boolean negation maps to P y = false. HOL list and Lean List have the same structural constructors, so this ordinary carrier translation needs no qualifier. Concrete regression xs=[0,1,3], P=(<2), y=3, ys=[] witnesses n=2."
   }
 ]

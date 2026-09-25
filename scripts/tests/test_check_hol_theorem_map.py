@@ -1409,6 +1409,44 @@ class ValidateInventoryTest(unittest.TestCase):
                 self.assertEqual(record["statement_status"], "reviewed_exact")
                 self.assertIn(key, MAP["tagged_declarations"]())
 
+    def test_panprops_mem_load_is_wf_shape_v_exact_port(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        key = ("Flapjack/Pancake/Semantics/PanProps.lean",
+               "memLoadHOLExact_isWfShapeValueHOLExact")
+        record = next(
+            (r for r in manifest
+             if (r["lean_path"], r["lean_name"]) == key), None)
+        self.assertIsNotNone(record)
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml",
+             "mem_load_is_wf_shape_v"))
+        self.assertEqual(record["statement_status"], "reviewed_exact")
+        self.assertIn(key, MAP["tagged_declarations"]())
+
+    def test_panprops_mem_load_shape_eq_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "memLoadHOLExact_shape_eq"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "mem_loads_some_shape_eq"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "memLoadHOLExact_some_shapeOf_eq"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "mem_load_some_shape_eq"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
     def test_panprops_every_exp_and_exps_of_exact_ports(self):
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         by_key = {

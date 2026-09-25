@@ -64,6 +64,25 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "(word_lab) and flapjack-pxn.18.3.5.8 (MlString). Same-file slc stays untagged "
         "for the String-vs-mlstring key mismatch (bead flapjack-4ac.5.36)."
     ),
+    ("Flapjack/Pancake/PanToCrep.lean", "expHdlHOL"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "exp_hdl_def",
+        "flapjack-ds3 (bead flapjack-2s5/flapjack-2s5.1): HOL exp_hdl_def "
+        "(106-112) quantifies over a finite map varname |-> (shape # num list). "
+        "expHdlHOL instead takes FiniteMap MlS (ShapeHOL × List Nat), i.e. the "
+        "production raw function MlString -> Option (ShapeHOL × List Nat), which "
+        "admits infinite support, so the quantified domain is strictly broader "
+        "than HOL's. The fmap_as_finite_support qualifier cannot authorize this: "
+        "every qualified name must be a field of one same-module owning carrier "
+        "structure with a HolFiniteMapExact-typed field and a canonical roundtrip "
+        "witness, while expHdlHOL's map is a bare declaration parameter; no "
+        "input-only exception is justified. The def and the kernel bridge "
+        "crepProgToHOL_expHdlFiniteMap remain as untagged infrastructure; the "
+        "faithful finite-map port is tracked by flapjack-pxn.18.3.5.8.13.2. HOL "
+        "rows missing/known/three_words/dup_update/dup_list from "
+        "scripts/hol-probes/exp_hdl_probe.out are replayed in "
+        "Flapjack/Test/ExpHdlHOLParity.lean."
+    ),
     ("Flapjack/Pancake/Semantics/PanSem.lean", "panEmptyLocals"): (
         "cakeml/pancake/semantics/panSemScript.sml",
         "empty_locals_def",
@@ -1376,6 +1395,9 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean",
          "isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact_drop"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "memLoadHOLExact_isWfShapeValueHOLExact"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "memLoadHOLExact_shape_eq"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "memLoadHOLExact_some_shapeOf_eq"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedExpHOL"),
@@ -1386,6 +1408,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "loadMemOpHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "storeMemOpHOL"),
+        ("Flapjack/Pancake/PanLang/Prog.lean", "expIdsHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

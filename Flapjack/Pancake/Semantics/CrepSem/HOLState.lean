@@ -415,26 +415,26 @@ why the raw-map state tags withdrawn in `flapjack-pxn.18.3.7.1.3.1.1.3` can be
 restored here. The positive `BitVec width` word index is the accepted canonical
 model for HOL's positive `dimindex` (the same representation as the
 `reviewed_exact` `ProgHOL`/`ValueHOL`/`HolWordLab` and the `PanSem/memLoadHOLExact`
-port). `upd_locals`'s `updateList`, and the Nat-keyed `FUPDATE`, agree with HOL
-`|++`/`|+` because Nat's `BEq` is lawful (`beq_iff_eq`). The kernel-checked
-bridges connect each update to the executable `CrepHolState` helper through the
+port). `upd_locals`'s `updateListEq` and the Nat-keyed `updateEq` are stated with
+HOL equality (`DecidableEq`) via `FUPDATE_HOL`/`FUPDATE_LIST_HOL`; the
+`FUPDATE_HOL_eq_FUPDATE`/`FUPDATE_LIST_HOL_eq_FUPDATE_LIST` agreement lemmas
+connect them to the executable `BEq`-based maps. The kernel-checked bridges
+connect each update to the executable `CrepHolState` helper through the
 projection `toBitVecEvaluatorState`.
 
-These helpers are **temporarily untagged**: their finite-map representation must
-be recorded with the `@[hol]` qualifier `(fmap_as_finite_support := [locals,
-globals, code])` rather than a bare tag, per the standard-translation rule. That
-qualifier, its canonical witness `holFmapAsFiniteSupportWitness`, and the
-`reviewed_fmap_as_finite_support` manifest status are being added under bead
-`flapjack-pxn.18.3.7.1.3.1.1.2.4` (ds3 commits `01dae7ba5`/`bcca041b5`, not yet
-in the integration branch). Each helper is still reviewed case-by-case for
-statement/side conditions and will be re-tagged with the qualifier only once the
-checker accepts it; no exact claim is made here until then.
+These helpers are tagged `reviewed_fmap_as_finite_support`: their finite-map
+representation is recorded with the `@[hol]` qualifier
+`(fmap_as_finite_support := [locals, globals, code])`, and the canonical
+same-module witness `holFmapAsFiniteSupportWitness` states the
+`CrepSemBroadState`/`CrepSemHOLState` `toBroad`/`ofBroad` roundtrip. The
+qualifier is representation-only; each helper's statement and side conditions
+were reviewed case-by-case against HOL `crepSemScript.sml`.
 
 HOL `crepSem$res_var_def` (`crepSemScript.sml:163`) is *polymorphic in the key
 type*, so it is ported as the generic `HolFiniteMapExact.resVarEq`
-(`[DecidableEq α]`, HOL `=`) above. Its carrier is `HolFiniteMapExact` itself,
-so the field-based `fmap_as_finite_support` qualifier does not directly apply;
-the exact tagging route is part of the same follow-up bead. The state-local
+(`[DecidableEq α]`, HOL `=`) above. Its carrier is `HolFiniteMapExact` itself
+with no owning state structure, so the field-based `fmap_as_finite_support`
+qualifier does not apply and it carries no tag. The state-local
 `CrepSemHOLState.resVar` below is a Nat-fixed, `BEq`-based convenience wrapper
 kept for the `resVarW` bridge and carries no tag. -/
 

@@ -244,6 +244,31 @@ the production `exceptionEntries` after the carrier bridge `paramOfHOL` /
   | cons d ds ih =>
     cases d <;> simp [exceptionsHOL, exceptionEntries, declOfHOL, paramOfHOL, ih]
 
+/-- Componentwise production carrier of one `functionsHOL` entry: the `MlS`
+name and shape/`ProgHOL` payloads are mapped through the reviewed codecs
+`toStringOfBytes`, `paramOfHOL`, `progOfHOL` and `shapeOfHOL`. -/
+def funEntryOfHOL {width : Nat} [NeZero width]
+    (entry : MlS × List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL) :
+    FunName × List (VarName × Shape) × Prog (BitVec width) × Shape :=
+  (toStringOfBytes entry.1, entry.2.1.map paramOfHOL,
+    progOfHOL entry.2.2.1, shapeOfHOL entry.2.2.2)
+
+/-- The exact `functionsHOL` projects exactly the same `Function` entries as the
+production `functionEntries` after the carrier bridge. Direct executable routing
+of `functionEntries` to `functionsHOL` is unavailable because production is
+polymorphic over `Decl α` with `String` names while the tagged `functionsHOL` is
+over the word-indexed `DeclHOL` with `MlString`/`ShapeHOL`/`ProgHOL` carriers;
+this checked bridge is the relation between them (bead flapjack-ni1.2). -/
+@[simp] theorem functionsHOL_map_funEntryOfHOL {width : Nat} [NeZero width]
+    (declarations : List (DeclHOL width)) :
+    (functionsHOL declarations).map funEntryOfHOL =
+      functionEntries (declarations.map declOfHOL) := by
+  induction declarations with
+  | nil => simp [functionsHOL, functionEntries]
+  | cons d ds ih =>
+    cases d <;>
+      simp [functionsHOL, functionEntries, declOfHOL, funDeclOfHOL, funEntryOfHOL, ih]
+
 /-! ### Reverse (byte-ranged) roundtrips to production
 
 The forward codecs above recover an exact HOL carrier from any production

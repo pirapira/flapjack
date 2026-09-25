@@ -2119,7 +2119,14 @@ theorem panSemEvaluateCodeState_decCallSkip_ofEntry
         .skip : Prog α) = tail + 5 := by
     simpa [program] using hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
+  have hsucc1 : tail + 1 = Nat.succ tail := by omega
+  have hsucc2 : tail + 2 = Nat.succ (tail + 1) := by omega
+  have hsucc3 : tail + 3 = Nat.succ (tail + 2) := by omega
+  have hsucc4 : tail + 4 = Nat.succ (tail + 3) := by omega
+  have hsucc5 : tail + 5 = Nat.succ (tail + 4) := by omega
+  rw [hsucc5, hsucc4, hsucc3, hsucc2, hsucc1]
+  simp [evalPanValueFfiClockCodeProg,
+    evalPanValueFfiClockCodeDecCall, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
     panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, panValueFfiClockRestoreLocal,
@@ -2218,7 +2225,8 @@ theorem panSemEvaluateCodeState_decCallTick_ofEntry
       (.decCall name .one function [.const value] .tick : Prog α) = tail + 5 := by
     simpa [program] using hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeDecCall,
+    evalPanValueFfiClockCodeCall,
     panValueCallArgumentsValue, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps, panValueReturnResult, evalPanValueExpCounted,
     evalPanValueExp, hargs, hcallee, hclockNonzero,
@@ -3665,10 +3673,35 @@ private theorem compileExpListHOL_heads_eq_compileArgs_of_singleton
     `flapjack-pxn.18.3.5.8.8`. Keep bead `flapjack-4ac.5.22` open until the
     exact HOL premises and conclusion are stated and proved. -/
 
-/-! Adapter from the complete per-expression `compile_exp_val_rel` shape to
+/-! Source-reviewed disposition for HOL `compile_exp_val_rel`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:130`). HOL quantifies over
+the width-polymorphic `panSem$state`, expression `e`, source value `v`,
+`crepSem$state`, compiler context and compiled pair. It assumes successful
+source evaluation, `state_rel`, `code_rel`, `locals_rel`, `localised_exp`, and
+the exact `compile_exp` result; it concludes target evaluation of the compiled
+expressions equals `MAP SOME (flatten v)`, plus the output length, shape, and
+well-formedness facts.
+
+There is no exact Lean counterpart yet. The nearby compiler-support theorems
+use the fixed `RiscV.Word 64` production `Exp`, `PanValue`, `Shape`,
+`PanSemState`, `CrepRuntimeState`, and `CrepExp` carriers. HOL instead uses
+`ExpHOL width`, `ValueHOL width` (with `word_lab` values), `ShapeHOL`, and
+width-polymorphic HOL source/target states; the context and `code_rel`/
+`locals_rel` keys are `mlstring` and HOL finite maps. In particular, current
+`stateRel` relates optional PanValue memory to total target word memory. The
+per-expression helper below also assumes a stronger four-part `heach` fact and
+proves only the list-evaluation result, while case lemmas elsewhere cover only
+selected constructors (some with an RV64 target invariant). These declarations
+must not carry the HOL tag. The faithful theorem replacement is tracked by
+`flapjack-4ac.5.81`, blocked on exact compiler/context carriers
+(`flapjack-pxn.18.3.5.8.8`, `.8.13`) and exact state relations
+(`flapjack-pxn.18.3.7.1.3.1`). The existing compile-expression probe covers
+`compile_exp` outputs; it does not establish this evaluation theorem. -/
+/-! Adapter from the complete per-expression compiled-evaluation relation to
 the `compile_args` evaluator boundary. The target evaluation premise consumed
-by the list induction is projected from the expression IH itself; callers do
-not assume target evaluation separately. -/
+by the list induction is projected from the relation itself; callers do not
+assume target evaluation separately. This list adapter does not prove
+`compile_exp_val_rel`. -/
 theorem compileArgsHOL_eval_flatten_of_compileExpRel
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

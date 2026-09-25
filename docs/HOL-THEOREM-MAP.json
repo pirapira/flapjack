@@ -4505,6 +4505,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "kvar_defs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateDefsExact.lean",
+    "lean_name": "kvar_defs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Theorem kvar_defs (panSemScript.sml:502-503) is LIST_CONJ [set_var_def,set_global_def,set_kvar_def,is_valid_value_def,lookup_kvar_def], rendered as the five-way conjunction of those accessor equations over the exact MlString-keyed PanSemStateExact carrier, reusing the tagged setVar/setGlobal/setKvar/lookupKvar/isValidValue ports and the shapeEqHOL bridge; direct HOL rows kvar_defs_set_kvar_local/kvar_defs_set_global_update/kvar_defs_lookup_global/kvar_defs_is_valid_value in pan_sem_e2e_probe.out)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "lookup_kvar_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "lookupKvarHOLExact",

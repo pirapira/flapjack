@@ -38,7 +38,6 @@ LEAN_DIRS = [ROOT / "Flapjack", ROOT / "Flapjack.lean"]
 
 ATTR_RE = re.compile(r'\bhol\s+"([^"]+)"\s+"([^"]+)"(?:\s+(\d+))?')
 QUALIFIER_RE = re.compile(r'\(\s*list_as_array\s*:=\s*\[([^]]*)\]\s*\)')
-LIST_AS_LIST_RE = re.compile(r'\(\s*list_as_list\s*:=\s*\[([^]]*)\]\s*\)')
 NAMES_AS_STRING_RE = re.compile(r'\(\s*names_as_string\s*:=\s*\[([^]]*)\]\s*\)')
 NAMES_AS_STRING_BOUNDARY_RE = re.compile(
     r'\(\s*names_as_string_boundary\s*:=\s*\[([^]]*)\]\s*\)'
@@ -152,7 +151,6 @@ def hol_attribute_sites(lines: list[str]):
                     hol_name,
                     int(hol_line) if hol_line else None,
                     fields_for(QUALIFIER_RE),
-                    fields_for(LIST_AS_LIST_RE),
                     fields_for(NAMES_AS_STRING_RE),
                     fields_for(NAMES_AS_STRING_BOUNDARY_RE),
                     fields_for(FMAP_AS_FINITE_SUPPORT_RE),
@@ -546,45 +544,6 @@ def list_as_array_errors(lines: list[str], fields: tuple[str, ...], module: str)
     return errors
 
 
-def list_as_list_errors(
-    declaration_text: str, identifiers: tuple[str, ...], module: str, declaration: str
-) -> list[str]:
-    """Require each list_as_list name to be a Lean List-typed binder.
-
-    This qualifier records the direct HOL list / Lean List carrier mapping.
-    It is intentionally limited to declaration binders and does not bless any
-    operation, bounds, or theorem-statement differences.
-    """
-    errors: list[str] = []
-    if len(set(identifiers)) != len(identifiers):
-        errors.append(
-            "list_as_list identifiers must be distinct (duplicate names are not allowed)"
-        )
-    source = strip_lean_comments(declaration_text)
-    binders: dict[str, str] = {}
-    for match in re.finditer(r"[({]([^(){}]*)[)}]", source):
-        content = match.group(1)
-        if ":" not in content:
-            continue
-        names, type_text = content.split(":", 1)
-        binder_names = re.findall(r"[A-Za-z_][A-Za-z0-9_']*", names)
-        for name in binder_names:
-            binders[name] = type_text.strip()
-    for identifier in identifiers:
-        type_text = binders.get(identifier)
-        if type_text is None:
-            errors.append(
-                f"list_as_list identifier `{identifier}` in {module}:{declaration} "
-                "is not a declaration binder"
-            )
-        elif not re.match(r"^(?:[A-Za-z0-9_'.]+\.)?List(?:\s|$)", type_text):
-            errors.append(
-                f"list_as_list identifier `{identifier}` in {module}:{declaration} "
-                f"does not have Lean List type (found `{type_text}`)"
-            )
-    return errors
-
-
 def has_mlstring_witness(lines: list[str], declaration: str) -> bool:
     """Require a same-module byte-range theorem for a byte-observable tag.
 
@@ -722,7 +681,7 @@ def main(argv: list[str]) -> int:
         lines = lean_path.read_text(encoding="utf-8").splitlines()
         module = module_name(lean_path)
         module_reported = False
-        for (number, hol_path, hol_name, hol_line, list_fields, list_as_list,
+        for (number, hol_path, hol_name, hol_line, list_fields,
              names_fields, boundary_fields, fmap_fields) in hol_attribute_sites(lines):
             where = f"{rel}:{number}"
             lean_decl = find_lean_decl(lines, number - 1)
@@ -737,13 +696,6 @@ def main(argv: list[str]) -> int:
                 errors.extend(
                     f"{where}: {error}"
                     for error in list_as_array_errors(lines, list_fields, rel)
-                )
-            if list_as_list:
-                errors.extend(
-                    f"{where}: {error}"
-                    for error in list_as_list_errors(
-                        tagged_declaration_text(lines, number), list_as_list, rel, lean_decl
-                    )
                 )
             if fmap_fields:
                 errors.extend(

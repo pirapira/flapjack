@@ -169,17 +169,6 @@ HOL state relation, list lengths, index bounds, and update behavior. The
 manifest must list the same fields and use `reviewed_list_as_array` after that
 comparison; never call a qualified theorem `reviewed_exact`.
 
-The `(list_as_list := [xs, ...])` qualifier identifies HOL list variables
-represented by Lean `List` binders. The reference checker requires every name
-to be a declaration binder of Lean `List` type. The manifest uses
-`reviewed_list_as_list`; source review must still compare each operation,
-length/index bounds, and full theorem shape. For example, a bounded Lean
-`get?` fact may represent HOL `EL` only when the existing HOL bound is
-preserved and the option equality is proved equivalent to the selected
-element. The qualifier itself authorizes no changed premises or conclusion.
-Combinations with other qualifiers need their own explicit reviewed manifest
-status before use.
-
 Each qualified field must be a field of a structure in the same Lean module
 and have a kernel-checked theorem named `holListArrayWitness_<field>`. Its
 result type must establish `RepresentsHOLNodeList` for that field and a HOL

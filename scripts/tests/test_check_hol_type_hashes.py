@@ -154,39 +154,12 @@ class HolTypeHashesTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "manifest qualifiers differ"):
             MODULE.lock_records(manifest, changed)
 
-    def test_reviewed_list_as_list_qualifiers_are_locked(self):
-        manifest = [{
-            **self.manifest[0],
-            "statement_status": "reviewed_list_as_list",
-            "list_as_list": ["xs", "ys"],
-        }]
-        export = [{
-            **self.export[0],
-            "qualifiers": {
-                "list_as_array": [],
-                "list_as_list": ["xs", "ys"],
-                "names_as_string": [],
-                "names_as_string_boundary": [],
-                "fmap_as_finite_support": [],
-            },
-        }]
-        lock = MODULE.expected_lock(manifest, export, "leanprover/lean4:v4")
-        self.assertEqual(
-            lock["records"][0]["qualifiers"]["list_as_list"], ["xs", "ys"]
-        )
-        changed = [{
-            **export[0],
-            "qualifiers": {**export[0]["qualifiers"], "list_as_list": ["xs"]},
-        }]
-        with self.assertRaisesRegex(ValueError, "manifest qualifiers differ"):
-            MODULE.lock_records(manifest, changed)
-
     def test_fmap_qualifier_validates_and_rejects_unknown(self):
         MODULE.validate_export_record(
             {
                 "lean_name": "n", "hol_path": "p", "hol_name": "h",
                 "type_expr": "t",
-                    "qualifiers": {"fmap_as_finite_support": ["locals"]},
+                "qualifiers": {"fmap_as_finite_support": ["locals"]},
             },
             1,
         )
@@ -225,7 +198,6 @@ class HolTypeHashesTest(unittest.TestCase):
             "qualifiers": {
                 "list_as_array": [], "names_as_string": ["key"],
                 "names_as_string_boundary": [],
-                "list_as_list": [],
             },
         }
         self.assertEqual(MODULE.validate_export_record(record, 1), record)

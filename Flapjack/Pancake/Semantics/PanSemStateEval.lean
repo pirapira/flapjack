@@ -179,13 +179,16 @@ def panMemLoadByteHOL {width : Nat} [NeZero width]
     stored word are reassembled (in the requested byte order) into a `word32`;
     out-of-domain or unaligned addresses yield `NONE`.  As in
     `panMemLoadByteHOL`, HOL's total `word_lab` memory is rendered as a total
-    map into `HolWordLab` and the `word set` domain as a `Prop` predicate. -/
+    map into `HolWordLab` and the `word set` domain as a `Prop` predicate.
+    `aligned 2` is `w2n address MOD 4 = 0`; writing this directly avoids
+    BitVec's overloaded shift notation choosing a word-sized shift amount,
+    which truncates literal 2 to zero for one-bit words. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "mem_load_32_def"]
 def panMemLoad32HOL {width : Nat} [NeZero width]
     (memory : RiscV.Word width → HolWordLab width)
     (domain : RiscV.Word width → Prop) [DecidablePred domain]
     (bigEndian : Bool) (address : RiscV.Word width) : Option (RiscV.Word 32) :=
-  if (address >>> 2) <<< 2 = address then
+  if address.toNat % 4 = 0 then
     let aligned := panByteAlignHOL (width := width) address
     match memory aligned with
     | .word value =>
@@ -594,36 +597,9 @@ production-side adapters. -/
 
 theorem panSemBitVec64Aligned4_eq_decide (address : RiscV.Word 64) :
     panSemBitVec64WordModel.aligned 4 address =
-      decide ((address >>> 2) <<< 2 = address) := by
-  change RiscV.aligned address 4 = decide ((address >>> 2) <<< 2 = address)
-  rw [RiscV.aligned]
-  show (decide ((4 : Nat) ≠ 0) && decide (address.toNat % 4 = 0)) =
-    decide ((address >>> 2) <<< 2 = address)
-  rw [show decide ((4 : Nat) ≠ 0) = true from rfl, Bool.true_and]
-  apply Bool.eq_iff_iff.mpr
-  rw [decide_eq_true_eq, decide_eq_true_eq]
-  constructor
-  · intro h
-    change BitVec.shiftLeft (BitVec.ushiftRight address 2) 2 = address
-    apply BitVec.eq_of_toNat_eq
-    simp only [BitVec.shiftLeft, BitVec.ushiftRight, BitVec.toNat_ofNat,
-      BitVec.toNat_ofNatLT, Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq,
-      show (2 : Nat) ^ 2 = 4 from by decide]
-    have hdvd : 4 ∣ BitVec.toNat address := Nat.dvd_of_mod_eq_zero h
-    rw [Nat.mul_comm, Nat.mul_div_cancel' hdvd, Nat.mod_eq_of_lt (BitVec.isLt address)]
-  · intro h
-    have h2 : (BitVec.toNat address / 4 * 4) % 2 ^ 64 = BitVec.toNat address := by
-      have hcong := congrArg BitVec.toNat h
-      change BitVec.toNat (BitVec.shiftLeft (BitVec.ushiftRight address 2) 2) =
-        BitVec.toNat address at hcong
-      simp only [BitVec.shiftLeft, BitVec.ushiftRight, BitVec.toNat_ofNat,
-        BitVec.toNat_ofNatLT, Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq,
-        show (2 : Nat) ^ 2 = 4 from by decide] at hcong
-      exact hcong
-    rw [← h2]
-    rw [Nat.mod_mod_of_dvd _ (show 4 ∣ 2 ^ 64 from ⟨2 ^ 62, by decide⟩)]
-    rw [Nat.mul_comm (BitVec.toNat address / 4) 4]
-    exact Nat.mul_mod_right 4 _
+      decide (address.toNat % 4 = 0) := by
+  change RiscV.aligned address 4 = decide (address.toNat % 4 = 0)
+  simp [RiscV.aligned]
 
 theorem panRiscVWordOfBytes64_eq_widen (be : Bool) (b0 b1 b2 b3 : RiscV.Word 64)
     (h0 : b0.toNat < 256) (h1 : b1.toNat < 256)
@@ -734,7 +710,7 @@ theorem panSemBitVec64Read32_eq_panMemLoad32HOL (state : PanSemState (RiscV.Word
               (panRiscVGetByteEndian_toNat_lt_256 (address + 2) w state.be)
               (panRiscVGetByteEndian_toNat_lt_256 (address + 3) w state.be)]
             rw [hu0, hu1, hu2, hu3]
-            by_cases hg : address >>> 2 <<< 2 = address <;> simp
+            by_cases hg : address.toNat % 4 = 0 <;> simp [hg]
       | rStruct fs => simp [panValueWordDefined, hcell]
       | nStruct nm fs => simp [panValueWordDefined, hcell]
 

@@ -56,7 +56,7 @@ example : holLoopExpToExecutable expLoad = LoopExp.load (LoopExp.var 3) := by
   simp only [holLoopExpToExecutable, expLoad]
 example : holLoopExpToExecutable expShift =
     LoopExp.shift .lsl (LoopExp.var 1) (LoopExp.const (w8 2)) := by
-  simp only [holLoopExpToExecutable, expShift, expVar, expConst, w8]
+  simp only [holLoopExpToExecutable, expShift, w8]
 example : holLoopExpToExecutable expBase = (LoopExp.baseAddr : LoopExp W) := by
   simp only [holLoopExpToExecutable, expBase]
 example : holLoopExpToExecutable expTop = (LoopExp.topAddr : LoopExp W) := by

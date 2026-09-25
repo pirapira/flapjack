@@ -84,6 +84,25 @@ def load32HitWidth8 : Option (Word 8) :=
   panModelRead32 word8Model word8Domain word8Memory
     word8BytesInWord (BitVec.ofNat 8 0) false
 
+/-! Width-one regression: the direct HOL row
+`load32_unaligned_width1_address1` is `NONE` because `aligned 2` rejects
+address 1. The tagged port now expresses that guard as divisibility by four,
+so its result matches the original definition. -/
+def word1Address1 : Word 1 := BitVec.ofNat 1 1
+def holByteAlignWidth1Address1 : Word 1 := panByteAlignHOL word1Address1
+def taggedLoad32Width1 : Option (Word 32) :=
+  panMemLoad32HOL
+    (fun _ => HolWordLab.word (BitVec.ofNat 1 1))
+    (fun _ => True) false word1Address1
+def wordOfBytes32DistinctLittle : Word 32 :=
+  RiscV.panRiscVWordOfBytes false
+    [BitVec.ofNat 32 0x11, BitVec.ofNat 32 0x22,
+     BitVec.ofNat 32 0x33, BitVec.ofNat 32 0x44]
+def wordOfBytes32DistinctBig : Word 32 :=
+  RiscV.panRiscVWordOfBytes true
+    [BitVec.ofNat 32 0x11, BitVec.ofNat 32 0x22,
+     BitVec.ofNat 32 0x33, BitVec.ofNat 32 0x44]
+
 /-! HOL `byte_align_def` is `align (LOG2 (dimindex DIV 8))`, while the
 RISC-V target rounds down by the supplied `bytesInWord`. For a 24-bit word,
 HOL therefore uses exponent `LOG2 3 = 1` and aligns address 5 to 4; the
@@ -188,6 +207,10 @@ example :
 #guard load32DomainMiss == originalLoad32DomainMiss
 #guard byteHitWidth8 == some (BitVec.ofNat 8 0xa5)
 #guard load32HitWidth8 == some (BitVec.ofNat 8 0xa5)
+#guard holByteAlignWidth1Address1 == word1Address1
+#guard taggedLoad32Width1 == none
+#guard wordOfBytes32DistinctLittle == BitVec.ofNat 32 0x44332211
+#guard wordOfBytes32DistinctBig == BitVec.ofNat 32 0x11223344
 #guard holByteAlignWidth24Address5 == BitVec.ofNat 24 4
 #guard riscvByteAlignWidth24Address5 == BitVec.ofNat 24 3
 #guard holByteAlignWidth24Address5 != riscvByteAlignWidth24Address5

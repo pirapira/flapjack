@@ -57,4 +57,47 @@ example : getKeyword "abc" = Token.identT "abc" := by decide
 
 example : getKeyword "@ffi" = Token.foreignIdent "ffi" := by decide
 
+/-! Direct parity with the original-HOL `get_keyword` oracle
+    (`scripts/hol-probes/pan_lexer_get_keyword_probe.out`,
+    bead `flapjack-pxn.18.3.5.8.7.2`): every table entry and fallback. -/
+
+example : getKeyword "skip" = Token.keywordT Keyword.skipK := by decide
+example : getKeyword "st" = Token.keywordT Keyword.stK := by decide
+example : getKeyword "stw" = Token.keywordT Keyword.stwK := by decide
+example : getKeyword "st8" = Token.keywordT Keyword.st8K := by decide
+example : getKeyword "st16" = Token.keywordT Keyword.st16K := by decide
+example : getKeyword "st32" = Token.keywordT Keyword.st32K := by decide
+example : getKeyword "if" = Token.keywordT Keyword.ifK := by decide
+example : getKeyword "else" = Token.keywordT Keyword.elseK := by decide
+example : getKeyword "while" = Token.keywordT Keyword.whileK := by decide
+example : getKeyword "break" = Token.keywordT Keyword.brK := by decide
+example : getKeyword "continue" = Token.keywordT Keyword.contK := by decide
+example : getKeyword "throw" = Token.keywordT Keyword.throwK := by decide
+example : getKeyword "return" = Token.keywordT Keyword.retK := by decide
+example : getKeyword "tick" = Token.keywordT Keyword.ticK := by decide
+example : getKeyword "var" = Token.keywordT Keyword.varK := by decide
+example : getKeyword "in" = Token.keywordT Keyword.inK := by decide
+example : getKeyword "try" = Token.keywordT Keyword.tryK := by decide
+example : getKeyword "catch" = Token.keywordT Keyword.catchK := by decide
+example : getKeyword "lds" = Token.keywordT Keyword.ldsK := by decide
+example : getKeyword "ldw" = Token.keywordT Keyword.ldwK := by decide
+example : getKeyword "ld8" = Token.keywordT Keyword.ld8K := by decide
+example : getKeyword "ld16" = Token.keywordT Keyword.ld16K := by decide
+example : getKeyword "ld32" = Token.keywordT Keyword.ld32K := by decide
+example : getKeyword "@base" = Token.keywordT Keyword.baseK := by decide
+example : getKeyword "@top" = Token.keywordT Keyword.baseK := by decide
+example : getKeyword "@biw" = Token.keywordT Keyword.biwK := by decide
+example : getKeyword "true" = Token.keywordT Keyword.trueK := by decide
+example : getKeyword "false" = Token.keywordT Keyword.falseK := by decide
+example : getKeyword "fun" = Token.keywordT Keyword.funK := by decide
+example : getKeyword "export" = Token.keywordT Keyword.exportK := by decide
+example : getKeyword "inline" = Token.keywordT Keyword.inlineK := by decide
+example : getKeyword "exception" = Token.keywordT Keyword.exceptionK := by decide
+example : getKeyword "struct" = Token.keywordT Keyword.namedK := by decide
+example : getKeyword "" = Token.lexErrorT "Expected keyword, found empty string" := by
+  decide
+example : getKeyword "@ffi" = Token.foreignIdent "ffi" := by decide
+example : getKeyword "abc" = Token.identT "abc" := by decide
+example : getKeyword "@" = Token.identT "@" := by decide
+
 end Flapjack.Test.ParserByteRangedParity

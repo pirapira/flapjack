@@ -17,9 +17,24 @@ The clause-shaped equations below expose each of the fifteen `eval_def` clauses
 over the finite carrier one by one; they are the per-clause review surface and
 each holds definitionally.
 
-No `@[hol]` tag yet: the `fmap_as_finite_support` qualifier, per-clause source
-review, and type-lock coverage are tracked by the parent bead
-`flapjack-pxn.18.3.7.1.3.1.1.2.5`.
+Per-clause source review (against `cakeml/pancake/semantics/panSemScript.sml:209-283`)
+is complete and each clause matches: `Const`; `Var Local`/`Global` as
+`FLOOKUP` on the finite-map fields (`state.locals.lookup`/`state.globals.lookup`);
+`RStruct` (`OPT_MMAP`); `RField` (`index < LENGTH` as `values[index]?`); `NStruct`
+(`ALOOKUP` + `UNZIP` + field-name equality + `OPT_MMAP` + `EVERY (shape_of ·)`);
+`NField`; `Load`/`Load32`/`LoadByte` (reusing the tagged exact memory helpers);
+`Op`/`Panop` (`EVERY isValWord` + `theWord`); `Cmp`; `Shift`;
+`BaseAddr`/`TopAddr`/`BytesInWord`.
+
+No `@[hol]` tag yet.  The wrapper bodies are `evalHOLExact state.toExact`, so
+they do not textually present HOL's clause-shaped definition body; tagging a
+delegating body `eval_def` would overclaim, and the type-hash lock records the
+elaborated body.  Restoring the tag requires either a literal clause-shaped
+definition over `PanSemStateFiniteExact` plus a mutual-induction equality to the
+delegation, or an explicit coordinator ruling that the delegation wrapper plus
+these clause equations is the reviewed rendering.  The `fmap_as_finite_support`
+qualifier, type-lock coverage, and the production-path follow-up are tracked by
+the parent bead `flapjack-pxn.18.3.7.1.3.1.1.2.5`.
 -/
 import Flapjack.Pancake.Semantics.PanSem.EvalExact
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap

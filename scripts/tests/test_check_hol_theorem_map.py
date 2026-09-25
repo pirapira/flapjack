@@ -32,6 +32,23 @@ protected theorem actualProof : True := by trivial
 
 
 class ReviewedSourceComparisonTest(unittest.TestCase):
+    def test_pan_globals_compile_prog_carrier_mismatch_is_documented(self):
+        key = ("Flapjack/Pancake/PanGlobals.lean", "compileProgCake")
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/pan_globalsScript.sml", "compile_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("ProgHOL width", record["reviewer"])
+        self.assertIn("No byte-range premise", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_crep_assigned_vars_nested_seq_carrier_mismatch_is_documented(self):
         key = (
             "Flapjack/Pancake/Semantics/CrepProps.lean",

@@ -35,6 +35,39 @@ def panRiscVByteAlign [NeZero width]
   if bytes = 0 then address
   else BitVec.ofNat width ((address.toNat / bytes) * bytes)
 
+/-- **Exact precondition for HOL faithfulness.** When the byte count
+`bytesInWord.toNat` is a power of two, `bytesInWord.toNat = 2 ^ k`, the
+division-based `panRiscVByteAlign` is exactly the HOL `byte$byte_align` bit
+mask (clear the low `k` bits). The production RISC-V target is fixed at
+`Word 64` with `bytesInWord = 8 = 2^3`, so this covers the only reachable
+production byte count; non-power-of-two byte counts (for example `width = 24`,
+`bytesInWord = 3`) diverge from HOL and are not reachable in the rv64i
+pipeline. See the direct HOL oracle `scripts/hol-probes/byte_align_probe.out`
+(`ba24_5 = 4`, `ba64_13 = 8`, `ba8_7 = 7`). -/
+theorem panRiscVByteAlign_eq_bitMask_of_pow2 [NeZero width]
+    (bytesInWord address : Word width) (k : Nat)
+    (hbytes : bytesInWord.toNat = 2 ^ k) :
+    panRiscVByteAlign bytesInWord address =
+      BitVec.ofNat width ((address.toNat >>> k) <<< k) := by
+  have h0 : bytesInWord.toNat ≠ 0 := by
+    rw [hbytes]
+    have hle := Nat.two_pow_pos k
+    omega
+  unfold panRiscVByteAlign
+  rw [if_neg h0]
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_ofNat]
+  rw [Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq, hbytes]
+
+/-- Production RISC-V `Word 64` byte alignment (`bytesInWord = 8 = 2^3`) is
+the HOL bit mask `(address >>> 3) <<< 3`. -/
+theorem panRiscVByteAlign_eight_eq_bitMask (address : Word 64) :
+    panRiscVByteAlign (8 : Word 64) address =
+      BitVec.ofNat 64 ((address.toNat >>> 3) <<< 3) := by
+  have h8 : (8 : Word 64).toNat = 2 ^ 3 := by decide
+  exact panRiscVByteAlign_eq_bitMask_of_pow2 (width := 64)
+    (bytesInWord := (8 : Word 64)) address 3 h8
+
 def panRiscVByteIndex [NeZero width]
     (bytesInWord address : Word width) : Nat :=
   let bytes := bytesInWord.toNat

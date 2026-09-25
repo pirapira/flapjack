@@ -212,10 +212,27 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
 /-! Flapjack-specific analogue of `pan_to_crep$wrap_rt`
     (`cakeml/pancake/pan_to_crepScript.sml:131-136`).
 
-    The empty one-word return slot is normalized to no return slot; every
-    other option is preserved unchanged. The production `Shape` nested in the
-    option uses String-backed named fields, while HOL uses `mlstring`; the
-    equations match but the carriers do not, so this declaration is untagged. -/
+    Clause-by-clause the HOL definition is
+    `wrap_rt NONE = NONE`,
+    `wrap_rt (SOME (One, [])) = NONE`,
+    `wrap_rt m = m`.
+    The Lean equations match exactly: the empty one-word return slot is
+    normalized to no return slot, and every other option is preserved
+    unchanged.
+
+    This declaration is untagged.  The production `Shape` `Named` constructor
+    carries a Lean `String` (`StructName`) where HOL carries `mlstring`.
+    `wrap_rt` never compares or byte-observes that name (it only tests the
+    `One`/empty-list shape and otherwise returns its argument unchanged), so
+    the difference is not byte-observable, but it is also not an
+    equality/map-key use, and no truthful `names_as_string` classification
+    exists yet.  A faithful tag needs an explicit unused/discarded
+    nested-carrier classification in the qualifier policy (or an exact
+    MlString-backed `ShapeHOL`); tracked as follow-up with `retVar`.
+
+    Direct HOL rows (`none`/`empty_one`/`one_word`/`comb_empty`/`named`) are in
+    `scripts/hol-probes/wrap_rt_probe.out`; Lean parity guards are in
+    `Flapjack/Test/WrapRtParity.lean`. -/
 def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
   | none => none
   | some (.one, []) => none

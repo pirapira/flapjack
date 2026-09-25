@@ -893,6 +893,55 @@ theorem crepSimpExpCorrect1CrepSemHOLFiniteStateSourceEval
   rw [CrepSemHOLFiniteState.toSourceEvaluatorState_mapc]
   exact hPreserved
 
+/-- All-dimension production-runtime support for the complete HOL-shaped
+`simp_exp_correct1` state and code update. The state retains exact finite maps,
+`MlString` code keys, `CrepProgHOL` entries, `HolFfiState`, total memory,
+address domains, and the full `Option word_lab` result. Evaluation uses
+`evalCrepRuntimeExp` after projecting the expression-observable fields into
+the explicit `HolFiniteDimension` runtime adapter; the HOL `mapc` update is
+preserved in the input state and erased by that projection, as expression
+evaluation does not inspect code. This remains untagged because the adapter's
+explicit dimension/word operations and its inert FFI projection have not yet
+been identified with native HOL `crepSem$eval` for the selected implicit
+`finite_index` instance. -/
+theorem crepSimpExpCorrect1CrepSemHOLFiniteStateRuntime
+    {ι : Type} [dimension : HolFiniteDimension ι] {σ : Type}
+    (update : MlString ×
+      (List Nat × CrepProgHOL dimension.width) →
+      List Nat × CrepProgHOL dimension.width)
+    (state : CrepSemHOLFiniteState ι
+      (List Nat × CrepProgHOL dimension.width) σ)
+    (expression : CrepExpHOL dimension.width)
+    (_result : PanWordLab (ι → Bool))
+    (h : (evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      (mapCrepExpWord (bitVecToHolWord dimension)
+        (crepExpOfHOL expression))).map PanWordLab.word ≠ none) :
+    (evalCrepRuntimeExp
+      ((state.mapc update).toSourceEvaluatorState.toHolFiniteWordSourceRuntime
+        dimension)
+      (crepSimpExp
+        (fun n => bitVecToHolWord dimension
+          (BitVec.ofNat dimension.width n))
+        (mapCrepExpWord (bitVecToHolWord dimension)
+          (crepExpOfHOL expression)))).map PanWordLab.word =
+    (evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      (mapCrepExpWord (bitVecToHolWord dimension)
+        (crepExpOfHOL expression))).map PanWordLab.word := by
+  have hRaw : evalCrepRuntimeExp
+      (state.toSourceEvaluatorState.toHolFiniteWordSourceRuntime dimension)
+      (mapCrepExpWord (bitVecToHolWord dimension)
+        (crepExpOfHOL expression)) ≠ none := by
+    intro hNone
+    simp [hNone] at h
+  have hPreserved := crepSimpExpEvalPreservesHolFiniteWordSource
+    dimension state.toSourceEvaluatorState
+    (mapCrepExpWord (bitVecToHolWord dimension)
+      (crepExpOfHOL expression)) hRaw
+  rw [CrepSemHOLFiniteState.toSourceEvaluatorState_mapc]
+  exact congrArg (Option.map PanWordLab.word) hPreserved
+
 /-- Native production-evaluator `Var` case against the exact finite-map local
 field in `CrepSemHOLState`, corresponding to HOL `crepSem$eval_def`
 (`crepSemScript.sml:91`). The production runtime state remains arbitrary,

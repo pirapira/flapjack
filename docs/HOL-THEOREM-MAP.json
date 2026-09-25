@@ -648,6 +648,14 @@
     "reviewer": "Uses an implicit HolFiniteDimension instance for an arbitrary word-index carrier and exact finite-map, MlString, CrepProgHOL, CrepExpHOL, set-domain, HolFfiState, expression, mapc-update, and word_lab result carriers. The source evaluator still transports through the dimension and word-operation adapter; its identity with HOL's selected finite_index instance and native crepSem$eval remains open. No @[hol] tag."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "crepSimpExpCorrect1CrepSemHOLFiniteStateRuntime",
+    "statement_status": "documented_mismatch",
+    "reviewer": "All-dimension production evalCrepRuntimeExp support over the exact finite-map, MlString/CrepProgHOL, HolFfiState, CrepExpHOL, mapc-update, and full Option/word_lab result carriers. The expression projection feeds the explicit HolFiniteDimension source-runtime adapter and erases code/FFI observations; its operations and selected finite_index instance are not proved identical to native HOL crepSem$eval. No @[hol] tag."
+  },
+  {
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/ExactStateProjection.lean",

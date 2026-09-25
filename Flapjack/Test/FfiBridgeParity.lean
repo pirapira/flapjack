@@ -88,8 +88,16 @@ example : FfiResultRel (callFfi prodState (FfiName.extCall "f") [1] [2])
     (by decide) (by decide) [1] [2] 1 [2, 2] rfl (by decide)
 
 
+
+example : BytesPairRel ([(1 : UInt8), 2].zip [(3 : UInt8)])
+    ([byteToBits 1, byteToBits 2].zip [byteToBits 3]) :=
+  bytesPairRel_zip (bytesRel_map_byteToBits [1, 2]) (bytesRel_map_byteToBits [3])
+
+example : FfiEventListRel ([] ++ []) ([] ++ []) :=
+  ffiEventListRel_append (by trivial) (by trivial)
+
 def runChecks : IO Bool := do
-  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure)"
+  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, append/zip)"
   pure true
 
 end Flapjack.Test.FfiBridgeParity

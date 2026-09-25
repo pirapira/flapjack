@@ -250,4 +250,42 @@ theorem callFfi_extCall_lengthFailure_bridge {σ : Type} (state : FfiState σ)
       exact ⟨rfl, bytesRel_map_byteToBits configuration, bytesRel_map_byteToBits bytes,
         Or.inl ⟨rfl, rfl⟩⟩
 
+
+/-- Zipping two lists commutes with componentwise mapping. -/
+theorem listMapZipPair {α β γ δ : Type} (f : α → γ) (g : β → δ) (l₁ : List α)
+    (l₂ : List β) :
+    (l₁.zip l₂).map (fun p => (f p.1, g p.2)) = (l₁.map f).zip (l₂.map g) := by
+  induction l₁ generalizing l₂ with
+  | nil => cases l₂ <;> rfl
+  | cons a t ih =>
+      cases l₂ with
+      | nil => rfl
+      | cons b u =>
+          simp only [List.zip_cons_cons, List.map_cons]
+          rw [ih u]
+
+/-- The byte-pair relation commutes with pairing production and exact byte lists. -/
+theorem bytesPairRel_zip {as bs : List UInt8} {as' bs' : List (BitVec 8)}
+    (ha : BytesRel as as') (hb : BytesRel bs bs') :
+    BytesPairRel (as.zip bs) (as'.zip bs') := by
+  have ha' : as'.map BitVec.toNat = as.map UInt8.toNat := ha
+  have hb' : bs'.map BitVec.toNat = bs.map UInt8.toNat := hb
+  simp only [BytesPairRel]
+  rw [listMapZipPair (f := BitVec.toNat) (g := BitVec.toNat),
+    listMapZipPair (f := UInt8.toNat) (g := UInt8.toNat), ha', hb']
+
+/-- The gradual event-list relation is preserved by list concatenation. -/
+theorem ffiEventListRel_append {l1 l2 : List FfiEvent} {m1 m2 : List HolIoEvent}
+    (h1 : FfiEventListRel l1 m1) (h2 : FfiEventListRel l2 m2) :
+    FfiEventListRel (l1 ++ l2) (m1 ++ m2) := by
+  induction l1 generalizing m1 with
+  | nil =>
+      cases m1 with
+      | nil => simpa [FfiEventListRel] using h2
+      | cons e es => exact (h1 : False).elim
+  | cons e es ih =>
+      cases m1 with
+      | nil => exact (h1 : False).elim
+      | cons e' es' => exact ⟨h1.1, ih h1.2⟩
+
 end Flapjack

@@ -90,6 +90,7 @@ import Flapjack.Tests
 import Flapjack.Pancake.PanStatic
 import Flapjack.Parser
 import Flapjack.Pancake.CrepLang
+import Flapjack.Pancake.CrepLang.Exp
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.WordConvs
 import Flapjack.Pancake.PanToCrep
@@ -228,6 +229,7 @@ import Flapjack.Lab
 import Flapjack.RiscV.Lab
 import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
+import Flapjack.FfiHOL
 
 /-!
 # Flapjack in Lean

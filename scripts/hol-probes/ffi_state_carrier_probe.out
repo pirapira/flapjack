@@ -1,0 +1,13 @@
+ffi_outcome_failed=FFI_failed
+shmem_mappedRead=MappedRead
+ffi_name_extcall=ExtCall «f»
+oracle_final_diverged=Oracle_final FFI_diverged
+initial_state_host=0
+initial_state_events=[]
+io_event_sizes=(2,1)
+call_identity=T
+call_ok_host=1
+call_ok_events=1
+call_ok_bytes=[1w]
+call_length_failure=T
+call_final_event=T

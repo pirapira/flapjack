@@ -9127,27 +9127,43 @@
     "statement_status": "pending_statement_review",
     "reviewer": "flapjack-deepseek (source comparison)"
   },
-{
-  "hol_path": "cakeml/pancake/panLangScript.sml",
-  "hol_name": "size_of_sh_with_ctxt_def",
-  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
-  "lean_name": "sizeOfShapeWithContextHOL",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "size_of_sh_with_ctxt_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "sizeOfShapeWithContextHOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "mem_load_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemLoadHOL.lean",
+    "lean_name": "memLoadHOLExact",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "size_of_shape_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
+    "lean_name": "sizeOfShapeHOL",
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-deepseek (source comparison)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "list_insert_SNOC",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "sptListInsert_snoc",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (statement compared against list_insert_SNOC at crep_to_loopProofScript.sml:386: HOL list_insert (SNOC x y) l = insert x () (list_insert y l); SNOC x y rendered as y ++ [x], list_insert/insert as the untagged sptListInsert/sptInsert renderings of HOL src/finite_maps/sptreeScript.sml list_insert/insert; direct HOL-EVAL rows li_mem_3/li_mem_4/li_absent_5/li_snoc_mem_5/li_snoc_agrees in scripts/hol-probes/crep_to_loop_list_insert_probe.out reproduced by Lean guards in Flapjack/Test/CrepToLoopParity.lean)"
+  },
 {
   "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-  "hol_name": "mem_load_def",
-  "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemLoadHOL.lean",
-  "lean_name": "memLoadHOLExact",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/pancake/panLangScript.sml",
-  "hol_name": "size_of_shape_def",
-  "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
-  "lean_name": "sizeOfShapeHOL",
+  "hol_name": "isValWord_def",
+  "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+  "lean_name": "isValWordHOL",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
 },
@@ -9172,14 +9188,6 @@
   "hol_name": "is_wf_ctxt_def",
   "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
   "lean_name": "isWfCtxtExactHOL",
-  "statement_status": "pending_statement_review",
-  "reviewer": "flapjack-deepseek (source comparison)"
-},
-{
-  "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-  "hol_name": "isValWord_def",
-  "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
-  "lean_name": "isValWordHOL",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
 }

@@ -529,4 +529,26 @@ def evalPanSemRecursiveCallHOLExact {width : Nat} {σ : Type} [NeZero width]
   | none => none
   | some (result, context) => some (result, context.state)
 
+/-! The outer `Option` above is an assembly marker, not part of HOL's
+`evaluate` result. Proving it cannot be `none` for any constructor turns the
+recursive fragment into a total result × post-state evaluator over the exact
+HOL syntax and state carrier. This is Flapjack evaluator infrastructure, not
+an `evaluate_def` port: `PanSemStateExact` still admits unrestricted function
+maps, and the finite-map carrier/output bridge remains separate. -/
+theorem evalPanSemRecursiveCallContextHOLExact_total {width : Nat} {σ : Type}
+    [NeZero width] (program : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) :
+    ∃ output,
+      evalPanSemRecursiveCallContextHOLExact program context = some output := by
+  fun_induction evalPanSemRecursiveCallContextHOLExact program context <;> simp_all
+  case case71 =>
+    rename_i ih
+    exact (ih _ _ _ _ rfl rfl rfl) rfl
+  case case73 =>
+    rename_i args ih
+    exact ih .addCarry
+  case case81 =>
+    rename_i ih
+    exact (ih _ _ _ _ _ rfl rfl rfl rfl) rfl
+
 end Flapjack

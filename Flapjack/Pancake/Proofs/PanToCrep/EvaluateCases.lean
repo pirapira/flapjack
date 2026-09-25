@@ -2119,7 +2119,14 @@ theorem panSemEvaluateCodeState_decCallSkip_ofEntry
         .skip : Prog α) = tail + 5 := by
     simpa [program] using hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
+  have hsucc1 : tail + 1 = Nat.succ tail := by omega
+  have hsucc2 : tail + 2 = Nat.succ (tail + 1) := by omega
+  have hsucc3 : tail + 3 = Nat.succ (tail + 2) := by omega
+  have hsucc4 : tail + 4 = Nat.succ (tail + 3) := by omega
+  have hsucc5 : tail + 5 = Nat.succ (tail + 4) := by omega
+  rw [hsucc5, hsucc4, hsucc3, hsucc2, hsucc1]
+  simp [evalPanValueFfiClockCodeProg,
+    evalPanValueFfiClockCodeDecCall, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
     panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, panValueFfiClockRestoreLocal,
@@ -2218,7 +2225,8 @@ theorem panSemEvaluateCodeState_decCallTick_ofEntry
       (.decCall name .one function [.const value] .tick : Prog α) = tail + 5 := by
     simpa [program] using hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeDecCall,
+    evalPanValueFfiClockCodeCall,
     panValueCallArgumentsValue, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps, panValueReturnResult, evalPanValueExpCounted,
     evalPanValueExp, hargs, hcallee, hclockNonzero,

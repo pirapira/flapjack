@@ -235,6 +235,28 @@ private def recursiveExact8
     [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs] :=
   evalPanSemRecursiveCallHOLExact program state
 
+/-! These kernel checks exercise the proof that the exact recursive evaluator's
+outer assembly marker is always populated on state-owned Call and DecCall
+entries. The adjacent `stateOwnedCallRows` / `stateOwnedDecCallRows` checks
+compare their full result and post-state against direct original-HOL rows. -/
+example : (recursiveExact (.call none (ml "loop") [])
+    (recursiveCallCodeState 2)).isSome = true := by
+  unfold recursiveExact evalPanSemRecursiveCallHOLExact
+  obtain ⟨output, houtput⟩ :=
+    evalPanSemRecursiveCallContextHOLExact_total
+      (.call none (ml "loop") [])
+      ⟨recursiveCallCodeState 2, inferInstance, inferInstance⟩
+  simp [houtput]
+
+example : (recursiveExact (.decCall (ml "answer") .one (ml "loop") [] .skip)
+    (recursiveDecCallCodeState 2)).isSome = true := by
+  unfold recursiveExact evalPanSemRecursiveCallHOLExact
+  obtain ⟨output, houtput⟩ :=
+    evalPanSemRecursiveCallContextHOLExact_total
+      (.decCall (ml "answer") .one (ml "loop") [] .skip)
+      ⟨recursiveDecCallCodeState 2, inferInstance, inferInstance⟩
+  simp [houtput]
+
 private def primitiveState : PanSemStateExact 64 Unit :=
   { baseState with
     locals := fun name =>

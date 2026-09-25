@@ -51,6 +51,30 @@ theorem loopAssignedVars_loopAssignPairs_fixture :
   loopAssignedVars_loopAssignPairs [3, 4, 5] [.const 0, .const 1, .const 2]
     (by decide)
 
+/-! Cake `crep_to_loopProofScript.sml:355` `assigned_vars_MAPi_Assign` with
+    HOL's `MAPi (λn. Assign (n + offset))` rendered by `List.mapIdx`.  Expected
+    observations are the `avma_*` rows of
+    `scripts/hol-probes/crep_to_loop_assigned_vars_mapidx_probe.out`. -/
+
+def probeMapIdxAssign : LoopProg (BitVec 64) :=
+  loopNestedSeq
+    (([.const 0, .const 1, .const 2] : List (LoopExp (BitVec 64))).mapIdx
+      (fun n e => .assign (n + 7) e))
+
+theorem loopAssignedVars_mapIdxAssign_fixture :
+    loopAssignedVars probeMapIdxAssign = [7, 8, 9] := by
+  unfold probeMapIdxAssign
+  rw [loopAssignedVars_mapIdxAssign]
+  decide
+
+theorem loopAssignedVars_mapIdxAssign_nil_fixture :
+    loopAssignedVars
+        (loopNestedSeq
+          (([] : List (LoopExp (BitVec 64))).mapIdx
+            (fun n e => .assign (n + 3) e))) = [] := by
+  rw [loopAssignedVars_mapIdxAssign]
+  decide
+
 /-! Cake `crep_to_loopProofScript.sml:342` `cut_sets_MAPi_Assign`. -/
 
 theorem loopCutSets_loopAssignPairs_fixture :
@@ -250,6 +274,8 @@ def runChecks : IO Bool := do
       (loopAssignedVars probeLoadByte) originalLoadByte,
     check "assigned_vars MAPi Assign"
       (loopAssignedVars probeAssignNames) [3, 4, 5],
+    check "assigned_vars MAPi mapIdx Assign"
+      (loopAssignedVars probeMapIdxAssign) [7, 8, 9],
     check "assigned_vars nested_seq Assign"
       (loopAssignedVars probeAssignPairs) [3, 4, 5],
     check "cut_sets MAPi Assign"

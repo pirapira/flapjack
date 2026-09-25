@@ -525,7 +525,8 @@ example :
           [.const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 1)),
            .const (bitVecToHolWord boolWordDimensionSwapped (BitVec.ofNat 2 2))]) ≠ none := by
     simp [evalCrepHolFiniteWordSourceExpWordLab,
-      evalCrepHolFiniteWordSourceExp, holFiniteWordSourceMul]
+      evalCrepHolFiniteWordSourceExp, holFiniteWordSourceCrepOp,
+      holFiniteWordSourceMul]
   exact @crepSimpExpCorrect1HolFiniteWordSourceWordLab Bool Unit
     boolWordDimensionSwapped (fun (_, entry) => entry) boolDimensionHolState
     (.crepOp .mul
@@ -675,7 +676,8 @@ example :
       (.crepOp .mul [left, right]) ≠ none := by
     simp [evalCrepHolFiniteWordSourceExpWordLab,
       evalCrepHolFiniteWordSourceExp, source, left, right,
-      holWordBitsVarState4, holFiniteWordSourceMul_eq_mul]
+      holWordBitsVarState4, holFiniteWordSourceCrepOp,
+      holFiniteWordSourceMul]
   have ih : ∀ (subexpression : CrepExp (Fin 4 → Bool)),
       subexpression ∈ [left, right] →
       ∀ (state : CrepHolState (Fin 4 → Bool) Unit)

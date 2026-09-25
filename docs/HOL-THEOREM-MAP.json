@@ -9133,7 +9133,7 @@
     "lean_path": "Flapjack/Pancake/LoopLang.lean",
     "lean_name": "HolLoopProg",
     "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-main (HOL/Lean constructor comparison: all 25 prog constructors and field types match loopLangScript.sml:30-60; word width fixed at BitVec width; num_set fields use the exact Spt Unit carrier; shMem uses CrepMemOp whose eight constructors match asm$memop; FFI name is the exact MlString carrier)"
+    "reviewer": "flapjack-deepseek-two (independent HOL/Lean comparison: all 24 prog constructors and field types match loopLangScript.sml:30-60; word width fixed at BitVec width; num_set fields use the exact Spt Unit carrier; shMem uses CrepMemOp whose eight constructors match asm$memop; FFI name is the exact MlString carrier)"
   },
 {
   "hol_path": "cakeml/compiler/backend/stackLangScript.sml",

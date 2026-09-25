@@ -67,6 +67,10 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 "cakeml/pancake/pan_globalsScript.sml",
                 "new_main_name_def",
             ),
+            ("Flapjack/Pancake/PanGlobals.lean", "globalDeclShapes"): (
+                "cakeml/pancake/pan_globalsScript.sml",
+                "dec_shapes_def",
+            ),
         }
         inventory = {
             (record["lean_path"], record["lean_name"]): record
@@ -85,7 +89,39 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                 self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
                 self.assertNotIn(key, tagged)
 
-    def test_pan_globals_fperm_name_polymorphic_port_and_specialization(self):
+    def test_pan_globals_exception_carrier_mismatches_are_documented(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        manifest_by_key = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in manifest
+        }
+        cases = {
+            ("Flapjack/Pancake/Proofs/PanGlobals.lean", "exceptions_append"): (
+                "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+                "exceptions_append",
+                "flapjack-dlc.48",
+            ),
+            (
+                "Flapjack/Pancake/Proofs/PanGlobals.lean",
+                "exceptions_FILTER_is_function",
+            ): (
+                "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+                "exceptions_FILTER_is_function",
+                "flapjack-dlc.47",
+            ),
+        }
+        tagged = MAP["tagged_declarations"]()
+        for key, (hol_path, hol_name, bead) in cases.items():
+            with self.subTest(lean_name=key[1]):
+                record = manifest_by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    (hol_path, hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("Exp α.Const", record["reviewer"])
+                self.assertIn(bead, record["reviewer"])
+                self.assertNotIn(key, tagged)
         tagged = MAP["tagged_declarations"]()
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
         manifest_by_key = {

@@ -1069,15 +1069,22 @@ theorem holMlStringWitness_globalNewMainName (declarations : List (Decl α)) :
 /-! Flapjack-specific source-shaped counterpart (NOT an exact HOL port) of Cake's `dec_shapes_def` (`pan_globalsScript.sml:228`): the
     shape projection skips function, name, and exception declarations and
     keeps the shape of each value declaration, in order. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the clauses preserve declaration
--- order and select the `Decl` shape as in `dec_shapes_def`, but this executed
--- function consumes `Decl α`, whose `Exp α.Const` payload is not HOL's
--- word-valued `ExpHOL width.Const`; its returned `Shape` also contains
--- production `String` names rather than HOL `mlstring`. The
--- `(names_as_string := ...)` qualifier covers only the latter difference.
--- Keep untagged until an exact-carrier definition is connected to the executed
--- path; tracked by bead `flapjack-6nn.3.1`. Clause/order evidence:
--- `scripts/hol-probes/pan_globals_dec_shapes_probe.out` and
+-- FLAPJACK-SPECIFIC (not an exact HOL port): source review for bead
+-- `flapjack-dlc.12`. HOL `dec_shapes_def` (`pan_globalsScript.sml:228-234`) is
+-- the five-clause projection `Function _::ds |-> dec_shapes ds`,
+-- `Decl sh _ _::ds |-> sh::dec_shapes ds`, `Name _ _::ds |-> dec_shapes ds`,
+-- `ExnDecl _ _::ds |-> dec_shapes ds`, `[] |-> []`; the Lean clauses match that
+-- order and shape selection clause-for-clause. The mismatch is the imported
+-- declaration carrier: the executed function consumes production `Decl α`
+-- (whose `Exp α.Const` payload is a generic word `α`, not HOL's
+-- `ExpHOL width.Const : 'a word` fixed width, and whose identifiers/`Shape`
+-- are `String`, not HOL `mlstring`), so the statement ranges over inputs HOL
+-- cannot represent. `(names_as_string := ...)` cannot authorize a whole
+-- declaration carrier; no byte witness applies. Keep untagged until an
+-- exact-carrier definition is connected to the executed path; tracked by
+-- `flapjack-6nn.3.1` with `flapjack-pxn.18.3.5.8`. Clause/order evidence:
+-- `scripts/hol-probes/pan_globals_dec_shapes_probe.out` rows `empty=[]`,
+-- `mixed=[Comb [One; Named «S»]; One]`, `functions_only=[]`, sampled by
 -- `Flapjack/Test/PanGlobalsDecShapesParity.lean`.
 def globalDeclShapes : List (Decl α) → List Shape
   | [] => []

@@ -1921,20 +1921,20 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
-    "hol_name": "exceptions_append",
-    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
-    "lean_name": "exceptions_append",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
-  },
+     "hol_name": "exceptions_append",
+     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+     "lean_name": "exceptions_append",
+     "statement_status": "documented_mismatch",
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.48) HOL exceptions_append (pan_globalsProofScript.sml:2507-2513) exceptions (ds ++ ds') = exceptions ds ++ exceptions ds' holds structurally for the source-shaped exceptionEntries, which only walks declaration constructors and never inspects an expression payload. The mismatch is the imported declaration carrier: Lean ranges over production Decl α with Exp α.Const : α (a generic word, not HOL's fixed-width ExpHOL width.Const : 'a word) and String FunName/VarName/ExceptionId/StructName, while HOL uses 'a word and mlstring. names_as_string cannot authorize the whole declaration carrier, so the tag remains withdrawn pending the exact MlString/exact-carrier retarget (flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8). Direct HOL rows empty=[] and exception=[(«E»,Comb [One; One])] are in pan_lang_exceptions_probe.out and sampled by Flapjack/Test/PanGlobalsExceptionsAppendParity.lean."
+   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
-    "hol_name": "exceptions_FILTER_is_function",
-    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
-    "lean_name": "exceptions_FILTER_is_function",
-    "statement_status": "documented_mismatch",
-    "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
-  },
+     "hol_name": "exceptions_FILTER_is_function",
+     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+     "lean_name": "exceptions_FILTER_is_function",
+     "statement_status": "documented_mismatch",
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.47) HOL exceptions_FILTER_is_function (pan_globalsProofScript.sml:2515-2525) is the five-clause conjunction over FILTER is_function, FILTER ($¬ o is_function), FILTER is_exn_decl, FILTER is_name, and FILTER is_decl; the Lean theorem assembles the same five clauses with globalDeclsFilter and globalDeclIsFunction/globalDeclIsException/globalDeclIsName/globalDeclIsGlobal. The mismatch is the imported declaration carrier: Lean ranges over production Decl α with Exp α.Const : α (a generic word, not HOL's fixed-width ExpHOL width.Const : 'a word) and String FunName/VarName/ExceptionId/StructName, while HOL uses 'a word and mlstring. names_as_string cannot authorize the whole declaration carrier, so the tag remains withdrawn pending the exact MlString/exact-carrier retarget (flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8). Direct HOL rows empty=[] and exception=[(«E»,Comb [One; One])] are in pan_lang_exceptions_probe.out and sampled by Flapjack/Test/PanGlobalsExceptionsFilterIsFunctionParity.lean."
+   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
     "hol_name": "not_is_function",
@@ -2037,8 +2037,16 @@
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "globalNewMainName",
     "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.15) against pan_globalsScript.sml:224: new_main_name decls = fresh_name «main» (MAP FST (functions decls)) matches freshNameHOL \"main\" (globalFunctionNames declarations) once the production projections stand for HOL functions/fresh_name. The mismatch is the input carrier: this consumes generic production List (Decl α) with Const : α and String identifiers/Shape, while HOL consumes word-valued declarations with Const : 'a word and mlstring identifiers. names_as_string and the generated-name boundary witness only address the name difference, not this input carrier, so the tag remains withdrawn pending the exact-carrier replacement flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. Direct HOL rows empty / two_collisions / mixed / absent are in pan_globals_new_main_name_probe.out and sampled by Flapjack/Test/PanGlobalsNewMainNameParity.lean."
-  },
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.15) against pan_globalsScript.sml:224: new_main_name decls = fresh_name «main» (MAP FST (functions decls)) matches freshNameHOL \"main\" (globalFunctionNames declarations) once the production projections stand for HOL functions/fresh_name. The mismatch is the input carrier: this consumes generic production List (Decl α) with Const : α and String identifiers/Shape, while HOL consumes word-valued declarations with Const : 'a word and mlstring identifiers. names_as_string and the generated-name boundary witness only address the name difference, not this input carrier, so the tag remains withdrawn pending the exact-carrier replacement flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. Direct HOL rows empty / two_collisions / mixed / absent are in pan_globals_new_main_name_probe.out and sampled by Flapjack/Test/PanGlobalsNewMainNameParity.lean."
+   },
+   {
+     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+     "hol_name": "dec_shapes_def",
+     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+     "lean_name": "globalDeclShapes",
+     "statement_status": "documented_mismatch",
+     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.12) against pan_globalsScript.sml:228-234: HOL dec_shapes is the five-clause projection Function _::ds |-> dec_shapes ds, Decl sh _ _::ds |-> sh::dec_shapes ds, Name _ _::ds |-> dec_shapes ds, ExnDecl _ _::ds |-> dec_shapes ds, [] |-> []; the Lean globalDeclShapes clauses match this order and shape selection clause-for-clause. The mismatch is the imported declaration carrier: the executed function consumes production Decl α whose Exp α.Const payload is a generic word α (not HOL's fixed-width ExpHOL width.Const : 'a word) and whose identifiers/Shape are String (not mlstring), so the statement ranges over inputs HOL cannot represent. names_as_string cannot authorize a whole declaration carrier and no byte witness applies, so the tag remains withdrawn pending the exact-carrier replacement flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. Direct HOL rows empty=[] / mixed=[Comb [One; Named «S»]; One] / functions_only=[] are in pan_globals_dec_shapes_probe.out and sampled by Flapjack/Test/PanGlobalsDecShapesParity.lean."
+   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_name_def",

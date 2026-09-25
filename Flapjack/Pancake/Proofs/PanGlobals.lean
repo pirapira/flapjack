@@ -238,8 +238,16 @@ theorem globalCompileTopCake_shapes_wf_nil {width : Nat} [NeZero width] [LawfulB
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
 -- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
 -- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- It also ranges over production `Decl α` whose `Exp α.Const` payload is a generic
+-- word `α`, not HOL's fixed-width `ExpHOL width.Const : 'a word`. `exceptionEntries`
+-- itself only walks declaration constructors and never inspects an expression
+-- payload, so the append equation is structurally source-shaped, but the carrier
+-- still differs and `(names_as_string := ...)` cannot authorize the whole
+-- declaration carrier. Keep untagged pending an exact-carrier retarget.
+-- Audit bead `flapjack-dlc.48`; dependency `flapjack-6nn.3.1` /
+-- `flapjack-pxn.18.3.5.8`. Evidence: `scripts/hol-probes/pan_lang_exceptions_probe.out`
+-- rows `empty=[]`, `exception=[(«E»,Comb [One; One])]`, sampled by
+-- `Flapjack/Test/PanGlobalsExceptionsAppendParity.lean`.
 theorem exceptions_append (declarations rest : List (Decl α)) :
     exceptionEntries (declarations ++ rest) =
       exceptionEntries declarations ++ exceptionEntries rest :=
@@ -255,8 +263,15 @@ theorem exceptions_append (declarations rest : List (Decl α)) :
 -- production identifiers `FunName`/`VarName`/`ExceptionId`/`StructName` = `String`
 -- (via `Decl`/`FunDecl`/`Shape`/`functionEntries`/`exceptionEntries`), while HOL
 -- `pan_globalsProofScript.sml` keys names by `funname`/`varname`/`eid`/`stcname` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+-- It also ranges over production `Decl α` whose `Exp α.Const` payload is a generic
+-- word `α`, not HOL's fixed-width `ExpHOL width.Const : 'a word`. The predicate
+-- application and `FILTER` correspondence are source-shaped, but the declaration
+-- carrier differs and `(names_as_string := ...)` cannot authorize it. Keep
+-- untagged pending an exact-carrier retarget. Audit bead `flapjack-dlc.47`;
+-- dependency `flapjack-6nn.3.1` / `flapjack-pxn.18.3.5.8`. Evidence:
+-- `scripts/hol-probes/pan_lang_exceptions_probe.out` rows `empty=[]`,
+-- `exception=[(«E»,Comb [One; One])]`, sampled by
+-- `Flapjack/Test/PanGlobalsExceptionsFilterIsFunctionParity.lean`.
 theorem exceptions_FILTER_is_function (declarations : List (Decl α)) :
     exceptionEntries (globalDeclsFilter globalDeclIsFunction declarations) = [] ∧
     exceptionEntries

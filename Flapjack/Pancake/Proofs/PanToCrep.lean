@@ -372,12 +372,6 @@ end
 
 /-- HOL `no_overlap_wrap_rt_some_all_distinct`: a successful wrapped return
     lookup retains the duplicate-free slot list supplied by `no_overlap`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
 theorem noOverlapWrapRtNodup
     (fm : FiniteMap String (Shape × List Nat)) (name : String)
     (shape : Shape) (slots : List Nat)
@@ -2699,12 +2693,16 @@ theorem panToCrepCompFuncRiscV_eq_compileCodeRelProg
     `PanToCrepProofContext`, so the relation is stated with the proof-context
     literal (as for `mk_ctxt_imp_locals_rel`). The HOL-vs-Lean equivalence of
     the statement is reviewed by comparing the definitions (per SOUNDNESS). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): this source-shaped theorem still uses
+-- production carriers. Its input is `Decl (BitVec width)`, whose identifiers are
+-- `String` and whose shapes are production `Shape`; its `codeRel` conclusion uses
+-- String-keyed `PanToCrepProofContext` maps and production `CrepProg` code. HOL's
+-- declaration, context, and code carriers instead use `mlstring`, `shape`, and
+-- `crepLang$prog` respectively. The generic production `Prog (BitVec width)` does
+-- not repair those surrounding carrier differences. Keep this useful theorem
+-- untagged until the faithful identifier and compiler carriers are used. The
+-- exact carrier work is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`).
 theorem mkCtxtCodeImpCodeRel [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (_hdistinct : ((functionEntries declarations).map Prod.fst).Nodup)

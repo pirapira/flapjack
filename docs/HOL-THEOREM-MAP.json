@@ -2153,6 +2153,22 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "load_op_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "loadMemOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.40): HOL load_op (cakeml/pancake/panLangScript.sml:300-305) maps Op8->Load8, Op16->Load16, OpW->Load, Op32->Load32. loadMemOpHOL matches clause-for-clause; OpSize is the tagged exact opsize port (constructors op8/op16/opW/op32) and the codomain CrepMemOp has the eight nullary constructors mirroring asm$memop, the representation already accepted for shMem in the reviewed HolLoopProg entry. The executable compileProg calls loadMemOpHOL directly, so the production path is routed, not merely bridged. Direct HOL-EVAL rows load_op8/16/w/32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed in Flapjack/Test/PanLangLoadStoreOpParity.lean. store_op is the analogous tagged port storeMemOpHOL (flapjack-4ac.1.41)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "store_op_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "storeMemOpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.41): HOL store_op (cakeml/pancake/panLangScript.sml:307-312) maps Op8->Store8, Op16->Store16, OpW->Store, Op32->Store32. storeMemOpHOL matches clause-for-clause over the same exact carriers as loadMemOpHOL (tagged exact OpSize; CrepMemOp mirroring asm$memop). The executable compileProg calls storeMemOpHOL directly. Direct HOL-EVAL rows store_op8/16/w/32 in scripts/hol-probes/pan_lang_load_store_op_probe.out are replayed in Flapjack/Test/PanLangLoadStoreOpParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "global_var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "globalVarExpHOL",
@@ -10814,8 +10830,8 @@
   "hol_name": "exp_hdl_def",
   "lean_path": "Flapjack/Pancake/PanToCrep.lean",
   "lean_name": "expHdlHOL",
-  "statement_status": "reviewed_exact",
-  "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.13.1): HOL exp_hdl_def (cakeml/pancake/pan_to_crepScript.sml:106-112) is exp_hdl fm v = case FLOOKUP fm v of NONE => Skip | SOME (vshp,ns) => nested_seq (MAP2 Assign ns (load_globals 0w (LENGTH ns))). expHdlHOL matches: the finite map is MlString-keyed with ShapeHOL values, the miss branch is Skip, and the hit branch is crepNestedSeqHOL over panMap2 Assign of the flattened word list against loadGlobalsHOL 0w (LENGTH ns), over CrepProgHOL width with [NeZero width]. Constructor arities and field types match HOL (funname mlstring, positive-width word). Direct HOL rows missing/known/three_words/dup_update/dup_list from scripts/hol-probes/exp_hdl_probe.out are replayed on the exact carriers in Flapjack/Test/ExpHdlHOLParity.lean. Kernel bridge crepProgToHOL_expHdlFiniteMap relates the executed String-keyed expHdlFiniteMap under the shape/name codecs. Production expHdlFiniteMap stays untagged; routing the executed handler through the exact function is tracked by flapjack-pxn.18.3.5.8.13."
+  "statement_status": "documented_mismatch",
+  "reviewer": "flapjack-ds3 (source review, bead flapjack-2s5): HOL exp_hdl_def (pan_to_crepScript.sml:106-112) quantifies over a finite map varname |-> (shape # num list), but expHdlHOL takes a raw MlString -> Option (ShapeHOL × List Nat) function admitting infinite support. The tag is withdrawn; the field-based fmap_as_finite_support qualifier cannot cover a bare parameter. The raw-map helper and its production bridge remain untagged. Faithful finite-map replacement is tracked by flapjack-pxn.18.3.5.8.13.2; direct HOL rows remain in scripts/hol-probes/exp_hdl_probe.out and Flapjack/Test/ExpHdlHOLParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

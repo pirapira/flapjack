@@ -195,20 +195,26 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
     expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
 
-/-! Exact-carrier port of `pan_to_crep$exp_hdl`
+/-! `pan_to_crep$exp_hdl` over the `MlString`-keyed / `ShapeHOL` / `CrepProgHOL`
     (`cakeml/pancake/pan_to_crepScript.sml:106-112`).
 
     HOL's equations are
     `exp_hdl fm v = case FLOOKUP fm v of
       | NONE => Skip
       | SOME (vshp, ns) => nested_seq (MAP2 Assign ns (load_globals 0w (LENGTH ns)))`.
-    The exact Lean statement uses the faithful `MlString`-keyed finite map, the
-    `mlstring`-backed `ShapeHOL`, and the width-indexed `CrepProgHOL` with
-    `[NeZero width]`, so every carrier matches HOL. The executed production
-    helper `expHdlFiniteMap` stays untagged (it keys by `VarName = String`); the
-    narrow kernel bridge `crepProgToHOL_expHdlFiniteMap` relates the two through
-    the codecs on every byte-ranged name. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]
+    The `@[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"]` tag is
+    WITHDRAWN (bead `flapjack-2s5`). HOL quantifies over a finite map
+    `varname |-> (shape # num list)`; this declaration instead takes
+    `FiniteMap MlS (ShapeHOL × List Nat)`, the production raw function
+    `MlString → Option (ShapeHOL × List Nat)`, which admits infinite support.
+    Its quantified domain is therefore strictly broader than HOL's.
+
+    The `fmap_as_finite_support` qualifier covers fields of a same-module
+    carrier structure, not a bare map parameter. A faithful finite-map port
+    is tracked by `flapjack-pxn.18.3.5.8.13.2`. This raw-map helper remains
+    untagged infrastructure. The executed production `expHdlFiniteMap` is
+    also untagged (its key is `VarName = String`); the checked bridge
+    `crepProgToHOL_expHdlFiniteMap` relates the two under byte-ranged codecs. -/
 def expHdlHOL {width : Nat} [NeZero width]
     (fm : FiniteMap Flapjack.Pancake.PanLang.MlS
       (Flapjack.Pancake.PanLang.ShapeHOL × List Nat))

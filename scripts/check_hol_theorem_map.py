@@ -38,6 +38,19 @@ DATA_DECLARATION_RE = re.compile(
 # inventory small and source-reviewed; a mismatch row is not generated merely
 # because an arbitrary Lean def happens to mention a HOL name.
 WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Pancake/PanToCrep.lean", "expHdlHOL"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "exp_hdl_def",
+        "flapjack-ds3 (bead flapjack-2s5/flapjack-2s5.1): HOL exp_hdl_def "
+        "quantifies over a finite map varname |-> (shape # num list), while "
+        "expHdlHOL takes a raw MlString -> Option (ShapeHOL × List Nat) "
+        "function and admits infinite support. The finite-support qualifier "
+        "requires a same-module owning structure field, not a bare parameter; "
+        "no input-only exception is justified. The raw-map helper and its "
+        "production bridge remain untagged; faithful finite-map port is "
+        "tracked by flapjack-pxn.18.3.5.8.13.2. Direct HOL rows remain in "
+        "Flapjack/Test/ExpHdlHOLParity.lean."
+    ),
     ("Flapjack/Pancake/Proofs/PanToCrep.lean", "tlc"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
         "tlc_def",
@@ -1056,6 +1069,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
+        ("Flapjack/Pancake/PanToCrep/Compile.lean", "loadMemOpHOL"),
+        ("Flapjack/Pancake/PanToCrep/Compile.lean", "storeMemOpHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

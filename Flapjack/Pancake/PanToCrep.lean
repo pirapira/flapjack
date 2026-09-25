@@ -153,7 +153,7 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     (vars : InfoMap (Shape × List Nat)) (name : VarName) :
     expHdl (α := α) vars name = expHdlFiniteMap (α := α) (infoMapToFiniteMap vars) name := rfl
 
-/-! Qualified port of `pan_to_crep$ret_var`
+/-! Flapjack-specific analogue of `pan_to_crep$ret_var`
     (`cakeml/pancake/pan_to_crepScript.sml:114-119`).
 
     Clause-by-clause the HOL definition is
@@ -164,12 +164,15 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     | h::_ => SOME h`) is exactly `List.head?`; `Shape.shapeSize` matches
     `size_of_shape` (`panLangScript.sml:174`) on `one`/`comb`/`named`.
 
-    The only carrier difference is that the production `Shape` `Named` field is
-    a Lean `String` (`StructName`) whereas HOL uses `mlstring`.  `ret_var`
-    never inspects or emits that name, so it is equality/map-key-only and the
-    narrow `names_as_string` qualifier records it; the shape name is not
-    byte-observable and needs no boundary witness. -/
-@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_var_def" (names_as_string := [name])]
+    This declaration is untagged.  The production `Shape` `Named` constructor
+    carries a Lean `String` (`StructName`) where HOL carries `mlstring`, and
+    `ret_var` neither compares nor emits that name: the `Named` clause discards
+    it outright (`_ => NONE`).  So the carrier difference is not byte-observable,
+    but it is also not an equality/map-key use, so no truthful
+    `names_as_string` classification exists yet (dropping the tag per
+    coordinator review).  A faithful port needs either an explicit
+    unused/discarded nested-carrier classification in the qualifier policy or an
+    exact MlString-backed `ShapeHOL`; both are tracked as follow-up. -/
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?

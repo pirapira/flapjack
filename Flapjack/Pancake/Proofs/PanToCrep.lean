@@ -4577,6 +4577,24 @@ counterparts for the two languages. The theorem therefore must not be
 `@[hol]`-tagged. Faithful-port dependencies: `flapjack-pxn.18.4.4` (port
 `state_rel_imp_semantics_to_crep` and the declarations theorem) plus
 `flapjack-pxn.18.3.5.8` (exact MlString carriers) and `flapjack-0lj`
-(`word_lab`). -/
+(`word_lab`).
+
+The same disposition applies to the two declaration-level companions.
+
+`state_rel_imp_semantics_decls_to_crep`
+(`pan_to_crepProofScript.sml:4973-4990`) drops to `state_rel (s with structs
+:= []) t`, `s.code = FEMPTY`, `t.code = alist_to_fmap (compile_to_crep
+pan_code)`, `s.eshapes = FEMPTY`, requires `EVERY (λx. is_function x ∨
+is_exn_decl x) pan_code`, and concludes `semantics t start = semantics_decls s
+start pan_code` from `semantics_decls s start pan_code <> Fail`.
+`state_rel_imp_semantics_decls` (`pan_to_crepProofScript.sml:5042-5059`) is the
+same statement with `t.code = alist_to_fmap (compile_prog pan_code)` and an
+additional `s.eshapes = FEMPTY`. Both quantify over the same `mlstring`-keyed
+`panSem$state`/`crepSem$state`, use the HOL `state_rel`, `semantics_decls`,
+`compile_to_crep`/`compile_prog` and `is_function`/`is_exn_decl`, none of which
+has a Lean counterpart; Flapjack's `stateRel` relates production String-keyed
+`PanSemState`/`CrepRuntimeState`. Neither may be `@[hol]`-tagged. Both are
+tracked by the same faithful-port dependency `flapjack-pxn.18.4.4` (with
+`flapjack-pxn.18.3.5.8` and `flapjack-0lj`). -/
 
 end Flapjack

@@ -83,6 +83,24 @@ DOCUMENTED_MISMATCHES = {
         "cannot be covered by names_as_string. Keep the analogue untagged "
         "pending exact-carrier work flapjack-pxn.18.3.5.8.)"
     ),
+    ("Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean", "panStructConvertValue"): (
+        "cakeml/pancake/proofs/pan_structsProofScript.sml",
+        "convert_v_def",
+        "flapjack-ds5 (source comparison with pan_structsProofScript.sml:31-37: the "
+        "three constructor equations match, but the carrier differs. HOL is over "
+        "panSem$v (panSemScript.sml:22) with stcname/fldname = mlstring and "
+        "Val ('a word_lab); production PanValue alpha uses StructName/FieldName = "
+        "String and stores alpha directly in the first constructor rather than a "
+        "word_lab wrapper. The constructor field-type difference is beyond name "
+        "representation, so names_as_string does not apply. Exact HolValue/HolWordLab "
+        "carriers now exist (PanSem.lean, flapjack-pxn.18.3.6.8), but no HOL-shaped "
+        "convert_v over HolValue with a production bridge is defined yet; keep this "
+        "source analogue untagged pending flapjack-pxn.18.3.5.8.19 (parent "
+        "flapjack-pxn.18.3.5.8). Direct HOL row "
+        "convert_named_record=RStruct [ValWord 3w; ValWord 5w] in "
+        "pan_structs_compile_correct_probe.out:1; paired Lean regression "
+        "Flapjack.Test.PanStructsCompileCorrect:13-17.)"
+    ),
     ("Flapjack/Pancake/PanGlobals.lean", "compileProgCake"): (
         "cakeml/pancake/pan_globalsScript.sml",
         "compile_def",

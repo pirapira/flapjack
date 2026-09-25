@@ -181,12 +181,22 @@ private theorem lookupInfo_append_eq_of_some [LawfulBEq String]
     invariant-preservation prerequisite used by `compile_correct`. The direct
     original-HOL EVAL row and a named-value Lean regression with nonempty
     prefix are recorded in `pan_structs_value_validity_probe.out`. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
--- production PanValue carrier whose nStruct record/field names are
--- StructName/FieldName = String and over StructContextHOL (String-keyed), while
--- HOL pan_structsProofScript.sml is over panSem$v with stcname/fldname = mlstring.
--- The exact MlString identifier carrier is tracked by flapjack-pxn.18.3.5.8
--- (parent flapjack-pxn.18.3.5.7.2).
+  -- FLAPJACK-SPECIFIC (not an exact HOL port, so no `@[hol]` tag). The three
+  -- constructor equations match HOL `convert_v_def`
+  -- (cakeml/pancake/proofs/pan_structsProofScript.sml:31-37), but the carrier
+  -- differs: HOL is over `panSem$v` (`panSemScript.sml:22`) with
+  -- `stcname`/`fldname` = `mlstring` and `Val ('a word_lab)`, while this is over
+  -- production `PanValue α`, whose `nStruct` names are
+  -- `StructName`/`FieldName = String` and whose first constructor stores `α`
+  -- directly rather than a `word_lab` wrapper. That constructor field-type
+  -- difference is beyond name representation, so `(names_as_string := ...)` does
+  -- not apply. The exact `HolValue`/`HolWordLab` carriers now exist
+  -- (`PanSem.lean`, bead `flapjack-pxn.18.3.6.8`), but no HOL-shaped `convert_v`
+  -- over `HolValue` with a production bridge is defined yet; tracked by
+  -- `flapjack-pxn.18.3.5.8.19` (parent `flapjack-pxn.18.3.5.8`). Direct HOL
+  -- oracle row `convert_named_record=RStruct [ValWord 3w; ValWord 5w]` in
+  -- `scripts/hol-probes/pan_structs_compile_correct_probe.out:1`; paired Lean
+  -- regression `Flapjack.Test.PanStructsCompileCorrect` (:13-17).
 theorem panValueFldsOk_append [LawfulBEq String]
     (pfx context : StructContextHOL) (value : PanValue α)
     (hvalue : panValueFldsOk context value = true)

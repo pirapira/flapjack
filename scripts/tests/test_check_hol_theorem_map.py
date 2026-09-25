@@ -86,6 +86,26 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertIn(key, MAP["data_declarations"]())
         self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pan_struct_convert_value_carrier_mismatch_is_documented(self):
+        key = (
+            "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
+            "panStructConvertValue",
+        )
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        record = inventory[key]
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/proofs/pan_structsProofScript.sml", "convert_v_def"),
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("word_lab wrapper", record["reviewer"])
+        self.assertIn("flapjack-pxn.18.3.5.8.19", record["reviewer"])
+        self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+        self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_crep_set_globals_state_carrier_mismatch_is_documented(self):
         key = ("Flapjack/Pancake/Semantics/CrepSem.lean", "setCrepHolGlobalsW")
         inventory = {

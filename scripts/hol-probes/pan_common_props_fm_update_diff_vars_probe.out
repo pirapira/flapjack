@@ -1,0 +1,6 @@
+fmdv_eq_1=T
+fmdv_eq_2=T
+fmdv_eq_3=T
+fmdv_lhs_a=SOME 10
+fmdv_lhs_b=SOME 22
+fmdv_lhs_absent=NONE

@@ -612,5 +612,80 @@ theorem rptHere_treesSafe {p : P P.Trees} (hp : PTreesSafe p) :
     simp only [P.rptHere] at hs
     exact (rpt_treesSafe hp s.remaining).2 s s' hs h
 
+/-! ### Terminal and combinator rule safety (bead flapjack-0up.1)
+
+The grammar's terminal-only rules and the `RetNT` rule are built purely from
+`keepExact`/`keepIdent`/`consume`/`subtree`, all of which are already known
+safe, so their byte-rangedness follows without the mutual fuel induction. -/
+
+theorem PTreesSafe.of_stateSafe {α : Type} {p : P α} (hp : PStateToksSafe p) :
+    PTreesSafe (P.bind' p (fun _ => P.pure' [])) := by
+  constructor
+  · intro s trees s' hs h
+    simp only [P.bind'] at hs
+    split at hs
+    · rename_i a s'' heq
+      have hp1 := hp.1 s a s'' heq h
+      simp only [P.pure', Prod.mk.injEq, Option.some.injEq] at hs
+      obtain ⟨rfl, rfl⟩ := hs
+      exact ⟨TreesByteRanged.nil, hp1⟩
+    · rename_i s'' heq
+      have hf := congrArg Prod.fst hs
+      change (none : Option P.Trees) = some trees at hf
+      simp at hf
+  · intro s s' hs h
+    simp only [P.bind'] at hs
+    split at hs
+    · rename_i a s'' heq
+      have hf := congrArg Prod.fst hs
+      change (some ([] : P.Trees)) = none at hf
+      simp at hf
+    · rename_i s'' heq
+      have h2 : s'' = s' := congrArg Prod.snd hs
+      rw [h2] at heq
+      exact hp.2 s s' heq h
+
+theorem consume_treesSafe (expected : Token) (described : String) :
+    PTreesSafe (P.consume expected described) :=
+  PTreesSafe.of_stateSafe (PStateToksSafe.expect expected described)
+
+theorem consumeKw_treesSafe (keyword : Keyword) (described : String) :
+    PTreesSafe (P.consumeKw keyword described) :=
+  consume_treesSafe (.keywordT keyword) described
+
+theorem PTreesSafe.consume_bind {q : P P.Trees} (hq : PTreesSafe q)
+    (expected : Token) (described : String) :
+    PTreesSafe (P.bind' (P.consume expected described) (fun _ => q)) :=
+  PTreesSafe.bind (consume_treesSafe expected described) (fun _ _ => hq)
+
+theorem gEqOps_treesSafe : PTreesSafe gEqOps := by
+  unfold gEqOps
+  exact PTreesSafe.orElse' (keepExact_treesSafe .eqT "==") (keepExact_treesSafe .neqT "!=")
+
+theorem gCmpOps_treesSafe : PTreesSafe gCmpOps := by
+  unfold gCmpOps
+  repeat' apply PTreesSafe.orElse'
+  all_goals exact keepExact_treesSafe _ _
+
+theorem gShiftOps_treesSafe : PTreesSafe gShiftOps := by
+  unfold gShiftOps
+  repeat' apply PTreesSafe.orElse'
+  all_goals exact keepExact_treesSafe _ _
+
+theorem gAddOps_treesSafe : PTreesSafe gAddOps := by
+  unfold gAddOps
+  exact PTreesSafe.orElse' (keepExact_treesSafe .plusT "+") (keepExact_treesSafe .minusT "-")
+
+theorem gMulOps_treesSafe : PTreesSafe gMulOps := by
+  unfold gMulOps
+  exact keepExact_treesSafe .starT "*"
+
+theorem gRet_treesSafe : PTreesSafe gRet := by
+  unfold gRet
+  apply subtree_treesSafe
+  exact PTreesSafe.bind keepIdent_treesSafe
+    (fun name hname => PTreesSafe.consume_bind (PTreesSafe.pure name hname) .assignT "=")
+
+
 
 end Flapjack.Parser

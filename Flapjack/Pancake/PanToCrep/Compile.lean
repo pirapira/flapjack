@@ -324,6 +324,15 @@ theorem hfresh_update [BEq String] [LawfulBEq String]
   · rw [if_neg hv] at hlk
     exact hfresh v sh ns' hlk
 
+/-- Exact `panLang$load_op` (`cakeml/pancake/panLangScript.sml:300-305`):
+`Op8 ↦ Load8`, `Op16 ↦ Load16`, `OpW ↦ Load`, `Op32 ↦ Load32`.
+The `OpSize` domain is the exact `opsize` carrier and the `CrepMemOp`
+codomain mirrors `asm$memop` by its eight nullary constructors, the same
+representation accepted for `shMem` in the reviewed `HolLoopProg` entry.
+The production `loadMemOp` below is definitionally this function
+(`loadMemOp_eq_loadMemOpHOL`), so the executed pan-to-crep path uses this
+mapping. -/
+@[hol "cakeml/pancake/panLangScript.sml" "load_op_def"]
 def loadMemOpHOL : OpSize → CrepMemOp
   | .op8 => .load8
   | .opW => .load
@@ -639,6 +648,11 @@ def loadMemOp : OpSize → CrepMemOp
   | .opW => .load
   | .op32 => .load32
   | .op16 => .load16
+
+/-- Source-review bridge (bead flapjack-4ac.1.40): the production `loadMemOp`
+is definitionally the reviewed exact `loadMemOpHOL`, so the executed
+pan-to-crep path uses the HOL `load_op` mapping. -/
+theorem loadMemOp_eq_loadMemOpHOL : loadMemOp = loadMemOpHOL := rfl
 
 def storeMemOp : OpSize → CrepMemOp
   | .op8 => .store8

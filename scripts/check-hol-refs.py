@@ -30,6 +30,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -265,14 +266,45 @@ def structure_field_types(lines: list[str]) -> dict[str, str]:
     return field_types
 
 
-def has_fmap_witness(lines: list[str]) -> bool:
+def structure_names_for_fields(lines: list[str], fields: Iterable[str]) -> set[str]:
+    """Structures declared in this module that own any of the given fields."""
+    wanted = set(fields)
+    names: set[str] = set()
+    structure_indent: int | None = None
+    current: str | None = None
+    for line in strip_lean_comments("\n".join(lines)).splitlines():
+        structure = re.match(
+            r"^(\s*)structure\s+([A-Za-z0-9_'.]+).*\bwhere\s*$", line
+        )
+        if structure:
+            structure_indent = len(structure.group(1))
+            current = structure.group(2)
+            continue
+        if structure_indent is None:
+            continue
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= structure_indent:
+            structure_indent = None
+            current = None
+            continue
+        field = re.match(r"^\s+([A-Za-z_][A-Za-z0-9_']*)\s*:", line)
+        if field and current is not None and field.group(1) in wanted:
+            names.add(current)
+    return names
+
+
+def has_fmap_witness(lines: list[str], structure_names: Iterable[str]) -> bool:
     """Require the canonical finite-map translation witness in this module.
 
     The witness is named `holFmapAsFiniteSupportWitness` and its statement must
-    mention both `PanSemStateFiniteExact` (the finite-support carrier) and
-    `PanSemStateExact` (the broad exact carrier), i.e. the roundtrip between
-    them.  Lake checks the proof; this gate checks its presence and shape.
+    mention the carrier structure that owns the qualified fields, i.e. the
+    checked translation between the finite-support representation and the
+    qualified state.  Lake checks the proof; this gate checks its presence and
+    shape, without hard-coding any one carrier module.
     """
+    names = [name for name in structure_names if name]
     source = strip_lean_comments("\n".join(lines))
     pattern = re.compile(
         rf"^\s*(?:@\[[\s\S]*?\]\s*)?(?:private\s+|protected\s+)?"
@@ -282,10 +314,7 @@ def has_fmap_witness(lines: list[str]) -> bool:
     )
     for match in pattern.finditer(source):
         statement = match.group("statement")
-        if (
-            "PanSemStateFiniteExact" in statement
-            and "PanSemStateExact" in statement
-        ):
+        if not names or any(name in statement for name in names):
             return True
     return False
 
@@ -318,11 +347,13 @@ def fmap_as_finite_support_errors(
                 f"fmap_as_finite_support field `{field}` does not use the approved "
                 "HolFiniteMapExact carrier; a raw function-backed map is ineligible"
             )
-    if fields and not has_fmap_witness(lines):
+    if fields and not has_fmap_witness(
+        lines, structure_names_for_fields(lines, fields)
+    ):
         errors.append(
             "fmap_as_finite_support has no same-module checked canonical witness "
-            "`holFmapAsFiniteSupportWitness` relating PanSemStateFiniteExact and "
-            "PanSemStateExact"
+            "`holFmapAsFiniteSupportWitness` mentioning `HolFiniteMapExact` and the "
+            "structure owning the qualified fields"
         )
     return errors
 

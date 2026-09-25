@@ -88,10 +88,25 @@ class HolAttributeSitesTest(unittest.TestCase):
             "  globals : HolFiniteMapExact MlS (ValueHOL width)",
             "",
             "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
-            "    PanSemStateFiniteExact width -> PanSemStateExact width := fun x => x",
+            "    HolFiniteMapExact MlS (ValueHOL width) -> State width -> State width :=",
+            "  fun m s => s",
         ]
         errors = CHECKER["fmap_as_finite_support_errors"](
             lines, ("locals", "globals"), "Example.lean"
+        )
+        self.assertEqual(errors, [])
+
+    def test_fmap_as_finite_support_witness_is_carrier_agnostic(self):
+        lines = [
+            "structure CrepStateExact where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    HolFiniteMapExact MlS (ValueHOL width) -> CrepStateExact width ->",
+            "      CrepStateExact width := fun m s => s",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Flapjack/Pancake/Semantics/CrepSem/StateExact.lean"
         )
         self.assertEqual(errors, [])
 
@@ -101,7 +116,8 @@ class HolAttributeSitesTest(unittest.TestCase):
             "  locals : String → Option Nat",
             "",
             "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
-            "    PanSemStateFiniteExact width -> PanSemStateExact width := fun x => x",
+            "    HolFiniteMapExact MlS (ValueHOL width) -> State width -> State width :=",
+            "  fun m s => s",
         ]
         errors = CHECKER["fmap_as_finite_support_errors"](
             lines, ("locals",), "Example.lean"
@@ -114,6 +130,19 @@ class HolAttributeSitesTest(unittest.TestCase):
         lines = [
             "structure State where",
             "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+        ]
+        errors = CHECKER["fmap_as_finite_support_errors"](
+            lines, ("locals",), "Example.lean"
+        )
+        self.assertTrue(any("canonical witness" in error for error in errors))
+
+    def test_fmap_as_finite_support_witness_must_mention_owner(self):
+        lines = [
+            "structure State where",
+            "  locals : HolFiniteMapExact MlS (ValueHOL width)",
+            "",
+            "theorem holFmapAsFiniteSupportWitness {width : Nat} :",
+            "    HolFiniteMapExact MlS (ValueHOL width) -> Unit := fun m => ()",
         ]
         errors = CHECKER["fmap_as_finite_support_errors"](
             lines, ("locals",), "Example.lean"

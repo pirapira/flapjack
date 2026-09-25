@@ -1572,4 +1572,35 @@ theorem decsStcnamesHOLExact_of_functions {width : Nat} [NeZero width]
       cases declaration <;>
         simp_all [decsStcnamesHOLExact, isFunctionHOL]
 
+/-- Exact port of HOL `panProps$functions_eq_FILTER`
+    (`panPropsScript.sml:1487`): `functions` is the image of the function
+    declarations under the entry map.  HOL writes the entry map as
+    `λx. case x of Function fi => (fi.name,fi.params,fi.body,fi.return) | _ => ARB`
+    over `FILTER is_function prog`.  HOL's `ARB` branch is rendered with the
+    concrete default entry `(implode [], [], ProgHOL.skip, ShapeHOL.one)`: HOL
+    `ARB` is an unspecified element and the branch is provably unreachable
+    because the list is filtered by `is_function`/`isFunctionHOL`, so the entry
+    map agrees with HOL on every element it is actually applied to.  The
+    production `functions_eq_filterMap` instead uses `List.filterMap`, which
+    drops elements rather than mapping them, so it is not the HOL shape. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "functions_eq_FILTER"]
+theorem functionsHOL_eq_FILTER {width : Nat} [NeZero width]
+    (prog : List (DeclHOL width)) :
+    functionsHOL prog =
+      (prog.filter isFunctionHOL).map
+        (fun declaration =>
+          match declaration with
+          | .function fi =>
+              (fi.name, fi.params, fi.body, fi.returnShape)
+          | _ =>
+              (Flapjack.Basis.Pure.MlString.ofString "", [], ProgHOL.skip, ShapeHOL.one)) := by
+  induction prog with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration with
+      | function fi => simp [functionsHOL, isFunctionHOL, List.filter_cons, ih]
+      | decl sh name body => simp [functionsHOL, isFunctionHOL, ih]
+      | exnDecl eid sh => simp [functionsHOL, isFunctionHOL, ih]
+      | name nm flds => simp [functionsHOL, isFunctionHOL, ih]
+
 end Flapjack

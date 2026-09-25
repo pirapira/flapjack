@@ -161,6 +161,9 @@ def sourceConstReturnCallCode : PanSemCodeMap Word64 :=
 def sourceBadReturnShapeCallCode : PanSemCodeMap Word64 :=
   [("badret", ([], .return (.const (BitVec.ofNat 64 7)), .comb [.one, .one]))]
 
+def sourceBadDecCallShapeCode : PanSemCodeMap Word64 :=
+  [("badret", ([], .return (.const (BitVec.ofNat 64 7)), .one))]
+
 def sourceRaiseExceptionCallCode : PanSemCodeMap Word64 :=
   [("raiseE", ([], .raise "E" (.const (BitVec.ofNat 64 7)), .one))]
 
@@ -337,9 +340,12 @@ def evaluateSourceCallBadReturnShape :=
     (.call none "badret" [] : Prog Word64)
 
 def evaluateSourceDecCallBadReturnShape :=
-  panSemEvaluateRiscV64CodeState statefulTestContext statefulTestPrimitive
-    statefulTestHandler sourceBadReturnShapeState
-    (.decCall "dest" .one "badret" [] .skip : Prog Word64)
+  panSemEvaluateCodeStateWithPostState statefulTestContext statefulTestPrimitive
+    statefulTestHandler (BitVec.ofNat 64 8)
+    ({ emptyPanSourceState 10 sourceBadDecCallShapeCode with
+        locals := updatePanValueMap (fun _ => none) "keep"
+          (.word (BitVec.ofNat 64 42)) })
+    (.decCall "answer" (.comb []) "badret" [] .skip : Prog Word64)
 
 def sourceBadCallDestinationState : PanSemState Word64 (FfiState Unit) :=
   { emptyPanSourceState 10 sourceIdCode with
@@ -495,12 +501,29 @@ def observeSourceCallBadReturnShape : Bool :=
       | some _ => false
   | _ => false
 
+/-- Full post-state guard for `recursive_deccall_bad_declared_shape` in the
+    direct `pan_sem_e2e_probe.out` HOL oracle. -/
 def observeSourceDecCallBadReturnShape : Bool :=
   match evaluateSourceDecCallBadReturnShape with
-  | some (.control (.error locals _ _ _), clock) =>
-      match locals "caller" with
-      | none => clock == 9
-      | some _ => false
+  | some ((.control (.error resultLocals resultGlobals resultMemory resultFfi), clock),
+      postState) =>
+      let zero := BitVec.ofNat 64 0
+      let emptyStructs := match postState.structs with | [] => true | _ => false
+      let unchangedCode := match postState.code with
+        | [("badret", ([], .return (.const value), .one))] =>
+            value == BitVec.ofNat 64 7
+        | _ => false
+      clock == 9 && postState.clock == 9 &&
+        (resultLocals "keep").isNone && (postState.locals "keep").isNone &&
+        (resultGlobals "global").isNone && (postState.globals "global").isNone &&
+        (resultMemory zero).isNone && (postState.memory zero).isNone &&
+        resultFfi.state == () && resultFfi.ioEvents.isEmpty &&
+        postState.ffi.state == () && postState.ffi.ioEvents.isEmpty &&
+        emptyStructs && unchangedCode &&
+        (postState.exceptionShapes "E").isNone &&
+        !(postState.memaddrs zero) && !(postState.sharedMemaddrs zero) &&
+        !postState.be && postState.baseAddress == BitVec.ofNat 64 0 &&
+        postState.topAddress == BitVec.ofNat 64 100
   | _ => false
 
 #guard observeSourceCodeCall

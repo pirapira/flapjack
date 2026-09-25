@@ -257,7 +257,7 @@ mutual
           none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
           (memoryHandler := memoryHandler)
         match outcome with
-        | .control (.returned _ nextGlobals nextMemory nextFfi [value]) =>
+        | .control (.returned nextLocals nextGlobals nextMemory nextFfi [value]) =>
             if panShapeMatches (panValueShape structs value) shape then
               let (bodyOutcome, bodyClock) ← evalPanValueFfiClockProg context primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel
@@ -265,7 +265,8 @@ mutual
                 (memoryAccess := memoryAccess) (contracts := contracts)
                 (memoryHandler := memoryHandler)
               pure (panValueFfiClockRestoreLocal name oldValue bodyOutcome, bodyClock)
-            else pure (.control (.error (fun _ => none) nextGlobals nextMemory nextFfi), nextClock)
+            -- HOL's mismatch branch returns the callee post-state `st`.
+            else pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
         | .control (.raised _ nextGlobals nextMemory nextFfi exception value) =>
             pure (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
               exception value), nextClock)
@@ -511,7 +512,7 @@ mutual
           none function arguments (memoryAccess := memoryAccess) (contracts := contracts)
           (memoryHandler := memoryHandler)
         match outcome with
-        | .control (.returned _ nextGlobals nextMemory nextFfi [value]) =>
+        | .control (.returned nextLocals nextGlobals nextMemory nextFfi [value]) =>
             if panShapeMatches (panValueShape structs value) shape then
               let (bodyOutcome, bodyClock) ← evalPanValueFfiClockCodeProg
                 context primitive handler structs code exceptionShapes baseAddress topAddress bytesInWord fuel
@@ -519,7 +520,8 @@ mutual
                 (memoryAccess := memoryAccess) (contracts := contracts)
                 (memoryHandler := memoryHandler)
               pure (panValueFfiClockRestoreLocal name oldValue bodyOutcome, bodyClock)
-            else pure (.control (.error (fun _ => none) nextGlobals nextMemory nextFfi), nextClock)
+            -- HOL's mismatch branch returns the callee post-state `st`.
+            else pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
         | .control (.raised _ nextGlobals nextMemory nextFfi exception value) =>
             pure (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
               exception value), nextClock)

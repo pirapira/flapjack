@@ -950,7 +950,7 @@ mutual
           (memoryAccess := memoryAccess) (contracts := contracts)
           (memoryHandler := memoryHandler)
         match callResult with
-        | .returned _ globals memory ffi [value] =>
+        | .returned returnedLocals globals memory ffi [value] =>
             if panShapeMatches (panValueShape structs value) shape then
               let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel
@@ -959,7 +959,8 @@ mutual
                 (memoryHandler := memoryHandler)
               pure (restorePanValueFfiLocal name oldValue bodyResult,
                 callSteps + bodySteps + 1)
-            else some (.error (fun _ => none) globals memory ffi, callSteps + 1)
+            -- HOL's mismatch branch returns the callee post-state `st`.
+            else some (.error returnedLocals globals memory ffi, callSteps + 1)
         | .raised _ globals memory ffi exception value =>
             pure (.raised (fun _ => none) globals memory ffi exception value,
               callSteps + 1)

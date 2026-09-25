@@ -498,9 +498,8 @@ theorem evalPanValueFfiClockProg_decCall_returned
   simp [evalPanValueFfiClockProg, hcall, hshape, hbody]
 
 /-! A declaration call whose callee returns a value of the wrong shape is
-    rejected with an explicit Error while preserving the callee's post-call
-    state and clock.  This is the `shape_of v ≠ return_sh` sub-case of Cake's
-    `DecCall` proof. -/
+    rejected with an explicit Error while preserving the callee's complete
+    post-call state and clock, as HOL `evaluate` does in the `DecCall` clause. -/
 theorem evalPanValueFfiClockProg_decCall_shape_mismatch
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -528,7 +527,7 @@ theorem evalPanValueFfiClockProg_decCall_shape_mismatch
     evalPanValueFfiClockProg context primitive handler structs functions
       baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
       (.decCall name shape function arguments body) =
-      some (.control (.error (fun _ => none) nextGlobals nextMemory nextFfi), callClock) := by
+      some (.control (.error calleeLocals nextGlobals nextMemory nextFfi), callClock) := by
   simp [evalPanValueFfiClockProg, hcall, hshape]
 
 /-! An uncaught exception from a clocked `DecCall` bypasses its local

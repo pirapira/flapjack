@@ -395,11 +395,20 @@ theorem noOverlapWrapRtNodup
         rcases hwrap with ⟨_, hslots⟩ <;>
         simpa [← hslots] using hnodup
 
-/-- Flapjack analogue of HOL `mem_comp_field_lem`: selecting a compiled record
-    field retains an input expression or produces the zero fallback. This is
-    deliberately untagged: the production `Shape` embedded in `shapes` uses
-    `String` for `Named`, whereas HOL `shape` uses `mlstring`, and the HOL
-    expression payload is an indexed word rather than arbitrary `α`. -/
+/-- Flapjack analogue of HOL `mem_comp_field_lem`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:397-406`), which states
+    `MEM x (FST (comp_field i l es)) ⇒ MEM x es ∨ x = Const 0w`. The clause
+    structure is preserved, but this declaration is deliberately untagged for
+    two substantive carrier differences: the production `Shape` embedded in
+    `shapes` uses `String` for `Named` (HOL `shape` uses `mlstring`), and the
+    expression payload is an arbitrary `α` word carrier rather than the HOL
+    `crepLang$exp` indexed by a positive word width. `names_as_string` cannot
+    authorize the `Shape`/expression carriers, and no `NameRanged` witness
+    exists because the output is a membership disjunction, not a name. The
+    exact-carrier `comp_field` port is the tagged `compFieldHOL`
+    (`PanToCrep.lean`); a faithful exact port of this MEM lemma is tracked by
+    `flapjack-pxn.18.3.5.8.8` (the production analogue is used by the
+    `pan_to_crep` proof development). -/
 theorem compileField_mem_or_zero
     [OfNat α 0]
     (index : Nat) (shapes : List Shape) (expressions : List (CrepExp α))

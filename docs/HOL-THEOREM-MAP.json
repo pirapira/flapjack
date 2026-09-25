@@ -9574,5 +9574,13 @@
     "lean_name": "sizeOfShapeWithContextHOL_eq",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison against panPropsScript.sml:184 `!sh sctxt. is_wf_shape_nil sh ==> size_of_sh_with_ctxt sctxt sh = size_of_shape sh`; HOL is_wf_shape_nil is the overload is_wf_shape [], here rendered as isWfShapeExactHOL [] shape = true over ShapeHOL/StructContextExact with the exact tagged sizeOfShapeWithContextHOL/sizeOfShapeHOL definitions; oracle rows ssc_one/ssc_comb2/ssc_nested/ssc_wf_one/ssc_wf_nested/ssc_eq_one/ssc_eq_nested in scripts/hol-probes/pan_props_size_with_ctxt_probe.out reproduced by Flapjack/Test/PanPropsShapeResVarParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "vshapes_args_rel_imp_eq_len_MAP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/DecCallExact.lean",
+    "lean_name": "vshapesArgsRel_imp_eq_len_MAP",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison against panSemScript.sml:740 `!vshapes args. LIST_REL (\\vshape arg. SND vshape = shape_of arg) vshapes args ==> LENGTH vshapes = LENGTH args /\\ MAP SND vshapes = MAP shape_of args`; exact carriers vshapes : List (MlS # ShapeHOL), args : List (ValueHOL width), shape_of = shapeOfHOLExact (tagged shape_of_def); HOL LIST_REL carried by the propositional ListRel because this core has no List.Forall2; oracle rows vra_one/vra_two/vra_bad/vra_len_one/vra_map_two in scripts/hol-probes/pan_sem_vshapes_args_rel_probe.out reproduced by Flapjack/Test/PanSemDecCallExactParity.lean)"
   }
 ]

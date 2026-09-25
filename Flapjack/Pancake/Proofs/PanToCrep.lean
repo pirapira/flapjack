@@ -2294,16 +2294,34 @@ def codeRel [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
         (names, compileCodeRelProg nextContext program)
 
 /-- Width-indexed proof-side `code_rel` interface: the HOL reference is
-    word-length polymorphic (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32`),
+    word-length polymorphic (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:32-43`),
     so this width-indexed form makes the compiler expression the
     `compileProgRiscV` (`compile_def`-shaped) boundary. The generic `codeRel` is its
-    `alpha`-instantiated view (`codeRelW_iff_codeRel` below). -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production
--- identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose `FiniteMap`s are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` = `mlstring`.
--- The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8`
--- (parent `flapjack-pxn.18.3.5.7.2`).
+    `alpha`-instantiated view (`codeRelW_iff_codeRel` below).
+
+    Source-reviewed decision: the `code_rel_def` tag stays WITHDRAWN as a
+    documented carrier mismatch, not an exact port. Clause for clause this matches
+    HOL `code_rel` (`∀ f vshs prog rsh, FLOOKUP s_code f = SOME (...) ==>
+    localised_prog prog ∧ FLOOKUP ctxt.funcs f = SOME (vshs, rsh) ∧ let ... ns =
+    GENLIST I (size_of_shape (Comb shs)); nctxt = ctxt_fc ... in FLOOKUP t_code f =
+    SOME (ns, compile nctxt prog)`), but the carriers differ: (1) the
+    source/target/context maps are keyed by production `FunName`/`VarName`/
+    `ExceptionId` = `String`, while HOL keys them by `funname`/`varname`/`eid` =
+    `mlstring` (the direct probe prints the HOL type as `(mlstring |->
+    (mlstring # shape) list # α panLang$prog # shape) -> (mlstring |-> num list #
+    α crepLang$prog) -> bool`); (2) the source shapes are the production `Shape`
+    and the target code the production `CrepProg (BitVec width)` whose `Call`/
+    `ExtCall` funnames are `String`, compiled through the production
+    `compileProgRiscV` rather than HOL's `crepLang$prog`-returning `compile`; (3)
+    `names_as_string` cannot authorize the `Shape`/`CrepProg` carriers, and no
+    `NameRanged` witness can be stated for a `Prop`-valued relation. Direct
+    HOL-EVAL/proof rows (`code_rel_matching`, `code_rel_rejects_wrong_body`,
+    `code_rel_rejects_missing_function_signature`,
+    `code_rel_rejects_unlocalised_source`) are recorded in
+    `scripts/hol-probes/code_rel_probe.out` and reproduced by
+    `Flapjack/Test/PanToCrepCodeRelParity.lean`. Exact-carrier replacement is
+    tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`); the
+    width-indexing part is now handled by this `codeRelW`. -/
 def codeRelW (width : Nat)
     (context : PanToCrepProofContext (BitVec width))
     (sourceCode : FiniteMap FunName

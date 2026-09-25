@@ -4,7 +4,11 @@ import Flapjack.Test.PanSemExtCallExactParity
 /-! Direct original-HOL rows for the exact-state PanSem dispatcher fragment.
     Call/DecCall cases correspond to `call_code_map_7`,
     `recursive_call_code_map_7`, `deccall_code_map_7`,
-    `nested_deccall_code_map_7`, and recursive timeout rows in
+    `nested_deccall_code_map_7`, `recursive_call_bad_return_shape`,
+    `recursive_deccall_bad_declared_shape`, `recursive_call_callee_skip`,
+    `recursive_call_callee_break`, `recursive_call_nonmatching_exception_handler`,
+    `recursive_call_invalid_exception_target`,
+    `recursive_deccall_exception_propagates`, and recursive timeout rows in
     `scripts/hol-probes/pan_sem_e2e_probe.out`; matching exception handling
     corresponds to `call_handles_exception_7`. -/
 
@@ -51,6 +55,19 @@ private def idCodeState (clock : Nat) : PanSemStateExact 64 Unit :=
       if name = ml "ev" then some (.val (.word 0)) else baseState.locals name
     clock := clock }
 
+private def callControlState (clock : Nat) : PanSemStateExact 64 Unit :=
+  { idCodeState clock with
+    code := fun name =>
+      if name = ml "skip" then some ([], .skip, .one)
+      else if name = ml "break" then some ([], .break, .one)
+      else if name = ml "raiseF" then
+        some ([], .raise (ml "F") (.const 7), .one)
+      else if name = ml "raiseE" then
+        some ([], .raise (ml "E") (.const 7), .one)
+      else none
+    eshapes := fun name =>
+      if name = ml "E" || name = ml "F" then some .one else none }
+
 private def existingLocalDecCallState (clock : Nat) : PanSemStateExact 64 Unit :=
   { idCodeState clock with
     locals := fun name =>
@@ -63,6 +80,16 @@ private instance (clock : Nat) : DecidablePred (idCodeState clock).memaddrs := b
   infer_instance
 
 private instance (clock : Nat) : DecidablePred (idCodeState clock).shMemaddrs := by
+  intro address
+  change Decidable (baseState.shMemaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (callControlState clock).memaddrs := by
+  intro address
+  change Decidable (baseState.memaddrs address)
+  infer_instance
+
+private instance (clock : Nat) : DecidablePred (callControlState clock).shMemaddrs := by
   intro address
   change Decidable (baseState.shMemaddrs address)
   infer_instance
@@ -331,6 +358,46 @@ def stateOwnedCallNegativeRows : Bool :=
   | some (some .error, post) => post.clock == 9 && (post.locals (ml "keep")).isNone
   | _ => false
 
+def stateOwnedCallControlNegativeRows : Bool :=
+  let skip := recursiveExact (.call none (ml "skip") []) (callControlState 10)
+  let breakCase := recursiveExact (.call none (ml "break") []) (callControlState 10)
+  let skipOk := match skip with
+    | some (some .error, post) => post.clock == 9 && (post.locals (ml "x")).isNone
+    | _ => false
+  let breakOk := match breakCase with
+    | some (some .error, post) => post.clock == 9 && (post.locals (ml "x")).isNone
+    | _ => false
+  skipOk && breakOk
+
+def stateOwnedCallExceptionNegativeRows : Bool :=
+  let nonmatching := recursiveExact
+    (.call (some (none, some (ml "E", ml "ev", .skip))) (ml "raiseF") [])
+    (callControlState 10)
+  let invalidTargetState := { callControlState 10 with
+    locals := fun name =>
+      if name = ml "ev" then some (.rStruct []) else (callControlState 10).locals name }
+  let invalidTarget := recursiveExact
+    (.call (some (none, some (ml "E", ml "ev", .skip))) (ml "raiseE") [])
+    invalidTargetState
+  let nonmatchingOk := match nonmatching with
+    | some (some (.exception name (.val (.word value))), post) =>
+        name == ml "F" && value.toNat == 7 && post.clock == 9 &&
+          (post.locals (ml "ev")).isNone
+    | _ => false
+  let invalidTargetOk := match invalidTarget with
+    | some (some .error, post) => post.clock == 9 && (post.locals (ml "ev")).isNone
+    | _ => false
+  nonmatchingOk && invalidTargetOk
+
+def stateOwnedDecCallExceptionRows : Bool :=
+  let propagated := recursiveExact
+    (.decCall (ml "answer") .one (ml "raiseE") [] .skip) (callControlState 10)
+  match propagated with
+  | some (some (.exception name (.val (.word value))), post) =>
+      name == ml "E" && value.toNat == 7 && post.clock == 9 &&
+        (post.locals (ml "x")).isNone
+  | _ => false
+
 def stateOwnedLookupErrorRows : Bool :=
   let missingCall := recursiveExact (.call none (ml "missing") []) baseState
   let missingDecCall := recursiveExact
@@ -408,9 +475,12 @@ def recursiveGapRows : Bool :=
 #guard extCallRows
 #guard stateOwnedCallRows
 #guard stateOwnedCallNegativeRows
+#guard stateOwnedCallControlNegativeRows
+#guard stateOwnedCallExceptionNegativeRows
 #guard stateOwnedLookupErrorRows
 #guard stateOwnedDecCallRows
 #guard stateOwnedDecCallNegativeRows
+#guard stateOwnedDecCallExceptionRows
 #guard stateOwnedTimeoutRows
 #guard recursiveGapRows
 
@@ -439,6 +509,12 @@ def runChecks : IO Bool := do
   if stateOwnedCallNegativeRows then
     IO.println "PASS exact-state recursive Call rejects a callee return-shape mismatch with the callee state"
   else IO.println "FAIL exact-state recursive Call rejects a callee return-shape mismatch with the callee state"
+  if stateOwnedCallControlNegativeRows then
+    IO.println "PASS exact-state recursive Call maps callee Skip/Break to Error with callee state"
+  else IO.println "FAIL exact-state recursive Call maps callee Skip/Break to Error with callee state"
+  if stateOwnedCallExceptionNegativeRows then
+    IO.println "PASS exact-state recursive Call preserves unmatched exceptions and rejects invalid handler targets"
+  else IO.println "FAIL exact-state recursive Call preserves unmatched exceptions and rejects invalid handler targets"
   if stateOwnedLookupErrorRows then
     IO.println "PASS exact-state recursive Call/DecCall missing-code errors preserve the caller state"
   else IO.println "FAIL exact-state recursive Call/DecCall missing-code errors preserve the caller state"
@@ -448,6 +524,9 @@ def runChecks : IO Bool := do
   if stateOwnedDecCallNegativeRows then
     IO.println "PASS exact-state recursive DecCall rejects a declared return-shape mismatch with the callee state"
   else IO.println "FAIL exact-state recursive DecCall rejects a declared return-shape mismatch with the callee state"
+  if stateOwnedDecCallExceptionRows then
+    IO.println "PASS exact-state recursive DecCall propagates callee exceptions and clears locals"
+  else IO.println "FAIL exact-state recursive DecCall propagates callee exceptions and clears locals"
   if stateOwnedTimeoutRows then
     IO.println "PASS exact-state recursive Call/DecCall timeout clocks match original HOL"
   else IO.println "FAIL exact-state recursive Call/DecCall timeout clocks match original HOL"
@@ -456,8 +535,9 @@ def runChecks : IO Bool := do
   else IO.println "FAIL exact-state dispatcher keeps unassembled constructors explicitly open"
   pure (skipBreakTickRows && assignPrimitiveRows && storeRows && returnRaiseRows &&
     sharedMemoryRows && extCallRows && stateOwnedCallRows && stateOwnedCallNegativeRows &&
+    stateOwnedCallControlNegativeRows && stateOwnedCallExceptionNegativeRows &&
     stateOwnedLookupErrorRows &&
     stateOwnedDecCallRows && stateOwnedDecCallNegativeRows &&
-    stateOwnedTimeoutRows && recursiveGapRows)
+    stateOwnedDecCallExceptionRows && stateOwnedTimeoutRows && recursiveGapRows)
 
 end Flapjack.Test.PanSemTotalEvalExactParity

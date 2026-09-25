@@ -60,6 +60,29 @@ def crepDest2Exp [PanShiftWidth α] [BEq α] [OfNat α 0] [OfNat α 1]
     [AndOp α] [ShiftRight α] (n : Nat) (word : α) : Option Nat :=
   crepDest2ExpFuel (PanShiftWidth.width (α := α) + 1) n word
 
+/-! A value-recursive specification support for `dest_2exp`. Unlike the
+    executable recognizer above, this follows the source recursion until the
+    word is zero, one, or odd. It is currently untagged because it is stated on
+    Lean `BitVec`; the HOL `finite_index` word carrier and source definition
+    still need to be related. -/
+def crepDest2ExpBitVecSpec {width : Nat} [NeZero width] (exponent : Nat)
+    (word : BitVec width) : Option Nat :=
+  if word == 0 then none
+  else if word == 1 then some exponent
+  else if AndOp.and word 1 != 0 then none
+  else crepDest2ExpBitVecSpec (exponent + 1)
+    (BitVec.ushiftRight word 1)
+termination_by word.toNat
+decreasing_by
+  simp_wf
+  have hword : word.toNat ≠ 0 := by
+    intro hzero
+    have hEq : word = 0 := BitVec.eq_of_toNat_eq (by simpa using hzero)
+    simp [hEq] at *
+  change (BitVec.ushiftRight word 1).toNat < word.toNat
+  rw [BitVec.ushiftRight_eq, BitVec.toNat_ushiftRight]
+  exact Nat.div_lt_self (Nat.pos_of_ne_zero hword) (by decide)
+
 /-! Fixed-width executable port of CakeML's `crep_arith$mul_const`.
     Constants zero and one are handled directly; powers of two become a left
     shift, while all other constants retain the original multiplication node.

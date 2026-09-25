@@ -1737,6 +1737,14 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "ret_hdl_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "retHdlHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.2): the three clauses of ret_hdl_def (pan_to_crepScript.sml:122-127) are ret_hdl One ns = Skip, ret_hdl (Comb sh) ns = if 1 < size_of_shape (Comb sh) then assign_ret ns else Skip, and ret_hdl (Named sh) ns = Skip. retHdlHOL has the identical clauses over the exact MlString-backed ShapeHOL carrier (constructor arities 0/1/1, field types List ShapeHOL and MlS match HOL shape) with sizeOfShapeHOL the tagged size_of_shape_def and assignRetHOL the CrepProgHOL counterpart of the tagged assignRetW; the Named name is carried exactly and discarded. The kernel-checked bridge crepProgToHOL_retHdl relates production retHdl to retHdlHOL through shapeToHOL. Direct HOL rows one/comb_empty/comb_one/comb_two/named in scripts/hol-probes/ret_hdl_probe.out; replayed on the exact carrier and through the bridge in Flapjack/Test/RetHdlParity.lean. Production retHdl stays untagged until the executable path runs over the exact carriers, tracked by flapjack-pxn.18.3.5.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "comp_field_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "compFieldHOL",

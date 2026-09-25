@@ -51,6 +51,7 @@ import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSem.TotalMeasureIf
 import Flapjack.Pancake.Semantics.PanSem.LookupCode
 import Flapjack.Pancake.Semantics.PanSem.TotalSteps
+import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.PanObservationalSemantics

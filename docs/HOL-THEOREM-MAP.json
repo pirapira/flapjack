@@ -4343,13 +4343,29 @@
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; HOL nb_op clauses Op8=1/Op16=2/OpW=0/Op32=4 reproduced over OpSize; direct HOL rows nb_op_op8/op16/opW/op32 in pan_sem_e2e_probe.out)"
   },
+    {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "v",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "ValueHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL Datatype v (panSemScript.sml:22) has Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list) with stcname/fldname = mlstring; ValueHOL has the same constructor arities 1/1/2 and field types HolWordLab width, List (ValueHOL width), List (MlStringHOL x ValueHOL width); no String anywhere; production String-backed PanValue stays untagged); carrier is positive-width via [NeZero width] on the inductive, matching HOL positive dimindex"
+  },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "word_lab",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
-    "lean_name": "HolWordLab",
+    "hol_name": "flatten_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "flattenHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL Datatype word_lab (panSemScript.sml:17, one constructor Word ('a word)) is width-indexed over BitVec width in the panSemScript.sml counterpart; production generic PanWordLab related by checked round-trip isomorphism theorems at each width)"
+    "reviewer": "Codex (source comparison; HOL flatten (panSemScript.sml:388) clauses Val -> [w], RStruct vs -> FLAT (MAP flatten vs), NStruct nm flds -> FLAT (MAP flatten (MAP SND flds)) reproduced over the exact ValueHOL carrier; direct HOL rows word/record/named in pan_flatten_probe.out reproduced by PanSemValueHOLParity); positive-width carrier via [NeZero width] on ValueHOL and flattenHOL"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "pan_primop_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "panPrimopHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL pan_primop (panSemScript.sml:196) AddCarry with LENGTH args = 3 and EVERY isValWord -> theValWord fields and word_add_carry -> SOME (RStruct [ValWord res; ValWord co]) else NONE, over the exact ValueHOL carrier; isValWord is automatic for the one-constructor word_lab carrier so the triple .val (.word _) pattern is the exact rendering; direct HOL rows pan_primop_basic/overflow/carry_is_bit/wrong_length/non_word in pan_sem_pan_primop_probe.out reproduced by PanSemValueHOLParity); positive-width carrier via [NeZero width]"
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

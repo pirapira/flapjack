@@ -5659,6 +5659,14 @@
     "reviewer": "Codex (untagged DecCall continuation composition helper; consumes state/code/exception/local relations and a source Tick run through a recursive IH, but does not establish the enclosing HOL pc_compile_correct case)"
   },
   {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/EvaluateCases.lean",
+    "lean_name": "panToCrepDecCallTickSourceRunComposeWithTickIH",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Codex (untagged DecCall/Tick source-run and target continuation-IH composition before the target Dec local restoration wrapper; the separate target callee-prefix IH and continuation-entry relations remain premises)"
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "map_snd_f_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",

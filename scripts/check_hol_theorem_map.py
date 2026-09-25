@@ -209,6 +209,53 @@ DOCUMENTED_MISMATCHES = {
         "(ValueHOL width) function. Exact finite-map route HolFiniteMapExact.resVarEq "
         "tracked by flapjack-pxn.18.3.7.1.3.1.1.2.4. "
     ),
+    ("Flapjack/Pancake/PanLang.lean", "length_withShape_eq_shape"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "length_with_shape_eq_shape",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.24; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL length_with_shape_eq_shape "
+        "(panPropsScript.sml:265-267) is over the mlstring-named shape and an "
+        "arbitrary value list. length_withShape_eq_shape (PanLang.lean:554) uses "
+        "the production Shape carrier and Shape.shapeSize. Exact ShapeHOL route "
+        "tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/PanLang.lean", "all_distinct_withShape"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "all_distinct_with_shape",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.26; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL all_distinct_with_shape "
+        "(panPropsScript.sml:286-289) is over the mlstring-named shape. "
+        "all_distinct_withShape (PanLang.lean:581) uses the production Shape "
+        "carrier. Exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/PanLang.lean", "mem_of_withShape_mem"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "el_mem_with_shape",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.27; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL el_mem_with_shape "
+        "(panPropsScript.sml:307-310) is over the mlstring-named shape. "
+        "mem_of_withShape_mem (PanLang.lean:616) uses the production Shape "
+        "carrier. Exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/PanLang.lean", "mem_withShape_length"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "mem_with_shape_length",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.28; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL mem_with_shape_length "
+        "(panPropsScript.sml:328-331) is over the mlstring-named shape. "
+        "mem_withShape_length (PanLang.lean:606) uses the production Shape "
+        "carrier. Exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8. "
+    ),
+    ("Flapjack/Pancake/PanLang.lean", "withShape_getElem_eq_take_drop"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "with_shape_el_take_drop_eq",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.29; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL with_shape_el_take_drop_eq "
+        "(panPropsScript.sml:341-344) is over the mlstring-named shape. "
+        "withShape_getElem_eq_take_drop (PanLang.lean:644) uses the production "
+        "Shape carrier and Shape.shapeSize. Exact ShapeHOL route tracked by "
+        "flapjack-pxn.18.3.5.8. "
+    ),
     ("Flapjack/PanLocalised.lean", "localisedProg"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
         "localised_prog_def",

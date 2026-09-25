@@ -2160,6 +2160,46 @@
     "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.21; FLAPJACK-SPECIFIC, documented_mismatch). HOL panProps$FLOOKUP_pan_res_var_thm (panPropsScript.sml:236-238) states FLOOKUP (panSem$res_var l (m,v)) n = if n = m then v else FLOOKUP l n, where panSem$res_var is the overload of the polymorphic res_var (panSemScript.sml:505) at the varname |-> v finite-map carrier with mlstring keys. The Lean analogue resVarHOLExact_flookup (PanProps.lean:936) keeps the same quantifiers and the same if-then-else conclusion but quantifies over every MlS -> Option (ValueHOL width) lookup function instead of HOL finite maps, so the carrier is strictly broader and the @[hol] tag is withheld. names_as_string cannot bridge a function carrier to a finite map. Exact finite-map route: HolFiniteMapExact.resVarEq with lookup_resVarEq_none/_some, tracked by flapjack-pxn.18.3.7.1.3.1.1.2.4."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "length_with_shape_eq_shape",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "length_withShape_eq_shape",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.24; FLAPJACK-SPECIFIC, documented_mismatch). HOL panProps$length_with_shape_eq_shape (panPropsScript.sml:265-267) states LENGTH ns = size_of_shape (Comb sh) ==> LENGTH sh = LENGTH (with_shape sh ns) over HOL's mlstring-named shape and an arbitrary value list. The Lean analogue length_withShape_eq_shape (PanLang.lean:554) keeps the same hypothesis, quantifiers, and conclusion but uses the production Shape carrier (StructName = String) and Shape.shapeSize rather than the exact ShapeHOL/sizeOfShapeHOL, so the @[hol] tag is withheld. names_as_string does not authorize substituting the whole Shape/ShapeHOL datatype. Exact carrier route tracked by flapjack-pxn.18.3.5.8. Sibling of the with_shape definition (panLangScript.sml:216)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "all_distinct_with_shape",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "all_distinct_withShape",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.26; FLAPJACK-SPECIFIC, documented_mismatch). HOL panProps$all_distinct_with_shape (panPropsScript.sml:286-289) states ALL_DISTINCT ns /\\ n < LENGTH sh /\\ LENGTH ns = size_of_shape (Comb sh) ==> ALL_DISTINCT (EL n (with_shape sh ns)). The Lean analogue all_distinct_withShape (PanLang.lean:581) keeps the three hypotheses (values.Nodup, n < shapes.length, values.length = Shape.shapeSize (.comb shapes)) and the conclusion (the n-th component is Nodup) but uses the production Shape/dimensions rather than HOL's mlstring-named shape, so the tag is withheld; exact ShapeHOL carrier route tracked by flapjack-pxn.18.3.5.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "el_mem_with_shape",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "mem_of_withShape_mem",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.27; FLAPJACK-SPECIFIC, documented_mismatch). HOL panProps$el_mem_with_shape (panPropsScript.sml:307-310) states n < LENGTH (with_shape sh ns) /\\ LENGTH ns = size_of_shape (Comb sh) /\\ MEM x (EL n (with_shape sh ns)) ==> MEM x ns. The Lean analogue mem_of_withShape_mem (PanLang.lean:616) keeps the indexed length and membership hypotheses and the conclusion x MEM values, but with the production Shape carrier instead of HOL's mlstring-named shape, so the tag is withheld; exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_with_shape_length",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "mem_withShape_length",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.28; FLAPJACK-SPECIFIC, documented_mismatch). HOL panProps$mem_with_shape_length (panPropsScript.sml:328-331) states LENGTH ns = size_of_shape (Comb sh) /\\ n < LENGTH sh ==> MEM (EL n (with_shape sh ns)) (with_shape sh ns). The Lean analogue mem_withShape_length (PanLang.lean:606) keeps the same hypotheses and conclusion but with the production Shape carrier and indexed getElem, not HOL's mlstring-named shape, so the tag is withheld; exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "with_shape_el_take_drop_eq",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "withShape_getElem_eq_take_drop",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.29; FLAPJACK-SPECIFIC, documented_mismatch). HOL panProps$with_shape_el_take_drop_eq (panPropsScript.sml:341-344) states LENGTH ns = size_of_shape (Comb sh) /\\ n < LENGTH sh ==> EL n (with_shape sh ns) = TAKE (size_of_shape (EL n sh)) (DROP (size_of_shape (Comb (TAKE n sh))) ns). The Lean analogue withShape_getElem_eq_take_drop (PanLang.lean:644) keeps the same hypotheses with indexed TAKE/DROP rendered via List.take/drop and the same equality, but uses the production Shape carrier and Shape.shapeSize instead of HOL's mlstring-named shape, so the tag is withheld; exact ShapeHOL route tracked by flapjack-pxn.18.3.5.8."
+  },
+  {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "exceptions_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",

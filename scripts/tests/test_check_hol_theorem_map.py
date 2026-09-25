@@ -396,6 +396,31 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
             self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_pan_lang_with_shape_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        cases = {
+            "length_withShape_eq_shape": "length_with_shape_eq_shape",
+            "all_distinct_withShape": "all_distinct_with_shape",
+            "mem_of_withShape_mem": "el_mem_with_shape",
+            "mem_withShape_length": "mem_with_shape_length",
+            "withShape_getElem_eq_take_drop": "with_shape_el_take_drop_eq",
+        }
+        for lean_name, hol_name in cases.items():
+            key = ("Flapjack/Pancake/PanLang.lean", lean_name)
+            record = inventory[key]
+            self.assertEqual(
+                (record["hol_path"], record["hol_name"]),
+                ("cakeml/pancake/semantics/panPropsScript.sml", hol_name),
+            )
+            self.assertEqual(record["statement_status"], "documented_mismatch")
+            self.assertIn("Shape", record["reviewer"])
+            self.assertIn("flapjack-pxn.18.3.5.8", record["reviewer"])
+            self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+            self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_global_rename_function_name_polymorphic_hol_mismatch_is_documented(
         self,
     ):

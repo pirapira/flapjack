@@ -2542,16 +2542,26 @@ theorem crepLocalsIdUpdate (target : CrepRuntimeState α σ) :
   rfl
 
 /-- Flapjack analogue of HOL `first_compile_to_crep_all_distinct`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4566`). Its proof shows
-    the production `compileToCrepHOL` map preserves the names in
-    `functionEntries`, but its input is `Decl (BitVec width)` and its output
-    uses `FunName`/generic `CrepProg`. HOL quantifies over the `DeclHOL`/panLang
-    carrier (with `mlstring` identifiers and HOL expression/shape types) and
-    returns a function list with HOL `CrepProgHOL width` bodies. These input
-    and output carrier differences exceed identifier representation, so
-    `names_as_string` cannot qualify this analogue. It is intentionally
-    untagged; an exact-carrier replacement depends on `DeclHOL` and compiler
-    boundary work tracked by `flapjack-yao.1`. -/
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4566-4573`), which proves
+    `ALL_DISTINCT (MAP FST (functions prog)) ==>
+      ALL_DISTINCT (MAP FST (compile_to_crep prog))`. This theorem mirrors that
+    statement shape (`Nodup`/`List.map` for `ALL_DISTINCT`/`MAP`), but its input
+    is the production `Decl (BitVec width)` carrier with `String`
+    `FunName`/`VarName`/`ExceptionId` and production `Shape`, and its output
+    uses `FunName`/generic `CrepProg`; HOL quantifies over the `DeclHOL`/panLang
+    carrier (`mlstring` identifiers and HOL expression/shape types) and returns
+    `mlstring` names with `CrepProgHOL width` bodies. These input and output
+    carrier differences exceed identifier representation, so `names_as_string`
+    cannot qualify this analogue (no `NameRanged` witness applies either, since
+    the conclusion is `Nodup` of a name list derived from a compiled program).
+    The withdrawn tag is recorded as a documented mismatch in
+    `docs/HOL-THEOREM-MAP.json`; it is intentionally untagged. An exact-carrier
+    replacement depends on `DeclHOL` and compiler-boundary work tracked by
+    `flapjack-yao.1` (MlString carrier umbrella `flapjack-pxn.18.3.5.8`).
+    Distinctness across the `compile_inl_top` boundary is exercised against the
+    HOL EVAL row `duplicate_first` of
+    `scripts/hol-probes/compile_prog_probe.out` by
+    `Flapjack/Test/CompileProgParity.lean`. -/
 theorem firstCompileToCrepAllDistinct [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (hdistinct : ((functionEntries declarations).map
@@ -2939,17 +2949,25 @@ theorem elCompileToCrepElProgEq [NeZero width]
   exact Prod.ext (by simpa using g2) (by simpa using g3)
 
 /-- Flapjack analogue of HOL `first_compile_prog_all_distinct`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556`). The list
-    distinctness argument mirrors HOL, but this theorem quantifies over the
-    production `Decl (BitVec width)` carrier and concludes about
-    `compileProgTopHOL`, whose output uses production `FunName`/generic
-    `CrepProg`. HOL instead quantifies over the `DeclHOL`/`panLang` carrier
-    (with `mlstring` identifiers and HOL expression/shape types) and concludes
-    about the exact `compile_prog` output (`mlstring` names and HOL-shaped
-    `CrepProgHOL width` bodies). These input and output type differences are not covered by
-    `names_as_string`; therefore this analogue is intentionally untagged. An
-    exact-carrier replacement depends on the `DeclHOL` and compiler-boundary
-    work tracked by `flapjack-wur.1`. -/
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4556-4564`), which proves
+    `ALL_DISTINCT (MAP FST (functions prog)) ==>
+      ALL_DISTINCT (MAP FST (compile_prog prog))`. This theorem mirrors that
+    statement shape (`Nodup`/`List.map`) and derives the `compileProgTopHOL`
+    result from the `compileToCrepHOL` result above, but it quantifies over the
+    production `Decl (BitVec width)` carrier with `String` identifiers and
+    production `Shape`, and concludes about `compileProgTopHOL`, whose output
+    uses production `FunName`/generic `CrepProg`. HOL instead quantifies over
+    the `DeclHOL`/`panLang` carrier (`mlstring` identifiers and HOL
+    expression/shape types) and concludes about the exact `compile_prog` output
+    (`mlstring` names and `CrepProgHOL width` bodies). These input and output
+    carrier differences are not covered by `names_as_string`; therefore this
+    analogue is intentionally untagged and recorded as a documented mismatch in
+    `docs/HOL-THEOREM-MAP.json`. An exact-carrier replacement depends on the
+    `DeclHOL` and compiler-boundary work tracked by `flapjack-wur.1` (MlString
+    carrier umbrella `flapjack-pxn.18.3.5.8`). Distinctness across the
+    `compile_inl_top` boundary is exercised against the HOL EVAL row
+    `duplicate_first` of `scripts/hol-probes/compile_prog_probe.out` by
+    `Flapjack/Test/CompileProgParity.lean`. -/
 theorem firstCompileProgAllDistinct {width : Nat} [NeZero width]
     (declarations : List (Decl (BitVec width)))
     (hdistinct : ((functionEntries declarations).map

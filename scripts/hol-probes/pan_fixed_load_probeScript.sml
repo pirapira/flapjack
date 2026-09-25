@@ -61,6 +61,10 @@ val _ = print_eval "load32_hit_width8"
 val _ = print_eval "load32_unaligned_width1_address1"
   ``mem_load_32 (\a : 1 word. Word (1w : 1 word))
       UNIV F (1w : 1 word)``
+val _ = print_eval "aligned_width1_address1"
+  ``aligned 2 (1w : 1 word)``
+val _ = print_eval "byte_align_width1_address1"
+  ``byte_align (1w : 1 word)``
 val _ = print_eval "byte_align_width24_address5"
   ``byte_align (5w : 24 word)``
 val _ = print_eval "byte_load_width24_address5"
@@ -94,6 +98,10 @@ val _ = print_eval "word_of_bytes_width4_little_endian_expected"
   ``word_of_bytes F (0w:word32) [0xBw:word8; 0w; 0w; 0w]``
 val _ = print_eval "word_of_bytes_width4_big_endian_expected"
   ``word_of_bytes T (0w:word32) [0xBw:word8; 0xBw; 0xBw; 0xBw]``
+val _ = print_eval "word_of_bytes_width32_distinct_little"
+  ``word_of_bytes F (0w:word32) [0x11w:word8; 0x22w; 0x33w; 0x44w]``
+val _ = print_eval "word_of_bytes_width32_distinct_big"
+  ``word_of_bytes T (0w:word32) [0x11w:word8; 0x22w; 0x33w; 0x44w]``
 val _ = print_eval "byte_align_width4_address1"
   ``byte_align (1w : 4 word)``
 val _ = print_eval "byte_index_width4_address1"

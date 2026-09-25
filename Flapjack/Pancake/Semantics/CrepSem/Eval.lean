@@ -1480,10 +1480,10 @@ theorem holFiniteWordSourceAligned_eq_holW2N {ι : Type u}
     (2 ^ Nat.log2 alignment) = 0) = _
   rw [holFiniteWordW2N_eq_SBitSum]
 
-/-! HOL `aligned 2` is the natural-number shift test (shifts by two bits),
-    while the currently tagged `panMemLoad32HOL` elaborates its literal as a
-    word-sized shift amount and differs at width one. This theorem records
-    only the source/HOL natural-shift equivalence. -/
+/-! HOL `aligned 2` is clearing two low bits, equivalent to a natural-number
+    shift round trip. This theorem records the source/HOL guard equivalence;
+    `panMemLoad32HOL` uses the equivalent modulo-four form directly so its
+    width-one instance does not depend on overloaded shift amounts. -/
 theorem holFiniteWordSourceAligned4_eq_natShiftGuard {ι : Type u}
     (dimension : HolFiniteDimension ι) (address : ι → Bool) :
     holFiniteWordSourceAligned dimension 4 address =

@@ -28,11 +28,22 @@ context.
 namespace Flapjack
 
 /-! Flapjack analogue of HOL `globals_lookup_def`
-    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435`). The lookup
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:435-438`). The lookup
     algorithm uses the same 5-bit indices, shape-size count, and optional-map
-    traversal. It is untagged: the input `PanValue` embeds String-backed
-    struct/field names where HOL `v` embeds `mlstring`, and `CrepRuntimeState`
-    is only a production projection of the HOL state. -/
+    traversal. It is deliberately untagged: HOL's input is a `panSem$value`
+    and a `crepSem$state` (the direct probe instantiates an
+    `((8),unit) crepSem$state` with `ValWord`/`RStruct` values), whereas this
+    uses the production `PanValue α` with String-backed struct/field names,
+    the untagged production `panSemShapeOf`/`Shape.shapeSize` in place of HOL
+    `shape_of`/`size_of_shape`, and `CrepRuntimeState α σ`, which is only a
+    production projection of the HOL state. The `names_as_string` qualifier
+    cannot authorize the value/shape/state carriers, and its required
+    same-module `NameRanged` witness cannot be stated for an
+    `Option (List (PanWordLab α))` output. Direct HOL-EVAL rows
+    (`lookup_success`, `lookup_missing`, `lookup_struct`) are recorded in
+    `scripts/hol-probes/globals_lookup_probe.out` and reproduced by
+    `Flapjack/Test/PanToCrepGlobalsLookupParity.lean`. Exact-carrier
+    replacement is tracked by `flapjack-pxn.18.3.5.8.8`. -/
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=
   (List.range (Shape.shapeSize (panSemShapeOf value))).mapM

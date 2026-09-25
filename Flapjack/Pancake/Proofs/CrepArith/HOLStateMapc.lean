@@ -1168,6 +1168,31 @@ theorem evalCrepHolFiniteStateSource_crepOpMul
     dimension state.toSourceEvaluatorState left right leftValue rightValue
     hLeft hRight
 
+/-- The malformed-arity `CrepOp` branch of the all-width source evaluator
+returns `NONE`, matching HOL `crepSem$eval_def` followed by the failure
+clause of `crep_op_def`. This records the complementary failure case to
+`evalCrepHolFiniteStateSource_crepOpMul`; it remains untagged because the
+enclosing evaluator still uses the explicit finite-dimension source adapter. -/
+theorem evalCrepHolFiniteStateSource_crepOp_wrongArity
+    {ι β σ : Type} [dimension : HolFiniteDimension ι]
+    (state : CrepSemHOLFiniteState ι β σ)
+    (expressions : List (CrepExp (ι → Bool)))
+    (hLength : expressions.length ≠ 2) :
+    evalCrepHolFiniteWordSourceExpWordLab dimension
+      state.toSourceEvaluatorState (.crepOp .mul expressions) = none := by
+  change (evalCrepHolFiniteWordSourceExp dimension
+      state.toSourceEvaluatorState (.crepOp .mul expressions)).map
+        PanWordLab.word = none
+  cases expressions with
+  | nil => simp [evalCrepHolFiniteWordSourceExp]
+  | cons first rest =>
+      cases rest with
+      | nil => simp [evalCrepHolFiniteWordSourceExp]
+      | cons second tail =>
+          cases tail with
+          | nil => exact (hLength rfl).elim
+          | cons third tail => simp [evalCrepHolFiniteWordSourceExp]
+
 /-- Arbitrary-index finite-state `Cmp` case of HOL `eval_def`. The recursive
 operand results feed the exact tagged HOL `word_cmp` operation; the result
 retains both finite-dimension transport and the complete `word_lab` wrapper.

@@ -755,6 +755,14 @@
     "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
     "hol_name": "eval_def",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
+    "lean_name": "evalCrepHolFiniteStateSource_crepOp_wrongArity",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged all-width proof that malformed CrepOp.mul operand lists return NONE. It confirms the source evaluator's failure branch, but the enclosing finite-dimension source evaluator/state has not been proved equal to native HOL crepSem$eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepSemScript.sml",
+    "hol_name": "eval_def",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith/HOLStateMapc.lean",
     "lean_name": "evalCrepHolFiniteStateSource_cmp",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged Cmp case over the arbitrary-index finite-map source state; successful recursive operands produce the tagged word_cmp result and full word_lab wrapper after explicit HolFiniteDimension transport. Native crepSem eval_def correspondence remains open."

@@ -9,6 +9,7 @@ namespace Flapjack.Test.ParserByteRangedParity
 
 open Flapjack.Parser
 open Flapjack.Basis.Pure.MlString
+open Flapjack.Pancake.PanLang
 
 example (s : String) : CharsByteRanged (utf8Bytes s) := utf8Bytes_byteRanged s
 
@@ -120,5 +121,20 @@ example (fuel : Nat) :
     (parseTreeByteRanged_lf (token := Token.defaultShT) (locs := unknownLoc)
       (by simp [TokenNameByteRanged]))
     Flapjack.Shape.one (by simp [convShape, convDefaultShape, ParseTree.destTok])
+
+example (fuel : Nat) : convParams fuel [] = some [] := rfl
+
+example (fuel : Nat) (p : VarName × Shape)
+    (hp : p ∈ ([] : List (VarName × Shape))) :
+    StringByteRanged p.1 ∧ ShapeByteRanged p.2 :=
+  convParams_byteRanged fuel [] (by simp) [] rfl p hp
+
+example (fuel : Nat) (result : String × List (VarName × Shape))
+    (h : convStructName fuel (ParseTree.lf Token.semiT unknownLoc) = some result) :
+    StringByteRanged result.1 ∧
+      ∀ p ∈ result.2, StringByteRanged p.1 ∧ ShapeByteRanged p.2 :=
+  convStructName_byteRanged
+    (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc)
+      (by simp [TokenNameByteRanged])) result h
 
 end Flapjack.Test.ParserByteRangedParity

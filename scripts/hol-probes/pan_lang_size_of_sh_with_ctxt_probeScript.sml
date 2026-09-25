@@ -1,8 +1,3 @@
-(*
-  Direct HOL-EVAL observations for Pancake panLang$size_of_sh_with_ctxt.
-  Reference: cakeml/pancake/panLangScript.sml:164-171.
-*)
-load "bossLib";
 load "preamble";
 load "panLangTheory";
 open bossLib;
@@ -10,34 +5,14 @@ open HolKernel Parse;
 open preamble;
 open panLangTheory;
 
-fun print_eval label q =
-  let
-    val th = EVAL q
-  in
-    print (label ^ "=");
-    print_term (rconc th);
-    print "\n"
-  end
+fun print_eval label q = (print label; print "="; print_term (rconc (EVAL q)); print "\n");
 
-val pair_context =
-  ``[(strlit "Pair", <| fields := [(strlit "left", One);
-                                     (strlit "right", One)]; size := 2 |>)]``;
-val drop_context =
-  ``[(strlit "prefix", <| fields := []; size := 9 |>);
-      (strlit "Suffix", <| fields := []; size := 7 |>)]``;
+val ctxt = ``[(«A» : stcname, (<| fields := ([] : (fldname # shape) list); size := 5n |>) : struct_info);
+              («B» : stcname, (<| fields := ([] : (fldname # shape) list); size := 3n |>) : struct_info)]``;
+val ctxt' = ctxt;
 
-val _ = print_eval "one"
-  ``size_of_sh_with_ctxt
-      ([] : (mlstring # panLang$struct_info) list) One``;
-val _ = print_eval "known_named"
-  ``size_of_sh_with_ctxt ^pair_context (Named (strlit "Pair"))``;
-val _ = print_eval "missing_named"
-  ``size_of_sh_with_ctxt ^pair_context (Named (strlit "Missing"))``;
-val _ = print_eval "nested_comb"
-  ``size_of_sh_with_ctxt ^pair_context
-      (Comb [One; Named (strlit "Pair"); Comb [One; One]])``;
-val _ = print_eval "nested_named_size_drop"
-  ``size_of_sh_with_ctxt (DROP 1 ^drop_context)
-      (Comb [One; Named (strlit "Suffix")]) =
-    size_of_sh_with_ctxt ^drop_context
-      (Comb [One; Named (strlit "Suffix")])``;
+val _ = print_eval "sswc_one" ``size_of_sh_with_ctxt ^ctxt' (One : shape)``;
+val _ = print_eval "sswc_named_hit" ``size_of_sh_with_ctxt ^ctxt' (Named «A» : shape)``;
+val _ = print_eval "sswc_named_miss" ``size_of_sh_with_ctxt ^ctxt' (Named «Z» : shape)``;
+val _ = print_eval "sswc_comb" ``size_of_sh_with_ctxt ^ctxt' (Comb [One; Named «A»; Named «B»] : shape)``;
+val _ = print_eval "sswc_comb_miss" ``size_of_sh_with_ctxt ^ctxt' (Comb [One; Named «Z»] : shape)``;

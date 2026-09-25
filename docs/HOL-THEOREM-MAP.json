@@ -4377,46 +4377,6 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compileProgRiscV",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (RISC-V statement review)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "make_vmap_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "panToCrepMakeVmapHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source and direct HOL oracle comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "crep_vars_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "panToCrepVars",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source and direct HOL oracle comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "get_eids_from_decls_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "panToCrepGetEidsFromDeclsHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_to_crep_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compileToCrepHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "compile_prog_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/CompileProg.lean",
     "lean_name": "compileProgTopHOL",
@@ -7464,22 +7424,6 @@
     "reviewer": "Private support for the NStruct specialization: successful full evaluation preserves the input field-name order. Untagged because this helper is stated over Lean's full evaluator rather than HOL's fixed-width eval and finite-map state."
   },
   {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "make_funcs_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "makeFuncsHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact port of HOL make_funcs_def (pan_to_crepScript.sml:366): pair each function entry's name with its parameter list and return shape, then build the finite map with alist_to_fmap (first duplicate name wins), rendered as FUPDATE_LIST FEMPTY over the reversed association list. functionInfosHOL_eq_makeFuncsHOL proves the declaration-list adapter functionInfosHOL equals makeFuncsHOL (functionEntries declarations). Direct HOL probe scripts/hol-probes/crep_make_funcs_probe.out (rows make_funcs_empty_params, make_funcs_param_entry, make_funcs_absent, make_funcs_duplicate_first_wins) and Lean guards in Flapjack/Test/PanToCrepCodeRelParity.lean. Unfolded by HOL mk_ctxt_code_imp_code_rel."
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "comp_func_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compFuncHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Exact port of HOL comp_func_def (pan_to_crepScript.sml:337): build make_vmap from the parameter shapes, take vmax = size_of_shape (Comb (MAP SND params)) - 1, and compile the body in the mk_ctxt context carrying the caller's function and exception maps. panToCrepCompFuncRiscV_eq_compFuncHOL proves the record-context adapter panToCrepCompFuncRiscV equals compFuncHOL at context.funcs/context.eids. Unfolded by HOL mk_ctxt_code_imp_code_rel."
-  },
-  {
     "hol_path": "cakeml/compiler/encoders/riscv/proofs/riscv_targetProofScript.sml",
     "hol_name": "word_extract_6",
     "lean_path": "Flapjack/RiscV/CorrectnessEncoding.lean",
@@ -8374,14 +8318,6 @@
     "lean_name": "distinctListsHol",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-main (HOL/Lean statement comparison; DecidableEq membership interface)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
-    "hol_name": "compile_exp_def",
-    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
-    "lean_name": "compileExpHOLW",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-deepseek-three (exact width-indexed port): carrier BitVec width with [NeZero width] matching HOL 'a word; body delegates to the generic compileExpHOL; mirrors the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-228). Recursive compile_exp dependency of memCompileExpVmaxW and genlistVmaxDistinctListsCompiledExpsW is stated through this tag. BRIDGE ONLY, NOT TEXTUAL ROUTING (flapjack-pxn.18.3.1.3.2): the shipped compileProgRiscV/compileProgHOL path still calls the generic compileExpHOL; the kernel-checked bridge compileExpHOLW_eq_compileExpHOL shows production is definitionally equal to this tag, but production has NOT been textually routed to it, so the AGENTS.md production-path rule is NOT met by this bridge alone. Full routing is tracked by flapjack-pxn.18.3.5.3.1.2. Oracle-backed parity rows for the tag live in Flapjack/Test/CompileExpParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

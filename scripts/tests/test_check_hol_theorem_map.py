@@ -488,6 +488,40 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertEqual(record["hol_name"], "compile_exp_not_mem_load_glob")
         self.assertEqual(record["statement_status"], "documented_mismatch")
 
+    def test_is_wf_shape_drop_carrier_mismatch_stays_untagged(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanStructs.lean", "isWfShape_drop")
+        self.assertEqual(inventory[key]["hol_name"], "is_wf_shape_drop")
+        self.assertEqual(inventory[key]["statement_status"], "documented_mismatch")
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
+        self.assertEqual(record["hol_name"], "is_wf_shape_drop")
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("unrestricted String", record["reviewer"])
+        self.assertIn("shapedFields", record["reviewer"])
+
+    def test_old_exp_shapes_map_analogue_stays_untagged(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        key = ("Flapjack/Pancake/Proofs/PanStructs.lean", "structOldExpShapes_eq_map")
+        self.assertEqual(inventory[key]["hol_name"], "old_exp_shapes_eq")
+        self.assertEqual(inventory[key]["statement_status"], "documented_mismatch")
+
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(record for record in manifest if
+                      (record["lean_path"], record["lean_name"]) == key)
+        self.assertEqual(record["hol_name"], "old_exp_shapes_eq")
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertIn("byte-observable", record["reviewer"])
+        self.assertIn("String", record["reviewer"])
+
 
 class ValidateInventoryTest(unittest.TestCase):
     path = "Flapjack/Pancake/Proofs/Example.lean"

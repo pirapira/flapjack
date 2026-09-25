@@ -83,6 +83,23 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "the exact finite-map state carrier flapjack-pxn.18.3.7.1.3.1.1.2 (audit "
         "flapjack-pxn.18.3.7.1.3.1.2)."
     ),
+    ("Flapjack/Pancake/PanLang/Exp.lean", "globalVarExpHOL"): (
+        "cakeml/pancake/panLangScript.sml",
+        "global_var_exp_def",
+        "flapjack-ds6 (source comparison, bead flapjack-4ac.1.39): HOL "
+        "global_var_exp_def (panLangScript.sml:278-291) is a partially specified "
+        "recursive function: the exported theorem states exactly thirteen clauses, "
+        "and the generated global_var_exp_def_primitive stores `| Load32 v => ARB | "
+        "BaseAddr => ARB | TopAddr => ARB | BytesInWord => ARB`. A total Lean "
+        "function must choose values for those four constructors, so globalVarExpHOL "
+        "(exact ExpHOL/MlS carrier, the thirteen specified clauses verbatim, plus "
+        "`load32` recursion and `[]` for the three nullary address constructors, "
+        "matching production expGlobalVars) extends HOL's specification and cannot "
+        "be an exact port. Direct HOL-EVAL rows global_var/nested_global are in "
+        "pan_lang_var_exp_probe.out and replayed in Flapjack/Test/"
+        "PanLangVarExpParity.lean. The tag is withheld; ARB/partial rendering is "
+        "tracked by the child bead of flapjack-4ac.1.39."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "res_var_def",
@@ -104,6 +121,18 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/PanLocalised.lean", "localisedProg"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "localised_prog_def",
+        "flapjack-ds4 (source comparison, bead flapjack-4ac.4.74; FLAPJACK-SPECIFIC, "
+        "documented_mismatch). HOL panProps$localised_prog (panPropsScript.sml:1380-1406) "
+        "is polymorphic over the 'a prog carrier whose identifiers are mlstring; this "
+        "definition is over the production Prog α carrier (PanLang.lean:316) whose "
+        "FunName/ExceptionId/StructName are Lean String. The @[hol] tag was withdrawn for "
+        "the carrier mismatch. Exact MlString/width-indexed port: localisedProgHOL over "
+        "ProgHOL width in Flapjack/Pancake/Semantics/PanProps.lean. Faithful replacement "
+        "depends on flapjack-pxn.18.3.5.8 (MlString carriers). "
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "fieldsInOrderReorderNoop"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "fields_in_order_reorder_noop",
@@ -1046,9 +1075,15 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isDecl"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact_shapeOfHOLExact"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "panPrimopHOLExact_isWfShapeValueHOLExact"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedExpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "namelessExpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedProgHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
+        ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

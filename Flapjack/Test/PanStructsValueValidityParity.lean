@@ -329,4 +329,25 @@ example :
       funext k
       by_cases hk : k = 2 <;> simp [FDOM, hk]) rfl
 
+/-! ## Exact `pan_primop_is_wf_shape_v` over the exact carriers
+    (HOL `panProps$pan_primop_is_wf_shape_v`, bead flapjack-4ac.4.14). -/
+
+/-- The tagged `pan_primop_is_wf_shape_v` applies to any exact `pan_primop`
+    result. -/
+example (values : List (ValueHOL 8)) (value : ValueHOL 8)
+    (h : panPrimopHOLExact PrimOp.addCarry values = some value) :
+    isWfShapeValueHOLExact exactPairContext value = true :=
+  panPrimopHOLExact_isWfShapeValueHOLExact exactPairContext PrimOp.addCarry values value h
+
+/-- A concrete `AddCarry` triple produces a well-formed exact value. -/
+example :
+    ∃ value, panPrimopHOLExact PrimOp.addCarry
+        [.val (.word (2 : BitVec 8)), .val (.word (3 : BitVec 8)),
+         .val (.word (4 : BitVec 8))] = some value ∧
+      isWfShapeValueHOLExact exactPairContext value = true := by
+  refine ⟨_, rfl, ?_⟩
+  exact panPrimopHOLExact_isWfShapeValueHOLExact exactPairContext PrimOp.addCarry
+    [.val (.word (2 : BitVec 8)), .val (.word (3 : BitVec 8)),
+     .val (.word (4 : BitVec 8))] _ rfl
+
 end Flapjack.Test

@@ -296,18 +296,60 @@ def structure_field_map(lines: list[str]) -> dict[str, set[str]]:
 
 
 def owning_structure_for_fields(
-    members: dict[str, set[str]], fields: Iterable[str]
+    members: dict[str, set[str]], fields: Iterable[str],
+    declaration_text: str = "",
 ) -> str | None:
-    """The single structure declaring every qualified field, if unique.
+    """The carrier structure declaring every qualified field.
 
     The qualifier stays narrow: all named fields must live in one carrier
-    structure, so fields split across several structures are rejected.
+    structure, so fields split across several structures are rejected.  When a
+    module declares several structures with the same field names (for example a
+    broad state and its finite-support counterpart), the tagged declaration's
+    own carrier disambiguates: the owner must be named in the declaration text.
     """
     wanted = set(fields)
-    owners = [name for name, names in members.items() if wanted <= names]
-    if len(owners) == 1:
-        return owners[0]
+    candidates = [name for name, names in members.items() if wanted <= names]
+    if len(candidates) == 1:
+        return candidates[0]
+    if declaration_text:
+        named = [name for name in candidates if name in declaration_text]
+        if len(named) == 1:
+            return named[0]
     return None
+
+
+TOP_DECL_RE = re.compile(
+    r"^(?:@\[|def |theorem |lemma |abbrev |instance |structure |inductive )"
+)
+
+
+def tagged_declaration_text(lines: list[str], attribute_start: int) -> str:
+    """Source text of the declaration carrying an attribute at `attribute_start`.
+
+    Used to disambiguate the owning carrier structure when a module defines more
+    than one structure with the same fields: the tagged declaration's signature
+    names the carrier it is stated over.
+    """
+    region: list[str] = []
+    seen_declaration = False
+    for line in lines[attribute_start - 1:]:
+        stripped = line.lstrip()
+        if stripped.startswith("@["):
+            if seen_declaration:
+                break
+            region.append(line)
+            continue
+        if not line.strip():
+            region.append(line)
+            continue
+        if seen_declaration and TOP_DECL_RE.match(line):
+            break
+        if re.match(r"(?:def|theorem|lemma|abbrev|instance) ", stripped):
+            seen_declaration = True
+        region.append(line)
+        if seen_declaration and ":=" in line:
+            break
+    return "\n".join(region)
 
 
 TO_FUNCTION_RE = re.compile(r"\bto([A-Z][A-Za-z0-9_']*)")
@@ -353,16 +395,19 @@ def has_fmap_witness(
 
 
 def fmap_as_finite_support_errors(
-    lines: list[str], fields: tuple[str, ...], module: str
+    lines: list[str], fields: tuple[str, ...], module: str,
+    declaration_text: str = "",
 ) -> list[str]:
     """Validate the reviewed canonical HOL finite-map translation.
 
     Each named field must be a same-module structure field whose declared type
     uses `HolFiniteMapExact`; a raw `α → Option β` lookup map is ineligible.
-    All named fields must belong to ONE owning carrier structure, and the module
-    must provide a canonical witness `holFmapAsFiniteSupportWitness` naming that
-    structure and stating a real `toX`/`ofX` roundtrip with its broad
-    counterpart (a bare arrow or unrelated counterpart mention is rejected).
+    All named fields must belong to ONE owning carrier structure (when several
+    structures declare the same fields, the tagged declaration's carrier
+    disambiguates), and the module must provide a canonical witness
+    `holFmapAsFiniteSupportWitness` naming that structure and stating a real
+    `toX`/`ofX` roundtrip with its broad counterpart (a bare arrow or unrelated
+    counterpart mention is rejected).
     """
     errors: list[str] = []
     if len(set(fields)) != len(fields):
@@ -383,11 +428,12 @@ def fmap_as_finite_support_errors(
                 "HolFiniteMapExact carrier; a raw function-backed map is ineligible"
             )
     members = structure_field_map(lines)
-    owning = owning_structure_for_fields(members, fields) if fields else None
+    owning = owning_structure_for_fields(members, fields, declaration_text) if fields else None
     if fields and owning is None:
         errors.append(
             "fmap_as_finite_support fields must all be declared by one owning "
-            f"carrier structure in {module}"
+            f"carrier structure in {module} (when several structures share the "
+            "field names, the tagged declaration must name its carrier)"
         )
     elif fields and not has_fmap_witness(lines, owning, members.keys()):
         errors.append(
@@ -613,7 +659,9 @@ def main(argv: list[str]) -> int:
             if fmap_fields:
                 errors.extend(
                     f"{where}: {error}"
-                    for error in fmap_as_finite_support_errors(lines, fmap_fields, rel)
+                    for error in fmap_as_finite_support_errors(
+                        lines, fmap_fields, rel, tagged_declaration_text(lines, number)
+                    )
                 )
             if names_fields or boundary_fields:
                 errors.extend(

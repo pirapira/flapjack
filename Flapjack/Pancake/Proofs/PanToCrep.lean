@@ -775,12 +775,22 @@ theorem ctxtFcVarsLookupGetElem
 
 /-- HOL `ctxt_fc_funcs_eq`: constructing a function context preserves the
     supplied function map. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the
--- production identifiers `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
--- `PanToCrepProofContext`/`PanToCrepHOLContext` whose finite maps are `String`-keyed),
--- while HOL `pan_to_crepProofScript.sml` keys names by `funname`/`varname`/`eid` =
--- `mlstring`. The exact MlString identifier carrier is tracked by
--- `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- FLAPJACK-SPECIFIC (not an exact HOL port): the HOL statement
+-- (`pan_to_crepProofScript.sml:2295`) has no premises and is definitionally the
+-- projection `(ctxt_fc cvs em vs shs ns).funcs = cvs`; the Lean projection
+-- matches clause-for-clause but is keyed by the production identifiers
+-- `FunName`/`VarName`/`ExceptionId` = `String` (or embeds a
+-- `PanToCrepProofContext`/`PanToCrepHOLContext` with `String`-keyed finite maps
+-- and production `Shape`), while HOL keys names by `funname`/`varname`/`eid` =
+-- `mlstring` and shapes by `shape`. The `names_as_string` qualifier cannot cover
+-- the `Shape` carrier, and no `NameRanged` byte witness exists because the
+-- output is a finite map of function signatures, not a name. The direct HOL
+-- EVAL row `functions_projection=T` is recorded in
+-- `scripts/hol-probes/ctxt_fc_probe.out` and paired with the kernel-checked
+-- fixture `ctxt_fc_funcs_eq_fixture` in
+-- `Flapjack/Test/PanToCrepRelationsParity.lean`. The exact MlString identifier
+-- carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
+-- `flapjack-pxn.18.3.5.7.2`).
 theorem ctxtFcFuncsEq
     (functions : FiniteMap String (List (String × Shape) × Shape))
     (codes : FiniteMap String α) (variables : List String)

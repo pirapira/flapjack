@@ -37,6 +37,13 @@ def CrepSemHOLState.mapc {width : Nat} [NeZero width] {σ : Type}
       state.toExpressionEvaluatorState := by
   rfl
 
+@[simp] theorem CrepSemHOLState.toBitVecEvaluatorState_mapc
+    {width : Nat} [NeZero width] {σ : Type}
+    (f : MlString × (List Nat × CrepProgHOL width) →
+      List Nat × CrepProgHOL width)
+    (state : CrepSemHOLState width σ) :
+    (state.mapc f).toBitVecEvaluatorState = state.toBitVecEvaluatorState := rfl
+
 /-- Changing only the HOL code map cannot alter expression evaluation after
 projection into the source evaluator. This is Flapjack support for the
 `simp_exp_correct1` dependency; the evaluator correspondence to native HOL
@@ -139,5 +146,76 @@ theorem crepSimpExpCorrect1CrepSemHOLStateRuntime
     projected (crepExpHOLToSourceBits expression) h
   rw [hCodeId] at hPres
   exact hPres
+
+/-- Direct BitVec production-runtime support for all-positive-width
+`crepSemHOLState`. It takes HOL's exact `CrepExpHOL` input and `HolWordLab`
+result carrier, and applies the actual HOL-shaped `mapc` update. The evaluator
+uses the production RISC-V runtime on a direct word-cell projection, so no
+`Fin width → Bool` conversion occurs here. It remains untagged: code/FFI are
+fixed in the expression-only projection, and the generic HOL
+finite-index/eval_def relation is not established. -/
+theorem crepSimpExpCorrect1CrepSemHOLStateBitVecRuntime
+    {width : Nat} [NeZero width] {σ : Type}
+    (update : MlString × (List Nat × CrepProgHOL width) →
+      List Nat × CrepProgHOL width)
+    (state : CrepSemHOLState width σ)
+    (expression : CrepExpHOL width)
+    (_result : HolWordLab width)
+    (h : ((evalCrepRuntimeExp
+      (riscvCrepWordTarget state.toBitVecEvaluatorState.toRuntime)
+      (crepExpOfHOL expression)).map PanWordLab.word).map
+        PanWordLab.toHolWordLab ≠ none) :
+    ((evalCrepRuntimeExp
+      (riscvCrepWordTarget
+        (state.mapc update).toBitVecEvaluatorState.toRuntime)
+      (crepSimpExp (BitVec.ofNat width) (crepExpOfHOL expression))).map
+        PanWordLab.word).map PanWordLab.toHolWordLab =
+    ((evalCrepRuntimeExp
+      (riscvCrepWordTarget state.toBitVecEvaluatorState.toRuntime)
+      (crepExpOfHOL expression)).map PanWordLab.word).map
+        PanWordLab.toHolWordLab := by
+  rw [CrepSemHOLState.toBitVecEvaluatorState_mapc]
+  let projected := state.toBitVecEvaluatorState
+  let productionExpression := crepExpOfHOL expression
+  have hRuntime :
+      (evalCrepRuntimeExp (riscvCrepWordTarget projected.toRuntime)
+        productionExpression).map PanWordLab.word ≠ none := by
+    have hWrapped := h
+    change ((evalCrepRuntimeExp (riscvCrepWordTarget projected.toRuntime)
+      productionExpression).map PanWordLab.word).map PanWordLab.toHolWordLab ≠ none
+      at hWrapped
+    intro hnone
+    rw [hnone] at hWrapped
+    simp at hWrapped
+  have hSource :
+      evalCrepHolExpWordLab projected productionExpression ≠ none := by
+    rw [evalCrepHolExpWordLab, ← evalCrepRuntimeExp_toRuntime_eq]
+    exact hRuntime
+  have hCodeId :
+      crepArithHolMapCode
+        (fun pair : FunName × (List Nat × CrepProg (RiscV.Word width)) => pair.2)
+        projected = projected := by
+    cases projected
+    simp [crepArithHolMapCode]
+  have hPres := crepSimpExpCorrect1BitVec
+    (f := fun pair : FunName × (List Nat × CrepProg (RiscV.Word width)) => pair.2)
+    projected productionExpression hSource
+  rw [hCodeId] at hPres
+  have hRuntimePreserved :
+      (evalCrepRuntimeExp (riscvCrepWordTarget projected.toRuntime)
+        (crepSimpExp (BitVec.ofNat width) productionExpression)).map
+          PanWordLab.word =
+      (evalCrepRuntimeExp (riscvCrepWordTarget projected.toRuntime)
+        productionExpression).map PanWordLab.word := by
+    calc
+      _ = evalCrepHolExpWordLab projected
+            (crepSimpExp (BitVec.ofNat width) productionExpression) := by
+              simp only [evalCrepHolExpWordLab]
+              rw [evalCrepRuntimeExp_toRuntime_eq]
+      _ = evalCrepHolExpWordLab projected productionExpression := hPres
+      _ = _ := by
+            simp only [evalCrepHolExpWordLab]
+            rw [evalCrepRuntimeExp_toRuntime_eq]
+  exact congrArg (Option.map PanWordLab.toHolWordLab) hRuntimePreserved
 
 end Flapjack

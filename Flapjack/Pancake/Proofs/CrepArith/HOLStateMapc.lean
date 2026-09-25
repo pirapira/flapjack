@@ -218,4 +218,30 @@ theorem crepSimpExpCorrect1CrepSemHOLStateBitVecRuntime
             rw [evalCrepRuntimeExp_toRuntime_eq]
   exact congrArg (Option.map PanWordLab.toHolWordLab) hRuntimePreserved
 
+/-- Native production-evaluator `Var` case against the exact finite-map local
+field in `CrepSemHOLState`, corresponding to HOL `crepSem$eval_def`
+(`crepSemScript.sml:91`). The production runtime state remains arbitrary,
+including its code, FFI, memory model, and byte configuration; the only
+premise relates the queried local observation to this state's finite-map
+lookup. No state projection or successful-evaluation premise is used, so the
+equation covers both a lookup hit and a miss. This stays untagged: the HOL
+state uses the positive-width `BitVec` encoding rather than an arbitrary HOL
+`finite_index`, and the local observation premise is only one component of the
+full state/evaluator correspondence. -/
+theorem evalCrepRuntimeExp_crepSemHOLState_var
+    {width : Nat} [NeZero width] {σ ρ : Type}
+    (holState : CrepSemHOLState width σ)
+    (runtimeState : CrepRuntimeState (RiscV.Word width) ρ)
+    (name : Nat)
+    (hLocal : runtimeState.locals name =
+      (holState.locals.lookup name).map HolWordLab.toPanWordLab) :
+    ((evalCrepRuntimeExp runtimeState (.var name)).map PanWordLab.word).map
+      PanWordLab.toHolWordLab = holState.locals.lookup name := by
+  simp only [evalCrepRuntimeExp]
+  rw [hLocal]
+  cases h : holState.locals.lookup name with
+  | none => simp
+  | some cell => cases cell <;> simp [HolWordLab.toPanWordLab,
+      PanWordLab.toHolWordLab, panTheWord]
+
 end Flapjack

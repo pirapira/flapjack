@@ -9664,4 +9664,37 @@
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-three (source comparison): HOL call_dest SOME pos args kf = (Skip, INL pos); NONE with LENGTH args = 0 gives (Skip, INL raise_stub_location) and otherwise takes LAST args through wReg2 then wStackLoad; the argument type is monomorphic num (LAST args is fed to wReg2), rendered as List Nat; Lean callDest matches on Option and on args.getLast? (none iff empty) so the empty branch is exactly HOL's, and uses the ported wReg2/wStackLoad/raiseStubLocation; HOL is polymorphic in the stack-program word type, so the exact statement returns ProgM alpha for an arbitrary alpha (Lean callDest is `{alpha : Type} ... : ProgM alpha x Sum Nat Nat`); the argument list alone is monomorphic num; no word operation and no dimindex; HOL rows cd_some/cd_none_reg/cd_none_stack/cd_empty in scripts/hol-probes/word_to_stack_call_dest_probe.out, reproduced by callDestParityGuard in Flapjack/Test/WordToStackBitsParity.lean."
   }
+
+  ,{
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "perf_call_prefix_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "perfCallPrefixW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL perf_call_prefix l1 l2 k = list_Seq [LocValue k l1 l2; Inst (Mem Store k (Addr perf_rsp (-8w))); Inst (Mem Store perf_rbp (Addr perf_rsp (-16w))); Inst (Arith (Binop Sub perf_rsp perf_rsp (Imm 16w))); Inst (Arith (Binop Or perf_rbp perf_rsp (Reg perf_rsp)))]; Lean perfCallPrefixW {width} [NeZero width] builds the same list_Seq over ProgM (BitVec width) with perfRsp/perfRbp and BitVec immediates; width-indexed because of the concrete -8w/-16w/16w words; HOL row pcp_eq=T in scripts/hol-probes/word_to_stack_stub_probe.out, reproduced by stubParityGuard in Flapjack/Test/WordToStackBitsParity.lean."
+  }
+  ,{
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "perf_call_suffix_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "perfCallSuffixW",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL perf_call_suffix = list_Seq [Inst (Mem Load perf_rbp (Addr perf_rsp 0w)); Inst (Arith (Binop Add perf_rsp perf_rsp (Imm 16w)))]; Lean perfCallSuffixW {width} [NeZero width] mirrors it over ProgM (BitVec width); width-indexed because of the 0w/16w words; HOL row pcs_eq=T in scripts/hol-probes/word_to_stack_stub_probe.out, reproduced by stubParityGuard."
+  }
+  ,{
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "raise_stub_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "raiseStub",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL raise_stub perf k = Seq (Get k Handler) (Seq (StackSetSize k) (Seq (if perf then list_Seq [StackLoad k 3; Inst (Arith (Binop Or perf_rsp k (Reg k))); StackLoad k 4; Inst (Arith (Binop Or perf_rbp k (Reg k)))] else Skip) (Seq (StackLoad k 2) (Seq (Set Handler k) (Seq (StackLoad k 1) (Seq (StackFree (handler_slots perf)) (Raise k))))))); the body contains no word literal and HOL is polymorphic in the word type, so the exact Lean raiseStub {alpha} is generic over the carrier parameter; uses the ported handlerSlots/perfRsp/perfRbp; HOL rows rs_eq_f=T and rs_eq_t=T in scripts/hol-probes/word_to_stack_stub_probe.out, reproduced by stubParityGuard and the rfl example in Flapjack/Test/WordToStackBitsParity.lean."
+  }
+  ,{
+    "hol_path": "cakeml/compiler/backend/word_to_stackScript.sml",
+    "hol_name": "store_consts_stub_def",
+    "lean_path": "Flapjack/Compiler/Backend/WordToStackRegFormat.lean",
+    "lean_name": "storeConstsStub",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-deepseek-three (source comparison): HOL store_consts_stub k = Seq (StoreConsts k (k+1) NONE) (Return 0); word-independent, so the exact Lean storeConstsStub {alpha} : ProgM alpha is generic in the carrier parameter; HOL row scs_eq=T in scripts/hol-probes/word_to_stack_stub_probe.out, reproduced by stubParityGuard and the rfl example in Flapjack/Test/WordToStackBitsParity.lean."
+  }
 ]

@@ -1,0 +1,237 @@
+import Flapjack.Pancake.CrepLang.Exp
+import Flapjack.Pancake.PanLang
+
+/-!
+Exact width-indexed carrier for the Crepe program syntax.
+
+`cakeml/pancake/crepLangScript.sml:41-66` defines
+
+```
+Datatype:
+  prog = Skip
+       | Dec varname ('a exp) prog
+       | Assign    varname  ('a exp)
+       | Primitive (varname list) panLang$primop (varname list)
+       | Store     ('a exp) ('a exp)
+       | Store32 ('a exp) ('a exp)
+       | StoreByte ('a exp) ('a exp)
+       | StoreGlob (5 word) ('a exp)
+       | Seq prog prog
+       | If    ('a exp) prog prog
+       | While ('a exp) prog
+       | Break num
+       | Continue num
+       | Call (((varname list) # ((('a word) # prog) option)) option)
+              funname (('a exp) list)
+       | ExtCall funname varname varname varname varname
+       | Raise ('a word)
+       | Return (('a exp) list)
+       | ShMem memop varname ('a exp)
+       | Tick;
+End
+```
+
+The production `Flapjack.CrepProg (α)` in `Flapjack/Pancake/CrepLang.lean` is
+generic over `α` and stores its `Call`/`ExtCall` names as `String`, so it is
+not an exact port (HOL `funname = mlstring`); it stays untagged.
+`CrepProgHOL` is the exact carrier: the word type is `BitVec width` with
+`[NeZero width]`, the function names are the faithful `MlString`, and the
+expression/`ShMem` payloads use the exact `CrepExpHOL`/`CrepMemOp` carriers.
+-/
+
+namespace Flapjack
+
+open Flapjack.Basis.Pure.MlString
+
+/-- Exact port of `crepLang$prog` (`cakeml/pancake/crepLangScript.sml:41-66`):
+19 constructors in HOL order, `funname` as the faithful `MlString`, `varname`
+as `Nat`, the `'a exp` payload as `CrepExpHOL width`, the `('a word)` payloads
+as `BitVec width`, and `memop` as `CrepMemOp`. -/
+@[hol "cakeml/pancake/crepLangScript.sml" "prog"]
+inductive CrepProgHOL (width : Nat) [NeZero width] where
+  | skip
+  | dec (name : Nat) (value : CrepExpHOL width) (body : CrepProgHOL width)
+  | assign (name : Nat) (value : CrepExpHOL width)
+  | primitive (names : List Nat) (operator : PrimOp) (args : List Nat)
+  | store (address value : CrepExpHOL width)
+  | store32 (address value : CrepExpHOL width)
+  | storeByte (address value : CrepExpHOL width)
+  | storeGlob (address : BitVec 5) (value : CrepExpHOL width)
+  | seq (first second : CrepProgHOL width)
+  | ite (condition : CrepExpHOL width) (thenBranch elseBranch : CrepProgHOL width)
+  | while (condition : CrepExpHOL width) (body : CrepProgHOL width)
+  | break (label : Nat)
+  | continue (label : Nat)
+  | call (returnInfo : Option (List Nat × Option (BitVec width × CrepProgHOL width)))
+      (name : MlString) (args : List (CrepExpHOL width))
+  | extCall (function : MlString) (configuration configurationLength array arrayLength : Nat)
+  | raise (exception : BitVec width)
+  | return (values : List (CrepExpHOL width))
+  | shMem (operator : CrepMemOp) (name : Nat) (address : CrepExpHOL width)
+  | tick
+  deriving Repr
+
+/-- `NameRanged` for the production `String` function names: every code unit is
+a byte, so `MlString.ofString`/`toStringOfBytes` round-trip exactly. -/
+def CrepNameRanged (s : String) : Prop := ∀ c ∈ s.toList, c.toNat < 256
+
+/-- Production-to-HOL direction: forget the exact carrier. -/
+def crepProgToHOL {width : Nat} [NeZero width] : CrepProg (BitVec width) → CrepProgHOL width
+  | .skip => .skip
+  | .dec name value body => .dec name (crepExpToHOL value) (crepProgToHOL body)
+  | .assign name value => .assign name (crepExpToHOL value)
+  | .primitive names operator args => .primitive names operator args
+  | .store address value => .store (crepExpToHOL address) (crepExpToHOL value)
+  | .store32 address value => .store32 (crepExpToHOL address) (crepExpToHOL value)
+  | .storeByte address value => .storeByte (crepExpToHOL address) (crepExpToHOL value)
+  | .storeGlob address value => .storeGlob address (crepExpToHOL value)
+  | .seq first second => .seq (crepProgToHOL first) (crepProgToHOL second)
+  | .ite condition thenBranch elseBranch =>
+      .ite (crepExpToHOL condition) (crepProgToHOL thenBranch) (crepProgToHOL elseBranch)
+  | .while condition body => .while (crepExpToHOL condition) (crepProgToHOL body)
+  | .break label => .break label
+  | .continue label => .continue label
+  | .call none name args => .call none (ofString name) (args.map crepExpToHOL)
+  | .call (some (returns, none)) name args =>
+      .call (some (returns, none)) (ofString name) (args.map crepExpToHOL)
+  | .call (some (returns, some (handler, body))) name args =>
+      .call (some (returns, some (handler, crepProgToHOL body))) (ofString name)
+        (args.map crepExpToHOL)
+  | .extCall function configuration configurationLength array arrayLength =>
+      .extCall (ofString function) configuration configurationLength array arrayLength
+  | .raise exception => .raise exception
+  | .return values => .return (values.map crepExpToHOL)
+  | .shMem operator name address => .shMem operator name (crepExpToHOL address)
+  | .tick => .tick
+termination_by p => sizeOf p
+decreasing_by
+  simp_wf
+  all_goals first
+    | decreasing_trivial
+    | (simp_all only [CrepProg.dec.sizeOf_spec, CrepProg.seq.sizeOf_spec,
+        CrepProg.ite.sizeOf_spec, CrepProg.while.sizeOf_spec, CrepProg.call.sizeOf_spec];
+       omega)
+
+/-- HOL-to-production direction: the exact carrier is a `CrepProg` at the same
+width, with the `MlString` names decoded to `String`. -/
+def crepProgOfHOL {width : Nat} [NeZero width] : CrepProgHOL width → CrepProg (BitVec width)
+  | .skip => .skip
+  | .dec name value body => .dec name (crepExpOfHOL value) (crepProgOfHOL body)
+  | .assign name value => .assign name (crepExpOfHOL value)
+  | .primitive names operator args => .primitive names operator args
+  | .store address value => .store (crepExpOfHOL address) (crepExpOfHOL value)
+  | .store32 address value => .store32 (crepExpOfHOL address) (crepExpOfHOL value)
+  | .storeByte address value => .storeByte (crepExpOfHOL address) (crepExpOfHOL value)
+  | .storeGlob address value => .storeGlob address (crepExpOfHOL value)
+  | .seq first second => .seq (crepProgOfHOL first) (crepProgOfHOL second)
+  | .ite condition thenBranch elseBranch =>
+      .ite (crepExpOfHOL condition) (crepProgOfHOL thenBranch) (crepProgOfHOL elseBranch)
+  | .while condition body => .while (crepExpOfHOL condition) (crepProgOfHOL body)
+  | .break label => .break label
+  | .continue label => .continue label
+  | .call none name args => .call none (toStringOfBytes name) (args.map crepExpOfHOL)
+  | .call (some (returns, none)) name args =>
+      .call (some (returns, none)) (toStringOfBytes name) (args.map crepExpOfHOL)
+  | .call (some (returns, some (handler, body))) name args =>
+      .call (some (returns, some (handler, crepProgOfHOL body))) (toStringOfBytes name)
+        (args.map crepExpOfHOL)
+  | .extCall function configuration configurationLength array arrayLength =>
+      .extCall (toStringOfBytes function) configuration configurationLength array arrayLength
+  | .raise exception => .raise exception
+  | .return values => .return (values.map crepExpOfHOL)
+  | .shMem operator name address => .shMem operator name (crepExpOfHOL address)
+  | .tick => .tick
+termination_by p => sizeOf p
+decreasing_by
+  simp_wf
+  all_goals first
+    | decreasing_trivial
+    | (simp_all only [CrepProgHOL.dec.sizeOf_spec, CrepProgHOL.seq.sizeOf_spec,
+        CrepProgHOL.ite.sizeOf_spec, CrepProgHOL.while.sizeOf_spec, CrepProgHOL.call.sizeOf_spec];
+       omega)
+
+@[simp] theorem crepExpMapToHOL_ofHOL {width : Nat} [NeZero width]
+    (l : List (CrepExpHOL width)) :
+    l.map (crepExpToHOL ∘ crepExpOfHOL) = l := by
+  induction l with
+  | nil => rfl
+  | cons head tail ih => simp [Function.comp_apply, ih]
+
+@[simp] theorem crepExpMapOfHOL_toHOL {width : Nat} [NeZero width]
+    (l : List (CrepExp (BitVec width))) :
+    l.map (crepExpOfHOL ∘ crepExpToHOL) = l := by
+  induction l with
+  | nil => rfl
+  | cons head tail ih => simp [Function.comp_apply, ih]
+
+@[simp] theorem crepProgToHOL_crepProgOfHOL {width : Nat} [NeZero width] :
+    (p : CrepProgHOL width) → crepProgToHOL (crepProgOfHOL p) = p := by
+  intro p
+  fun_induction crepProgOfHOL p <;>
+    simp_all [crepProgToHOL, Flapjack.Basis.Pure.MlString.ofString_toStringOfBytes]
+
+/-- Byte-ranged predicate for the production side: every function name must be
+`CrepNameRanged` (the only `String`-valued fields of `CrepProg`). -/
+def CrepProgNameRanged {width : Nat} : CrepProg (BitVec width) → Prop
+  | .skip => True
+  | .dec _ _ body => CrepProgNameRanged body
+  | .assign _ _ => True
+  | .primitive _ _ _ => True
+  | .store _ _ => True
+  | .store32 _ _ => True
+  | .storeByte _ _ => True
+  | .storeGlob _ _ => True
+  | .seq first second => CrepProgNameRanged first ∧ CrepProgNameRanged second
+  | .ite _ thenBranch elseBranch =>
+      CrepProgNameRanged thenBranch ∧ CrepProgNameRanged elseBranch
+  | .while _ body => CrepProgNameRanged body
+  | .break _ => True
+  | .continue _ => True
+  | .call none name _ => CrepNameRanged name
+  | .call (some (_, none)) name _ => CrepNameRanged name
+  | .call (some (_, some (_, body))) name _ =>
+      CrepNameRanged name ∧ CrepProgNameRanged body
+  | .extCall function _ _ _ _ => CrepNameRanged function
+  | .raise _ => True
+  | .return _ => True
+  | .shMem _ _ _ => True
+  | .tick => True
+termination_by p => sizeOf p
+decreasing_by
+  simp_wf
+  all_goals first
+    | decreasing_trivial
+    | (simp_all only [CrepProg.dec.sizeOf_spec, CrepProg.seq.sizeOf_spec,
+        CrepProg.ite.sizeOf_spec, CrepProg.while.sizeOf_spec, CrepProg.call.sizeOf_spec];
+       omega)
+
+@[simp] theorem crepProgOfHOL_crepProgToHOL {width : Nat} [NeZero width] :
+    (p : CrepProg (BitVec width)) → CrepProgNameRanged p →
+      crepProgOfHOL (crepProgToHOL p) = p := by
+  intro p
+  fun_induction crepProgToHOL p
+  case case14 name args =>
+    intro h
+    simp only [CrepProgNameRanged] at h
+    simpa [crepProgOfHOL] using
+      Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name h
+  case case15 returns name args =>
+    intro h
+    simp only [CrepProgNameRanged] at h
+    simpa [crepProgOfHOL] using
+      Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes name h
+  case case16 returns handler body name args ih =>
+    intro h
+    simp only [CrepProgNameRanged] at h
+    obtain ⟨hname, hbody⟩ := h
+    simp_all [CrepNameRanged, crepProgOfHOL,
+      Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes]
+  case case17 function configuration configurationLength array arrayLength =>
+    intro h
+    simp only [CrepProgNameRanged] at h
+    simpa [crepProgOfHOL] using
+      Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes function h
+  all_goals (intro h <;>
+    simp_all [CrepProgNameRanged, crepProgOfHOL])
+
+end Flapjack

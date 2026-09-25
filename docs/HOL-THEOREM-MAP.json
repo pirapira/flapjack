@@ -248,22 +248,6 @@
     "reviewer": "Codex (source comparison; exact HOL arg order a,bs,m,dm,be over total word_loc memory and word-set domain, byte_align via mem_store_byte_aux = LOG2(width/8), no extra codec)"
   },
   {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "resort_decls_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalResortDecls",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "dec_shapes_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "globalDeclShapes",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (constructor-by-constructor source comparison)"
-  },
-  {
     "hol_path": "cakeml/pancake/crep_arithScript.sml",
     "hol_name": "dest_const_def",
     "lean_path": "Flapjack/Pancake/CrepArith.lean",
@@ -3782,38 +3766,6 @@
     "lean_name": "compile_decls_append_cake",
     "statement_status": "reviewed_exact",
     "reviewer": "Codex (source comparison; exact compile_decs_* statement over the canonical CakeContext: compileDecsCake is the tagged compile_decs_def port, compileProgCake/compileExpCake/freshNameHOL are the tagged compile_def/compile_exp_def/fresh_name_def ports, [NeZero width] mirrors HOL dimindex positivity, and globals is consulted only through FLOOKUP/FUPDATE with the same local finite-map representation argument as compileExpCake); name equality is [LawfulBEq String] so the == used by FUPDATE/FLOOKUP reflects HOL =.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "compile_exp_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "compileExpCake",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL-shaped CakeContext over BitVec width with [NeZero width] mirroring HOL dimindex positivity; extensional finite-map globals used only through FLOOKUP, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port; bytes_in_word = n2w (width/8); all compile_exp_def clauses Var Local/Global, RStruct, RField, NStruct/NField, Load/LoadByte/Load32, Op/Panop/Cmp/Shift, TopAddr and the identity catch-all match)."
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "compile_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "compileProgCake",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause compile_def over CakeContext: Dec, Assign Global/Local via FLOOKUP, Primitive, Store/Store32/StoreByte, Return, Raise, Seq, If, While, all Call rtyp/handler cases including the global-return-handler fresh-name machinery built from the exact freshNameHOL and freeVarIds/expLocalVars ports, DecCall, ExtCall, ShMemStore, ShMemLoad Local/Global, and the identity catch-all; [LawfulBEq String] so == and != implement HOL =; globals consulted only through FLOOKUP)."
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "compile_decs_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "compileDecsCake",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause compile_decs_def over CakeContext: Function compiles its body under the context at its own position via compileProgCake, Decl computes globals_size + bytes_in_word * n2w (size_of_shape sh) then extends globals by FUPDATE and sets globals_size := address for the following declarations, ExnDecl conses the exception, Name is skipped, and nil returns the context unchanged; [NeZero width] mirrors HOL dimindex positivity; globals is consulted only through FLOOKUP/FUPDATE, with the local representation argument that HOL finite maps embed as lookup functions and extra infinite-support lookups do not alter this port); name equality is [LawfulBEq String] so the == used by FUPDATE/FLOOKUP reflects HOL =.)"
-  },
-  {
-    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
-    "hol_name": "fresh_name_def",
-    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
-    "lean_name": "freshNameHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; clause-for-clause: if the candidate is MEM/∈ of names then recurse on name ++ \"'\" else return it; termination follows HOL's measure via maxNameLength, no fuel recursion; direct HOL oracle rows fresh_name_clear=«x», fresh_name_missing_empty=«», fresh_name_hit=«'''», fresh_name_seed=«vn''» match the Lean parity checks)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

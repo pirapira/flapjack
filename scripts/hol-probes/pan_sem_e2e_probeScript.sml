@@ -617,4 +617,18 @@ val _ = print_eval "storebyte_clause_hit"
           <| memaddrs := {0w}; memory := (\a:64 word. Word (0w:64 word)); be := F |>)) of
       (res, s') => (res, s'.memory 0w)``
 
+val _ = print_eval "tick_clock_zero"
+  ``case panSem$evaluate
+      (panLang$Tick,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word)); clock := 0 |>)) of
+      (res, s') => (res, FLOOKUP s'.locals «x», s'.clock)``
+
+val _ = print_eval "tick_clock_positive"
+  ``case panSem$evaluate
+      (panLang$Tick,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word)); clock := 5 |>)) of
+      (res, s') => (res, FLOOKUP s'.locals «x», s'.clock)``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

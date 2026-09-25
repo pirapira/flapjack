@@ -321,4 +321,14 @@ example (nonterminal : Nonterminal) {p : P P.Trees} (hp : PTreesSafe p) :
     PTreesSafe (P.subtree nonterminal p) :=
   subtree_treesSafe nonterminal hp
 
+/-- `rpt` preserves tree safety. -/
+example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PTreesSafe p) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.rpt p 3) :=
+  Flapjack.Parser.rpt_treesSafe hp 3
+
+/-- `rptHere` preserves tree safety. -/
+example {p : Flapjack.Parser.P Flapjack.Parser.P.Trees} (hp : Flapjack.Parser.PTreesSafe p) :
+    Flapjack.Parser.PTreesSafe (Flapjack.Parser.P.rptHere p) :=
+  Flapjack.Parser.rptHere_treesSafe hp
+
 end Flapjack.Test.ParserByteRangedParity

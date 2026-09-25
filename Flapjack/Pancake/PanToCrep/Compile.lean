@@ -996,11 +996,29 @@ def compileToCrep [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
 /-! HOL finite-map variants used by the RISC-V production path. The parameter
     and function tables are built with `FUPDATE_LIST`; body compilation then
     uses `compileProgHOL` without converting the context to `InfoMap`. -/
-/-- HOL `make_vmap_def`: allocate consecutive flattened parameter slots and
-    update the finite map in source order, so a later duplicate name wins. -/
+/-- HOL `make_vmap_def` (`cakeml/pancake/pan_to_crepScript.sml:327-334`):
+    `make_vmap params = let pvars = MAP FST params; shs = MAP SND params;
+    ns = GENLIST I (size_of_shape (Comb shs));
+    cvars = ZIP (shs, with_shape shs ns) in FEMPTY |++ ZIP (pvars, cvars)`.
+    This Flapjack mirror follows the same consecutive slot allocation and
+    source-order finite-map update, so a later duplicate name wins. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the produced map is keyed by
--- `VarName` = `String`, while HOL `pan_to_crepScript.sml` keys `make_vmap` by
--- `varname` = `mlstring` (tracked by `flapjack-pxn.18.3.5.8`, parent
+-- `VarName` = `String` and stores the production `Shape` (`named : StructName`
+-- = `String`) rather than HOL's `varname` = `mlstring` and `shape`
+-- (`named : mlstring`); the result is a `FiniteMap` function rather than HOL's
+-- `fmap`, rendered by `FUPDATE_LIST FEMPTY` (a left fold) over the source-order
+-- allocation, which matches `FEMPTY |++ ZIP`'s later-duplicate-wins semantics.
+-- The `names_as_string` qualifier cannot authorize the `Shape` carrier, and no
+-- `NameRanged` byte witness applies (the output is a finite map of
+-- shape/slot-list entries, not a name). Direct HOL-EVAL rows are recorded in
+-- `scripts/hol-probes/crep_vmap_ctxtfc_probe.out` (`vmap_x`/`vmap_y`/
+-- `vmap_absent`/`ns_offsets`, plus `vmap_eq_ctxt`) and reproduced by
+-- `makeVmapOracle`/`makeVmapHOLOracle`/`duplicateVmapOracle` in
+-- `Flapjack/Test/CompileToCrepeParity.lean`, by `vmapCtxtFCGuard` in
+-- `Flapjack/Test/PanToCrepCodeRelParity.lean`, and by the `with_shape` rows in
+-- `Flapjack/Test/PanWithShapeParity.lean` (probe
+-- `scripts/hol-probes/pan_lang_with_shape_probe.out`). Exact-carrier
+-- replacement is tracked by `flapjack-pxn.18.3.5.8` (parent
 -- `flapjack-pxn.18.3.5.7.2`).
 def panToCrepMakeVmapHOL (params : List (VarName × Shape)) :
     FiniteMap VarName (Shape × List Nat) :=

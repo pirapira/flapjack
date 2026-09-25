@@ -214,6 +214,10 @@ run_probe crep_runtime_shared_domain_probeScript.sml crep_runtime_shared_domain_
   "$cake_dir/pancake/semantics"
 run_probe crep_arith_dest_const_probeScript.sml crep_arith_dest_const_probe.out \
   constant dimindex_pos "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_state_mapc_probeScript.sml crep_state_mapc_probe.out \
+  fmap_map2_keyed_lookup \
+  "$hol_dir/src/finite_maps/finite_mapScript.sml" \
+  "$hol_dir/src/finite_maps"
 run_probe crep_arith_lookup_code_probeScript.sml crep_arith_lookup_code_probe.out \
   simp_prog_after_lookup \
   "$cake_dir/pancake/proofs/crep_arithProofScript.sml" \

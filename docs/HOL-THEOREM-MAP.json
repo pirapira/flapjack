@@ -10363,6 +10363,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_is_wf_shape_v",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExact_isWfShapeValueHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.11; exact HOL panProps$mem_load_is_wf_shape_v (panPropsScript.sml:90-108): the triple conjunction (!sh adr dm m stcs v. mem_load sh adr dm m stcs = SOME v ==> is_wf_shape_v stcs v) /\\ (!shs ... mem_loads ... = SOME vs ==> EVERY (is_wf_shape_v stcs) vs) /\\ (!flds ... mem_load_flds ... = SOME nm_vs ==> EVERY (is_wf_shape_v stcs) (MAP SND nm_vs)). Lean `{width : Nat} [NeZero width] (domain : BitVec width → Prop) [DecidablePred domain] (memory : BitVec width → HolWordLab width)` returns the same triple conjunction over the already-reviewed exact ports memLoadHOLExact/memLoadsHOLExact/memLoadFldsHOLExact (panSemScript.sml mem_load_def/mem_loads_def/mem_load_flds_def) and isWfShapeValueHOLExact/isWfShapeValuesHOLExact (panPropsScript.sml is_wf_shape_v_def); the HOL EVERY folds are the Bool list predicates, and the named-hit case lifts the field-list predicate through the tagged isWfShapeValueHOLExact_drop (is_wf_shape_v_drop). No extra hypotheses beyond [DecidablePred domain], which renders HOL's memory domain predicate; [NeZero width] models HOL's positive word dimension. Direct HOL mem_load rows one_hit/one_miss/comb_hit/named_hit/named_suffix_blocked in pan_mem_load_probe.out and ml_one_hit/ml_one_miss/ml_comb/ml_named_hit/ml_named_miss/ml_comb_offset in pan_sem_mem_load_exact_probe.out; the wf conjunct is source-only (no dedicated probe). Parity examples in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "every_exp_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "everyExpHOL",

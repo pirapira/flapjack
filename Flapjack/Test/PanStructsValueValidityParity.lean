@@ -378,4 +378,19 @@ example :
   isWfShapeValueHOLExact_drop 1 exactPairContext
     (.val (.word 1) : ValueHOL 8) (by simp [isWfShapeValueHOLExact])
 
+/-! ## Exact `mem_load_is_wf_shape_v` over the exact carriers (HOL
+    `panProps$mem_load_is_wf_shape_v`, bead flapjack-4ac.4.11). -/
+
+/-- The triple conjunction's first component: a loaded `.one` value is
+    well-formed in any context. -/
+example (domain : BitVec 8 → Prop) [DecidablePred domain]
+    (memory : BitVec 8 → HolWordLab 8)
+    (h : memLoadHOLExact Flapjack.Pancake.PanLang.ShapeHOL.one 0 domain memory
+        ([] : Flapjack.StructContextHOLM) = some (.val (memory 0))) :
+    isWfShapeValueHOLExact
+      ([] : Flapjack.StructContextHOLM) (.val (memory 0)) = true :=
+  (memLoadHOLExact_isWfShapeValueHOLExact domain memory).1
+    Flapjack.Pancake.PanLang.ShapeHOL.one 0 ([] : Flapjack.StructContextHOLM)
+    (.val (memory 0)) h
+
 end Flapjack.Test

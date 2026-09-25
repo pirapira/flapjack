@@ -589,10 +589,18 @@ theorem structCompileShapeWF_size
       exact hfalse.elim
   exact hsize context shape hshape hok
 
-/-- Exact API translation of HOL `struct_infos_ok_append`
+/-- Production analogue of HOL `struct_infos_ok_append`
     (`pan_structsProofScript.sml:198`): a valid appended structure context
-    remains valid in its suffix. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the production `StructContext`/`StructPassContext` carriers (`StructName`/`FieldName` = `String`), while HOL `pan_structsProofScript.sml` keys structure/field names by `stcname`/`fldname` = `mlstring`. The exact MlString identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+    remains valid in its suffix. It is untagged because HOL's contexts use
+    `MlS` structure/field names, `ShapeHOL`, and a fields/size-only
+    `struct_info`; this theorem uses production `String`-backed
+    `StructContext`/`Shape` and cache-augmented `StructInfo.shapedFields`.
+    The body relies on production String-keyed lookup through `structInfosOk`.
+    `names_as_string` cannot cover the context/record difference. The single
+    premise and conclusion otherwise match HOL exactly, and no name bytes are
+    observable in this proposition. A faithful statement can use the exact
+    `StructContextExact` carrier; name-carrier/bridge work is tracked by
+    `flapjack-pxn.18.3.5.8`. -/
 theorem structInfosOk_append (xs ys : StructContext)
     (h : structInfosOk (xs ++ ys)) : structInfosOk ys := by
   have hdrop := structInfosOk_drop xs.length (xs ++ ys) h

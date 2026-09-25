@@ -9495,8 +9495,8 @@
     "hol_name": "mem_load_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemLoadHOL.lean",
     "lean_name": "memLoadHOLExact",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (exact-carrier review against panSemScript.sml:137-166): `ShapeHOL`, `StructInfoHOLExact`/`MlString`, `ValueHOL width`, and `HolWordLab width` preserve HOL shape/value/name/word_lab carriers; `[NeZero width]` represents HOL's positive word dimension and `[DecidablePred domain]` is proof-only Lean evidence. The mutually recursive `memLoadsHOLExact` and `memLoadFldsHOLExact` clauses preserve the empty/success/failure cases and `addr + bytesInWord * n2w (size_of_sh_with_ctxt ...)` progression. `Named` scans the context to the first matching name. Six direct HOL-EVAL rows (One hit/miss, Comb, Named hit/miss, and Comb offset) from `pan_sem_mem_load_exact_probe.out` are reproduced by `PanSemMemLoadExactParity.lean`. The older String-carrier `panMemLoadHOL` remains untagged; this exact moved counterpart is eligible."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",

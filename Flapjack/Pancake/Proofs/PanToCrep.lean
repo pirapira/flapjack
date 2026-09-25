@@ -178,15 +178,26 @@ theorem globalsLookup_wordCell {state : CrepRuntimeState (RiscV.Word 64) σ}
   rw [houtput] at hpoint
   exact hpoint
 
-/-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL
-    `flatten_nil_no_size[local]`: flattening a value of well-formed
-    empty-structure shape is empty exactly when its shape has size zero. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is over the
--- production `PanValue` carrier whose `nStruct` record/field names are
--- `StructName`/`FieldName` = `String`, while HOL `pan_to_crepProofScript.sml`
--- is over `panSem$v` with `stcname`/`fldname` = `mlstring`. The exact MlString
--- identifier carrier is tracked by `flapjack-pxn.18.3.5.8` (parent
--- `flapjack-pxn.18.3.5.7.2`).
+/-- Flapjack analogue of HOL `flatten_nil_no_size[local]`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3001-3006`), which proves
+    `is_wf_shape_nil (shape_of x) ⇒ (flatten x = [] ⇔ size_of_shape(shape_of x) = 0)`.
+    This theorem mirrors that statement shape (`isWfShape [] ... = true` for
+    `is_wf_shape_nil`, `panSemShapeOf` for `shape_of`, `panValueFlatten` for
+    `flatten`, `Shape.shapeSize` for `size_of_shape`, `↔` for `⇔`), but its input
+    is the production `PanValue α` carrier whose `nStruct` record/field names are
+    `StructName`/`FieldName` = `String`, whereas HOL is over `panSem$v` with
+    `stcname`/`fldname` = `mlstring`. These value/shape carrier differences
+    exceed identifier representation, so `names_as_string` cannot qualify this
+    analogue (no `NameRanged` witness applies either, since the conclusion is a
+    biconditional over a flattened value, not a name). The withdrawn tag is
+    recorded as a documented mismatch in `docs/HOL-THEOREM-MAP.json`; it is
+    intentionally untagged. An exact MlString-carrier replacement is tracked by
+    `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). The statement is
+    exercised against the original-domain fixtures in
+    `Flapjack/Test/PanValueFlattenParity.lean` (notably
+    `panValueFlatten_eq_nil_iff_shapeSize_eq_zero_fixture`), and HOL `flatten`
+    output rows `word`/`record`/`named` live in
+    `scripts/hol-probes/pan_flatten_probe.out`. -/
 theorem flattenNilNoSize (value : PanValue α)
     (hwf : isWfShape [] (panSemShapeOf value) = true) :
     panValueFlatten value = [] ↔ Shape.shapeSize (panSemShapeOf value) = 0 := by

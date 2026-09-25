@@ -9110,5 +9110,29 @@
   "lean_name": "sizeOfShapeHOL",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/panLangScript.sml",
+  "hol_name": "is_wf_shape_def",
+  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+  "lean_name": "isWfShapeExactHOL",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/panLangScript.sml",
+  "hol_name": "is_wf_flds_def",
+  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+  "lean_name": "isWfFldsExactHOL",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/pancake/panLangScript.sml",
+  "hol_name": "is_wf_ctxt_def",
+  "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+  "lean_name": "isWfCtxtExactHOL",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

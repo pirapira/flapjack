@@ -1562,3 +1562,11 @@ run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.ou
   ss_one ss_eq \
   "$cake_dir/pancake/panLangScript.sml" \
   "$cake_dir/pancake"
+
+# The is_wf_shape probe observes is_wf_shape/is_wf_flds/is_wf_ctxt over the
+# exact MlString-keyed context, including the duplicate-name and missing-field
+# rejections.
+run_probe pan_lang_is_wf_shape_probeScript.sml pan_lang_is_wf_shape_probe.out \
+  iwf_one iwf_ctxt_field_miss \
+  "$cake_dir/pancake/panLangScript.sml" \
+  "$cake_dir/pancake"

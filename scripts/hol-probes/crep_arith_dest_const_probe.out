@@ -2,3 +2,6 @@ constant=SOME 7w
 variable=NONE
 load=NONE
 multiplication=NONE
+word_carrier_bool=T
+dimindex_8=T
+dimindex_pos=T

@@ -4441,22 +4441,6 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "dec_clock_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/TotalSteps.lean",
-    "lean_name": "decClockHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL dec_clock s = s with clock := s.clock - 1 ported over the word-indexed HOL-shaped source state PanSemHolState; direct HOL row dec_clock_step=<|clock := 4|>)"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "fix_clock_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/TotalSteps.lean",
-    "lean_name": "fixClockHOL",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL fix_clock clamps the returned clock to min(old,new) and threads res through; result-polymorphic in beta exactly as HOL leaves res unconstrained; direct HOL rows fix_clock_clamps=(NONE,2), fix_clock_keeps_new=(NONE,4))"
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "word_lab",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "HolWordLab",

@@ -350,4 +350,21 @@ def pushHandlerW {width : Nat} [NeZero width]
                   (.seq (.stackGetSize kf.1)
                         (.set .handler kf.1)))))))))
 
+/-- HOL `word_to_stack$call_dest`: the destination register/stack slot of a
+    call target.  A direct target is the `INL` position; an indirect target is
+    taken from the last argument via `wReg2`, with the target load emitted by
+    `wStackLoad`.  Touches only `num`/option/sum/list plus the `num`-indexed
+    `wReg2`/`wStackLoad`, so the tag is unconditional in the argument type. -/
+@[hol "cakeml/compiler/backend/word_to_stackScript.sml" "call_dest_def"]
+def callDest (pos : Option Nat) (args : List Nat)
+    (kf : Nat × Nat × Nat) : ProgM Nat × Sum Nat Nat :=
+  match pos with
+  | some p => (.skip, .inl p)
+  | none =>
+    match args.getLast? with
+    | none => (.skip, .inl Flapjack.raiseStubLocation)
+    | some last =>
+      let w := wReg2 last kf
+      (Flapjack.Compiler.Backend.WordToStack.wStackLoad w.1 .skip, .inr w.2)
+
 end Flapjack.Compiler.Backend.WordToStackRegFormat

@@ -1,0 +1,8 @@
+cd_some=T
+cd_none_reg=T
+cd_none_stack=T
+cd_empty=T
+bc_stack=T
+bc_word=T
+wl_raise=T
+wl_store=T

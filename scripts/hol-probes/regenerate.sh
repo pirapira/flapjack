@@ -1741,3 +1741,7 @@ run_probe pan_globals_fperm_name_probeScript.sml pan_globals_fperm_name_probe.ou
 run_probe word_to_stack_handler_probeScript.sml word_to_stack_handler_probe.out \
   shaF pop_eq "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"
+
+run_probe word_to_stack_call_dest_probeScript.sml word_to_stack_call_dest_probe.out \
+  cd_some wl_store "$cake_dir/compiler/backend/word_to_stackScript.sml" \
+  "$cake_dir/compiler/backend"

@@ -741,6 +741,41 @@ example : stackHandlerArgs (α := BitVec 64)
 example : popHandler (α := BitVec 64) false (1, 2, 3) .skip
     = .seq (.stackLoad 1 2) (.seq (.set .handler 1) (.seq (.stackFree 3) .skip)) := rfl
 
+/-!
+## `call_dest` and stub-constant oracle parity
+
+`call_dest_def` (`word_to_stackScript.sml:264`) plus `stack_num_stubs_def` /
+`word_num_stubs_def` (`backend_commonScript.sml:124/128`) and
+`raise_stub_location_def` / `store_consts_stub_location_def`
+(`wordLangScript.sml:70/73`), checked in
+`scripts/hol-probes/word_to_stack_call_dest_probe.out`.
+-/
+
+private def callDestSum : Flapjack.Compiler.Backend.StackLang.ProgM Nat × Sum Nat Nat → Bool
+  | (.skip, .inl 3) => true
+  | (.skip, .inr 1) => true
+  | (.seq (.stackLoad 3 4) .skip, .inr 3) => true
+  | (.skip, .inl 5) => true
+  | _ => false
+
+def callDestParityGuard : Bool :=
+  (callDestSum (callDest (some 3) [1, 2] (2, 7, 9))) &&
+  (callDestSum (callDest none [1, 2] (2, 7, 9))) &&
+  (callDestSum (callDest none [1, 8] (2, 7, 9))) &&
+  (callDestSum (callDest none [] (2, 7, 9))) &&
+  (Flapjack.stackNumStubs == 5) &&
+  (Flapjack.wordNumStubs == 7) &&
+  (Flapjack.raiseStubLocation == 5) &&
+  (Flapjack.storeConstsStubLocation == 6)
+
+#eval callDestParityGuard
+#guard callDestParityGuard
+
+example : callDest (some 3) [1, 2] (2, 7, 9) = (.skip, .inl 3) := rfl
+example : callDest none [1, 8] (2, 7, 9)
+    = (.seq (.stackLoad 3 4) .skip, .inr 3) := rfl
+example : Flapjack.raiseStubLocation = 5 := rfl
+
 def runChecks : IO Bool := do
   IO.println "PASS Word-to-Stack HOL bitmap, stack-slot, and program-combinator oracle rows"
   IO.println "PASS executable Cake bitmap recursion maps to tagged bitsToWordW/wordListW"
@@ -750,6 +785,7 @@ def runChecks : IO Bool := do
     stackSlotsParityGuard && perfSlotsParityGuard && bridgeParityGuard &&
     progCombinatorsParityGuard && storeNameParityGuard && regFormatParityGuard &&
     stackMoveParityGuard && wMoveParityGuard && copyRetParityGuard &&
-    copyRetIndependentGuard && wLiveParityGuard && handlerParityGuard)
+    copyRetIndependentGuard && wLiveParityGuard && handlerParityGuard &&
+    callDestParityGuard)
 
 end Flapjack.Test.WordToStackBitsParity

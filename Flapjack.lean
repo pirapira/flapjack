@@ -127,7 +127,6 @@ import Flapjack.Semantics
 import Flapjack.CrepeSemantics
 import Flapjack.CrepeGlobalAddress
 import Flapjack.Pancake.Semantics.CrepSem
-import Flapjack.Pancake.Semantics.CrepSem.StateWidthModel
 import Flapjack.Pancake.Semantics.CrepSem.LookupCode
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.PanToCrepExceptionRelation

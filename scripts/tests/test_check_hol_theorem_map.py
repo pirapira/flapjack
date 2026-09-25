@@ -242,7 +242,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             "memLoadCrepSemHOL": "mem_load_def",
         }
         for lean_name, hol_name in exact_cases.items():
-            key = ("Flapjack/Pancake/Semantics/CrepSem/StateExact.lean", lean_name)
+            key = ("Flapjack/Pancake/Semantics/CrepSem/HOLState.lean", lean_name)
             with self.subTest(lean_name=lean_name):
                 record = manifest_by_key[key]
                 self.assertEqual(
@@ -1130,6 +1130,33 @@ class ValidateInventoryTest(unittest.TestCase):
              "pan_primop_is_wf_shape_v"))
         self.assertEqual(record["statement_status"], "reviewed_exact")
         self.assertIn(key, MAP["tagged_declarations"]())
+
+    def test_panprops_shape_wf_nil_and_drop_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "isWfShapeValueHOLExact_nil_step1"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "is_wf_shape_v_nil_step1"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "is_wf_shape_v_nil"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean",
+             "isWfShapeValueHOLExact_drop"): (
+                "cakeml/pancake/semantics/panPropsScript.sml",
+                "is_wf_shape_v_drop"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
 
     def test_panprops_every_exp_and_exps_of_exact_ports(self):
         manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())

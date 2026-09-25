@@ -54,10 +54,11 @@
 -/
 
 import Flapjack.Pancake.Semantics.PanSem.StateExactFinite
+import Flapjack.Pancake.Semantics.PanSem.EvalExact
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ProgHOL)
+open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ProgHOL ExpHOL)
 
 /-- `HolFiniteMapExact` is extensional: two values with the same `lookup` are
     equal, because the `finiteSupport` field is a proof of a proposition.  This
@@ -319,6 +320,56 @@ def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) :
     (emptyLocalsHOLFinite state).toExact = emptyLocalsHOLExact state.toExact :=
   rfl
+
+/-- HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`) over the
+    finite-support state carrier.  The body delegates to the exact broad
+    evaluator through the canonical translation `toExact`; it does NOT
+    syntactically present HOL's clause-shaped definition body.  The clause-shaped
+    equations in `Flapjack/Pancake/Semantics/PanSem/EvalFinite.lean` expose each
+    of the fifteen HOL clauses one by one over this carrier, and the state's four
+    finite-map fields (`locals`, `globals`, `code`, `eshapes`) are recorded by the
+    `fmap_as_finite_support` qualifier (canonical `HolFiniteMapExact`
+    translation, witness `holFmapAsFiniteSupportWitness`). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "eval_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+def evalHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
+    ExpHOL width → Option (ValueHOL width) :=
+  @evalHOLExact width σ _ state.toExact h
+
+/-- Finite-support carrier rendering of the `OPT_MMAP eval` list step; delegates
+    through `toExact` (untagged helper, not a HOL declaration). -/
+def evalListHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
+    List (ExpHOL width) → Option (List (ValueHOL width)) :=
+  @evalListHOLExact width σ _ state.toExact h
+
+/-- Finite-support carrier rendering of the named-struct field-expression step;
+    delegates through `toExact` (untagged helper, not a HOL declaration). -/
+def evalListFieldsHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
+    List (MlS × ExpHOL width) → Option (List (MlS × ValueHOL width)) :=
+  @evalListFieldsHOLExact width σ _ state.toExact h
+
+/-- Projection equality: the tagged finite-support evaluator is the broad exact
+    evaluator applied to `toExact`, i.e. the canonical translation is used. -/
+@[simp] theorem evalHOLFinite_eq_toExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (expression : ExpHOL width) :
+    state.evalHOLFinite expression =
+      @evalHOLExact width σ _ state.toExact h expression := rfl
+
+@[simp] theorem evalListHOLFinite_eq_toExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (expressions : List (ExpHOL width)) :
+    state.evalListHOLFinite expressions =
+      @evalListHOLExact width σ _ state.toExact h expressions := rfl
+
+@[simp] theorem evalListFieldsHOLFinite_eq_toExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (fields : List (MlS × ExpHOL width)) :
+    state.evalListFieldsHOLFinite fields =
+      @evalListFieldsHOLExact width σ _ state.toExact h fields := rfl
 
 end PanSemStateFiniteExact
 

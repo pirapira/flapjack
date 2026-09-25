@@ -631,6 +631,78 @@ theorem panSemCodeEvaluateFuel_call_decomposition
   rw [panSemCodeEvaluateFuel_call_delegates,
     panSemCodeEvaluateFuel_call_sub_one_eq]
 
+/-- A body stored under the called function in a `DecCall` has a canonical
+    recursive fuel budget derived from the enclosing state and code map. -/
+theorem panSemCodeEvaluateFuel_decCall_callee_le
+    (state : PanSemState α ffi)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation calleeBody : Prog α)
+    (locals : VarName → Option (PanValue α))
+    (parameters : List (VarName × Shape)) (returnShape : Shape)
+    (hclock : state.clock ≠ 0)
+    (hentry : panSemCodeLookup state.code function =
+      some (parameters, calleeBody, returnShape)) :
+    panSemCodeEvaluateFuel
+        { state with clock := decPanClock state.clock, locals := locals }
+        calleeBody
+      ≤ panSemCodeEvaluateFuel state
+          (.decCall name shape function arguments continuation) - 2 := by
+  have hclockPos : 0 < state.clock := Nat.pos_of_ne_zero hclock
+  have hclockDec : decPanClock state.clock + 1 = state.clock := by
+    simp [decPanClock, Nat.sub_add_cancel (Nat.succ_le_of_lt hclockPos)]
+  have hentryMem : (function, (parameters, calleeBody, returnShape)) ∈ state.code :=
+    panSemCodeLookup_mem_binding state.code function
+      (parameters, calleeBody, returnShape) hentry
+  have hbodyFuel : panSemProgFuel calleeBody ≤ panSemCodeBodyFuel state.code := by
+    simpa using panSemProgFuel_le_codeBodyFuel_of_mem state.code hentryMem
+  have hcalleeMax : max (panSemProgFuel calleeBody)
+      (panSemCodeBodyFuel state.code) = panSemCodeBodyFuel state.code :=
+    Nat.max_eq_right hbodyFuel
+  have hparentMax : panSemCodeBodyFuel state.code ≤
+      max (panSemProgFuel (.decCall name shape function arguments continuation))
+        (panSemCodeBodyFuel state.code) := Nat.le_max_right _ _
+  have hparentPos : 1 ≤ max
+      (panSemProgFuel (.decCall name shape function arguments continuation))
+      (panSemCodeBodyFuel state.code) :=
+    Nat.le_trans (panSemProgFuel_pos _) (Nat.le_max_left _ _)
+  rw [panSemCodeEvaluateFuel_update, panSemCodeEvaluateFuel_update,
+    hclockDec, hcalleeMax]
+  have hmul := Nat.mul_le_mul_left state.clock
+    (Nat.succ_le_succ hparentMax)
+  have htotal : state.clock * (panSemCodeBodyFuel state.code + 1) + 3 ≤
+      (state.clock + 1) *
+        (max (panSemProgFuel
+          (.decCall name shape function arguments continuation))
+          (panSemCodeBodyFuel state.code) + 1) + 1 := by
+    have hslack : state.clock *
+        (max (panSemProgFuel
+          (.decCall name shape function arguments continuation))
+          (panSemCodeBodyFuel state.code) + 1) + 3 ≤
+        (state.clock + 1) *
+          (max (panSemProgFuel
+            (.decCall name shape function arguments continuation))
+            (panSemCodeBodyFuel state.code) + 1) + 1 := by
+      rw [Nat.add_mul, Nat.one_mul]
+      omega
+    calc
+      state.clock * (panSemCodeBodyFuel state.code + 1) + 3 ≤
+          state.clock *
+            (max (panSemProgFuel
+              (.decCall name shape function arguments continuation))
+              (panSemCodeBodyFuel state.code) + 1) + 3 := by
+                simpa [Nat.succ_eq_add_one] using Nat.add_le_add_right hmul 3
+      _ ≤ (state.clock + 1) *
+          (max (panSemProgFuel
+            (.decCall name shape function arguments continuation))
+            (panSemCodeBodyFuel state.code) + 1) + 1 := hslack
+  have hminus : state.clock * (panSemCodeBodyFuel state.code + 1) + 1 + 2 ≤
+      (state.clock + 1) *
+        (max (panSemProgFuel
+          (.decCall name shape function arguments continuation))
+          (panSemCodeBodyFuel state.code) + 1) + 1 := by
+    omega
+  omega
+
 /-- A continuation/body program of a `DecCall` has canonical fuel within the
     canonical DecCall fuel after the dispatch steps. -/
 theorem panSemCodeEvaluateFuel_decCall_body_le

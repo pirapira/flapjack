@@ -35,7 +35,7 @@ def panRiscVByteAlign [NeZero width]
   if bytes = 0 then address
   else BitVec.ofNat width ((address.toNat / bytes) * bytes)
 
-/-- **Exact precondition for HOL faithfulness.** When the byte count
+/-- **Sufficient precondition for HOL faithfulness.** When the byte count
 `bytesInWord.toNat` is a power of two, `bytesInWord.toNat = 2 ^ k`, the
 division-based `panRiscVByteAlign` is exactly the HOL `byte$byte_align` bit
 mask (clear the low `k` bits). The production RISC-V target is fixed at

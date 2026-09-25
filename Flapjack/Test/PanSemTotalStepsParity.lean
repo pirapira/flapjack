@@ -497,6 +497,68 @@ def callGuard : Bool :=
     callReturnShapeMismatchGuard && callExceptionHandlerGuard &&
     callExceptionPropagateGuard
 
+/-- An FFI final event for the ExtCall fixtures. -/
+def extCallEvent : FfiFinalEvent :=
+  { name := .extCall "f", configuration := [], bytes := [], outcome := .failed }
+
+/-- Byte-array read callback returning empty arrays. -/
+def extCallReadOk : Word64 → Word64 → Option (List UInt8) := fun _ _ => some []
+
+/-- Byte-array read callback that always fails. -/
+def extCallReadFail : Word64 → Word64 → Option (List UInt8) := fun _ _ => none
+
+/-- `call_FFI` stub taking the final branch. -/
+def extCallFinalInvoke :
+    FfiState Unit → FfiName → List UInt8 → List UInt8 → FfiResult Unit :=
+  fun _ _ _ _ => .final extCallEvent
+
+/-- `call_FFI` stub taking the returned branch. -/
+def extCallReturnInvoke :
+    FfiState Unit → FfiName → List UInt8 → List UInt8 → FfiResult Unit :=
+  fun state _ _ _ => .returned state []
+
+/-- Total `write_bytearray` stub: identity on the state. -/
+def extCallWriteBytes :
+    PanSemState Word64 (FfiState Unit) → Word64 → List UInt8 →
+      PanSemState Word64 (FfiState Unit) :=
+  fun state _ _ => state
+
+def isFinalFfiResult : Option (PanSemHOLResult Word64) → Bool
+  | some (.finalFfi _) => true
+  | _ => false
+
+/-- Missing arguments produce an error. -/
+def extCallNoneArgsGuard : Bool :=
+  isErrorResult (panSemTotalExtCallStep stepsState none none none none
+    extCallReadOk extCallReturnInvoke extCallWriteBytes "f").1
+
+/-- A failing byte-array read produces an error. -/
+def extCallReadErrorGuard : Bool :=
+  isErrorResult (panSemTotalExtCallStep stepsState
+    (some (.word (BitVec.ofNat 64 0))) (some (.word (BitVec.ofNat 64 0)))
+    (some (.word (BitVec.ofNat 64 0))) (some (.word (BitVec.ofNat 64 0)))
+    extCallReadFail extCallReturnInvoke extCallWriteBytes "f").1
+
+/-- The final FFI branch propagates the event and clears the locals. -/
+def extCallFinalGuard : Bool :=
+  let result := panSemTotalExtCallStep stepsState
+    (some (.word (BitVec.ofNat 64 0))) (some (.word (BitVec.ofNat 64 0)))
+    (some (.word (BitVec.ofNat 64 0))) (some (.word (BitVec.ofNat 64 0)))
+    extCallReadOk extCallFinalInvoke extCallWriteBytes "f"
+  isFinalFfiResult result.1 && (result.2.locals "x").isNone
+
+/-- The returned FFI branch installs the returned bytes and FFI state. -/
+def extCallReturnedGuard : Bool :=
+  let result := panSemTotalExtCallStep stepsState
+    (some (.word (BitVec.ofNat 64 0))) (some (.word (BitVec.ofNat 64 0)))
+    (some (.word (BitVec.ofNat 64 0))) (some (.word (BitVec.ofNat 64 0)))
+    extCallReadOk extCallReturnInvoke extCallWriteBytes "f"
+  isNoneResult result.1 && result.2.clock = stepsState.clock
+
+def extCallGuard : Bool :=
+  extCallNoneArgsGuard && extCallReadErrorGuard && extCallFinalGuard &&
+    extCallReturnedGuard
+
 def stepsGuard : Bool :=
   assignLocalGuard && assignMissingGuard && returnGuard && returnSizeErrorGuard &&
     returnErrorGuard &&
@@ -510,14 +572,14 @@ def stepsGuard : Bool :=
     partialEvaluateGuard &&
     shMemLoadGuard && shMemLoadMissingGuard && shMemLoadUnsharedGuard &&
     shMemStoreGuard && shMemStoreNonWordGuard && whileGuard && decCallGuard &&
-    callGuard
+    callGuard && extCallGuard
 
 #eval stepsGuard
 #guard stepsGuard
 
 def runChecks : IO Bool := do
   if stepsGuard then
-    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec/ShMem/While/DecCall/Call)"
+    IO.println "PASS total PanSem statement-clause assembly steps (Assign/Return/Raise/Primitive/Annot/Store/Dec/ShMem/While/DecCall/Call/ExtCall)"
     pure true
   else
     IO.println "FAIL total PanSem statement-clause assembly steps (Assign/Return/Raise)"

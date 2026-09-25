@@ -2,6 +2,7 @@ import Flapjack.Parser.ByteRanged
 import Flapjack.Parser.Conversion
 import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.PanLang.Exp
+import Flapjack.Pancake.PanLang.Prog
 
 /-!
 Byte-rangedness of the concrete parse tree and of the first conversion step.
@@ -968,6 +969,539 @@ theorem convExp_byteRanged {width : Nat} (ofInt : Int → BitVec width) :
           all_goals (rw [convExp.eq_def] at h; try (simp at h))
   exact H
 
+
+theorem convDecForm_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (nt : Nonterminal) : ∀ (tree : ParseTree), ParseTreeByteRanged tree → ∀ r,
+      convDecForm ofInt fuel nt tree = some r →
+      ShapeByteRanged r.1 ∧ StringByteRanged r.2.1 ∧ ExpByteRanged r.2.2 := by
+  intro tree ht r h
+  unfold convDecForm at h
+  cases hargs : tree.argsNT nt with
+  | none => simp [hargs] at h
+  | some children =>
+    cases children with
+    | nil => simp [hargs] at h
+    | cons a rest =>
+      cases rest with
+      | nil => simp [hargs] at h
+      | cons b rest2 =>
+        cases rest2 with
+        | nil => simp [hargs] at h
+        | cons c rest3 =>
+          cases rest3 with
+          | cons d rest4 => simp [hargs] at h
+          | nil =>
+            simp only [hargs] at h
+            cases hs : convShape fuel a with
+            | none => simp [hs] at h
+            | some shape =>
+              simp only [hs] at h
+              cases hn : convIdent b with
+              | none => simp [hn] at h
+              | some name =>
+                simp only [hn] at h
+                cases hv : convExp ofInt fuel c with
+                | none => simp [hv] at h
+                | some value =>
+                  simp only [hv] at h
+                  injection h with h; subst h
+                  exact ⟨convShape_byteRanged fuel a (argsNT_byteRanged ht hargs a (by simp)) shape hs,
+                         convIdent_byteRanged (argsNT_byteRanged ht hargs b (by simp)) hn,
+                         convExp_byteRanged ofInt fuel c (argsNT_byteRanged ht hargs c (by simp)) value hv⟩
+
+theorem convExnDec_byteRanged (fuel : Nat) : ∀ (tree : ParseTree), ParseTreeByteRanged tree →
+    ∀ r, convExnDec fuel tree = some r → StringByteRanged r.1 ∧ ShapeByteRanged r.2 := by
+  intro tree ht r h
+  unfold convExnDec at h
+  cases hargs : tree.argsNT .exnDec with
+  | none => simp [hargs] at h
+  | some children =>
+    cases children with
+    | nil => simp [hargs] at h
+    | cons a rest =>
+      cases rest with
+      | nil => simp [hargs] at h
+      | cons b rest2 =>
+        cases rest2 with
+        | cons c rest3 => simp [hargs] at h
+        | nil =>
+          simp only [hargs] at h
+          cases he : convIdent a with
+          | none => simp [he] at h
+          | some name =>
+            simp only [he] at h
+            cases hs : convShape fuel b with
+            | none => simp [hs] at h
+            | some shape =>
+              simp only [hs] at h
+              injection h with h; subst h
+              exact ⟨convIdent_byteRanged (argsNT_byteRanged ht hargs a (by simp)) he,
+                     convShape_byteRanged fuel b (argsNT_byteRanged ht hargs b (by simp)) shape hs⟩
+
+theorem convDecCall_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat) :
+    ∀ (tree : ParseTree), ParseTreeByteRanged tree → ∀ r,
+      convDecCall ofInt fuel tree = some r →
+      ShapeByteRanged r.1 ∧ StringByteRanged r.2.1 ∧ StringByteRanged r.2.2.1 ∧
+        ∀ e ∈ r.2.2.2, ExpByteRanged e := by
+  intro tree ht r h
+  unfold convDecCall at h
+  cases hargs : tree.argsNT .decCall with
+  | none => simp [hargs] at h
+  | some children =>
+    cases children with
+    | nil => simp [hargs] at h
+    | cons shapeTree rest =>
+      cases rest with
+      | nil => simp [hargs] at h
+      | cons nameTree rest2 =>
+        cases rest2 with
+        | nil => simp [hargs] at h
+        | cons functionTree rest3 =>
+          simp only [hargs] at h
+          cases hs : convShape fuel shapeTree with
+          | none => simp [hs] at h
+          | some shape =>
+            simp only [hs] at h
+            cases hn : convIdent nameTree with
+            | none => simp [hn] at h
+            | some name =>
+              simp only [hn] at h
+              cases hf : convIdent functionTree with
+              | none => simp [hf] at h
+              | some fn =>
+                simp only [hf] at h
+                cases rest3 with
+                | nil =>
+                  simp only at h
+                  injection h with h; subst h
+                  exact ⟨convShape_byteRanged fuel shapeTree (argsNT_byteRanged ht hargs shapeTree (by simp)) shape hs,
+                         convIdent_byteRanged (argsNT_byteRanged ht hargs nameTree (by simp)) hn,
+                         convIdent_byteRanged (argsNT_byteRanged ht hargs functionTree (by simp)) hf,
+                         by intro e he; simp at he⟩
+                | cons argsTree rest4 =>
+                  simp only at h
+                  cases ha : convArgList ofInt fuel argsTree with
+                  | none => simp [ha] at h
+                  | some args =>
+                    simp only [ha] at h
+                    injection h with h; subst h
+                    exact ⟨convShape_byteRanged fuel shapeTree (argsNT_byteRanged ht hargs shapeTree (by simp)) shape hs,
+                           convIdent_byteRanged (argsNT_byteRanged ht hargs nameTree (by simp)) hn,
+                           convIdent_byteRanged (argsNT_byteRanged ht hargs functionTree (by simp)) hf,
+                           convArgList_byteRanged ofInt fuel (fun g _ => convExp_byteRanged ofInt g)
+                             argsTree (argsNT_byteRanged ht hargs argsTree (by simp)) args ha⟩
+
+theorem convRet_byteRanged : ∀ (tree : ParseTree), ParseTreeByteRanged tree → ∀ r,
+    convRet tree = some r → ∀ vk name, r = some (some (vk, name)) → StringByteRanged name := by
+  intro tree ht r h vk name hr
+  unfold convRet at h
+  by_cases h1 : tree.tokcheck (.keywordT .retK) = true
+  · rw [if_pos h1] at h
+    injection h with h; subst h
+    simp at hr
+  · rw [if_neg h1] at h
+    by_cases h2 : tree.tokcheck .notT = true
+    · rw [if_pos h2] at h
+      injection h with h; subst h
+      simp at hr
+    · rw [if_neg h2] at h
+      cases hargs : tree.argsNT .ret with
+      | none => simp [hargs] at h
+      | some children =>
+        cases children with
+        | nil => simp [hargs] at h
+        | cons a rest =>
+          cases rest with
+          | cons b rest2 => simp [hargs] at h
+          | nil =>
+            simp only [hargs] at h
+            cases hn : convIdent a with
+            | none => simp [hn] at h
+            | some n =>
+              simp only [hn] at h
+              injection h with h; subst h
+              simp only [Option.some.injEq, Prod.mk.injEq] at hr
+              obtain ⟨_, rfl⟩ := hr
+              exact convIdent_byteRanged (argsNT_byteRanged ht hargs a (by simp)) hn
+
+
+theorem convNonRecStmt_byteRanged {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat) :
+    ∀ tree, ParseTreeByteRanged tree → ∀ p, convNonRecStmt ofInt fuel tree = some p →
+      ProgByteRanged p := by
+  intro tree ht p h
+  cases tree with
+  | lf token locs =>
+    simp only [convNonRecStmt] at h
+    by_cases h1 : (ParseTree.lf token locs).tokcheck (.keywordT .skipK) = true
+    · rw [if_pos h1] at h; simp only [Option.some.injEq] at h; subst h; exact trivial
+    · rw [if_neg h1] at h
+      by_cases h2 : (ParseTree.lf token locs).tokcheck (.keywordT .brK) = true
+      · rw [if_pos h2] at h; simp only [Option.some.injEq] at h; subst h; exact trivial
+      · rw [if_neg h2] at h
+        by_cases h3 : (ParseTree.lf token locs).tokcheck (.keywordT .contK) = true
+        · rw [if_pos h3] at h; simp only [Option.some.injEq] at h; subst h; exact trivial
+        · rw [if_neg h3] at h
+          by_cases h4 : (ParseTree.lf token locs).tokcheck (.keywordT .ticK) = true
+          · rw [if_pos h4] at h; simp only [Option.some.injEq] at h; subst h; exact trivial
+          · rw [if_neg h4] at h
+            cases token with
+            | annotCommentT text =>
+              simp [destAnnotTok, ParseTree.destTok] at h
+              subst h
+              exact ⟨by decide,
+                by simpa [ParseTreeByteRanged, TokenNameByteRanged, NameRanged, StringByteRanged, CharsByteRanged] using ht⟩
+            | _ => simp [destAnnotTok, ParseTree.destTok] at h
+  | nd nonterminal children locs =>
+    have ht' : ∀ c ∈ children, ParseTreeByteRanged c := by simpa [ParseTreeByteRanged] using ht
+    cases nonterminal
+    case nd.assign =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt] at h
+            cases h0 : convIdent n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' n0 (by simp)) h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.store =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt] at h
+            cases h0 : convExp ofInt fuel n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨convExp_byteRanged ofInt fuel n0 (ht' n0 (by simp)) _ h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.storeByte =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt] at h
+            cases h0 : convExp ofInt fuel n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨convExp_byteRanged ofInt fuel n0 (ht' n0 (by simp)) _ h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.store32 =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt] at h
+            cases h0 : convExp ofInt fuel n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨convExp_byteRanged ofInt fuel n0 (ht' n0 (by simp)) _ h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.sharedLoad =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt, convNonRecStmt.convSharedLoad] at h
+            cases h0 : convIdent n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' n0 (by simp)) h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.sharedLoadByte =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt, convNonRecStmt.convSharedLoad] at h
+            cases h0 : convIdent n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' n0 (by simp)) h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.sharedLoad16 =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt, convNonRecStmt.convSharedLoad] at h
+            cases h0 : convIdent n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' n0 (by simp)) h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.sharedLoad32 =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt, convNonRecStmt.convSharedLoad] at h
+            cases h0 : convIdent n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' n0 (by simp)) h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.sharedStore =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt, convNonRecStmt.convSharedStore] at h
+            cases h0 : convExp ofInt fuel n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨convExp_byteRanged ofInt fuel n0 (ht' n0 (by simp)) _ h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.sharedStoreByte =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt, convNonRecStmt.convSharedStore] at h
+            cases h0 : convExp ofInt fuel n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨convExp_byteRanged ofInt fuel n0 (ht' n0 (by simp)) _ h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.sharedStore16 =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt, convNonRecStmt.convSharedStore] at h
+            cases h0 : convExp ofInt fuel n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨convExp_byteRanged ofInt fuel n0 (ht' n0 (by simp)) _ h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.sharedStore32 =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt, convNonRecStmt.convSharedStore] at h
+            cases h0 : convExp ofInt fuel n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨convExp_byteRanged ofInt fuel n0 (ht' n0 (by simp)) _ h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.throwNT =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons n0 rest =>
+        cases rest with
+        | nil => simp [convNonRecStmt] at h
+        | cons n1 rest =>
+          cases rest with
+          | nil =>
+            simp only [convNonRecStmt] at h
+            cases h0 : convIdent n0 with
+            | none => simp [h0] at h
+            | some v0 =>
+              simp [h0] at h
+              cases h1 : convExp ofInt fuel n1 with
+              | none => simp [h1] at h
+              | some v1 =>
+                simp [h1] at h
+                subst h
+                exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' n0 (by simp)) h0,
+                       convExp_byteRanged ofInt fuel n1 (ht' n1 (by simp)) _ h1⟩
+          | cons n2 rest => simp [convNonRecStmt] at h
+    case nd.returnNT =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons valueTree rest =>
+        cases rest with
+        | nil =>
+          simp only [convNonRecStmt] at h
+          cases hv : convExp ofInt fuel valueTree with
+          | none => simp [hv] at h
+          | some value =>
+            simp [hv] at h
+            subst h
+            exact convExp_byteRanged ofInt fuel valueTree (ht' valueTree (by simp)) _ hv
+        | cons extra rest => simp [convNonRecStmt] at h
+    case nd.extCall =>
+      cases children with
+      | nil => simp [convNonRecStmt] at h
+      | cons nameTree rest0 =>
+        cases rest0 with
+        | nil => simp [convNonRecStmt] at h
+        | cons configurationTree rest1 =>
+          cases rest1 with
+          | nil => simp [convNonRecStmt] at h
+          | cons configurationLengthTree rest2 =>
+            cases rest2 with
+            | nil => simp [convNonRecStmt] at h
+            | cons arrayTree rest3 =>
+              cases rest3 with
+              | nil => simp [convNonRecStmt] at h
+              | cons arrayLengthTree rest4 =>
+                cases rest4 with
+                | nil =>
+                  simp only [convNonRecStmt] at h
+                  cases hf : convFfiIdent nameTree with
+                  | none => simp [hf] at h
+                  | some function =>
+                    simp [hf] at h
+                    cases hc : convExp ofInt fuel configurationTree with
+                    | none => simp [hc] at h
+                    | some configuration =>
+                      simp [hc] at h
+                      cases hl : convExp ofInt fuel configurationLengthTree with
+                      | none => simp [hl] at h
+                      | some configurationLength =>
+                        simp [hl] at h
+                        cases ha : convExp ofInt fuel arrayTree with
+                        | none => simp [ha] at h
+                        | some array =>
+                          simp [ha] at h
+                          cases hal : convExp ofInt fuel arrayLengthTree with
+                          | none => simp [hal] at h
+                          | some arrayLength =>
+                            simp [hal] at h
+                            subst h
+                            simp only [ProgByteRanged]
+                            exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convFfiIdent_byteRanged (ht' nameTree (by simp)) hf,
+                              convExp_byteRanged ofInt fuel configurationTree (ht' configurationTree (by simp)) _ hc,
+                              convExp_byteRanged ofInt fuel configurationLengthTree (ht' configurationLengthTree (by simp)) _ hl,
+                              convExp_byteRanged ofInt fuel arrayTree (ht' arrayTree (by simp)) _ ha,
+                              convExp_byteRanged ofInt fuel arrayLengthTree (ht' arrayLengthTree (by simp)) _ hal⟩
+                | cons extra rest => simp [convNonRecStmt] at h
+    all_goals (simp [convNonRecStmt] at h)
 
 
 end Flapjack.Parser

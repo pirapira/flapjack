@@ -617,4 +617,55 @@ val _ = print_eval "storebyte_clause_hit"
           <| memaddrs := {0w}; memory := (\a:64 word. Word (0w:64 word)); be := F |>)) of
       (res, s') => (res, s'.memory 0w)``
 
+val _ = print_eval "tick_clock_zero"
+  ``case panSem$evaluate
+      (panLang$Tick,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word)); clock := 0 |>)) of
+      (res, s') => (res, FLOOKUP s'.locals «x», s'.clock)``
+
+val _ = print_eval "tick_clock_positive"
+  ``case panSem$evaluate
+      (panLang$Tick,
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word)); clock := 5 |>)) of
+      (res, s') => (res, FLOOKUP s'.locals «x», s'.clock)``
+
+val final_ffi =
+  ``<| oracle := (λname st conf bytes. ffi$Oracle_final ffi$FFI_failed);
+      ffi_state := (); io_events := [] |>``;
+
+val _ = print_eval "extcall_clause_returned"
+  ``case panSem$evaluate
+      (panLang$ExtCall «x» (panLang$Const (0w:8 word)) (panLang$Const (2w:8 word))
+         (panLang$Const (0w:8 word)) (panLang$Const (2w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY;
+          memory := (\a:8 word. if a = 0w then Word (0xABw:8 word) else Word (0w:8 word));
+          memaddrs := {0w; 1w}; sh_memaddrs := EMPTY; be := F;
+          ffi := ^returning_ffi |>)) of
+      (res, s') => (res, s'.memory 0w)``
+
+val _ = print_eval "extcall_clause_bad_read"
+  ``case panSem$evaluate
+      (panLang$ExtCall «x» (panLang$Const (0w:8 word)) (panLang$Const (2w:8 word))
+         (panLang$Const (0w:8 word)) (panLang$Const (2w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY;
+          memory := (\a:8 word. if a = 0w then Word (0xABw:8 word) else Word (0w:8 word));
+          memaddrs := EMPTY; sh_memaddrs := EMPTY; be := F;
+          ffi := ^returning_ffi |>)) of
+      (res, s') => (res, s'.memory 0w)``
+
+val _ = print_eval "extcall_clause_final"
+  ``case panSem$evaluate
+      (panLang$ExtCall «x» (panLang$Const (0w:8 word)) (panLang$Const (2w:8 word))
+         (panLang$Const (0w:8 word)) (panLang$Const (2w:8 word)),
+       ((ARB:((8),unit) panSem$state) with <|
+          locals := FEMPTY |+ («x», ValWord (7w:8 word));
+          memory := (\a:8 word. if a = 0w then Word (0xABw:8 word) else Word (0w:8 word));
+          memaddrs := {0w; 1w}; sh_memaddrs := EMPTY; be := F;
+          ffi := ^final_ffi |>)) of
+      (res, s') => (case res of SOME (FinalFFI _) => (T, FLOOKUP s'.locals «x») | _ => (F, FLOOKUP s'.locals «x»))``
+
 val _ = print_eval "pan_sem_e2e_done" ``0``

@@ -4456,7 +4456,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs.lean",
     "lean_name": "structInfosOk_append",
     "statement_status": "documented_mismatch",
-    "reviewer": "Codex (audit: HOL pan_structsProofScript.sml keys structure/field names by stcname/fldname = mlstring while this statement uses the production StructContext/StructPassContext carriers with StructName/FieldName = String, so it is not exact; tag withdrawn, exact MlString carrier tracked by flapjack-pxn.18.3.5.8)"
+    "reviewer": "Codex (P0 source review: struct_infos_ok_append is exactly the implication from struct_infos_ok (xs ++ ys) to struct_infos_ok ys, with one premise and the same conclusion. It remains untagged because HOL uses MlS/ShapeHOL/StructContextExact and fields/size-only struct_info, while Lean uses String-backed production StructContext/Shape and cache-augmented StructInfo.shapedFields; isWfShape/lookups use production String equality. names_as_string cannot cover the context/record carrier difference. A faithful theorem can use StructContextExact; exact name-carrier/bridge work is tracked by flapjack-pxn.18.3.5.8.16. This proposition has no byte-observable name output."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",

@@ -202,4 +202,16 @@ example : functionsHOL (exactDecls.filter isFunctionHOL) = functionsHOL exactDec
 example : (functionsHOL (exactDecls.filter isDeclHOL)).length = 0 := by
   simp [functionsHOL_filter_isDecl]
 
+example :
+    decsStcnamesHOLExact (width := 64) ([] : StructContextExact)
+      [ .function fdH, .decl .one (s "z") expH, .exnDecl (s "ex") .one ] = some [] := by
+  apply decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls
+  decide
+
+example :
+    decsStcnamesHOLExact (width := 64) ([] : StructContextExact)
+      [ .function fdH ] = some [] := by
+  apply decsStcnamesHOLExact_of_functions
+  decide
+
 end Flapjack.Test.PanLangDeclHOLParity

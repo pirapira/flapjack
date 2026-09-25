@@ -467,6 +467,14 @@
     "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
     "hol_name": "simp_exp_correct1",
     "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
+    "lean_name": "crepSimpExpCorrect1CmpHolFiniteWordSourceCase",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Untagged all-width Cmp case with the successful premise, arbitrary code-map update, full Option word_lab result, and child IHs over its two source expressions. The proof uses the explicit finite-dimension source evaluator; its state and primitive word-operation interpretation is not yet proved identical to native HOL crepSem eval."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_arithProofScript.sml",
+    "hol_name": "simp_exp_correct1",
+    "lean_path": "Flapjack/Pancake/Proofs/CrepArith.lean",
     "lean_name": "crepSimpExpCorrect1CrepOpMulHolFiniteWordSourceCase",
     "statement_status": "documented_mismatch",
     "reviewer": "Untagged all-width Crepop Mul case with the recursive hypotheses restricted to its two children, successful premise, arbitrary code-map update, and complete Option word_lab result. It uses the explicit HolFiniteDimension/source evaluator and is not tagged until that evaluator and CrepHolState are proved to represent native HOL crepSem eval for arbitrary finite index types and states."

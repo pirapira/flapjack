@@ -1086,6 +1086,39 @@ class ValidateInventoryTest(unittest.TestCase):
         self.assertNotIn(eq_filter, MAP["tagged_declarations"]())
         self.assertNotIn(eq_filter, by_key)
 
+    def test_panprops_is_wf_shape_of_v_exact_port(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        key = ("Flapjack/Pancake/Semantics/PanProps.lean",
+               "isWfShapeValueHOLExact_shapeOfHOLExact")
+        record = next(
+            (r for r in manifest
+             if (r["lean_path"], r["lean_name"]) == key), None)
+        self.assertIsNotNone(record)
+        self.assertEqual(
+            (record["hol_path"], record["hol_name"]),
+            ("cakeml/pancake/semantics/panPropsScript.sml", "is_wf_shape_of_v"))
+        self.assertEqual(record["statement_status"], "reviewed_exact")
+        self.assertIn(key, MAP["tagged_declarations"]())
+
+    def test_panprops_every_exp_and_exps_of_exact_ports(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        by_key = {
+            (record["lean_path"], record["lean_name"]): record for record in manifest
+        }
+        expected = {
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "every_exp_def"),
+            ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"): (
+                "cakeml/pancake/semantics/panPropsScript.sml", "exps_of_def"),
+        }
+        for key, (hol_path, hol_name) in expected.items():
+            with self.subTest(key=key):
+                record = by_key[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]), (hol_path, hol_name))
+                self.assertEqual(record["statement_status"], "reviewed_exact")
+                self.assertIn(key, MAP["tagged_declarations"]())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,7 @@ import importlib.util
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "check_hol_type_hashes.py"
@@ -86,6 +87,7 @@ class HolTypeHashesTest(unittest.TestCase):
             "list_as_array": [],
             "names_as_string": ["key", "generated"],
             "names_as_string_boundary": ["generated"],
+            "fmap_as_finite_support": [],
         })
         changed = [{
             **export[0],
@@ -123,6 +125,53 @@ class HolTypeHashesTest(unittest.TestCase):
             lock["records"][0]["sha256"],
             hashlib.sha256(self.export[0]["type_expr"].encode()).hexdigest(),
         )
+
+    def test_reviewed_fmap_as_finite_support_qualifiers_are_locked(self):
+        manifest = [{
+            **self.manifest[0],
+            "statement_status": "reviewed_fmap_as_finite_support",
+            "fmap_as_finite_support": ["locals", "globals"],
+        }]
+        export = [{
+            **self.export[0],
+            "qualifiers": {
+                "list_as_array": [],
+                "names_as_string": [],
+                "names_as_string_boundary": [],
+                "fmap_as_finite_support": ["locals", "globals"],
+            },
+        }]
+        lock = MODULE.expected_lock(manifest, export, "leanprover/lean4:v4")
+        self.assertEqual(lock["records"][0]["qualifiers"]["fmap_as_finite_support"],
+                         ["locals", "globals"])
+        changed = [{
+            **export[0],
+            "qualifiers": {
+                **export[0]["qualifiers"],
+                "fmap_as_finite_support": ["locals"],
+            },
+        }]
+        with self.assertRaisesRegex(ValueError, "manifest qualifiers differ"):
+            MODULE.lock_records(manifest, changed)
+
+    def test_fmap_qualifier_validates_and_rejects_unknown(self):
+        MODULE.validate_export_record(
+            {
+                "lean_name": "n", "hol_path": "p", "hol_name": "h",
+                "type_expr": "t",
+                "qualifiers": {"fmap_as_finite_support": ["locals"]},
+            },
+            1,
+        )
+        with self.assertRaisesRegex(ValueError, "invalid qualifiers"):
+            MODULE.validate_export_record(
+                {
+                    "lean_name": "n", "hol_path": "p", "hol_name": "h",
+                    "type_expr": "t",
+                    "qualifiers": {"finite_map": ["locals"]},
+                },
+                1,
+            )
 
     def test_unknown_export_field_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "invalid fields"):
@@ -180,6 +229,28 @@ class HolTypeHashesTest(unittest.TestCase):
         lock = MODULE.expected_lock(self.manifest, self.export, "leanprover/lean4:v4")
         self.assertEqual(json.loads(MODULE.render_lock(lock)), lock)
         self.assertEqual(len(MODULE.render_lock(lock).splitlines()), 6)
+
+    def test_exporter_uses_current_lake_build_graph(self):
+        result = type("Completed", (), {
+            "returncode": 0,
+            "stdout": json.dumps(self.export[0]) + "\n",
+            "stderr": "",
+        })()
+        with patch.object(MODULE.subprocess, "run", return_value=result) as run:
+            self.assertEqual(MODULE.exported_types(), self.export)
+        self.assertEqual(run.call_args.args[0], [
+            "lake", "--quiet", "lean", str(MODULE.EXPORTER),
+        ])
+
+    def test_native_export_sees_recent_crep_props_source_declaration(self):
+        # This exact declaration was missing from an old saved
+        # Flapjack.setup.json after Lake had rebuilt CrepProps from source.
+        # Exercise the real Lake path to ensure the fresh declaration is
+        # visible and that no local OLean import is missing.
+        names = {item["lean_name"] for item in MODULE.exported_types()}
+        self.assertIn(
+            "Flapjack.crepAssignedVarsHOL_nestedSeq_storesHOL", names
+        )
 
 
 if __name__ == "__main__":

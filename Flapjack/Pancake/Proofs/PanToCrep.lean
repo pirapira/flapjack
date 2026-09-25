@@ -1045,8 +1045,28 @@ theorem bindPanValueParameters_eq_slc
 
 /-! A successful source-local lookup after `slc` comes from one of the zipped
 formal/argument pairs. This Flapjack finite-map support lemma is used to expose
-the source-side parameter index in the Call-entry `locals_rel` proof; it does
-not claim the full HOL `call_preserve_state_code_locals_rel` theorem. -/
+the source-side parameter index in the Call-entry `locals_rel` proof.
+
+**Not the HOL `call_preserve_state_code_locals_rel` port.**
+`cakeml/pancake/proofs/pan_to_crepProofScript.sml:2355` concludes a four-way
+conjunction `state_rel (dec_clock s with locals := slc vshs args) (... tlc ...)
+∧ code_rel (ctxt_fc ...) ... ∧ excp_rel (ctxt_fc ...).eids ... ∧ locals_rel
+(ctxt_fc ...) ...`, under HOL hypotheses `LIST_REL (λvshape arg. SND vshape =
+shape_of arg)`, `state_rel`, `code_rel`, `excp_rel`, `locals_rel`, `FLOOKUP
+s.code`/`t.code`, `FLOOKUP ctxt.funcs`, `ALL_DISTINCT ns`,
+`size_of_shape (Comb (MAP SND vshs)) = LENGTH (FLAT (MAP flatten args))`, and
+`EVERY is_wf_shape_v_nil args`. No Lean declaration claims that statement:
+every relation it mentions is a documented carrier mismatch — `state_rel` /
+`code_rel` / `excp_rel` / `locals_rel` relate production `PanSemState` /
+`CrepRuntimeState` with `VarName`/`FunName`/`ExceptionId`/`StructName = String`,
+`PanValue α` and production `Shape`, whereas HOL relates `mlstring`-keyed states,
+`panSem$v`, and `shape` with `'a word_lab` payloads. `slc`/`tlc` compound the gap
+(`slc` keys by `String`; `tlc` returns `FiniteMap Nat α` not `word_lab`). The
+theorem must not be `@[hol]`-tagged until the exact carrier ports land; faithful
+port dependencies: `flapjack-pxn.18.3.5.8` (MlString carriers) and
+`flapjack-0lj` (word_lab); the Call-case correctness work is tracked by
+`flapjack-pxn.18.4.4`. The support lemmas below cover only individual
+`slc`/`ctxt_fc`/`withShape` ingredients, not the HOL theorem. -/
 theorem slcLookupGetElem
     (parameters : List (String × Shape)) (arguments : List (PanValue α))
     (name : String) (value : PanValue α)

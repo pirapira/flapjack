@@ -8981,7 +8981,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panMemStoreHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL mem_store addr w dm m = if addr IN dm then SOME ((addr =+ w) m) else NONE over the 'a word_lab total memory and 'a word set domain; rendered as total HolWordLab memory with a Prop/DecidablePred domain and pointwise update; direct HOL rows store_hit/store_miss in scripts/hol-probes/pan_flat_store_probe.out)"
+    "reviewer": "Codex (source comparison; HOL mem_store addr w dm m = if addr IN dm then SOME ((addr =+ w) m) else NONE over the 'a word_lab total memory and 'a word set domain; rendered as total HolWordLab memory with a Prop/DecidablePred domain and pointwise update; direct HOL rows store_hit/store_miss in scripts/hol-probes/pan_flat_store_probe.out) [NeZero width] matches HOL positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -8989,7 +8989,7 @@
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panMemStoresHOL",
     "statement_status": "reviewed_exact",
-    "reviewer": "Codex (source comparison; HOL mem_stores a [] dm m = SOME m and mem_stores a (w::ws) dm m advances by bytes_in_word = n2w(dimindex DIV 8), here the canonical panBytesInWord width; total HolWordLab memory + Prop/DecidablePred domain; direct HOL rows stores_hit/stores_blocked in scripts/hol-probes/pan_flat_store_probe.out)"
+    "reviewer": "Codex (source comparison; HOL mem_stores a [] dm m = SOME m and mem_stores a (w::ws) dm m advances by bytes_in_word = n2w(dimindex DIV 8), here the canonical panBytesInWord width; total HolWordLab memory + Prop/DecidablePred domain; direct HOL rows stores_hit/stores_blocked in scripts/hol-probes/pan_flat_store_probe.out) [NeZero width] matches HOL positive dimindex."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

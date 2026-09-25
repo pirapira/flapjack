@@ -281,8 +281,12 @@ mutual
             pure (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
               nextClock)
         | .control (.returned _ _ _ _ _) => none
-        | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
-            .control (.continued _ _ _ _) => none
+        | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
+            .control (.broke nextLocals nextGlobals nextMemory nextFfi) |
+            .control (.continued nextLocals nextGlobals nextMemory nextFfi) =>
+            -- HOL `DecCall` turns callee NONE/Break/Continue into Error and
+            -- returns the fixed callee post-state unchanged.
+            pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
         | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
             pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | fuel + 1, locals, globals, memory, ffi, clock, .while conditionExp body,
@@ -540,8 +544,12 @@ mutual
         | .control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event) =>
             pure (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event), nextClock)
         | .control (.returned _ _ _ _ _) => none
-        | .control (.normal _ _ _ _) | .control (.broke _ _ _ _) |
-            .control (.continued _ _ _ _) => none
+        | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
+            .control (.broke nextLocals nextGlobals nextMemory nextFfi) |
+            .control (.continued nextLocals nextGlobals nextMemory nextFfi) =>
+            -- HOL `DecCall` turns these callee outcomes into Error and returns
+            -- the fixed callee post-state unchanged.
+            pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
         | .control (.error nextLocals nextGlobals nextMemory nextFfi) =>
             pure (.control (.error nextLocals nextGlobals nextMemory nextFfi), nextClock)
     | _fuel + 1, locals, globals, memory, ffi, clock,

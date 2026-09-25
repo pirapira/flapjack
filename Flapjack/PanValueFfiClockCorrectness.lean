@@ -1527,9 +1527,15 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
                   obtain ⟨_, he⟩ := hrun; omega
               · simp only [hmatch, if_false, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
                 obtain ⟨_, he⟩ := hrun; omega
-        | normal l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-        | broke l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
-        | continued l g m f => simp only [Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
+        | normal l g m f =>
+          simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+          obtain ⟨_, he⟩ := hrun; omega
+        | broke l g m f =>
+          simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+          obtain ⟨_, he⟩ := hrun; omega
+        | continued l g m f =>
+          simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
+          obtain ⟨_, he⟩ := hrun; omega
         | raised l g m f ex v =>
           simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at hrun
           obtain ⟨_, he⟩ := hrun; omega

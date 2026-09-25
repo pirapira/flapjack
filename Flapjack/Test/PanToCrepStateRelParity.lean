@@ -11,6 +11,7 @@ runtime function list and carried through target Skip evaluation. -/
 namespace Flapjack.Test.PanToCrepStateRelParity
 
 open Flapjack
+open Flapjack.Pancake.PanLang
 
 def noNatCells : Nat → PanWordLab Nat := fun _ => .word 0
 def noPanValueCells : Nat → Option (PanValue Nat) := fun _ => some (.word 0)
@@ -268,6 +269,21 @@ def localsRelLookupCtxtGuard : Bool :=
         ([0].mapM (FLOOKUP targetLocals) == some [.word 5]) && isWfShape [] .one
   | _ => false
 
+/-- Exact `ValueHOL` fixture for HOL
+`is_wf_shape_nil_length_flatten` (`pan_to_crepProofScript.sml:2469`). -/
+def iwfStruct : ValueHOL 64 := .rStruct [.val (.word 1), .val (.word 2)]
+
+theorem isWfShapeExactHOL_length_flatten_fixture :
+    (flattenHOL iwfStruct).length = sizeOfShapeHOL (shapeOfHOLExact iwfStruct) :=
+  isWfShapeExactHOL_length_flatten iwfStruct (flattenHOL iwfStruct)
+    (by simp [iwfStruct, shapeOfHOLExact, isWfShapeExactHOL])
+    (by intro h; simp [iwfStruct, shapeOfHOLExact, sizeOfShapeHOL] at h)
+    (by intro _; rfl)
+
+def isWfShapeNilLengthFlattenGuard : Bool :=
+  (flattenHOL iwfStruct).length == sizeOfShapeHOL (shapeOfHOLExact iwfStruct) &&
+    isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact iwfStruct)
+
 def runChecks : IO Bool := do
   let checks := [
     ("HOL state_rel satisfying fixture", true),
@@ -279,7 +295,9 @@ def runChecks : IO Bool := do
       localsRelLookupCtxtGuard),
     ("HOL Crep code field matches a nonempty runtime function and survives Skip",
       skipCodeLookupGuard),
-    ("HOL locals_rel rejects unmapped local", true)]
+    ("HOL locals_rel rejects unmapped local", true),
+    ("HOL exact is_wf_shape_nil_length_flatten over ValueHOL",
+      isWfShapeNilLengthFlattenGuard)]
   for (name, passed) in checks do
     IO.println s!"{if passed then "PASS" else "FAIL"} {name}"
   pure (checks.all Prod.snd)

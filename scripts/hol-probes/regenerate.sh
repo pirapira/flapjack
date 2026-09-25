@@ -1753,3 +1753,11 @@ run_probe pan_globals_fperm_probeScript.sml pan_globals_fperm_probe.out \
   recursive_control fperm_done \
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"
+
+# The pan_globals fperm_decs probe observes the source-shape declaration-list
+# permutation `fperm_decs f g ds` (pan_globalsScript.sml:216-221) for a mixed
+# declaration list and the empty list.
+run_probe pan_globals_fperm_decs_probeScript.sml pan_globals_fperm_decs_probe.out \
+  mixed singleton_nonfunction \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"

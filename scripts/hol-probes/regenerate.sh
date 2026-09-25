@@ -1643,3 +1643,11 @@ run_probe pan_sem_sh_mem_probeScript.sml pan_sem_sh_mem_probe.out \
 run_probe pan_sem_decs_stcnames_probeScript.sml pan_sem_decs_stcnames_probe.out \
   dsc_empty dsc_skip_len \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+
+# The panProps shape_of_val / res_var FLOOKUP probe observes the exact HOL
+# shape_of on the Val (word_lab) constructor and the res_var finite-map
+# update/delete semantics (panPropsScript.sml:14, :220, :228, :236).
+run_probe pan_props_shape_res_var_probeScript.sml pan_props_shape_res_var_probe.out \
+  spv_one rv_some \
+  "$cake_dir/pancake/semantics/panPropsScript.sml" \
+  "$cake_dir/pancake/semantics"

@@ -191,4 +191,17 @@ theorem convParams_byteRanged : ∀ (fuel : Nat) (trees : List ParseTree),
   · intro ht params h p hp
     simp at h
 
+/-- `convFieldNameList` maps a byte-ranged tree to byte-ranged field names and
+    shapes, via `convParams`. -/
+theorem convFieldNameList_byteRanged {fuel : Nat} {tree : ParseTree}
+    (ht : ParseTreeByteRanged tree) :
+    ∀ fields, convFieldNameList fuel tree = some fields →
+      ∀ p ∈ fields, StringByteRanged p.1 ∧ ShapeByteRanged p.2 := by
+  intro fields h p hp
+  cases hargs : tree.argsNT .fieldNameList with
+  | none => simp [convFieldNameList, hargs] at h
+  | some children =>
+      simp only [convFieldNameList, hargs] at h
+      exact convParams_byteRanged fuel children (argsNT_byteRanged ht hargs) fields h p hp
+
 end Flapjack.Parser

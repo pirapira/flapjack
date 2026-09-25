@@ -1040,14 +1040,45 @@ theorem panToCrepCompFuncRiscV_eq_compFuncHOL
     panToCrepCompFuncRiscV context params body =
       compFuncHOL context.funcs context.eids params body := rfl
 
-/-! HOL `get_eids_from_decls_def`: enumerate exception declarations in source
-order and turn their zero-based indices into words. HOL `alist_to_fmap` uses
-`FOLDR FUPDATE FEMPTY`, so the first duplicate exception name wins. The word
-type fixes the conversion, rather than taking a caller-supplied map. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): the produced map is keyed by
--- `ExceptionId` = `String`, while HOL `pan_to_crepScript.sml` keys
--- `get_eids_from_decls` by `eid` = `mlstring` (tracked by
--- `flapjack-pxn.18.3.5.8`, parent `flapjack-pxn.18.3.5.7.2`).
+/-! HOL `get_eids_from_decls_def` (`cakeml/pancake/pan_to_crepScript.sml:356-364`):
+
+```
+get_eids_from_decls decls =
+  let eids = MAP FST (exceptions decls);
+      ns   = GENLIST (λx. (n2w x):'a word) (LENGTH eids);
+      es   = MAP2 (λx y. (x,y)) eids ns
+  in alist_to_fmap es
+```
+
+enumerating exception declarations in source order and turning their zero-based
+indices into words. HOL `alist_to_fmap` uses `FOLDR FUPDATE FEMPTY`, so the
+first duplicate exception name wins.
+
+FLAPJACK-SPECIFIC (not an exact HOL port): this port mirrors the clause
+structure and first-binding discipline, but its carriers differ from HOL.
+(i) The result is keyed by `ExceptionId` = `String` (PanLang.lean), while HOL
+`eid` is `mlstring`. (ii) The input is the production
+`List (Decl (BitVec width))`, whose names are `String` and whose shapes are the
+production `Shape`, not HOL's word-indexed `'a decl` carrying `mlstring` names
+and `shape`. (iii) The output is the function-backed
+`FiniteMap ExceptionId (BitVec width)` rather than HOL's
+`(mlstring, 'a word) fmap`; the `FUPDATE_LIST ... .reverse` construction is the
+Flapjack encoding of `alist_to_fmap`'s right fold. The `names_as_string`
+qualifier cannot authorize the `Decl`/`Shape` input carrier or the
+`FiniteMap`-vs-`fmap` representation, and no `NameRanged` byte witness exists
+because the output is a map of words, not a name.
+
+Direct HOL-EVAL rows are recorded in
+`scripts/hol-probes/crep_get_eids_probe.out` (`eids_present`/`eids_second`/
+`eids_absent`/`eids_codes_distinct`), reproduced against this definition by
+`getEidsGuard` in `Flapjack/Test/PanToCrepCodeRelParity.lean`; the
+first-binding duplicate row `duplicate_exceptions` from
+`scripts/hol-probes/compile_to_crep_probe.out` is reproduced by
+`holDuplicateExceptionProductionOracle` in
+`Flapjack/Test/CompileToCrepeParity.lean`.
+
+The exact MlString-keyed carrier replacement is tracked by
+`flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`). -/
 def panToCrepGetEidsFromDeclsHOL
     (declarations : List (Decl (BitVec width))) :
     FiniteMap ExceptionId (BitVec width) :=

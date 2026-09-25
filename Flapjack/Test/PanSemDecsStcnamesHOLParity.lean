@@ -62,6 +62,17 @@ example : (decsStcnamesHOLExact (width := 8) [] wfMiss).isNone = true := by deci
 /-- `Decl`/`Function`/`ExnDecl` entries are skipped and the scan continues. -/
 example : ctxLen (decsStcnamesHOLExact (width := 8) [] skipDecl) = some 1 := by decide
 
+/-- `decs_stcnames_lemma`: a code list of only function/exception declarations
+leaves the context unchanged (tagged exact port). -/
+private def functionAndExn : List (DeclHOL 8) :=
+  [.function ⟨ml "f", false, false, [], .skip, .one⟩,
+   .exnDecl (ml "e") .one]
+
+example (context : StructContextExact) :
+    decsStcnamesHOLExact (width := 8) context functionAndExn = some context := by
+  apply decsStcnamesHOLExact_of_functions_or_exnDecls
+  native_decide
+
 private def decsGuard : Bool :=
   (ctxLen (decsStcnamesHOLExact (width := 8) [] ([] : List (DeclHOL 8))) == some 0) &&
   (ctxLen (decsStcnamesHOLExact (width := 8) [] nameAF) == some 1) &&

@@ -73,4 +73,19 @@ def decsStcnamesHOLExact {width : Nat} [NeZero width] (context : StructContextEx
     (context : StructContextExact) :
     decsStcnamesHOLExact (width := width) context [] = some context := rfl
 
+/-- Exact port of HOL `decs_stcnames_lemma` (`pan_to_crepProofScript.sml:4963-4969`):
+a declaration list containing only function or exception declarations leaves the
+structure context unchanged. -/
+@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml" "decs_stcnames_lemma"]
+theorem decsStcnamesHOLExact_of_functions_or_exnDecls {width : Nat} [NeZero width]
+    (context : StructContextExact) (code : List (DeclHOL width))
+    (h : code.all (fun declaration =>
+      isFunctionHOL declaration || isExnDeclHOL declaration) = true) :
+    decsStcnamesHOLExact (width := width) context code = some context := by
+  induction code generalizing context with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration <;>
+        simp_all [decsStcnamesHOLExact, isFunctionHOL, isExnDeclHOL]
+
 end Flapjack

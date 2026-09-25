@@ -173,6 +173,20 @@ def functionsHOL {width : Nat} [NeZero width] :
   | .exnDecl _ _ :: declarations => functionsHOL declarations
   | .name _ _ :: declarations => functionsHOL declarations
 
+/-- Exact port of HOL `panLang$is_exn_decl` (`panLangScript.sml:239-242`):
+true only for `ExnDecl`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_exn_decl_def"]
+def isExnDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .exnDecl _ _ => true
+  | _ => false
+
+/-- Exact port of HOL `panLang$is_function` (`panLangScript.sml:314-317`):
+true only for `Function`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_function_def"]
+def isFunctionHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .function _ => true
+  | _ => false
+
 /-! ### Reverse (byte-ranged) roundtrips to production
 
 The forward codecs above recover an exact HOL carrier from any production

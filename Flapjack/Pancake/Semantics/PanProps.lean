@@ -17,36 +17,6 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS)
 
-/-! Cake's local `dropWhile_eq_cons_IMP`
-(`cakeml/pancake/semantics/panPropsScript.sml:74`) says that when
-`dropWhile P xs` yields `y :: ys`, there is an in-bounds index `n` at which
-`P` first fails, with `y = EL n xs` and `DROP n xs = y :: ys`.
-
-Both HOL lists are represented by Lean `List` binders, recorded by
-`list_as_list`. The bounded `List.get` is HOL `EL` under the explicitly
-preserved bound; `P y = false` expresses HOL's boolean negation. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "dropWhile_eq_cons_IMP"
-  (list_as_list := [xs, ys])]
-theorem dropWhileEqConsImp {α : Type} (P : α → Bool) (xs : List α)
-    (y : α) (ys : List α) (h : xs.dropWhile P = y :: ys) :
-    ∃ n, ∃ hn : n < xs.length,
-      y = xs.get ⟨n, hn⟩ ∧ P y = false ∧ xs.drop n = y :: ys := by
-  induction xs generalizing y ys with
-  | nil => simp at h
-  | cons x rest ih =>
-      cases hP : P x with
-      | false =>
-          simp only [List.dropWhile_cons, hP, Bool.false_eq_true, if_false] at h
-          cases h
-          exact ⟨0, ⟨by simp, by simp [hP]⟩⟩
-      | true =>
-          simp only [List.dropWhile_cons, hP, if_true] at h
-          obtain ⟨n, hn, hget, hpy, hdrop⟩ := ih y ys h
-          refine ⟨n + 1, ⟨by simpa using Nat.succ_lt_succ hn, ?_⟩⟩
-          refine ⟨?_, hpy, ?_⟩
-          · simpa using hget
-          · simpa [List.drop_succ_cons] using hdrop
-
 /-! Equality-based first-match lookup for HOL `ALOOKUP` expressions. Lean's
     production `lookupInfo` intentionally takes `[BEq κ]`; this version keeps
     the HOL equality semantics explicit. -/

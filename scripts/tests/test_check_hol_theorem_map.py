@@ -779,61 +779,6 @@ class ValidateInventoryTest(unittest.TestCase):
             [],
         )
 
-    def test_reviewed_list_as_list_requires_matching_tag_and_source_review(self):
-        tagged = {
-            (self.path, "exampleTheorem"): (
-                "cakeml/pancake/semantics/panPropsScript.sml",
-                "dropWhile_eq_cons_IMP",
-                (),
-                ("xs", "ys"),
-                (),
-                (),
-                (),
-            )
-        }
-        reviewed = self.record(
-            hol_path="cakeml/pancake/semantics/panPropsScript.sml",
-            hol_name="dropWhile_eq_cons_IMP",
-            statement_status="reviewed_list_as_list",
-            list_as_list=["xs", "ys"],
-            reviewer="Codex source review: xs and ys are HOL lists represented by Lean List",
-        )
-        self.assertEqual(
-            MAP["validate_inventory"](
-                [reviewed], {(self.path, "exampleTheorem")}, tagged
-            ),
-            [],
-        )
-
-        wrong_fields = {**reviewed, "list_as_list": ["xs"]}
-        errors = MAP["validate_inventory"](
-            [wrong_fields], {(self.path, "exampleTheorem")}, tagged
-        )
-        self.assertTrue(any("list_as_list identifiers do not match" in e for e in errors))
-
-        unqualified = self.record(statement_status="reviewed_list_as_list")
-        errors = MAP["validate_inventory"](
-            [unqualified], {(self.path, "exampleTheorem")}, {}
-        )
-        self.assertTrue(any("needs a qualified @[hol] tag" in e for e in errors))
-
-        combined = {**reviewed, "names_as_string": ["name"]}
-        combined_tagged = {
-            (self.path, "exampleTheorem"): (
-                "cakeml/pancake/semantics/panPropsScript.sml",
-                "dropWhile_eq_cons_IMP",
-                (),
-                ("xs", "ys"),
-                ("name",),
-                (),
-                (),
-            )
-        }
-        errors = MAP["validate_inventory"](
-            [combined], {(self.path, "exampleTheorem")}, combined_tagged
-        )
-        self.assertTrue(any("combinations need their own explicit" in e for e in errors))
-
     def test_qualified_tag_rejects_absent_or_misnamed_witness_field(self):
         tagged = {
             (self.path, "exampleTheorem"): (
@@ -881,9 +826,7 @@ class ValidateInventoryTest(unittest.TestCase):
                 "cakeml/pancake/proofs/exampleProofScript.sml",
                 "example_theorem",
                 (),
-                (),
                 ("key",),
-                (),
                 (),
             )
         }
@@ -940,10 +883,8 @@ class ValidateInventoryTest(unittest.TestCase):
                 "cakeml/pancake/proofs/exampleProofScript.sml",
                 "example_theorem",
                 (),
-                (),
                 ("key", "generated"),
                 ("generated",),
-                (),
             )
         }
         record = self.record(

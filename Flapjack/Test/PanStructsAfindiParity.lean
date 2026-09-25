@@ -1,5 +1,4 @@
 import Flapjack.PanStructsAfindi
-import Flapjack.Pancake.Semantics.PanProps
 
 namespace Flapjack.Test.PanStructsAfindiParity
 
@@ -250,16 +249,16 @@ def shapeSizeWithContextGuard : Bool :=
 #eval shapeSizeWithContextGuard
 #guard shapeSizeWithContextGuard
 
-/-! Direct concrete regression for Cake's `dropWhile_eq_cons_IMP`
-    (`panPropsScript.sml:74`): on this input the HOL witness index is 2. -/
+/-! Focused regression for the ported Cake `dropWhile_eq_cons_IMP`
+    (`panPropsScript.sml:74`). -/
 
 theorem dropWhile_eq_cons_imp_fixture :
-    ∃ n, ∃ hn : n < ([0, 1, 3] : List Nat).length,
-      3 = ([0, 1, 3] : List Nat).get ⟨n, hn⟩ ∧
-        decide ((3 : Nat) < 2) = false ∧ ([0, 1, 3] : List Nat).drop n = [3] :=
-  dropWhileEqConsImp (fun n : Nat => n < 2) [0, 1, 3] 3 [] (by decide)
+    ∃ n, n < ([0, 1, 3] : List Nat).length ∧
+      ([0, 1, 3] : List Nat)[n]? = some 3 ∧ (decide ((3 : Nat) < 2) = false) ∧
+      ([0, 1, 3] : List Nat).drop n = [3] :=
+  dropWhile_eq_cons_imp (fun n : Nat => n < 2) [0, 1, 3] 3 [] (by decide)
 
-#check @dropWhileEqConsImp
+#check @dropWhile_eq_cons_imp
 
 /-! Focused regression for the ported Cake `ALOOKUP_MAP3`/`ALOOKUP_MAP4`
     (`pan_globalsProofScript.sml:2841`/`:2851`). -/

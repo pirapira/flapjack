@@ -729,13 +729,23 @@ theorem panToCrepMakeFuncs_eq_map (declarations : List (Decl α)) :
         simp [panToCrepMakeFuncs, functionEntries, ih]
 
 /-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of CakeML's
-    `crep_vars_def`
-    (`pan_to_crepScript.sml:376`).  The Crepe function interface exposes one
-    consecutive slot for every flattened parameter word. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port): `params : List (VarName × Shape)`
--- uses `VarName` = `String`, while HOL `pan_to_crepScript.sml` `crep_vars` takes
--- `(varname # shape) list` with `varname` = `mlstring` (tracked by
--- `flapjack-pxn.18.3.5.8`, parent `flapjack-pxn.18.3.5.7.2`).
+    `crep_vars_def` (`pan_to_crepScript.sml:376-380`).  The Crepe function
+    interface exposes one consecutive slot for every flattened parameter word,
+    matching HOL's `GENLIST I (size_of_shape (Comb (MAP SND params)))` through
+    `List.range` and the production `Shape.shapeSize` fold. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port). Two carrier mismatches beyond a
+-- name representation: (1) `params : List (VarName × Shape)` uses `VarName` =
+-- `String`, while HOL takes `(varname # shape) list` with `varname` =
+-- `mlstring`; (2) the shape carrier is the production `Shape`
+-- (`named : StructName` = `String`) folded by the untagged `Shape.shapeSize`,
+-- not HOL's `shape` (`named : mlstring`) folded by `sizeOfShapeHOL`
+-- (`@[hol ... "size_of_shape_def"]`, `PanLang/Shape.lean`).  The
+-- `names_as_string` qualifier cannot cover the second difference, so the tag
+-- stays withdrawn.  No exact-carrier `crep_vars` exists yet; the faithful port
+-- is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
+-- Direct HOL-oracle-derived rows are exercised by `Test/CompileToCrepeParity.lean`
+-- (`crepVarsOracle`).  This production analogue remains useful to the executed
+-- compiler and is deliberately untagged.
 def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
   List.range (Shape.shapeSize (.comb (params.map Prod.snd)))
 

@@ -15,21 +15,27 @@
   (2026-09-25): the five HOL definitions
   (`cakeml/pancake/semantics/panSemScript.sml:396-449`) quantify the state
   component as a finite map `varname |-> v`, written with `FUPDATE`/`FLOOKUP`,
-  whereas `PanSemStateFiniteExact` carries a `HolFiniteMapExact` value (a
+  whereas `PanSemStateFiniteExact` carries a   `HolFiniteMapExact` value (a
   `lookup` function together with a `finiteSupport` proof).  `HolFiniteMapExact`
   is the reviewed *standard* Lean translation of HOL's finite map: it is closed,
   extensional (see `HolFiniteMapExact.ext`), and invertible with the
   finite-support subtype of the broad `PanSemStateExact` carrier (see
   `PanSemStateFiniteExact.ofExact` / `toExact` and the canonical witness
-  `holFmapAsFiniteSupportWitness`).  The representation is now recorded by the
+  `holFmapAsFiniteSupportWitness`).  The representation is recorded by the
   `@[hol ...]` qualifier `fmap_as_finite_support` implemented in
   `Flapjack/HolRef.lean` and enforced by `scripts/check-hol-refs.py`; it is a
   representation statement only and does not authorize changed quantifiers,
-  hypotheses, results, `BEq` side conditions, or word-model differences.  The
-  five `...HOLFinite` helpers remain untagged: each is still reviewed
-  case-by-case under `flapjack-pxn.18.3.7.1.3.1.1.2.4`.  The broad-carrier
-  helpers over `PanSemStateExact` (`StateExact.lean`) remain the
-  `documented_mismatch` analogues.
+  hypotheses, results, `BEq` side conditions, or word-model differences.
+
+  Four helper definitions have now passed their case-by-case review and carry
+  `@[hol ...]` with that qualifier: `decClockHOLFinite` (`dec_clock_def`),
+  `fixClockHOLFinite` (`fix_clock_def`), `lookupKvarHOLFinite` (`lookup_kvar_def`)
+  and `emptyLocalsHOLFinite` (`empty_locals_def`).  `setKvarHOLFinite` stays
+  untagged: HOL `set_kvar_def` routes through `set_var`/`set_global` whose bodies
+  are the canonical `HolFiniteMapExact.update`, while the Lean body builds the
+  update pointwise (no `LawfulBEq MlS`).  The broad-carrier helpers over
+  `PanSemStateExact` (`StateExact.lean`) remain the `documented_mismatch`
+  analogues.  Work tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.4`.
 
   Nothing here is tagged `@[hol]` yet: this is representation infrastructure for
   the exact-carrier rebuild tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`; the
@@ -147,6 +153,12 @@ theorem holFmapAsFiniteSupportWitness {width : Nat} {σ : Type} [NeZero width] :
   ⟨fun state h => toExact_ofExact state h, fun state => ofExact_toExact state⟩
 
 
+/-- HOL `dec_clock_def` (`cakeml/pancake/semantics/panSemScript.sml:441-444`):
+    `dec_clock s = s with clock := s.clock - 1`.  The body matches clause for
+    clause; the state carrier's four finite-map fields (`locals`, `globals`,
+    `code`, `eshapes`) are recorded by the `fmap_as_finite_support` qualifier. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "dec_clock_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def decClockHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) : PanSemStateFiniteExact width σ :=
   { state with clock := state.clock - 1 }
@@ -157,8 +169,13 @@ def decClockHOLFinite {width : Nat} {σ : Type} [NeZero width]
     state.decClockHOLFinite.toExact = decClockHOLExact state.toExact :=
   rfl
 
-/-- Finite-support mirror of `fixClockHOLExact`.  Untagged: the exact-carrier
-    retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+/-- HOL `fix_clock_def` (`cakeml/pancake/semantics/panSemScript.sml:446-449`):
+    `fix_clock old_s (res, new_s) = (res, new_s with clock := if old_s.clock <
+    new_s.clock then old_s.clock else new_s.clock)`.  The pair result and the
+    clamped clock match clause for clause; the four finite-map fields are
+    recorded by the `fmap_as_finite_support` qualifier. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "fix_clock_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def fixClockHOLFinite {width : Nat} {σ : Type} [NeZero width] {β : Type}
     (oldState : PanSemStateFiniteExact width σ)
     (step : β × PanSemStateFiniteExact width σ) :
@@ -174,8 +191,13 @@ def fixClockHOLFinite {width : Nat} {σ : Type} [NeZero width] {β : Type}
       (fixClockHOLExact oldState.toExact (step.1, step.2.toExact)).2 :=
   rfl
 
-/-- Finite-support mirror of `lookupKvarHOLExact`.  Untagged: the exact-carrier
-    retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+/-- HOL `lookup_kvar_def` (`cakeml/pancake/semantics/panSemScript.sml:415-420`):
+    `lookup_kvar vk v s = case vk of Local => FLOOKUP s.locals v | Global =>
+    FLOOKUP s.globals v`.  The two branches match; `HolFiniteMapExact.lookup` is
+    the standard Lean translation of `FLOOKUP` and the carrier's finite-map
+    fields are recorded by the `fmap_as_finite_support` qualifier. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "lookup_kvar_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def lookupKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (state : PanSemStateFiniteExact width σ) :
     Option (ValueHOL width) :=
@@ -192,8 +214,18 @@ def lookupKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
   cases kind <;> rfl
 
 /-- Finite-support mirror of `setKvarHOLExact`.  The updated component keeps a
-    finite support by consing the written key onto the old support.  Untagged:
-    the exact-carrier retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+    finite support by consing the written key onto the old support.
+
+    NOT tagged: HOL `set_kvar_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:408-413`) routes through
+    `set_var`/`set_global`, whose bodies are `s.locals |+ (v,value)` i.e. the
+    canonical `HolFiniteMapExact.update` (`FUPDATE`).  The Lean body instead
+    builds the updated map pointwise with an explicit `if current = name`, so it
+    is only propositionally equal to `HolFiniteMapExact.update`; the canonical
+    update-based body is unavailable because `MlS` does not provide
+    `[BEq MlS]`/`[LawfulBEq MlS]`.  Retagging therefore needs either
+    `setVarHOLFinite`/`setGlobalHOLFinite` with the canonical update or a
+    `LawfulBEq MlS` instance; tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 def setKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (kind : VarKind) (name : MlS) (value : ValueHOL width)
     (state : PanSemStateFiniteExact width σ) : PanSemStateFiniteExact width σ :=
@@ -232,8 +264,12 @@ def setKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
       setKvarHOLExact kind name value state.toExact := by
   cases kind <;> rfl
 
-/-- Finite-support mirror of `emptyLocalsHOLExact`.  Untagged: the exact-carrier
-    retag is tracked by `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+/-- HOL `empty_locals_def` (`cakeml/pancake/semantics/panSemScript.sml:437-439`):
+    `empty_locals s = s with locals := FEMPTY`.  The cleared `locals` is the
+    canonical empty finite map (`HolFiniteMapExact.empty`); the carrier's
+    finite-map fields are recorded by the `fmap_as_finite_support` qualifier. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "empty_locals_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) : PanSemStateFiniteExact width σ :=
   { state with

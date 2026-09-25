@@ -589,11 +589,13 @@ theorem evalPanValueFfiClockProg_decCall_projects_to_steps
     (contracts : Option PanValueCallContracts := none)
     (hcallClock : evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock none function
-      arguments (memoryAccess := memoryAccess) (contracts := contracts) =
+      arguments (memoryAccess := memoryAccess) (contracts := contracts)
+      (preserveReturnLocals := true) =
       some (.control (.returned callLocals callGlobals callMemory callFfi [value]), callClock))
     (hcallSteps : evalPanValueFfiCallSteps context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi none function
-      arguments (memoryAccess := memoryAccess) (contracts := contracts) =
+      arguments (memoryAccess := memoryAccess) (contracts := contracts)
+      (preserveReturnLocals := true) =
       some (.returned callLocals callGlobals callMemory callFfi [value], callSteps))
     (hshape : panShapeMatches (panValueShape structs value) shape = true)
     (hbodyClock : evalPanValueFfiClockProg context primitive handler structs functions

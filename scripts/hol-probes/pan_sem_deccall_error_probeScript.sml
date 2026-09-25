@@ -41,6 +41,18 @@ val errCode = ``FEMPTY |+ (strlit "f",
    panLang$Assign Local (strlit "q") (panLang$Const (7w:8 word)),
    panLang$One))``;
 
+(* A nested DecCall returns through the existing callee parameter p.  The
+   outer DecCall requests an incompatible result shape, so the post-state must
+   still expose p = 42.  This distinguishes preservation from empty locals. *)
+val nestedCode = ``FEMPTY |+ (strlit "bad",
+  ([(strlit "p", panLang$One)],
+   panLang$DecCall (strlit "p") panLang$One (strlit "id") []
+     (panLang$Return (panLang$Var Local (strlit "p"))),
+   panLang$One)) |+ (strlit "id",
+  ([] : (mlstring # panLang$shape) list,
+   panLang$Return (panLang$Const (7w:8 word)),
+   panLang$One))``;
+
 val baseState = ``(^s with <| clock := 5;
   locals := FEMPTY |+ (strlit "x", ValWord (3w:8 word));
   globals := FEMPTY;
@@ -50,6 +62,7 @@ val baseState = ``(^s with <| clock := 5;
   code := ^okCode |>)``;
 
 val errState = ``(^baseState with code := ^errCode)``;
+val nestedState = ``(^baseState with <| clock := 10; code := ^nestedCode |>)``;
 
 val _ = print_eval "deccall_ok_result"
   ``FST (panSem$evaluate
@@ -75,3 +88,15 @@ val _ = print_eval "deccall_missing_result"
   ``FST (panSem$evaluate
       (panLang$DecCall (strlit "r") panLang$One (strlit "g") []
         panLang$Skip, ^baseState))``;
+val _ = print_eval "nested_deccall_bad_shape_result"
+  ``FST (panSem$evaluate
+      (panLang$DecCall (strlit "answer") (panLang$Named (strlit "Other")) (strlit "bad")
+        [panLang$Const (42w:8 word)] panLang$Skip, ^nestedState))``;
+val _ = print_eval "nested_deccall_bad_shape_clock"
+  ``(SND (panSem$evaluate
+      (panLang$DecCall (strlit "answer") (panLang$Named (strlit "Other")) (strlit "bad")
+        [panLang$Const (42w:8 word)] panLang$Skip, ^nestedState))).clock``;
+val _ = print_eval "nested_deccall_bad_shape_parameter"
+  ``FLOOKUP (SND (panSem$evaluate
+      (panLang$DecCall (strlit "answer") (panLang$Named (strlit "Other")) (strlit "bad")
+        [panLang$Const (42w:8 word)] panLang$Skip, ^nestedState))).locals (strlit "p")``;

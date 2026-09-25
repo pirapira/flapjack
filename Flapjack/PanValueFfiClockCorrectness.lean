@@ -423,7 +423,7 @@ theorem evalPanValueFfiClockProg_decCall_timeout
     (nextMemory : α → Option (PanValue α)) (nextFfi : FfiState σ)
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-      none function arguments =
+      none function arguments (preserveReturnLocals := true) =
       some (.timeout (fun _ => none) nextGlobals nextMemory nextFfi, callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
       baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
@@ -450,7 +450,7 @@ theorem evalPanValueFfiClockProg_decCall_finalFfi
     (event : FfiFinalEvent)
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-      none function arguments =
+      none function arguments (preserveReturnLocals := true) =
       some (.control (.finalFfi nextLocals nextGlobals nextMemory nextFfi event),
         callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
@@ -483,7 +483,7 @@ theorem evalPanValueFfiClockProg_decCall_returned
     (value : PanValue α) (outcome : PanValueFfiClockOutcome α σ)
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-      none function arguments =
+      none function arguments (preserveReturnLocals := true) =
       some (.control (.returned calleeLocals nextGlobals nextMemory nextFfi [value]),
         callClock))
     (hshape : panShapeMatches (panValueShape structs value) shape = true)
@@ -520,7 +520,7 @@ theorem evalPanValueFfiClockProg_decCall_shape_mismatch
     (value : PanValue α)
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-      none function arguments =
+      none function arguments (preserveReturnLocals := true) =
       some (.control (.returned calleeLocals nextGlobals nextMemory nextFfi [value]),
         callClock))
     (hshape : panShapeMatches (panValueShape structs value) shape = false) :
@@ -551,7 +551,7 @@ theorem evalPanValueFfiClockProg_decCall_raised
     (exception : ExceptionId) (value : PanValue α)
     (hcall : evalPanValueFfiClockCall context primitive handler structs functions
       baseAddress topAddress bytesInWord fuel locals globals memory ffi clock
-      none function arguments =
+      none function arguments (preserveReturnLocals := true) =
       some (.control (.raised (fun _ => none) nextGlobals nextMemory nextFfi
         exception value), callClock)) :
     evalPanValueFfiClockProg context primitive handler structs functions
@@ -1247,10 +1247,12 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
         (function : FunName) (arguments : List (Exp α))
         (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
         (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+        (preserveReturnLocals : Bool)
         (outcome : PanValueFfiClockOutcome α σ) (resultClock : Nat),
         evalPanValueFfiClockCall context primitive handler structs functions baseAddress topAddress bytesInWord
           fuel locals globals memory ffi clock info function arguments
-          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler)
+          (preserveReturnLocals := preserveReturnLocals) =
           some (outcome, resultClock) → resultClock ≤ clock)
     ∧
     (∀ (fuel : Nat) (locals globals : VarName → Option (PanValue α)) (memory : α → Option (PanValue α))
@@ -1263,11 +1265,12 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
           (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
           some (outcome, resultClock) → resultClock ≤ clock) := by
   refine evalPanValueFfiClockCall.mutual_induct
-    (motive1 := fun fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler =>
+    (motive1 := fun fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler preserveReturnLocals =>
       ∀ outcome resultClock,
         evalPanValueFfiClockCall context primitive handler structs functions baseAddress topAddress bytesInWord
           fuel locals globals memory ffi clock info function arguments
-          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+          (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler)
+          (preserveReturnLocals := preserveReturnLocals) =
           some (outcome, resultClock) → resultClock ≤ clock)
     (motive2 := fun fuel locals globals memory ffi clock program memoryAccess contracts memoryHandler =>
       ∀ outcome resultClock,
@@ -1277,11 +1280,11 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
           some (outcome, resultClock) → resultClock ≤ clock)
     ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
   · -- case1: Call fuel 0
-    intro memoryAccess contracts memoryHandler locals globals memory ffi clock info function arguments outcome resultClock hrun
+    intro memoryAccess contracts memoryHandler preserveReturnLocals locals globals memory ffi clock info function arguments outcome resultClock hrun
     simp only [evalPanValueFfiClockCall] at hrun
     exact absurd hrun (by simp)
   · -- case2: Call fuel+1
-    intro fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler hbodyIH hhandlerIH outcome resultClock hrun
+    intro fuel locals globals memory ffi clock info function arguments memoryAccess contracts memoryHandler preserveReturnLocals hbodyIH hhandlerIH outcome resultClock hrun
     simp only [evalPanValueFfiClockCall, panValueCallArgumentsValue, panValueCallTarget] at hrun
     cases hvalues : evalPanValueExps structs locals globals memory baseAddress topAddress bytesInWord arguments
         (memoryAccess := memoryAccess) with
@@ -1487,7 +1490,8 @@ theorem evalPanValueFfiClock_clock_le (context : PanValueFfiContext α) (primiti
     simp only [evalPanValueFfiClockProg] at hrun
     cases hcall : evalPanValueFfiClockCall context primitive handler structs functions baseAddress topAddress
         bytesInWord fuel locals globals memory ffi clock none function arguments
-        (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) with
+        (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler)
+        (preserveReturnLocals := true) with
     | none => simp only [hcall, Option.bind_eq_bind, Option.bind_none] at hrun; exact absurd hrun (by simp)
     | some pair =>
       obtain ⟨callOutcome, nextClock⟩ := pair
@@ -1655,13 +1659,15 @@ theorem evalPanValueFfiClockCall_clock_le (context : PanValueFfiContext α)
     (function : FunName) (arguments : List (Exp α))
     (memoryAccess : Option (PanValueMemoryAccess α)) (contracts : Option PanValueCallContracts)
     (memoryHandler : Option (PanValueMemoryFfiHandler α σ))
+    (preserveReturnLocals : Bool)
     (outcome : PanValueFfiClockOutcome α σ) (resultClock : Nat)
     (hrun : evalPanValueFfiClockCall context primitive handler structs functions baseAddress topAddress
         bytesInWord fuel locals globals memory ffi clock info function arguments
-        (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler) =
+        (memoryAccess := memoryAccess) (contracts := contracts) (memoryHandler := memoryHandler)
+        (preserveReturnLocals := preserveReturnLocals) =
         some (outcome, resultClock)) : resultClock ≤ clock :=
   (evalPanValueFfiClock_clock_le context primitive handler structs functions baseAddress topAddress
     bytesInWord).1 fuel locals globals memory ffi clock info function arguments memoryAccess contracts
-    memoryHandler outcome resultClock hrun
+    memoryHandler preserveReturnLocals outcome resultClock hrun
 
 end Flapjack

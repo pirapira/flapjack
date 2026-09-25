@@ -1407,13 +1407,16 @@ where
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /- FLAPJACK-SPECIFIC (not an exact HOL port): clause-structured mirror of HOL
-    `panLang$free_var_ids` (`panLangScript.sml:347`). The expression helper is
-    the mirror of HOL `var_exp` preserving the local/global distinction; the
-    `Dec` filter uses `!=` (lawful String equality). The `@[hol]` tag is
-    WITHDRAWN because the result element type is `VarName := String`
-    (PanLang.lean:16) while HOL `varname` is `mlstring`
-    (`panLangScript.sml:27`); pending an MlString carrier
-    (bead `flapjack-pxn.18.3.5.8`). -/
+    `panLang$free_var_ids` (`panLangScript.sml:347`). The expression helper
+    mirrors HOL `var_exp`, and the `Dec` filter uses lawful String equality.
+    The `@[hol]` tag is WITHDRAWN for more than a name representation change:
+    HOL's input is a word-indexed `prog` with `mlstring` identifiers and its
+    result is `mlstring list`; this production function instead quantifies over
+    generic `Prog α`/`Exp α` with String-backed names and returns `List String`.
+    The `names_as_string` qualifier cannot account for the generic expression
+    and program carriers. Exact-carrier replacement is tracked by
+    `flapjack-pxn.18.3.5.8`; this analogue remains useful to the executed
+    compiler and is deliberately untagged. -/
 def freeVarIds : Prog α → List VarName
   | .dec name _ value body =>
       expLocalVars value ++ (freeVarIds body).filter (fun vname => vname != name)

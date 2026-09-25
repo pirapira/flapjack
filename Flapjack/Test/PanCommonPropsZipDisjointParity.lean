@@ -77,13 +77,41 @@ theorem fm_update_diff_vars_fixture :
       FUPDATE (FUPDATE FEMPTY (1, 10)) (2, 22) :=
   fm_update_diff_vars FEMPTY 1 2 10 20 22 (by decide)
 
+/-- HOL `all_distinct_take_frop_disjoint` (`pan_commonPropsScript.sml:534`). -/
+theorem all_distinct_take_frop_disjoint_fixture :
+    ListDisjoint (([1, 2, 3, 4] : List Nat).take 2) (([1, 2, 3, 4] : List Nat).drop 2) :=
+  all_distinct_take_frop_disjoint [1, 2, 3, 4] 2 (by decide) (by decide)
+
+/-- HOL `disjoint_not_mem_el` (`pan_commonPropsScript.sml:606`). -/
+theorem disjoint_not_mem_el_fixture :
+    ([1, 2] : List Nat)[0] ∉ ([3, 4] : List Nat) :=
+  disjoint_not_mem_el [1, 2] [3, 4] 0 (by simp [ListDisjoint]) (by decide)
+
+-- HOL `nmfz_absent = T` / `nmfz_hit = SOME 10`.
+def nmfzGuard : Bool :=
+  (FLOOKUP (FUPDATE_LIST FEMPTY (([1, 2] : List Nat).zip [10, 20])) 9 == none) &&
+    (FLOOKUP (FUPDATE_LIST FEMPTY (([1, 2] : List Nat).zip [10, 20])) 1 == some 10)
+
+def atddGuard : Bool :=
+  (([1, 2, 3, 4] : List Nat).take 2).all
+    (fun x => !decide (x ∈ (([1, 2, 3, 4] : List Nat).drop 2)))
+
+def takeDropElZipGuard : Bool := atddGuard && nmfzGuard
+
+#guard takeDropElZipGuard
+
+/-- HOL `not_mem_fst_zip_flookup_empty` (`pan_commonPropsScript.sml:575`). -/
+theorem not_mem_fst_zip_flookup_empty_fixture :
+    FLOOKUP (FUPDATE_LIST FEMPTY (([1, 2] : List Nat).zip [10, 20])) 9 = none :=
+  not_mem_fst_zip_flookup_empty [1, 2] [10, 20] 9 (by decide) (by decide) (by decide)
+
 def runChecks : IO Bool := do
-  if zipGuard && fmdvGuard then
+  if zipGuard && fmdvGuard && takeDropElZipGuard then
     IO.println
-      "PASS exact pan_commonProps zip fupdate not-mem, disjoint take/drop, and fm_update_diff_vars (9 HOL rows)"
+      "PASS exact pan_commonProps zip fupdate not-mem, disjoint take/drop, fm_update_diff_vars, take/drop suffix disjoint, EL disjoint, and empty zip lookup (14 HOL rows)"
     return true
   else
-    IO.println "FAIL exact pan_commonProps zip fupdate not-mem, disjoint take/drop, and fm_update_diff_vars"
+    IO.println "FAIL exact pan_commonProps zip fupdate not-mem, disjoint take/drop, fm_update_diff_vars, take/drop suffix disjoint, EL disjoint, and empty zip lookup"
     return false
 
 end Flapjack.Test.PanCommonPropsZipDisjointParity

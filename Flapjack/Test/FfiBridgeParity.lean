@@ -96,6 +96,27 @@ example : FfiResultRel (callFfi prodState (FfiName.extCall "f") [] [])
   callFfi_extCall_success_bridge prodState holState fixture_rel "f"
     (by decide) (by decide) [] [] 1 [] (by simp [prodState, prodOracle]) rfl
 
+/-- A shared-memory call that the oracle finalises agrees. -/
+example : FfiResultRel (callFfi prodFinalState (FfiName.sharedMem .mappedRead) [1] [2])
+    (callFFIHOL holFinalState (HolFfiName.sharedMem .mappedRead)
+      ([1].map byteToBits) ([2].map byteToBits)) :=
+  callFfi_sharedMem_oracleFinal_bridge prodFinalState holFinalState finalState_rel
+    .mappedRead .mappedRead (Or.inl ⟨rfl, rfl⟩) [1] [2] .failed rfl
+
+/-- A shared-memory call whose returned length differs agrees. -/
+example : FfiResultRel (callFfi prodState (FfiName.sharedMem .mappedWrite) [1] [2])
+    (callFFIHOL holState (HolFfiName.sharedMem .mappedWrite)
+      ([1].map byteToBits) ([2].map byteToBits)) :=
+  callFfi_sharedMem_lengthFailure_bridge prodState holState fixture_rel
+    .mappedWrite .mappedWrite (Or.inr ⟨rfl, rfl⟩) [1] [2] 1 [2, 2] rfl (by decide)
+
+/-- A shared-memory call whose returned length matches agrees. -/
+example : FfiResultRel (callFfi prodState (FfiName.sharedMem .mappedRead) [] [])
+    (callFFIHOL holState (HolFfiName.sharedMem .mappedRead) [] []) :=
+  callFfi_sharedMem_success_bridge prodState holState fixture_rel
+    .mappedRead .mappedRead (Or.inl ⟨rfl, rfl⟩) [] [] 1 []
+    (by simp [prodState, prodOracle]) rfl
+
 example : BytesPairRel ([(1 : UInt8), 2].zip [(3 : UInt8)])
     ([byteToBits 1, byteToBits 2].zip [byteToBits 3]) :=
   bytesPairRel_zip (bytesRel_map_byteToBits [1, 2]) (bytesRel_map_byteToBits [3])
@@ -104,7 +125,7 @@ example : FfiEventListRel ([] ++ []) ([] ++ []) :=
   ffiEventListRel_append (by trivial) (by trivial)
 
 def runChecks : IO Bool := do
-  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, success, append/zip)"
+  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, success, shared-mem, append/zip)"
   pure true
 
 end Flapjack.Test.FfiBridgeParity

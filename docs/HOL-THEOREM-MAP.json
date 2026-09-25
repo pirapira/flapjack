@@ -10298,6 +10298,22 @@
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.6; exact HOL panProps$is_wf_shape_of_v (panPropsScript.sml:38): !sctxt v. is_wf_shape_v sctxt v ==> is_wf_shape sctxt (shape_of v). Lean statement is `{width : Nat} [NeZero width] (context : StructContextExact) (value : ValueHOL width) (h : isWfShapeValueHOLExact context value = true) : isWfShapeExactHOL context (shapeOfHOLExact value) = true`, clause-for-clause over the exact isWfShapeValueHOLExact/isWfShapeExactHOL/shapeOfHOLExact carriers; no extra hypotheses; [NeZero width] represents HOL's positive word dimension. Direct HOL rows is_wf_shape_v_* in pan_structs_value_validity_probe.out and spv_* in pan_props_shape_res_var_probe.out; parity example in Flapjack/Test/PanPropsShapeOfWfParity.lean)"
   },
   {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "every_exp_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "everyExpHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.68; exact HOL panProps$every_exp (panPropsScript.sml:1311-1333). Lean `everyExpHOL {width : Nat} [NeZero width] (P : ExpHOL width → Bool) : ExpHOL width → Bool` transcribes all 16 HOL clauses in order (Const/Var/RStruct/RField/NStruct/NField/Load/Load32/LoadByte/Op/Panop/Cmp/Shift/BaseAddr/TopAddr/BytesInWord): each leaf `P(e)` is the conjoined `P e` and sub-expressions recurse; HOL `EVERY (every_exp P) es` is rendered by the structural helper everyExpListHOL and NStruct's `EVERY (every_exp P) (MAP SND nm_es)` by everyExpFieldListHOL, matching the isWfShapesExactHOL/EVERY convention. Carrier is the exact constructor-for-constructor `ExpHOL width` (tagged panLang$exp); [NeZero width] represents HOL's positive word dimension; no extra hypotheses. Source only, since no panLang every_exp probe exists; parity rows over ExpHOL 64 in Flapjack/Test/PanPropsEveryExpParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "exps_of_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "expsOfHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.69; exact HOL panProps$exps_of (panPropsScript.sml:1336-1358). Lean `expsOfHOL {width : Nat} [NeZero width] : ProgHOL width → List (ExpHOL width)` transcribes every HOL clause in order: Raise -> [e], Dec -> e :: exps_of p, Seq -> p ++ q, If -> e :: (exps_of p ++ exps_of q), While -> e :: exps_of p, Call NONE -> es, Call (SOME(_,SOME(_,_,ep))) -> es ++ exps_of ep, Call (SOME(_,NONE)) -> es, DecCall -> es ++ exps_of p, Store/Store32/StoreByte -> [e1,e2], Return -> [e], ExtCall -> [e1,e2,e3,e4], Assign -> [e], Primitive -> es, ShMemLoad -> [e], ShMemStore -> [e1,e2], and default -> []. Carriers are the exact `ProgHOL width`/`ExpHOL width`; [NeZero width] represents HOL's positive word dimension; no extra hypotheses. Source only, since no panLang exps_of probe exists; parity rows over ProgHOL 64 in Flapjack/Test/PanPropsExpsOfParity.lean)"
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/pan_commonPropsScript.sml",
     "hol_name": "flookup_fupdate_zip_not_mem",
     "lean_path": "Flapjack/Pancake/Semantics/PanCommonProps.lean",

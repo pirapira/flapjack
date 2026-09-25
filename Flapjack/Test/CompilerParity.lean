@@ -9,6 +9,8 @@ import Flapjack.Test.PanShapeVarsParity
 import Flapjack.Test.PanStructsCompileCorrect
 import Flapjack.Test.PanStructsValueValidityParity
 import Flapjack.Test.PanPropsShapeOfWfParity
+import Flapjack.Test.PanPropsEveryExpParity
+import Flapjack.Test.PanPropsExpsOfParity
 import Flapjack.Test.PanGetEidsParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.PanEvaluateDeclsParity

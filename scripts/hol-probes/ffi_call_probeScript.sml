@@ -66,3 +66,6 @@ val _ = print_eval "empty_extcall"
       (ffi$ExtCall «») [1w] [3w; 4w] of
       | ffi$FFI_return st bytes => (bytes, LENGTH st.io_events)
       | ffi$FFI_final _ => ([], 99)``;
+
+val _ = print_eval "extcall_name_explode" ``mlstring$explode «foo»``;
+val _ = print_eval "extcall_name_len" ``mlstring$strlen «foo»``;

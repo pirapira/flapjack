@@ -21,4 +21,17 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-- Replays the `empty` direct-HOL row (`resort_decls [] = []`). -/
+def emptyGuard : Bool :=
+  (globalResortDecls ([] : List (Decl Nat))).isEmpty
+
+#eval emptyGuard
+#guard emptyGuard
+
+def runChecks : IO Bool := do
+  IO.println (if parityGuard && emptyGuard then
+    "PASS pan_globals resort_decls_def parity (3 HOL rows)"
+    else "FAIL pan_globals resort_decls_def parity (3 HOL rows)")
+  pure (parityGuard && emptyGuard)
+
 end Flapjack.Test.PanGlobalsResortDeclsParity

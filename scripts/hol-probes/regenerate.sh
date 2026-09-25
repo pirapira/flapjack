@@ -1762,6 +1762,22 @@ run_probe pan_globals_fperm_decs_probeScript.sml pan_globals_fperm_decs_probe.ou
   "$cake_dir/pancake/pan_globalsScript.sml" \
   "$cake_dir/pancake"
 
+# The pan_globals resort_decls probe observes the declaration regrouping
+# `resort_decls ds` (pan_globalsScript.sml:179-182) for a mixed list, an
+# already-grouped list, and the empty list.
+run_probe pan_globals_resort_decls_probeScript.sml pan_globals_resort_decls_probe.out \
+  mixed empty \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
+# The pan_globals dec_shapes probe observes the shape projection
+# `dec_shapes ds` (pan_globalsScript.sml:228-233) for the empty list, a mixed
+# list, and a function-only list.
+run_probe pan_globals_dec_shapes_probeScript.sml pan_globals_dec_shapes_probe.out \
+  empty functions_only \
+  "$cake_dir/pancake/pan_globalsScript.sml" \
+  "$cake_dir/pancake"
+
 run_probe word_to_stack_stub_probeScript.sml word_to_stack_stub_probe.out \
   pcp_eq pcp_top "$cake_dir/compiler/backend/word_to_stackScript.sml" \
   "$cake_dir/compiler/backend"

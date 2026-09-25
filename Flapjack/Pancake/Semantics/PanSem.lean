@@ -21,7 +21,12 @@ source semantics.
 namespace Flapjack
 
 /-- HOL `panSem$empty_locals`: clear only the source state's local map. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "empty_locals_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `empty_locals`
+-- (`panSemScript.sml:74`) clears a `panSem$state` whose `locals` is
+-- `varname |-> v` with `varname = mlstring`, whereas this Lean state's
+-- `locals : VarName → Option (PanValue α)` is keyed by `VarName = String`.
+-- The tag is withheld until an exact MlString-keyed source state lands
+-- (tracked by `flapjack-pxn.18.3.5.8`, parent `flapjack-0lj`).
 def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
   { state with locals := fun _ => none }
 
@@ -33,7 +38,13 @@ def panEmptyLocals (state : PanSemState α ffi) : PanSemState α ffi :=
     fields` maps to `Named nm`, with fields ignored on both sides. The HOL
     definition has no premises or side conditions, and these three Lean cases
     have exactly the same behavior. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "shape_of_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `shape_of` returns the
+-- `mlstring`-named `panLang$shape`, whereas this Lean function returns the
+-- production `Shape` whose `Named` field is `StructName = String`
+-- (PanLang.lean aliases `stcname = ``:mlstring```). Constructor clauses match,
+-- but the codomain carrier differs, so the tag is withheld until the exact
+-- MlString-named `ShapeHOL` is routed here (tracked by `flapjack-pxn.18.3.5.8`,
+-- parent `flapjack-0lj`).
 def panSemShapeOf : PanValue α → Shape
   | .word _ => .one
   | .rStruct values => .comb (values.map panSemShapeOf)
@@ -89,10 +100,20 @@ def PanWordLab.toHolWordLab {width : Nat} : PanWordLab (BitVec width) → HolWor
 @[simp] theorem HolWordLab.toPanWordLab_word {width : Nat} (value : BitVec width) :
     (HolWordLab.word value).toPanWordLab = PanWordLab.word value := rfl
 
-/-- Statement-exact port of HOL `panSem$v` (`panSemScript.sml:22`,
+/-- Source-shaped port of HOL `panSem$v` (`panSemScript.sml:22`,
     `v = Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list) End`).
-    As with `HolWordLab`, the payload word is width-indexed. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "v"]
+    As with `HolWordLab`, the payload word is width-indexed. The HOL name
+    carriers `stcname`/`fldname` are `mlstring`, while Lean uses `String`, so
+    the datatype is not an exact HOL port and carries no `@[hol]` tag; see the
+    note below. -/
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `panSem$v`
+-- (`panSemScript.sml:22`) is
+-- `Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)`
+-- with `stcname`/`fldname` = `mlstring`, whereas this Lean `nStruct` carries
+-- `StructName`/`FieldName = String`. Constructor names/arities match, but the
+-- name carriers differ, so no tag is attached until an exact MlString-backed
+-- value datatype is introduced (tracked by `flapjack-pxn.18.3.5.8`, parent
+-- `flapjack-0lj`).
 inductive HolValue (width : Nat) where
   | val (value : HolWordLab width)
   | rStruct (fields : List (HolValue width))
@@ -2418,7 +2439,12 @@ def panSemCompileTopAdmissible : Decl α → Bool
     source exception map. The legacy runtime `functions` list is not used as a
     substitute for the source code map. Unlike `evalPanValueDeclarations`,
     this definition does no struct-name prepass: HOL's `Name` case is a no-op. -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "evaluate_decls_def"]
+-- FLAPJACK-SPECIFIC (not an exact HOL port): HOL `evaluate_decls` operates on
+-- a `panSem$state` whose `code`/`eshapes` are `mlstring`-keyed finite maps,
+-- whereas `PanSemDeclarationState` uses `InfoMap` lists keyed by
+-- `FunName`/`ExceptionId = String`. The clauses match but the key carrier
+-- differs, so the tag is withheld until an exact MlString-keyed state lands
+-- (tracked by `flapjack-pxn.18.3.5.8`, parent `flapjack-0lj`).
 def evaluateDecls
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

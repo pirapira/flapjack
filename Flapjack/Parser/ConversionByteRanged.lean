@@ -3,6 +3,7 @@ import Flapjack.Parser.Conversion
 import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.PanLang.Exp
 import Flapjack.Pancake.PanLang.Prog
+import Flapjack.Pancake.PanLang.Decl
 
 /-!
 Byte-rangedness of the concrete parse tree and of the first conversion step.
@@ -1584,6 +1585,456 @@ mutual
         exact ⟨shapeVal_byteRanged ofInt s (h s (by simp)),
           shapeVals_byteRanged ofInt ss (fun x hx => h x (by simp [hx]))⟩
 end
+
+set_option maxHeartbeats 8000000 in
+theorem convProg_convProgSeq_byteRanged {width : Nat} (ofInt : Int → BitVec width)
+    (locations : Bool) :
+    ∀ fuel,
+      (∀ tree, ParseTreeByteRanged tree → ∀ p, convProg ofInt locations fuel tree = some p →
+        ProgByteRanged p) ∧
+      (∀ trees, (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ p,
+        convProgSeq ofInt locations fuel trees = some p → ProgByteRanged p) := by
+  intro fuel
+  induction fuel using Nat.strongRecOn with
+  | ind n ih =>
+    cases n with
+    | zero =>
+      refine ⟨?_, ?_⟩
+      · intro tree ht p h
+        rw [convProg.eq_1] at h
+        simp at h
+      · intro trees ht p h
+        cases trees with
+        | nil => rw [convProgSeq.eq_1] at h; simp at h
+        | cons t ts =>
+          cases ts with
+          | nil =>
+            rw [convProgSeq.eq_2] at h
+            rw [convProg.eq_1] at h
+            simp at h
+          | cons u us =>
+            rw [convProgSeq.eq_3] at h
+            · cases hf : convProg ofInt locations 0 t with
+              | none => simp_all
+              | some first => rw [convProg.eq_1] at hf; simp at hf
+            · simp
+    | succ m =>
+      have ihP : ∀ tree, ParseTreeByteRanged tree → ∀ p,
+          convProg ofInt locations m tree = some p → ProgByteRanged p := (ih m (by omega)).1
+      have ihS : ∀ trees, (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ p,
+          convProgSeq ofInt locations m trees = some p → ProgByteRanged p := (ih m (by omega)).2
+      have hP : ∀ tree, ParseTreeByteRanged tree → ∀ p,
+          convProg ofInt locations (m + 1) tree = some p → ProgByteRanged p := by
+        intro tree ht p h
+        cases tree with
+        | lf token locs =>
+          simp only [convProg] at h
+          cases hc : convNonRecStmt ofInt m (ParseTree.lf token locs) with
+          | none => simp_all
+          | some q =>
+            simp only [hc, Option.map_some, Option.some.injEq] at h
+            subst h
+            exact addLocsAnnot_byteRanged locations (ParseTree.lf token locs)
+              (convNonRecStmt_byteRanged ofInt m (ParseTree.lf token locs) ht q hc)
+        | nd nt children locs' =>
+          have ht' : ∀ c ∈ children, ParseTreeByteRanged c := by
+            simpa [ParseTreeByteRanged] using ht
+          have hnonrec : ∀ tree, ParseTreeByteRanged tree → ∀ p,
+              (convNonRecStmt ofInt m tree).map (addLocsAnnot locations tree) = some p →
+                ProgByteRanged p := by
+            intro tree ht p h
+            cases hc : convNonRecStmt ofInt m tree with
+            | none => simp_all
+            | some q =>
+              simp only [hc, Option.map_some, Option.some.injEq] at h
+              subst h
+              exact addLocsAnnot_byteRanged locations tree
+                (convNonRecStmt_byteRanged ofInt m tree ht q hc)
+          cases nt
+          case nd.dec =>
+            cases children with
+            | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+            | cons a rest =>
+              cases rest with
+              | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+              | cons b rest2 =>
+                cases rest2 with
+                | cons c rest3 => simp only [convProg] at h; exact hnonrec _ ht p h
+                | nil =>
+                  simp only [convProg] at h
+                  cases hd : convDecForm ofInt m .dec a with
+                  | none => simp_all
+                  | some r =>
+                    obtain ⟨shape, name, value⟩ := r
+                    cases hb : convProg ofInt locations m b with
+                    | none => simp_all
+                    | some body =>
+                      simp [hd, hb] at h
+                      subst h
+                      obtain ⟨hshape, hname, hvalue⟩ := convDecForm_byteRanged ofInt m .dec a (ht' a (by simp)) _ hd
+                      apply addLocsAnnot_byteRanged
+                      exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using hname,
+                        hshape, hvalue, ihP b (ht' b (by simp)) body hb⟩
+          case nd.ifNT =>
+            cases children with
+            | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+            | cons a rest =>
+              cases rest with
+              | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+              | cons b rest2 =>
+                cases rest2 with
+                | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+                | cons c rest3 =>
+                  cases rest3 with
+                  | cons d rest4 => simp only [convProg] at h; exact hnonrec _ ht p h
+                  | nil =>
+                    simp only [convProg] at h
+                    cases hc : convExp ofInt m a with
+                    | none => simp_all
+                    | some condition =>
+                      cases hb : convProg ofInt locations m b with
+                      | none => simp_all
+                      | some thenBranch =>
+                        cases hb2 : convProg ofInt locations m c with
+                        | none => simp_all
+                        | some elseBranch =>
+                          simp [hc, hb, hb2] at h
+                          subst h
+                          apply addLocsAnnot_byteRanged
+                          exact ⟨convExp_byteRanged ofInt m a (ht' a (by simp)) _ hc,
+                            ihP b (ht' b (by simp)) thenBranch hb,
+                            ihP c (ht' c (by simp)) elseBranch hb2⟩
+          case nd.whileNT =>
+            cases children with
+            | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+            | cons a rest =>
+              cases rest with
+              | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+              | cons b rest2 =>
+                cases rest2 with
+                | cons c rest3 => simp only [convProg] at h; exact hnonrec _ ht p h
+                | nil =>
+                  simp only [convProg] at h
+                  cases hc : convExp ofInt m a with
+                  | none => simp_all
+                  | some condition =>
+                    cases hb : convProg ofInt locations m b with
+                    | none => simp_all
+                    | some body =>
+                      simp [hc, hb] at h
+                      subst h
+                      apply addLocsAnnot_byteRanged
+                      exact ⟨convExp_byteRanged ofInt m a (ht' a (by simp)) _ hc,
+                        ihP b (ht' b (by simp)) body hb⟩
+          case nd.decCall =>
+            cases children with
+            | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+            | cons a rest =>
+              cases rest with
+              | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+              | cons b rest2 =>
+                cases rest2 with
+                | cons c rest3 => simp only [convProg] at h; exact hnonrec _ ht p h
+                | nil =>
+                  simp only [convProg] at h
+                  cases hd : convDecCall ofInt m a with
+                  | none => simp_all
+                  | some r =>
+                    obtain ⟨shape, name, function, args⟩ := r
+                    cases hb : convProg ofInt locations m b with
+                    | none => simp_all
+                    | some body =>
+                      by_cases hf : function = addWithCarryName
+                      · simp [hd, hb, hf] at h
+                        subst h
+                        obtain ⟨hshape, hname, hfn, hargs⟩ := convDecCall_byteRanged ofInt m a (ht' a (by simp)) _ hd
+                        apply addLocsAnnot_byteRanged
+                        refine ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using hname,
+                          hshape, ?_, ?_⟩
+                        · exact shapeVal_byteRanged ofInt shape hshape
+                        · exact ⟨⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using hname,
+                            hargs⟩, ihP b (ht' b (by simp)) body hb⟩
+                      · simp [hd, hb, hf] at h
+                        subst h
+                        obtain ⟨hshape, hname, hfn, hargs⟩ := convDecCall_byteRanged ofInt m a (ht' a (by simp)) _ hd
+                        apply addLocsAnnot_byteRanged
+                        exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using hname,
+                          hshape, by simpa [NameRanged, StringByteRanged, CharsByteRanged] using hfn,
+                          hargs, ihP b (ht' b (by simp)) body hb⟩
+          case nd.handle =>
+            cases children with
+            | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+            | cons a rest =>
+              cases rest with
+              | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+              | cons b rest2 =>
+                cases rest2 with
+                | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+                | cons c rest3 =>
+                  cases rest3 with
+                  | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+                  | cons d rest4 =>
+                    cases rest4 with
+                    | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+                    | cons e rest5 =>
+                      cases rest5 with
+                      | cons f rest6 =>
+                        cases rest6 with
+                        | cons g rest7 => simp only [convProg] at h; exact hnonrec _ ht p h
+                        | nil =>
+                          simp only [convProg] at h
+                          cases hr : convRet a with
+                          | none => simp_all
+                          | some ret =>
+                            cases ret with
+                            | none => simp_all
+                            | some target =>
+                              cases hf : convIdent b with
+                              | none => simp_all
+                              | some function =>
+                                cases ha : convArgList ofInt m c with
+                                | none => simp_all
+                                | some args =>
+                                  cases hx : convIdent d with
+                                  | none => simp_all
+                                  | some exception =>
+                                    cases hbn : convIdent e with
+                                    | none => simp_all
+                                    | some bound =>
+                                      cases hbody : convProg ofInt locations m f with
+                                      | none => simp_all
+                                      | some handler =>
+                                        simp [hr, hf, ha, hx, hbn, hbody] at h
+                                        subst h
+                                        apply addLocsAnnot_byteRanged
+                                        refine ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' b (by simp)) hf,
+                                          convArgList_byteRanged ofInt m (fun g _ => convExp_byteRanged ofInt g) c (ht' c (by simp)) args ha, ?_⟩
+                                        cases target with
+                                        | none =>
+                                          refine ⟨trivial,
+                                            by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' d (by simp)) hx,
+                                            by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' e (by simp)) hbn,
+                                            ihP f (ht' f (by simp)) handler hbody⟩
+                                        | some vkpair =>
+                                          obtain ⟨vk, name⟩ := vkpair
+                                          refine ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using
+                                            convRet_byteRanged a (ht' a (by simp)) (some (some (vk, name))) hr vk name rfl,
+                                            by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' d (by simp)) hx,
+                                            by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' e (by simp)) hbn,
+                                            ihP f (ht' f (by simp)) handler hbody⟩
+                      | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+          case nd.call =>
+            cases children with
+            | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+            | cons a rest =>
+              cases rest with
+              | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+              | cons b rest2 =>
+                cases rest2 with
+                | cons c rest3 =>
+                  cases rest3 with
+                  | cons d rest4 => simp only [convProg] at h; exact hnonrec _ ht p h
+                  | nil =>
+                    simp only [convProg] at h
+                    cases hr : convRet a with
+                    | none => simp_all
+                    | some ret =>
+                      cases hf : convIdent b with
+                      | none => simp_all
+                      | some function =>
+                        cases ha : convArgList ofInt m c with
+                        | none => simp_all
+                        | some args =>
+                          by_cases hfn : function = addWithCarryName
+                          · simp [hr, hf, ha, hfn] at h
+                            cases ret with
+                            | none => simp_all
+                            | some t =>
+                              cases t with
+                              | none => simp_all
+                              | some vkname =>
+                                obtain ⟨vk, name⟩ := vkname
+                                simp only [Option.some.injEq] at h
+                                subst h
+                                apply addLocsAnnot_byteRanged
+                                refine ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using
+                                  convRet_byteRanged a (ht' a (by simp)) (some (some (vk, name))) hr vk name rfl,
+                                  convArgList_byteRanged ofInt m (fun g _ => convExp_byteRanged ofInt g) c (ht' c (by simp)) args ha⟩
+                          · simp [hr, hf, ha, hfn] at h
+                            subst h
+                            apply addLocsAnnot_byteRanged
+                            unfold ProgByteRanged
+                            refine ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using convIdent_byteRanged (ht' b (by simp)) hf,
+                              convArgList_byteRanged ofInt m (fun g _ => convExp_byteRanged ofInt g) c (ht' c (by simp)) args ha, ?_⟩
+                            cases ret with
+                            | none => exact trivial
+                            | some t =>
+                              cases t with
+                              | none => simp
+                              | some vkname =>
+                                obtain ⟨vk, name⟩ := vkname
+                                simp only [Option.map_some]
+                                exact ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using
+                                  convRet_byteRanged a (ht' a (by simp)) (some (some (vk, name))) hr vk name rfl, trivial⟩
+                | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+          case nd.prog =>
+            cases children with
+            | nil => simp only [convProg] at h; exact hnonrec _ ht p h
+            | cons first rest =>
+              simp only [convProg] at h
+              exact ihS (first :: rest) (fun t hmem => ht' t hmem) p h
+          all_goals (simp only [convProg] at h; exact hnonrec _ ht p h)
+      refine ⟨hP, ?_⟩
+      intro trees
+      induction trees with
+      | nil =>
+        intro ht p h
+        rw [convProgSeq.eq_1] at h
+        simp at h
+      | cons t ts ihT =>
+        cases ts with
+        | nil =>
+          intro ht p h
+          rw [convProgSeq.eq_2] at h
+          exact hP t (ht t (by simp)) p h
+        | cons u us =>
+          intro ht p h
+          rw [convProgSeq.eq_3] at h
+          · cases hf : convProg ofInt locations (m + 1) t with
+            | none => simp_all
+            | some first =>
+              cases hr : convProgSeq ofInt locations (m + 1) (u :: us) with
+              | none => simp_all
+              | some rest =>
+                simp [hf, hr] at h
+                subst h
+                exact ⟨hP t (ht t (by simp)) first hf,
+                  ihT (fun x hx => ht x (by simp [hx])) rest hr⟩
+          · simp
+
+theorem convProg_byteRanged {width : Nat} (ofInt : Int → BitVec width) (locations : Bool)
+    (fuel : Nat) :
+    ∀ tree, ParseTreeByteRanged tree → ∀ p, convProg ofInt locations fuel tree = some p →
+      ProgByteRanged p :=
+  (convProg_convProgSeq_byteRanged ofInt locations fuel).1
+
+theorem convProgSeq_byteRanged {width : Nat} (ofInt : Int → BitVec width) (locations : Bool)
+    (fuel : Nat) :
+    ∀ trees, (∀ t ∈ trees, ParseTreeByteRanged t) → ∀ p,
+      convProgSeq ofInt locations fuel trees = some p → ProgByteRanged p :=
+  (convProg_convProgSeq_byteRanged ofInt locations fuel).2
+
+theorem convTopDec_byteRanged {width : Nat} (ofInt : Int → BitVec width) (locations : Bool)
+    (fuel : Nat) :
+    ∀ tree, ParseTreeByteRanged tree → ∀ d, convTopDec ofInt locations fuel tree = some d →
+      DeclByteRanged d := by
+  intro tree ht decl h
+  unfold convTopDec at h
+  split at h
+  · rename_i inlineTree exportTree shapeTree nameTree paramsTree bodyTree hargs
+    cases hpl : paramsTree.argsNT .paramList with
+    | none => simp [hpl] at h
+    | some pchildren =>
+      cases hp : convParams fuel pchildren with
+      | none => simp [hpl, hp] at h
+      | some params =>
+        cases hb : convProg ofInt locations fuel bodyTree with
+        | none => simp [hpl, hp, hb] at h
+        | some body =>
+          cases hn : convIdent nameTree with
+          | none => simp [hpl, hp, hb, hn] at h
+          | some name =>
+            cases hi : convInline inlineTree with
+            | none => simp [hpl, hp, hb, hn, hi] at h
+            | some inline =>
+              cases he : convExport exportTree with
+              | none => simp [hpl, hp, hb, hn, hi, he] at h
+              | some exported =>
+                cases hs : convShape fuel shapeTree with
+                | none => simp [hpl, hp, hb, hn, hi, he, hs] at h
+                | some returnShape =>
+                  simp [hpl, hp, hb, hn, hi, he, hs] at h
+                  subst h
+                  refine ⟨?_, ?_, ?_, ?_⟩
+                  · simpa [NameRanged, StringByteRanged, CharsByteRanged]
+                      using convIdent_byteRanged
+                        (argsNT_byteRanged ht hargs nameTree (by simp)) hn
+                  · exact convParams_byteRanged fuel pchildren
+                      (argsNT_byteRanged
+                        (argsNT_byteRanged ht hargs paramsTree (by simp)) hpl) params hp
+                  · exact convProg_byteRanged ofInt locations fuel bodyTree
+                      (argsNT_byteRanged ht hargs bodyTree (by simp)) body hb
+                  · exact convShape_byteRanged fuel shapeTree
+                      (argsNT_byteRanged ht hargs shapeTree (by simp)) returnShape hs
+  · cases hd : convDecForm ofInt fuel .globalDec tree with
+    | none =>
+      simp only [hd] at h
+      cases hs : convStructName fuel tree with
+      | none =>
+        simp only [hs] at h
+        cases he : convExnDec fuel tree with
+        | none => simp [he] at h
+        | some r =>
+          simp only [he, Option.some.injEq] at h
+          subst h
+          obtain ⟨exception, shape⟩ := r
+          exact ⟨(convExnDec_byteRanged fuel tree ht _ he).1,
+            (convExnDec_byteRanged fuel tree ht _ he).2⟩
+      | some r =>
+        simp only [hs, Option.some.injEq] at h
+        subst h
+        obtain ⟨name, fields⟩ := r
+        exact ⟨(convStructName_byteRanged ht _ hs).1, (convStructName_byteRanged ht _ hs).2⟩
+    | some r =>
+      simp only [hd, Option.some.injEq] at h
+      subst h
+      obtain ⟨shape, name, value⟩ := r
+      exact ⟨(convDecForm_byteRanged ofInt fuel .globalDec tree ht _ hd).1,
+        (convDecForm_byteRanged ofInt fuel .globalDec tree ht _ hd).2.1,
+        (convDecForm_byteRanged ofInt fuel .globalDec tree ht _ hd).2.2⟩
+
+theorem convTopDecList_byteRanged {width : Nat} (ofInt : Int → BitVec width)
+    (locations : Bool) :
+    ∀ fuel, ∀ tree, ParseTreeByteRanged tree → ∀ ds,
+      convTopDecList ofInt locations fuel tree = some ds → ∀ d ∈ ds, DeclByteRanged d := by
+  intro fuel
+  induction fuel using Nat.strongRecOn with
+  | ind n ih =>
+    intro tree ht ds h d hd
+    cases n with
+    | zero => simp [convTopDecList] at h
+    | succ m =>
+      unfold convTopDecList at h
+      split at h
+      · -- some []
+        rename_i hargs
+        simp only [Option.some.injEq] at h
+        subst h
+        simp at hd
+      · -- some [itemTree, restTree]
+        rename_i itemTree restTree hargs
+        cases ha : destAnnotTok itemTree with
+        | some _ =>
+          simp [ha] at h
+          exact ih m (by omega) restTree
+            (argsNT_byteRanged ht hargs restTree (by simp)) ds h d hd
+        | none =>
+          cases hdec : convTopDec ofInt locations m itemTree with
+          | none => simp [ha, hdec] at h
+          | some dcl =>
+            cases hrest : convTopDecList ofInt locations m restTree with
+            | none => simp [ha, hdec, hrest] at h
+            | some restDecls =>
+              simp [ha, hdec, hrest] at h
+              subst h
+              rw [List.mem_cons] at hd
+              rcases hd with rfl | htail
+              · exact convTopDec_byteRanged ofInt locations m itemTree
+                  (argsNT_byteRanged ht hargs itemTree (by simp)) _ hdec
+              · exact ih m (by omega) restTree
+                  (argsNT_byteRanged ht hargs restTree (by simp)) restDecls hrest d htail
+      · -- no match
+        simp at h
 
 
 end Flapjack.Parser

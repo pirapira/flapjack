@@ -80,6 +80,29 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
         self.assertNotIn(key, MAP["tagged_declarations"]())
 
+    def test_crep_clock_and_locals_carrier_mismatches_are_documented(self):
+        inventory = {
+            (record["lean_path"], record["lean_name"]): record
+            for record in MAP["build_inventory"]()
+        }
+        expected = {
+            "decCrepHolClockW": "dec_clock_def",
+            "emptyCrepHolLocalsW": "empty_locals_def",
+            "fixCrepHolClock_IMP_LESS_EQW": "fix_clock_IMP_LESS_EQ",
+        }
+        for lean_name, hol_name in expected.items():
+            key = ("Flapjack/Pancake/Semantics/CrepSem.lean", lean_name)
+            with self.subTest(key=key):
+                record = inventory[key]
+                self.assertEqual(
+                    (record["hol_path"], record["hol_name"]),
+                    ("cakeml/pancake/semantics/crepSemScript.sml", hol_name),
+                )
+                self.assertEqual(record["statement_status"], "documented_mismatch")
+                self.assertIn("infinite", record["reviewer"])
+                self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
+                self.assertNotIn(key, MAP["tagged_declarations"]())
+
     def test_pan_empty_locals_definition_mismatch_is_in_review_inventory(self):
         key = (
             "Flapjack/Pancake/Semantics/PanSem.lean",

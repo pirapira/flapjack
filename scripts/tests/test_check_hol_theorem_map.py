@@ -53,9 +53,13 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             (record["lean_path"], record["lean_name"]): record
             for record in MAP["build_inventory"]()
         }
+        # compileProgTopHOL's String-keyed compile_prog_def tag was withdrawn
+        # (flapjack-pxn.18.3.5.7.2.10), so it is no longer a reviewed exact port.
+        self.assertNotIn(
+            ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"),
+            inventory,
+        )
         expected = {
-            ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"):
-                "compile_prog_def",
             ("Flapjack/Pancake/Proofs/PanToCrep.lean", "firstCompileProgAllDistinct"):
                 "first_compile_prog_all_distinct",
         }
@@ -122,25 +126,31 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
                     inventory[key]["reviewer"], "Codex (source comparison)"
                 )
 
-    def test_locals_rel_lookup_ctxt_is_in_review_inventory(self):
-        inventory = {
-            (record["lean_path"], record["lean_name"]): record
-            for record in MAP["build_inventory"]()
-        }
-        key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", "localsRelLookupCtxt")
-        self.assertEqual(inventory[key]["hol_name"], "locals_rel_lookup_ctxt")
-        self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
-        self.assertEqual(inventory[key]["reviewer"], "Codex (source comparison)")
+    def test_locals_rel_lookup_ctxt_is_documented_mismatch_not_exact(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(
+            r
+            for r in manifest
+            if r["lean_path"] == "Flapjack/Pancake/Proofs/PanToCrep.lean"
+            and r["lean_name"] == "localsRelLookupCtxt"
+        )
+        # The String-keyed locals_rel_lookup_ctxt tag was withdrawn
+        # (flapjack-pxn.18.3.5.7.2.12); the record stays as documented_mismatch.
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertEqual(record["hol_name"], "locals_rel_lookup_ctxt")
+        self.assertTrue(record["reviewer"])
 
-    def test_compile_exp_not_mem_load_glob_is_in_review_inventory(self):
-        inventory = {
-            (record["lean_path"], record["lean_name"]): record
-            for record in MAP["build_inventory"]()
-        }
-        key = ("Flapjack/Pancake/Proofs/PanToCrep.lean", "compileExpNotMemLoadGlob")
-        self.assertEqual(inventory[key]["hol_name"], "compile_exp_not_mem_load_glob")
-        self.assertEqual(inventory[key]["statement_status"], "reviewed_exact")
-        self.assertEqual(inventory[key]["reviewer"], "Codex (source comparison)")
+    def test_compile_exp_not_mem_load_glob_is_documented_mismatch_not_exact(self):
+        manifest = json.loads(MAP["DEFAULT_MANIFEST"].read_text())
+        record = next(
+            r
+            for r in manifest
+            if r["lean_path"] == "Flapjack/Pancake/Proofs/PanToCrep.lean"
+            and r["lean_name"] == "compileExpNotMemLoadGlob"
+        )
+        self.assertEqual(record["statement_status"], "documented_mismatch")
+        self.assertEqual(record["hol_name"], "compile_exp_not_mem_load_glob")
+        self.assertTrue(record["reviewer"])
 
 
 class ValidateInventoryTest(unittest.TestCase):

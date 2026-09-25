@@ -124,8 +124,63 @@ example : BytesPairRel ([(1 : UInt8), 2].zip [(3 : UInt8)])
 example : FfiEventListRel ([] ++ []) ([] ++ []) :=
   ffiEventListRel_append (by trivial) (by trivial)
 
+/-- Host-only oracle that returns the requested bytes unchanged. -/
+private def prodEchoOracle : FfiOracle Nat := fun _ state _ bytes => .returned (state + 1) bytes
+private def holEchoOracle : HolOracle Nat := fun _ state _ bytes => .ret (state + 1) bytes
+
+private def prodEchoState : FfiState Nat :=
+  { oracle := prodEchoOracle, state := 0, ioEvents := [] }
+
+private def holEchoState : HolFfiState Nat :=
+  { oracle := holEchoOracle, ffiState := 0, ioEvents := [] }
+
+/-- The echo pair satisfies the persistent state relation. -/
+theorem echoState_rel : FfiStateRel prodEchoState holEchoState := by
+  refine ⟨rfl, ?_, ?_⟩
+  · exact trivial
+  · intro _name _holName _hname _state _configuration _holConfiguration bytes holBytes _hconf hbytes
+    simp only [prodEchoState, holEchoState, prodEchoOracle, holEchoOracle]
+    exact ⟨rfl, hbytes⟩
+
+/-- Projection helpers mirroring the HOL `call_shmem_ok_*` oracle rows. -/
+private def shmemHost : Nat :=
+  match callFFIHOL holEchoState (HolFfiName.sharedMem .mappedRead)
+      ([7, 8].map byteToBits) ([1].map byteToBits) with
+  | .ret st _ => st.ffiState
+  | .final _ => 99
+
+private def shmemEvents : Nat :=
+  match callFFIHOL holEchoState (HolFfiName.sharedMem .mappedRead)
+      ([7, 8].map byteToBits) ([1].map byteToBits) with
+  | .ret st _ => st.ioEvents.length
+  | .final _ => 0
+
+private def shmemBytes : Nat :=
+  match callFFIHOL holEchoState (HolFfiName.sharedMem .mappedRead)
+      ([7, 8].map byteToBits) ([1].map byteToBits) with
+  | .ret _ bs => bs.length
+  | .final _ => 0
+
+/-- `call_shmem_ok_host`: the shared-memory call advances the host state. -/
+example : shmemHost = 1 := by simp [shmemHost, callFFIHOL, holEchoState, holEchoOracle]
+
+/-- `call_shmem_ok_events`: the shared-memory call appends one event. -/
+example : shmemEvents = 1 := by simp [shmemEvents, callFFIHOL, holEchoState, holEchoOracle]
+
+/-- `call_shmem_ok_bytes`: the returned byte list is the oracle output. -/
+example : shmemBytes = 1 := by simp [shmemBytes, callFFIHOL, holEchoState, holEchoOracle]
+
+/-- The shared-memory echo bridge holds for the same call. -/
+example : FfiResultRel (callFfi prodEchoState (FfiName.sharedMem .mappedRead)
+      [(7 : UInt8), 8] [(1 : UInt8)])
+    (callFFIHOL holEchoState (HolFfiName.sharedMem .mappedRead)
+      ([7, 8].map byteToBits) ([1].map byteToBits)) :=
+  callFfi_sharedMem_success_bridge prodEchoState holEchoState echoState_rel
+    .mappedRead .mappedRead (Or.inl ⟨rfl, rfl⟩) [(7 : UInt8), 8]
+    [(1 : UInt8)] 1 [(1 : UInt8)] rfl rfl
+
 def runChecks : IO Bool := do
-  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, success, shared-mem, append/zip)"
+  IO.println "PASS production FfiState / exact HolFfiState bridge fixtures (identity, final, length failure, success, shared-mem, shared-mem HOL rows, append/zip)"
   pure true
 
 end Flapjack.Test.FfiBridgeParity

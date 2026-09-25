@@ -1519,7 +1519,7 @@ run_probe pan_lexer_bytes_probeScript.sml pan_lexer_bytes_probe.out \
 # initial_ffi_state and the call_FFI cases (identity, success, length
 # failure, oracle final).
 run_probe ffi_state_carrier_probeScript.sml ffi_state_carrier_probe.out \
-  ffi_outcome_failed call_final_event \
+  ffi_outcome_failed call_shmem_final_event \
   "$cake_dir/semantics/ffi/ffiScript.sml" \
   "$cake_dir/semantics/ffi"
 

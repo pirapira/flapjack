@@ -381,14 +381,22 @@ def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
   | _ :: declarations => exceptionEntries declarations
 termination_by declarations => sizeOf declarations
 
-/- FLAPJACK-SPECIFIC (not an exact HOL port): executable mirror of
-    `panLang$functions` (`panLangScript.sml:319-328`), retaining every
+/- FLAPJACK-SPECIFIC (not an exact HOL port): clause-structured mirror of HOL
+    `panLang$functions` (`panLangScript.sml:319-326`), retaining every
     function's metadata while skipping value, exception, and struct
     declarations; the tuple order matches HOL (name, params, body, return
-    shape). The tag is WITHDRAWN because the result keys are
-    `FunName := String` / `VarName := String` (PanLang.lean:16-17) while HOL
-    `funname`/`varname` are `mlstring` (`panLangScript.sml:24,27`); an exact port
-    needs the MlString carrier (bead `flapjack-pxn.18.3.5.8`). -/
+    shape). The `@[hol]` tag is WITHDRAWN for more than a name representation
+    change: HOL's input is a `decl list` whose `Function` payload is
+    word-indexed (`'a prog` bodies, `mlstring` names, `shape` params/return) and
+    its result is `(mlstring # (mlstring # shape) list # 'a prog # shape)
+    list`; this production function instead quantifies over generic `Decl α`
+    with String-backed names and monomorphic `Shape`/`Prog α`. The
+    `names_as_string` qualifier cannot account for the generic expression and
+    program carriers. Direct HOL-EVAL rows are recorded in
+    `scripts/hol-probes/pan_lang_functions_probe.out` and reproduced by
+    `Flapjack/Test/PanLangFunctionsParity.lean`. Exact-carrier replacement is
+    tracked by `flapjack-pxn.18.3.5.8`; this analogue remains useful to the
+    executed compiler and is deliberately untagged. -/
 def functionEntries : List (Decl α) →
     List (FunName × List (VarName × Shape) × Prog α × Shape)
   | [] => []

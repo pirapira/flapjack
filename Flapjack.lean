@@ -58,6 +58,8 @@ import Flapjack.Pancake.Semantics.PanSem.IsValidValueExact
 import Flapjack.Pancake.Semantics.PanSem.DecExact
 import Flapjack.Pancake.Semantics.PanSem.AssignPrimitiveExact
 import Flapjack.Pancake.Semantics.PanSem.ReturnRaiseExact
+import Flapjack.Pancake.Semantics.PanSem.EvalExact
+import Flapjack.Pancake.Semantics.PanSem.StoreExact
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 import Flapjack.Pancake.Semantics.PanSem.ShMemExact
 import Flapjack.Pancake.Semantics.ByteAlignBridge

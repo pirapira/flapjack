@@ -60,4 +60,15 @@ example (code : CrepCodeMapExact 8)
         (Flapjack.Basis.Pure.MlString.toStringOfBytes fname) args len :=
   Flapjack.lookupCodeHOL_exactToProd code fname args len
 
+/-- Kernel-checked executed-path bridge at width 8: the executed
+`lookupCrepRuntimeCode` on the `codeMapExactToProd` image of an exact code map
+is exactly the image of the exact `lookupCodeHOL`. -/
+example (code : CrepCodeMapExact 8)
+    (fname : MlS) (values : List (BitVec 8)) (len : Nat) :
+    Flapjack.lookupCrepRuntimeCode (Flapjack.Basis.Pure.MlString.toStringOfBytes fname) values
+        (Flapjack.codeMapExactToProd code) =
+      (lookupCodeHOL code fname ((values.map PanWordLab.word).map PanWordLab.toHolWordLab) len).map
+        (fun result => (Flapjack.crepProgOfHOL result.1, mapFiniteMap HolWordLab.toPanWordLab result.2)) :=
+  Flapjack.lookupCrepRuntimeCode_exactImage code fname values len
+
 end Flapjack.Test.CrepLookupCodeHOLParity

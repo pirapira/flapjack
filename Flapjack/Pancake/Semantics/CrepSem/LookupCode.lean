@@ -18,7 +18,10 @@ faithful `MlString` key, the exact width-indexed `CrepProgHOL` code value
 The production `Flapjack.lookupCrepHolCode` uses Lean `String` keys,
 `CrepProg (BitVec width)`, and `PanWordLab`; the bridge
 `lookupCodeHOL_exactToProd` transports the exact result back along
-`crepProgOfHOL` and `HolWordLab.toPanWordLab`.
+`crepProgOfHOL` and `HolWordLab.toPanWordLab`. The executed-path bridge
+`lookupCrepRuntimeCode_exactImage` records that the runtime lookup on the
+induced production map is exactly that image, with the caveat that textual
+routing would require an `MlString`-keyed runtime code map.
 -/
 
 namespace Flapjack
@@ -147,5 +150,33 @@ theorem lookupCodeHOL_exactToProd {width : Nat} [NeZero width]
       simp only [List.length_map]
       by_cases hcond : parameters.length = args.length ∧ parameters.Nodup <;>
         simp [hcond, mapFiniteMap_FUPDATE_LIST, zip_holToPan]
+
+/-! ## Executed-path bridge
+
+The executed crepSem interpreter performs its code lookup through
+`Flapjack.lookupCrepRuntimeCode` (`CrepSem.lean`), which is keyed by the
+production `FunName = String` and consumes raw `BitVec width` argument values.
+A full textual route through `lookupCodeHOL` would require changing the runtime
+code map (`CrepRuntimeState.code` / `caller.code`) to the `MlString` key, which
+is a state-representation change touching the whole interpreter and its proof
+surface. The theorem below instead gives a kernel-checked bridge: on the
+production code map induced by an exact one (`codeMapExactToProd`), the executed
+lookup is exactly the image of the exact `lookupCodeHOL`. This establishes the
+executed path is bridge-equal to the reviewed exact carrier, with the documented
+caveat that routing is not textual. -/
+
+/-- Kernel-checked executed-path bridge: the runtime code lookup on the
+production map induced by an exact one returns exactly the `codeMapExactToProd`
+image of the exact `lookupCodeHOL` result. -/
+theorem lookupCrepRuntimeCode_exactImage {width : Nat} [NeZero width]
+    (code : CrepCodeMapExact width)
+    (fname : Flapjack.Basis.Pure.MlString.MlString)
+    (values : List (BitVec width)) (len : Nat) :
+    lookupCrepRuntimeCode (Flapjack.Basis.Pure.MlString.toStringOfBytes fname) values
+        (codeMapExactToProd code) =
+      (lookupCodeHOL code fname ((values.map PanWordLab.word).map PanWordLab.toHolWordLab) len).map
+        (fun result => (crepProgOfHOL result.1, mapFiniteMap HolWordLab.toPanWordLab result.2)) := by
+  rw [lookupCrepRuntimeCode_eq_lookupCrepHolCode]
+  exact (lookupCodeHOL_exactToProd code fname (values.map PanWordLab.word) len).symm
 
 end Flapjack

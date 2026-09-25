@@ -1,4 +1,5 @@
 import Flapjack.Parser.ByteRanged
+import Flapjack.Parser.ConversionByteRanged
 
 /-! Kernel checks for the byte-rangedness foundation (bead
     `flapjack-pxn.18.3.5.8.7.1`).  These are the reusable lemmas the parser
@@ -103,5 +104,12 @@ example : getKeyword "struct" = Token.keywordT Keyword.namedK := by decide
 example : getKeyword "" = Token.lexErrorT "Expected keyword, found empty string" := by
   decide
 example : getKeyword "@" = Token.identT "@" := by decide
+
+example (name : String) (h : StringByteRanged name) : StringByteRanged name :=
+  convIdent_byteRanged (parseTreeByteRanged_lf (token := .identT name) (locs := unknownLoc) h) rfl
+
+example (name : String) (h : StringByteRanged name) : StringByteRanged name :=
+  convFfiIdent_byteRanged (parseTreeByteRanged_lf (token := .foreignIdent name)
+    (locs := unknownLoc) h) rfl
 
 end Flapjack.Test.ParserByteRangedParity

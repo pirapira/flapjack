@@ -9,6 +9,61 @@ def compileContext : GlobalPassContext Nat :=
     bytesInWord := 1
     fromNat := id }
 
+/-- Canonical 8-bit Cake context for exercising the canonical `compileProgCake`
+    analogue directly against `pan_globals_compile_probe.out`. -/
+def compileProgCakeContext8 : CakeContext 8 where
+  globals := fun name =>
+    if name == "g" then some (.one, BitVec.ofNat 8 8) else none
+  globalsSize := BitVec.ofNat 8 1
+  maxGlobalsSize := BitVec.ofNat 8 16
+
+/-! These rows exercise `compileProgCake` itself, rather than only the
+production `globalCompileProg` path. They mirror the direct HOL-EVAL rows in
+`pan_globals_compile_probe.out`; the remaining carrier mismatch is recorded
+beside the declaration and in the theorem map. -/
+def compileProgCakeOracleGuard : Bool :=
+  (match compileProgCake compileProgCakeContext8
+      (.assign .local "x" (.const (BitVec.ofNat 8 7)) : Prog (BitVec 8)) with
+  | .assign .local "x" (.const value) => value == BitVec.ofNat 8 7
+  | _ => false) &&
+  (match compileProgCake compileProgCakeContext8
+      (.assign .global "g" (.const (BitVec.ofNat 8 7)) : Prog (BitVec 8)) with
+  | .store (.op .sub [.topAddr, .const address]) (.const value) =>
+      address == BitVec.ofNat 8 8 && value == BitVec.ofNat 8 7
+  | _ => false) &&
+  (match compileProgCake compileProgCakeContext8
+      (.assign .global "missing" (.const (BitVec.ofNat 8 7)) : Prog (BitVec 8)) with
+  | .skip => true
+  | _ => false) &&
+  (match compileProgCake compileProgCakeContext8
+      (.seq .skip (.return (.const (BitVec.ofNat 8 7))) : Prog (BitVec 8)) with
+  | .seq .skip (.return (.const value)) => value == BitVec.ofNat 8 7
+  | _ => false) &&
+  (match compileProgCake compileProgCakeContext8
+      (.return (.var .global "g") : Prog (BitVec 8)) with
+  | .return (.load .one (.op .sub [.topAddr, .const address])) =>
+      address == BitVec.ofNat 8 8
+  | _ => false) &&
+  (match compileProgCake compileProgCakeContext8
+      (.call (some (some (.global, "g"), some ("E", "handler", .skip))) "f" []
+        : Prog (BitVec 8)) with
+  | .dec "" .one (.const zero)
+      (.dec "vn'" .one (.const flagZero)
+        (.seq
+          (.call
+            (some (some (.local, ""), some ("E", "handler",
+              .seq .skip (.assign .local "vn'" (.const flagOne)))))
+            "f" [])
+          (.ite (.var .local "vn'") .skip
+            (.store (.op .sub [.topAddr, .const address])
+              (.var .local ""))))) =>
+      zero == BitVec.ofNat 8 0 && flagZero == BitVec.ofNat 8 0 &&
+        flagOne == BitVec.ofNat 8 1 && address == BitVec.ofNat 8 8
+  | _ => false)
+
+#eval compileProgCakeOracleGuard
+#guard compileProgCakeOracleGuard
+
 /-! Direct parity for `pan_globals$compile_def`
     (`pan_globalsScript.sml:69`). -/
 def parityGuard : Bool :=

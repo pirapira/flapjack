@@ -190,6 +190,8 @@ class ValidateInventoryTest(unittest.TestCase):
                 "cakeml/pancake/proofs/exampleProofScript.sml",
                 "example_theorem",
                 fields,
+                (),
+                (),
             )
         }
         record = self.record(
@@ -208,6 +210,8 @@ class ValidateInventoryTest(unittest.TestCase):
                 "cakeml/pancake/proofs/exampleProofScript.sml",
                 "example_theorem",
                 ("degrees",),
+                (),
+                (),
             )
         }
         exact = self.record(statement_status="reviewed_exact")
@@ -234,10 +238,105 @@ class ValidateInventoryTest(unittest.TestCase):
                     "cakeml/pancake/proofs/exampleProofScript.sml",
                     "example_theorem",
                     (),
+                    (),
+                    (),
                 )
             },
         )
         self.assertEqual(errors, [])
+
+    def test_reviewed_names_as_string_requires_matching_tag_and_source_review(self):
+        tagged = {
+            (self.path, "exampleTheorem"): (
+                "cakeml/pancake/proofs/exampleProofScript.sml",
+                "example_theorem",
+                (),
+                ("key",),
+                (),
+            )
+        }
+        reviewed = self.record(
+            statement_status="reviewed_names_as_string",
+            reviewer="Codex (HOL source review: key: equality/map-key-only)",
+            names_as_string=["key"],
+        )
+        self.assertEqual(
+            MAP["validate_inventory"](
+                [reviewed], {(self.path, "exampleTheorem")}, tagged
+            ),
+            [],
+        )
+
+        exact = self.record(
+            statement_status="reviewed_exact", names_as_string=["key"]
+        )
+        errors = MAP["validate_inventory"](
+            [exact], {(self.path, "exampleTheorem")}, tagged
+        )
+        self.assertTrue(any("use reviewed_names_as_string" in e for e in errors))
+
+        pending = self.record(
+            statement_status="pending_statement_review",
+            names_as_string=["key"],
+        )
+        errors = MAP["validate_inventory"](
+            [pending], {(self.path, "exampleTheorem")}, tagged
+        )
+        self.assertTrue(any("needs a reviewed source classification" in e for e in errors))
+
+        generic_review = {**reviewed, "reviewer": "Codex (reference inventory)"}
+        errors = MAP["validate_inventory"](
+            [generic_review], {(self.path, "exampleTheorem")}, tagged
+        )
+        self.assertTrue(any("source-review note" in e for e in errors))
+
+        unclassified = {**reviewed, "reviewer": "Codex (HOL source review: key use reviewed)"}
+        errors = MAP["validate_inventory"](
+            [unclassified], {(self.path, "exampleTheorem")}, tagged
+        )
+        self.assertTrue(any("must classify key as equality/map-key-only" in e for e in errors))
+
+        wrong_field = {**reviewed, "names_as_string": ["other"]}
+        errors = MAP["validate_inventory"](
+            [wrong_field], {(self.path, "exampleTheorem")}, tagged
+        )
+        self.assertTrue(any("names_as_string fields do not match" in e for e in errors))
+
+    def test_boundary_qualifier_must_be_reviewed_subset_and_match_manifest(self):
+        tagged = {
+            (self.path, "exampleTheorem"): (
+                "cakeml/pancake/proofs/exampleProofScript.sml",
+                "example_theorem",
+                (),
+                ("key", "generated"),
+                ("generated",),
+            )
+        }
+        record = self.record(
+            statement_status="reviewed_names_as_string",
+            reviewer=("Codex (HOL source review: key: equality/map-key-only; "
+                      "generated: byte-observable)"),
+            names_as_string=["key", "generated"],
+            names_as_string_boundary=["key"],
+        )
+        errors = MAP["validate_inventory"](
+            [record], {(self.path, "exampleTheorem")}, tagged
+        )
+        self.assertTrue(any("names_as_string_boundary fields do not match" in e
+                            for e in errors))
+
+        reviewed_boundary = {
+            **record,
+            "names_as_string_boundary": ["generated"],
+            "reviewer": ("Codex (HOL source review: key: equality/map-key-only; "
+                         "generated: byte-observable)"),
+        }
+        self.assertEqual(
+            MAP["validate_inventory"](
+                [reviewed_boundary], {(self.path, "exampleTheorem")}, tagged
+            ),
+            [],
+        )
 
     def test_missing_proofs_declaration_fails(self):
         errors = MAP["validate_inventory"](

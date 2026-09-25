@@ -38,6 +38,19 @@ DATA_DECLARATION_RE = re.compile(
 # inventory small and source-reviewed; a mismatch row is not generated merely
 # because an arbitrary Lean def happens to mention a HOL name.
 WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Pancake/Proofs/PanToCrep.lean", "tlc"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "tlc_def",
+        "flapjack-ds3 (bead flapjack-4ac.5.37): HOL tlc_def (2317-2319) returns a "
+        "finite map to 'a word_lab (flatten : 'a v -> 'a word_lab list), while Lean "
+        "tlc returns FiniteMap Nat alpha, i.e. the raw word payload with the "
+        "PanWordLab.word wrapper dropped; PanValue is explicitly not statement-exact "
+        "(.word stores alpha, not 'a word_lab). Keys agree (Nat/num) but the element "
+        "carrier mismatch is not authorized by any qualifier. Untagged tlcWordLab is "
+        "the PanWordLab-carrying analogue; faithful port tracked by flapjack-0lj "
+        "(word_lab) and flapjack-pxn.18.3.5.8 (MlString). Same-file slc stays untagged "
+        "for the String-vs-mlstring key mismatch (bead flapjack-4ac.5.36)."
+    ),
     ("Flapjack/Pancake/Semantics/PanSem.lean", "panEmptyLocals"): (
         "cakeml/pancake/semantics/panSemScript.sml",
         "empty_locals_def",
@@ -70,6 +83,23 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "the exact finite-map state carrier flapjack-pxn.18.3.7.1.3.1.1.2 (audit "
         "flapjack-pxn.18.3.7.1.3.1.2)."
     ),
+    ("Flapjack/Pancake/PanLang/Exp.lean", "globalVarExpHOL"): (
+        "cakeml/pancake/panLangScript.sml",
+        "global_var_exp_def",
+        "flapjack-ds6 (source comparison, bead flapjack-4ac.1.39): HOL "
+        "global_var_exp_def (panLangScript.sml:278-291) is a partially specified "
+        "recursive function: the exported theorem states exactly thirteen clauses, "
+        "and the generated global_var_exp_def_primitive stores `| Load32 v => ARB | "
+        "BaseAddr => ARB | TopAddr => ARB | BytesInWord => ARB`. A total Lean "
+        "function must choose values for those four constructors, so globalVarExpHOL "
+        "(exact ExpHOL/MlS carrier, the thirteen specified clauses verbatim, plus "
+        "`load32` recursion and `[]` for the three nullary address constructors, "
+        "matching production expGlobalVars) extends HOL's specification and cannot "
+        "be an exact port. Direct HOL-EVAL rows global_var/nested_global are in "
+        "pan_lang_var_exp_probe.out and replayed in Flapjack/Test/"
+        "PanLangVarExpParity.lean. The tag is withheld; ARB/partial rendering is "
+        "tracked by the child bead of flapjack-4ac.1.39."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem.lean", "resVarW"): (
         "cakeml/pancake/semantics/crepSemScript.sml",
         "res_var_def",
@@ -91,6 +121,18 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/PanLocalised.lean", "localisedProg"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "localised_prog_def",
+        "flapjack-ds4 (source comparison, bead flapjack-4ac.4.74; FLAPJACK-SPECIFIC, "
+        "documented_mismatch). HOL panProps$localised_prog (panPropsScript.sml:1380-1406) "
+        "is polymorphic over the 'a prog carrier whose identifiers are mlstring; this "
+        "definition is over the production Prog α carrier (PanLang.lean:316) whose "
+        "FunName/ExceptionId/StructName are Lean String. The @[hol] tag was withdrawn for "
+        "the carrier mismatch. Exact MlString/width-indexed port: localisedProgHOL over "
+        "ProgHOL width in Flapjack/Pancake/Semantics/PanProps.lean. Faithful replacement "
+        "depends on flapjack-pxn.18.3.5.8 (MlString carriers). "
+    ),
     ("Flapjack/Pancake/Proofs/PanStructs.lean", "fieldsInOrderReorderNoop"): (
         "cakeml/pancake/proofs/pan_structsProofScript.sml",
         "fields_in_order_reorder_noop",
@@ -811,6 +853,7 @@ VALID_STATUSES = {
     "reviewed_list_as_array",
     "reviewed_names_as_string",
     "reviewed_list_as_array_names_as_string",
+    "reviewed_fmap_as_finite_support",
     "pending_statement_review",
     "documented_mismatch",
     "no_hol_reference_pending_classification",
@@ -941,13 +984,14 @@ def tagged_declarations(
         rel = path.relative_to(root).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
         for (line, hol_path, hol_name, _hol_line, list_fields,
-             names_fields, boundary_fields) in HOL_ATTRIBUTE_SITES(lines):
+             names_fields, boundary_fields, fmap_fields) in HOL_ATTRIBUTE_SITES(lines):
             lean_name = FIND_LEAN_DECL(lines, line - 1)
             key = (rel, lean_name)
             # Source-line disambiguation is checked against the HOL script by
             # check-hol-refs.py. The inventory keys the declaration by its
             # stable HOL file/name pair, not by an editable source line.
-            value = (hol_path, hol_name, list_fields, names_fields, boundary_fields)
+            value = (hol_path, hol_name, list_fields, names_fields,
+                     boundary_fields, fmap_fields)
             if key in tagged and tagged[key] != value:
                 raise ValueError(f"conflicting @[hol] references for {rel}:{lean_name}")
             tagged[key] = value
@@ -959,7 +1003,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     tagged = tagged_declarations(root)
     inventory: dict[tuple[str, str], dict[str, Any]] = {}
     for (lean_path, lean_name), (
-        hol_path, hol_name, list_fields, names_fields, boundary_fields
+        hol_path, hol_name, list_fields, names_fields, boundary_fields, fmap_fields
     ) in tagged.items():
         entry = {
             "hol_path": hol_path,
@@ -975,6 +1019,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
             entry["names_as_string"] = list(names_fields)
         if boundary_fields:
             entry["names_as_string_boundary"] = list(boundary_fields)
+        if fmap_fields:
+            entry["fmap_as_finite_support"] = list(fmap_fields)
         inventory[(lean_path, lean_name)] = entry
 
     for lean_path, lean_name in proof_theorem_declarations(root):
@@ -1028,7 +1074,16 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isFunction"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isDecl"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "isWfShapeValueHOLExact_shapeOfHOLExact"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "panPrimopHOLExact_isWfShapeValueHOLExact"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "everyExpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "expsOfHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedExpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "namelessExpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "localisedProgHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
+        ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is
@@ -1080,14 +1135,16 @@ def validate_inventory(
 
         hol_path, hol_name = record["hol_path"], record["hol_name"]
         tag = tagged.get(key)
-        if tag is not None and len(tag) < 5:
-            tag = tag + ((),) * (5 - len(tag))
+        if tag is not None and len(tag) < 6:
+            tag = tag + ((),) * (6 - len(tag))
         list_fields = tag[2] if tag is not None else ()
         names_fields = tag[3] if tag is not None else ()
         boundary_fields = tag[4] if tag is not None else ()
+        fmap_fields = tag[5] if tag is not None else ()
         manifest_list_fields = tuple(record.get("list_as_array", ()))
         manifest_names_fields = tuple(record.get("names_as_string", ()))
         manifest_boundary_fields = tuple(record.get("names_as_string_boundary", ()))
+        manifest_fmap_fields = tuple(record.get("fmap_as_finite_support", ()))
         if manifest_list_fields != list_fields:
             errors.append(
                 f"{key[0]}:{key[1]}: manifest list_as_array fields do not match its @[hol] tag"
@@ -1099,6 +1156,10 @@ def validate_inventory(
         if manifest_boundary_fields != boundary_fields:
             errors.append(
                 f"{key[0]}:{key[1]}: manifest names_as_string_boundary fields do not match its @[hol] tag"
+            )
+        if manifest_fmap_fields != fmap_fields:
+            errors.append(
+                f"{key[0]}:{key[1]}: manifest fmap_as_finite_support fields do not match its @[hol] tag"
             )
         if not set(boundary_fields) <= set(names_fields):
             errors.append(
@@ -1129,6 +1190,21 @@ def validate_inventory(
         if not names_fields and status == "reviewed_names_as_string":
             errors.append(
                 f"{key[0]}:{key[1]}: reviewed_names_as_string needs a names_as_string @[hol] tag"
+            )
+        if fmap_fields and status == "reviewed_exact":
+            errors.append(
+                f"{key[0]}:{key[1]}: fmap_as_finite_support @[hol] tag cannot have reviewed_exact "
+                "status; use reviewed_fmap_as_finite_support after source comparison"
+            )
+        if fmap_fields and status != "reviewed_fmap_as_finite_support":
+            errors.append(
+                f"{key[0]}:{key[1]}: fmap_as_finite_support @[hol] tag needs a reviewed "
+                "source classification (reviewed_fmap_as_finite_support)"
+            )
+        if not fmap_fields and status == "reviewed_fmap_as_finite_support":
+            errors.append(
+                f"{key[0]}:{key[1]}: reviewed_fmap_as_finite_support needs a "
+                "fmap_as_finite_support @[hol] tag"
             )
         if list_fields and names_fields:
             if status == "reviewed_list_as_array" or status == "reviewed_names_as_string":

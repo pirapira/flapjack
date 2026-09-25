@@ -313,4 +313,97 @@ decreasing_by
       simp only [Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes fst hf,
         ih hs])
 
+/-! ### Exact `panLang$var_exp` -/
+
+/-- Exact port of HOL `panLang$var_exp` (`cakeml/pancake/panLangScript.sml:253-276`):
+collects the local variable names of an expression in source order, returning
+`mlstring` names.  `Var Local v` contributes `[v]`, `Var Global` nothing, and
+aggregating constructs concatenate the results of their sub-expressions
+(`FLAT (MAP var_exp …)` for `RStruct`/`NStruct`/`Op`/`Panop`, `++` for
+`Cmp`/`Shift`).  The production `expLocalVars` uses Lean `String` and is
+untagged. -/
+@[hol "cakeml/pancake/panLangScript.sml" "var_exp_def"]
+def varExpHOL {width : Nat} [NeZero width] : ExpHOL width → List MlS
+  | .const _ => []
+  | .var .local name => [name]
+  | .var .global _ => []
+  | .rstruct fields => (fields.map varExpHOL).flatten
+  | .rfield _ value => varExpHOL value
+  | .nstruct _ fields => (fields.map (fun pair => varExpHOL pair.2)).flatten
+  | .nfield _ value => varExpHOL value
+  | .load _ address => varExpHOL address
+  | .load32 address => varExpHOL address
+  | .loadByte address => varExpHOL address
+  | .op _ args => (args.map varExpHOL).flatten
+  | .panop _ args => (args.map varExpHOL).flatten
+  | .cmp _ left right => varExpHOL left ++ varExpHOL right
+  | .shift _ left right => varExpHOL left ++ varExpHOL right
+  | .baseAddr => []
+  | .topAddr => []
+  | .bytesInWord => []
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | (rename_i mem
+       have hlt := List.sizeOf_lt_of_mem mem
+       have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
+       omega)
+    | (rename_i elem mem
+       have hlt := List.sizeOf_lt_of_mem mem
+       omega)
+
+/-! ### `panLang$global_var_exp` (specified fragment; no exact tag) -/
+
+/-- Exact-carrier counterpart of HOL `panLang$global_var_exp`
+(`cakeml/pancake/panLangScript.sml:278-291`), collecting global variable names
+in source order.  This mirrors the thirteen clauses HOL actually states:
+`Var Global v` contributes `[v]`, `Var Local`/`Const` nothing, and the
+aggregating constructs concatenate recursively.
+
+FLAPJACK-SPECIFIC (not an exact HOL port).  HOL's `global_var_exp_def` is a
+partial pattern match: `Load32`, `BaseAddr`, `TopAddr` and `BytesInWord` are
+unspecified (`ARB`) in HOL --- the generated `global_var_exp_def_primitive`
+stores `| Load32 v => ARB | BaseAddr => ARB | TopAddr => ARB | BytesInWord =>
+ARB`, and the exported `global_var_exp_def` theorem contains only the thirteen
+clauses above.  A total Lean function must choose values for those four
+constructors, so `globalVarExpHOL` extends HOL's specification (it recurses on
+`Load32` and returns `[]` on the three nullary address constructors, matching
+production `expGlobalVars`).  The tag is therefore withheld; the exact HOL
+clause fragment agrees, but the ARB cases have no HOL equation to port.  ARB /
+partial rendering is tracked by the child bead of `flapjack-4ac.1.39`. -/
+def globalVarExpHOL {width : Nat} [NeZero width] : ExpHOL width → List MlS
+  | .const _ => []
+  | .var .local _ => []
+  | .var .global name => [name]
+  | .rstruct fields => (fields.map globalVarExpHOL).flatten
+  | .rfield _ value => globalVarExpHOL value
+  | .nstruct _ fields => (fields.map (fun pair => globalVarExpHOL pair.2)).flatten
+  | .nfield _ value => globalVarExpHOL value
+  | .load _ address => globalVarExpHOL address
+  | .load32 address => globalVarExpHOL address
+  | .loadByte address => globalVarExpHOL address
+  | .op _ args => (args.map globalVarExpHOL).flatten
+  | .panop _ args => (args.map globalVarExpHOL).flatten
+  | .cmp _ left right => globalVarExpHOL left ++ globalVarExpHOL right
+  | .shift _ left right => globalVarExpHOL left ++ globalVarExpHOL right
+  | .baseAddr => []
+  | .topAddr => []
+  | .bytesInWord => []
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | (rename_i mem
+       have hlt := List.sizeOf_lt_of_mem mem
+       have hsnd : sizeOf pair.snd < sizeOf pair := by cases pair; simp +arith
+       omega)
+    | (rename_i elem mem
+       have hlt := List.sizeOf_lt_of_mem mem
+       omega)
+
 end Flapjack.Pancake.PanLang

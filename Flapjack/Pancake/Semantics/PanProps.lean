@@ -56,7 +56,33 @@ mutual
       that the production representation is the same HOL interface. Lean
       `StructInfo` also has an additional `shapedFields` cache absent from HOL.
       The separate Prop-valued convenience predicate in CompileCorrect is
-      further from the HOL Bool statement. -/
+      further from the HOL Bool statement.
+
+      Executable-path disposition (bead `flapjack-4ac.4.4.1`): this value-level
+      predicate has no call site on the executable compiler path. The RISC-V
+      entrypoints (`compileFlapjackRiscVSourceRuntimeImageChecked` and siblings
+      in `Flapjack/RiscV/PipelineDiagnostics.lean`) run `staticCheck`
+      (`Flapjack/Pancake/PanStatic.lean:1794`), which checks declared shapes
+      (`isWfShape`/`checkShape`/`shapedBased...`), not runtime value validity.
+      `panIsWfShapeValueBool` occurs only as a proof-side precondition
+      (`panStructEveryValueShapeWfBool`,
+      `Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean:614`) over
+      locals/globals, and the kernel-checked `panIsWfShapeValueHOL_toHOL`
+      already connects it to the HOL-shaped `panIsWfShapeValueHOL`. The
+      remaining gap to the exact `isWfShapeValueHOLExact` is the carrier
+      (`String`/`StructContextHOL` vs `MlStringHOL`/`StructContextExact`),
+      tracked by bead `flapjack-pxn.18.3.5.8`.
+
+      The HOL side is also proof-only: a repository-wide search of the
+      read-only CakeML/Pancake sources finds `panProps$is_wf_shape_v` only in
+      `cakeml/pancake/semantics/panPropsScript.sml` (its own definition and
+      proof lemmas such as `is_wf_shape_of_v`, `mem_load_is_wf_shape_v`,
+      `eval_is_wf_shape_v`, `pan_primop_is_wf_shape_v`) and in
+      `cakeml/pancake/proofs/*ProofScript.sml`; no executable Pancake compile
+      script (`pan_to_crepScript.sml`, `pan_globalsScript.sml`, ...) calls it.
+      So there is no production call site on the HOL side either, and this
+      child bead is closed as a documented no-production-callsite disposition;
+      the exact tagged port `isWfShapeValueHOLExact` remains `reviewed_exact`. -/
   def panIsWfShapeValueBool (structs : StructContext) : PanValue α → Bool
     | .word _ => true
     | .rStruct values => panIsWfShapeValuesBool structs values
@@ -154,6 +180,241 @@ mutual
   termination_by values => sizeOf values
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
+
+/-- Untagged support: the exact value-level well-formedness predicate implies
+    that the exact `shape_of` image is well-formed (`is_wf_shape_of_v`
+    `panPropsScript.sml:38`). -/
+private theorem isWfShapeValueHOLExact_shapeOf_val {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (value : ValueHOL width) :
+    isWfShapeValueHOLExact context value = true →
+      Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = true := by
+  induction value using isWfShapeValueHOLExact.induct
+    (motive2 := fun values =>
+      isWfShapeValuesHOLExact context values = true →
+        Flapjack.Pancake.PanLang.isWfShapesExactHOL context (values.map shapeOfHOLExact) = true) with
+  | case1 value =>
+      simp [shapeOfHOLExact]
+  | case2 values ih =>
+      intro h
+      simp only [isWfShapeValueHOLExact.eq_2] at h
+      simpa [shapeOfHOLExact, Flapjack.Pancake.PanLang.isWfShapeExactHOL] using ih h
+  | case3 name fields _ =>
+      simp only [isWfShapeValueHOLExact.eq_3, Bool.and_eq_true]
+      intro h
+      simpa [shapeOfHOLExact, Flapjack.Pancake.PanLang.isWfShapeExactHOL] using h.1
+  | case4 =>
+      rfl
+  | case5 value values ihValue ihValues =>
+      rename_i h
+      have hp : isWfShapeValueHOLExact context value = true ∧
+          isWfShapeValuesHOLExact context values = true := by
+        simpa [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true] using h
+      simp only [List.map_cons, Flapjack.Pancake.PanLang.isWfShapesExactHOL.eq_2,
+        Bool.and_eq_true]
+      exact ⟨ihValue hp.1, ihValues hp.2⟩
+
+/-- Exact port of HOL `panProps$is_wf_shape_of_v`
+    (`panPropsScript.sml:38`): `!sctxt v. is_wf_shape_v sctxt v ==>
+    is_wf_shape sctxt (shape_of v)`, over the exact `ValueHOL width` value
+    carrier and MlString-keyed `StructContextExact` context.  The Bool-valued
+    predicates are rendered as `= true`, matching the accepted
+    `flattenHOL_length_eq_sizeOfShapeHOL` style; no extra hypotheses. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_of_v"]
+theorem isWfShapeValueHOLExact_shapeOfHOLExact {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (value : ValueHOL width)
+    (h : isWfShapeValueHOLExact context value = true) :
+    Flapjack.Pancake.PanLang.isWfShapeExactHOL context (shapeOfHOLExact value) = true :=
+  isWfShapeValueHOLExact_shapeOf_val context value h
+
+/-- Exact port of HOL `panProps$pan_primop_is_wf_shape_v`
+    (`cakeml/pancake/semantics/panPropsScript.sml:162`):
+    `!sctxt pop args value. pan_primop pop args = SOME value ==>
+    is_wf_shape_v sctxt value`.  Both `pan_primop` and `is_wf_shape_v` are the
+    already-reviewed exact ports `panPrimopHOLExact` and
+    `isWfShapeValueHOLExact` over `ValueHOL width`; the Bool predicate is
+    rendered as `= true`, matching the accepted port style. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "pan_primop_is_wf_shape_v"]
+theorem panPrimopHOLExact_isWfShapeValueHOLExact {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (operator : PrimOp)
+    (values : List (ValueHOL width)) (value : ValueHOL width)
+    (h : panPrimopHOLExact operator values = some value) :
+    isWfShapeValueHOLExact context value = true := by
+  unfold panPrimopHOLExact at h
+  split at h
+  · simp only [Option.some.injEq] at h
+    subst value
+    simp only [isWfShapeValueHOLExact.eq_1, isWfShapeValueHOLExact.eq_2,
+      isWfShapeValuesHOLExact.eq_1, isWfShapeValuesHOLExact.eq_2]
+    rfl
+  · simp at h
+
+/-! Exact port of HOL `panProps$every_exp` (`panPropsScript.sml:1311-1333`) and
+    `panProps$exps_of` (`panPropsScript.sml:1336-1358`) over the exact
+    MlString/width-indexed `ExpHOL width`/`ProgHOL width` carriers.
+
+    `every_exp P e` conjoins the leaf predicate `P` on `e` with the recursive
+    predicate on its immediate sub-expressions; the HOL `EVERY` folds are
+    rendered as the structural helpers `everyExpListHOL` (for `exp list`) and
+    `everyExpFieldListHOL` (for the `MAP SND` field list of `NStruct`), matching
+    the `isWfShapesExactHOL` convention.  `exps_of` returns the list of all
+    expressions occurring in a program, mirroring the HOL clauses in order. -/
+mutual
+  /-- Exact port of HOL `panProps$every_exp`. -/
+  @[hol "cakeml/pancake/semantics/panPropsScript.sml" "every_exp_def"]
+  def everyExpHOL {width : Nat} [NeZero width]
+      (P : Flapjack.Pancake.PanLang.ExpHOL width → Bool) :
+      Flapjack.Pancake.PanLang.ExpHOL width → Bool
+    | .const w => P (.const w)
+    | .var vk v => P (.var vk v)
+    | .rstruct es => P (.rstruct es) && everyExpListHOL P es
+    | .rfield i e => P (.rfield i e) && everyExpHOL P e
+    | .nstruct nm nm_es => P (.nstruct nm nm_es) && everyExpFieldListHOL P nm_es
+    | .nfield i e => P (.nfield i e) && everyExpHOL P e
+    | .load sh e => P (.load sh e) && everyExpHOL P e
+    | .load32 e => P (.load32 e) && everyExpHOL P e
+    | .loadByte e => P (.loadByte e) && everyExpHOL P e
+    | .op bop es => P (.op bop es) && everyExpListHOL P es
+    | .panop op es => P (.panop op es) && everyExpListHOL P es
+    | .cmp c e1 e2 => P (.cmp c e1 e2) && everyExpHOL P e1 && everyExpHOL P e2
+    | .shift sh e1 e2 => P (.shift sh e1 e2) && everyExpHOL P e1 && everyExpHOL P e2
+    | .baseAddr => P .baseAddr
+    | .topAddr => P .topAddr
+    | .bytesInWord => P .bytesInWord
+
+  /- `EVERY (every_exp P) es` over an exact expression list. -/
+  def everyExpListHOL {width : Nat} [NeZero width]
+      (P : Flapjack.Pancake.PanLang.ExpHOL width → Bool) :
+      List (Flapjack.Pancake.PanLang.ExpHOL width) → Bool
+    | [] => true
+    | e :: es => everyExpHOL P e && everyExpListHOL P es
+
+  /- `EVERY (every_exp P) (MAP SND nm_es)` over a field list. -/
+  def everyExpFieldListHOL {width : Nat} [NeZero width]
+      (P : Flapjack.Pancake.PanLang.ExpHOL width → Bool) :
+      List (MlS × Flapjack.Pancake.PanLang.ExpHOL width) → Bool
+    | [] => true
+    | (_, e) :: es => everyExpHOL P e && everyExpFieldListHOL P es
+end
+
+/-- Exact port of HOL `panProps$exps_of`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "exps_of_def"]
+def expsOfHOL {width : Nat} [NeZero width] :
+    Flapjack.Pancake.PanLang.ProgHOL width → List (Flapjack.Pancake.PanLang.ExpHOL width)
+  | .raise _ e => [e]
+  | .dec _ _ e p => e :: expsOfHOL p
+  | .seq p q => expsOfHOL p ++ expsOfHOL q
+  | .ite e p q => e :: (expsOfHOL p ++ expsOfHOL q)
+  | .while e p => e :: expsOfHOL p
+  | .call none _ es => es
+  | .call (some (_, some (_, _, ep))) _ es => es ++ expsOfHOL ep
+  | .call (some (_, none)) _ es => es
+  | .decCall _ _ _ es p => es ++ expsOfHOL p
+  | .store e1 e2 => [e1, e2]
+  | .store32 e1 e2 => [e1, e2]
+  | .storeByte e1 e2 => [e1, e2]
+  | .return e => [e]
+  | .extCall _ e1 e2 e3 e4 => [e1, e2, e3, e4]
+  | .assign _ _ e => [e]
+  | .primitive _ _ es => es
+  | .shMemLoad _ _ _ e => [e]
+  | .shMemStore _ e1 e2 => [e1, e2]
+  | _ => []
+
+/-- Exact port of HOL `panProps$localised_exp` (`panPropsScript.sml:1362-1364`)
+    over the MlString/width-indexed `ExpHOL width` carrier.
+
+    HOL defines `localised_exp = every_exp (\e. case e of Var tp _ => tp = Local
+    | _ => T)`, so the only rejecting pattern is a variable with a global
+    destination. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_exp_real_def"]
+def localisedExpHOL {width : Nat} [NeZero width] :
+    Flapjack.Pancake.PanLang.ExpHOL width → Bool :=
+  everyExpHOL (fun e =>
+    match e with
+    | .var .local _ => true
+    | .var .global _ => false
+    | _ => true)
+
+/-- Exact port of HOL `panProps$nameless_exp` (`panPropsScript.sml:1371-1373`)
+    over the MlString/width-indexed `ExpHOL width` carrier.
+
+    HOL defines `nameless_exp = every_exp (\e. case e of NStruct _ _ => F |
+    NField _ _ => F | _ => T)`, so structural name introduction is rejected. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "nameless_exp_real_def"]
+def namelessExpHOL {width : Nat} [NeZero width] :
+    Flapjack.Pancake.PanLang.ExpHOL width → Bool :=
+  everyExpHOL (fun e =>
+    match e with
+    | .nstruct _ _ => false
+    | .nfield _ _ => false
+    | _ => true)
+
+/-- Exact port of HOL `panProps$localised_prog` (`panPropsScript.sml:1380-1406`)
+    over the MlString/width-indexed `ProgHOL width` carrier, clause for clause.
+
+    HOL's `EVERY localised_exp args` folds are rendered as
+    `everyExpListHOL localisedExpHOL`; `localised_exp` is the exact
+    `localisedExpHOL` defined above. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_prog_def"]
+def localisedProgHOL {width : Nat} [NeZero width] :
+    Flapjack.Pancake.PanLang.ProgHOL width → Bool
+  | .skip | .break | .continue | .tick | .annot _ _ => true
+  | .dec _ _ value body => localisedExpHOL value && localisedProgHOL body
+  | .seq first second => localisedProgHOL first && localisedProgHOL second
+  | .ite condition thenBranch elseBranch =>
+      localisedExpHOL condition && localisedProgHOL thenBranch &&
+        localisedProgHOL elseBranch
+  | .while condition body => localisedExpHOL condition && localisedProgHOL body
+  | .store address value | .store32 address value | .storeByte address value
+  | .shMemStore _ address value => localisedExpHOL address && localisedExpHOL value
+  | .extCall _ configuration configurationLength array arrayLength =>
+      localisedExpHOL configuration && localisedExpHOL configurationLength &&
+        localisedExpHOL array && localisedExpHOL arrayLength
+  | .raise _ value | .return value => localisedExpHOL value
+  | .shMemLoad _ .local _ address => localisedExpHOL address
+  | .shMemLoad _ .global _ _ => false
+  | .call info _ arguments =>
+      everyExpListHOL localisedExpHOL arguments &&
+        (match info with
+         | some (_, some (_, _, handler)) => localisedProgHOL handler
+         | _ => true) &&
+        (match info with
+         | some (some (.global, _), _) => false
+         | _ => true)
+  | .decCall _ _ _ arguments body =>
+      everyExpListHOL localisedExpHOL arguments && localisedProgHOL body
+  | .assign .local _ value => localisedExpHOL value
+  | .assign .global _ _ => false
+  | .primitive _ _ arguments => everyExpListHOL localisedExpHOL arguments
+
+/-- Exact port of the `[local]` HOL helper `panProps$opt_mmap_eq_some_helper`
+    (`panPropsScript.sml:1575-1582`): if two maps agree on every element that
+    the first maps successfully, the second succeeds with the same result.
+
+    HOL's `OPT_MMAP` is the repository's `List.mapM` for `Option` (cf. the
+    tagged `OPT_MMAP_MEM_IMP`); the statement is fully polymorphic, so there is
+    no carrier side condition. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "opt_mmap_eq_some_helper" 1575]
+theorem optMmapEqSomeHelper {α β : Type} (f g : α → Option β) :
+    ∀ (xs : List α) (zs : List β), xs.mapM f = some zs →
+      (∀ x ∈ xs, ∀ y, f x = some y → g x = some y) → xs.mapM g = some zs
+  | [], zs, h, _ => h
+  | x :: xs, zs, h, hfg => by
+      rw [List.mapM_cons] at h ⊢
+      cases hx : f x with
+      | none => simp [hx] at h
+      | some a =>
+          have hga : g x = some a := hfg x (by simp) a hx
+          rw [hga]
+          simp at h ⊢
+          cases hys : List.mapM f xs with
+          | none => simp [hys] at h
+          | some ys =>
+              have hz : zs = a :: ys := by simpa [hys, hx] using h.symm
+              subst hz
+              rw [optMmapEqSomeHelper f g xs ys hys
+                    (fun z hz' b hb => hfg z (by simp [hz']) b hb)]
+              rfl
 
 /-- The `MAP SND` view of a field list does not increase `sizeOf`, which
     justifies the well-founded recursion of `panIsWfShapeValueHOL` (HOL's

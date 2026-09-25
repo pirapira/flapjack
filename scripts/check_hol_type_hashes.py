@@ -28,7 +28,6 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "docs" / "HOL-THEOREM-MAP.json"
 LOCK = ROOT / "docs" / "HOL-TYPE-HASHES.json"
 EXPORTER = ROOT / "scripts" / "HolTypeHashes.lean"
-LEAN_SETUP = ROOT / ".lake" / "build" / "ir" / "Flapjack.setup.json"
 
 
 def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
@@ -47,7 +46,8 @@ def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
             raise ValueError(f"Lean export line {line_number} has non-string fields {non_string}")
     qualifiers = record.get("qualifiers", {})
     allowed_qualifiers = {
-        "list_as_array", "names_as_string", "names_as_string_boundary"
+        "list_as_array", "names_as_string", "names_as_string_boundary",
+        "fmap_as_finite_support",
     }
     if not isinstance(qualifiers, dict) or not set(qualifiers) <= allowed_qualifiers:
         raise ValueError(f"Lean export line {line_number} has invalid qualifiers")
@@ -58,13 +58,12 @@ def validate_export_record(record: Any, line_number: int) -> dict[str, Any]:
 
 
 def exported_types() -> list[dict[str, Any]]:
-    # Lake's setup file points Lean at the verified OLean artifacts selected
-    # for this workspace, including remote-cache artifacts that do not have a
-    # local .olean copy. A plain `lake env lean` only searches LEAN_PATH and
-    # incorrectly fails when Lake has reused such an artifact.
-    setup_args = ["--setup", str(LEAN_SETUP)] if LEAN_SETUP.is_file() else []
+    # Use Lake's native `lean` command so the exporter resolves imports from
+    # the current workspace build graph. A saved setup file can keep pointing
+    # at a shared-cache OLean from an older source revision after `lake build`
+    # has rebuilt the local module.
     result = subprocess.run(
-        ["lake", "env", "lean", *setup_args, str(EXPORTER)],
+        ["lake", "--quiet", "lean", str(EXPORTER)],
         cwd=ROOT,
         text=True,
         capture_output=True,
@@ -121,6 +120,7 @@ def lock_records(
             "reviewed_list_as_array",
             "reviewed_names_as_string",
             "reviewed_list_as_array_names_as_string",
+            "reviewed_fmap_as_finite_support",
         }:
             continue
         key = (record["hol_path"], record["hol_name"], record["lean_name"])
@@ -139,6 +139,7 @@ def lock_records(
             "list_as_array": list(record.get("list_as_array", ())),
             "names_as_string": list(record.get("names_as_string", ())),
             "names_as_string_boundary": list(record.get("names_as_string_boundary", ())),
+            "fmap_as_finite_support": list(record.get("fmap_as_finite_support", ())),
         }
         exported_qualifiers = item.get("qualifiers", {})
         if any(exported_qualifiers.get(key, []) != value

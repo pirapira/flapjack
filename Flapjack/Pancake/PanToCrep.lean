@@ -2,6 +2,7 @@ import Flapjack.HolRef
 import Flapjack.FiniteMap.Basic
 import Flapjack.Pancake.CrepLang
 import Flapjack.Pancake.PanStatic
+import Flapjack.Pancake.PanLang.Shape
 
 /-!
 Executable expression lowering from Flapjack to Crepe.
@@ -168,15 +169,86 @@ theorem expHdl_eq_expHdlFiniteMap_bridge {α : Type u} [BEq String]
     whereas HOL uses `mlstring`. This function discards that payload. The
     current `names_as_string` policy classifies observed equality/map-key uses
     and byte-observable uses, not a discarded nested carrier; therefore this
-    analogue remains untagged pending an exact-carrier port or a reviewed
-    qualifier policy for discarded names. Direct HOL/Lean cases are retained
-    in `ret_var_probe.out` and `RetVarParity.lean`. -/
+    analogue remains untagged. The exact carrier port `retVarHOL` over
+    `ShapeHOL` below is tagged, and `retVarHOL_shapeToHOL` is the kernel bridge.
+    Direct HOL/Lean cases are retained in `ret_var_probe.out` and
+    `RetVarParity.lean`. -/
 def retVar (shape : Shape) (names : List Nat) : Option Nat :=
   match shape with
   | .one => names.head?
   | .comb fields =>
       if Shape.shapeSize (.comb fields) = 1 then names.head? else none
   | .named _ => none
+
+/-! Exact port of HOL `pan_to_crep$ret_var`
+    (`cakeml/pancake/pan_to_crepScript.sml:114-119`) over the faithful
+    MlString-backed `ShapeHOL` carrier and the tagged `sizeOfShapeHOL`
+    (`panLangScript.sml:174`).
+
+    The HOL equations are
+    `ret_var One ns = oHD ns`,
+    `ret_var (Comb sh) ns = if size_of_shape (Comb sh) = 1 then oHD ns else NONE`,
+    and `ret_var (Named sh) ns = NONE`, where `oHD`
+    (`HOL/src/list/src/listScript.sml:5474`) is exactly `List.head?`.  The
+    `named` case discards its `mlstring` payload, and all constructor arities
+    and field types match `ShapeHOL`, so this is the exact statement.  The
+    production `retVar` above mirrors these equations over `Flapjack.Shape`
+    (String names) and stays untagged; `retVarHOL_shapeToHOL` below is the
+    narrow kernel bridge on byte-ranged shapes. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "ret_var_def"]
+def retVarHOL (shape : Flapjack.Pancake.PanLang.ShapeHOL) (names : List Nat) : Option Nat :=
+  match shape with
+  | .one => names.head?
+  | .comb shapes =>
+      if Flapjack.Pancake.PanLang.sizeOfShapeHOL (.comb shapes) = 1 then names.head? else none
+  | .named _ => none
+
+private theorem foldl_shapeSize_add (a : Nat) (fields : List Shape) :
+    List.foldl (fun total field => total + Shape.shapeSize field) a fields =
+      a + List.foldl (fun total field => total + Shape.shapeSize field) 0 fields := by
+  induction fields generalizing a with
+  | nil => simp
+  | cons x xs ih =>
+      simp only [List.foldl_cons]
+      rw [ih (a + Shape.shapeSize x), ih (0 + Shape.shapeSize x)]
+      omega
+
+mutual
+  /-- `sizeOfShapeHOL` and `Shape.shapeSize` agree under the shape codec
+      `shapeToHOL` (names are inert in both). -/
+  theorem sizeOfShapeHOL_shapeToHOL : (s : Shape) →
+      Flapjack.Pancake.PanLang.sizeOfShapeHOL (Flapjack.Pancake.PanLang.shapeToHOL s) =
+        Shape.shapeSize s
+    | .one => by simp [Flapjack.Pancake.PanLang.shapeToHOL]
+    | .comb fields => by
+      simp only [Flapjack.Pancake.PanLang.shapeToHOL,
+        Flapjack.Pancake.PanLang.sizeOfShapeHOL, Shape.shapeSize]
+      rw [sizeOfShapesHOL_shapeToHOL fields]
+    | .named name => by simp [Flapjack.Pancake.PanLang.shapeToHOL]
+  theorem sizeOfShapesHOL_shapeToHOL : (fields : List Shape) →
+      Flapjack.Pancake.PanLang.sizeOfShapesHOL
+          (fields.map Flapjack.Pancake.PanLang.shapeToHOL) =
+        List.foldl (fun total field => total + Shape.shapeSize field) 0 fields
+    | [] => rfl
+    | field :: fields => by
+      simp only [List.map_cons, List.foldl_cons, Nat.zero_add,
+        Flapjack.Pancake.PanLang.sizeOfShapesHOL]
+      rw [sizeOfShapeHOL_shapeToHOL field, sizeOfShapesHOL_shapeToHOL fields,
+        foldl_shapeSize_add (Shape.shapeSize field) fields]
+end
+
+/-- Narrow kernel bridge: on every shape the exact `retVarHOL` agrees with the
+    production `retVar` after the `shapeToHOL` codec.  Names are discarded by
+    both, so no byte-rangedness hypothesis is needed. -/
+theorem retVarHOL_shapeToHOL (shape : Shape) (names : List Nat) :
+    retVarHOL (Flapjack.Pancake.PanLang.shapeToHOL shape) names = retVar shape names := by
+  cases shape with
+  | one => simp [retVarHOL, retVar, Flapjack.Pancake.PanLang.shapeToHOL]
+  | comb fields =>
+    simp only [retVarHOL, retVar, Flapjack.Pancake.PanLang.shapeToHOL,
+      Flapjack.Pancake.PanLang.sizeOfShapeHOL, Shape.shapeSize]
+    simp only [sizeOfShapesHOL_shapeToHOL fields]
+  | named name => simp [retVarHOL, retVar, Flapjack.Pancake.PanLang.shapeToHOL]
 
 /-! Flapjack-only helper modeled on the commented-out `shape_vars_def` text
     (`cakeml/pancake/pan_to_crepScript.sml:319-324`); HOL does not define this

@@ -73,11 +73,12 @@ example : globalVarExpHOL (.var .global (ofString "g") : ExpHOL 8) = [ofString "
 example : globalVarExpHOL nestedHOL = [ofString "g", ofString "addr"] := by
   simp [globalVarExpHOL, nestedHOL]
 
-/-! ## `global_var_exp` Option-valued specification parity
+/-! ## `global_var_exp` conservative known-result parity
 
-`globalVarExpHOL?` is the precise partial rendering: it returns `none` exactly
-on the four HOL `ARB` constructors and `some` of the HOL clause result on the
-thirteen specified clauses. -/
+`globalVarExpHOL?` is a conservative known-result analysis: `some` only when the
+specified clauses force the result independently of the HOL `ARB` cases, and
+`none` on the four `ARB` constructors **or on any composite reaching one**
+(e.g. `RStruct [Load32 e]`). -/
 
 #guard (globalVarExpHOL? (.var .global (ofString "g") : ExpHOL 8)) ==
   some [ofString "g"]
@@ -87,6 +88,13 @@ thirteen specified clauses. -/
 #guard (globalVarExpHOL? (.baseAddr : ExpHOL 8)) == (none : Option (List MlS))
 #guard (globalVarExpHOL? (.topAddr : ExpHOL 8)) == (none : Option (List MlS))
 #guard (globalVarExpHOL? (.bytesInWord : ExpHOL 8)) == (none : Option (List MlS))
+#guard (globalVarExpHOL? (.rstruct [.var .local xName, .load32 (.var .local xName)] :
+    ExpHOL 8)) == (none : Option (List MlS))
+#guard (globalVarExpHOL? (.cmp .equal (.var .local xName) .baseAddr : ExpHOL 8)) ==
+  (none : Option (List MlS))
+#guard (globalVarExpHOL? (.nstruct (ofString "S")
+    [(ofString "field", .load32 (.var .local xName))] : ExpHOL 8)) ==
+  (none : Option (List MlS))
 
 example : globalVarExpHOL? (.var .global (ofString "g") : ExpHOL 8) =
     some [ofString "g"] := by
@@ -96,6 +104,10 @@ example : globalVarExpHOL? nestedHOL = some [ofString "g", ofString "addr"] := b
   simp [nestedHOL]
 
 example : (globalVarExpHOL? (.load32 (.var .local xName) : ExpHOL 8)) = none := by
+  simp
+
+example : (globalVarExpHOL? (.rstruct [.var .local xName, .load32 (.var .local xName)] :
+    ExpHOL 8)) = none := by
   simp
 
 end Flapjack.Test.PanLangVarExpParity

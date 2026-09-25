@@ -371,11 +371,13 @@ ARB`, and the exported `global_var_exp_def` theorem contains only the thirteen
 clauses above.  A total Lean function must choose values for those four
 constructors, so `globalVarExpHOL` extends HOL's specification (it recurses on
 `Load32` and returns `[]` on the three nullary address constructors, matching
-production `expGlobalVars`).  The tag is therefore withheld; the exact HOL
-clause fragment agrees, but the ARB cases have no HOL equation to port.  The
-precise partial rendering is `globalVarExpHOL?` below (untagged, bead
-`flapjack-4ac.1.39.1`), which is `none` on the four `ARB` constructors and
-`some` of the thirteen specified clause results. -/
+production `expGlobalVars`).  The tag is therefore withheld; the ARB cases
+have no HOL equation to port, and the specified clauses only pin down the
+composites whose children are all specified.  The untagged `globalVarExpHOL?`
+below (bead `flapjack-4ac.1.39.1`) is a conservative known-result analysis:
+`some` exactly when the result is forced by the specified clauses regardless of
+the `ARB` choices, and `none` otherwise, including composites such as
+`RStruct [Load32 e]` that contain an unspecified sub-expression. -/
 def globalVarExpHOL {width : Nat} [NeZero width] : ExpHOL width → List MlS
   | .const _ => []
   | .var .local _ => []
@@ -408,30 +410,33 @@ termination_by expression => sizeOf expression
          have hlt := List.sizeOf_lt_of_mem mem
          omega)
 
-/-! ### `panLang$global_var_exp` as a partial (Option-valued) function -/
+/- panLang global_var_exp as an Option-valued conservative analysis
 
-/-! ### `panLang$global_var_exp` as a partial (Option-valued) function
-
-Partial, exact-carrier rendering of HOL `panLang$global_var_exp`
-(`cakeml/pancake/panLangScript.sml:278-291`).  HOL's definition is partially
-specified: the generated `global_var_exp_def_primitive` stores
+Conservative, known-result analysis of HOL `panLang$global_var_exp`
+(`cakeml/pancake/panLangScript.sml:278-291`) over the exact `ExpHOL` carrier.
+HOL's definition is partially specified: the generated
+`global_var_exp_def_primitive` stores
 `| Load32 v => ARB | BaseAddr => ARB | TopAddr => ARB | BytesInWord => ARB`,
 and the exported `global_var_exp_def` theorem states only the thirteen clauses
 over the other constructors.
 
-`globalVarExpHOL?` is the exact fragment HOL actually specifies: it returns
-`none` on exactly those four constructors and `some` with the HOL equation's
-right hand side on the thirteen specified clauses, recursing into
-sub-expressions.  `globalVarExpHOL` below is the total extension that chooses
+`globalVarExpHOL?` returns `some names` only when the result is forced by those
+thirteen clauses independently of the unspecified `ARB` choices, and `none`
+otherwise.  In particular it is `none` on the four `ARB` constructors and on
+any composite that reaches one (for example `RStruct [Load32 e]`), so it is a
+conservative under-approximation and **not** a clause-for-clause rendering of
+HOL: HOL's clause for `RStruct` (say) still returns an arbitrary list when a
+child is `ARB`.  `globalVarExpHOL` above is the total extension that chooses
 concrete values for the `ARB` cases.
 
 Untagged: `global_var_exp` is a partial specification, so no total Lean
-function is an exact HOL port.  The defined fragment here is the precise
-representation of that partial specification, tracked by
+function is an exact HOL port; this known-result analysis is tracked by
 `flapjack-4ac.1.39.1`. -/
 mutual
-  /-- Option-valued exact fragment of HOL `global_var_exp`: `none` on the four
-  ARB constructors, `some` of the specified clause result elsewhere. -/
+  /-- Conservative Option-valued known-result analysis of HOL `global_var_exp`:
+  `some` only when the specified clauses force the result regardless of the
+  unknown `ARB` cases (so `none` on the four `ARB` constructors and on any
+  composite reaching one). -/
   def globalVarExpHOL? {width : Nat} [NeZero width] :
     ExpHOL width → Option (List MlS)
   | .const _ => some []

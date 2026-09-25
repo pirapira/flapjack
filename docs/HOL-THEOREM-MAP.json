@@ -9190,5 +9190,37 @@
   "lean_name": "haltInst",
   "statement_status": "pending_statement_review",
   "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "comp_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "progComp",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "prog_comp_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "progCompEntry",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
+  "hol_name": "compile_def",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "compile",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
+},
+{
+  "hol_path": "cakeml/compiler/backend/proofs/stack_namesProofScript.sml",
+  "hol_name": "MAP_FST_compile",
+  "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
+  "lean_name": "map_fst_compile",
+  "statement_status": "pending_statement_review",
+  "reviewer": "flapjack-deepseek (source comparison)"
 }
 ]

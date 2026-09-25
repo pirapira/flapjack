@@ -10306,6 +10306,38 @@
     "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.4): HOL assigned_free_vars_nested_decs_append (cakeml/pancake/semantics/crepPropsScript.sml:400-407) is LENGTH ns = LENGTH es ==> assigned_free_vars (nested_decs ns es p) = FILTER (\\x. ~MEM x ns) (assigned_free_vars p). The Lean theorem has the same length premise and the same equation over the exact CrepProgHOL carrier using nestedDecsHOL and crepAssignedFreeVarsHOL, with FILTER written as List.filter (fun candidate => decide (candidate ∉ names)); no mlstring identifier is inspected. The production W analogue crepAssignedFreeVars_nestedDecs_appendW stays a documented mismatch."
   },
   {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_vars_seq_store_empty",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVarsHOL_nestedSeq_storesHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.5): HOL assigned_vars_seq_store_empty (cakeml/pancake/semantics/crepPropsScript.sml:429-437) is !es ad a. assigned_vars (nested_seq (stores ad es a)) = []. The Lean theorem has the same quantified values, address and offset and the same empty conclusion over the exact CrepProgHOL carrier using the exact storesHOL (matching stores_def including the offset/0w destination case and the byte-in-word stride) and crepAssignedVarsHOL; no mlstring identifier is inspected. The production W analogue crepAssignedVars_nestedSeq_storesW stays a documented mismatch."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_seq_store_empty",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVarsHOL_nestedSeq_storesHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.5): HOL assigned_free_vars_seq_store_empty (cakeml/pancake/semantics/crepPropsScript.sml:439-447) is !es ad a. assigned_free_vars (nested_seq (stores ad es a)) = []. The Lean theorem has the same quantified values, address and offset and the same empty conclusion over the exact CrepProgHOL carrier using storesHOL and crepAssignedFreeVarsHOL; no mlstring identifier is inspected. The production W analogue crepAssignedFreeVars_nestedSeq_storesW stays a documented mismatch."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_vars_store_globals_empty",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedVarsHOL_nestedSeq_storeGlobalsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.5): HOL assigned_vars_store_globals_empty (cakeml/pancake/semantics/crepPropsScript.sml:449-456) is !es ad. assigned_vars (nested_seq (store_globals ad es)) = []. The Lean theorem has the same quantified values and word5 address and the same empty conclusion over the exact CrepProgHOL carrier using the exact storeGlobalsHOL (matching store_globals_def, ad+1w successor) and crepAssignedVarsHOL; no mlstring identifier is inspected. The production W analogue crepAssignedVars_nestedSeq_storeGlobalsW stays a documented mismatch."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/crepPropsScript.sml",
+    "hol_name": "assigned_free_vars_store_globals_empty",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepProps.lean",
+    "lean_name": "crepAssignedFreeVarsHOL_nestedSeq_storeGlobalsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-pxn.18.3.5.8.8.5): HOL assigned_free_vars_store_globals_empty (cakeml/pancake/semantics/crepPropsScript.sml:458-465) is !es ad. assigned_free_vars (nested_seq (store_globals ad es)) = []. The Lean theorem has the same quantified values and word5 address and the same empty conclusion over the exact CrepProgHOL carrier using storeGlobalsHOL and crepAssignedFreeVarsHOL; no mlstring identifier is inspected. The production W analogue crepAssignedFreeVars_nestedSeq_storeGlobalsW stays a documented mismatch."
+  },
+  {
    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
   "hol_name": "exp_hdl_def",
   "lean_path": "Flapjack/Pancake/PanToCrep.lean",

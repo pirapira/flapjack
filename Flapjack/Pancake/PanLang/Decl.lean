@@ -183,6 +183,13 @@ def isDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
   | .decl _ _ _ => true
   | _ => false
 
+/-- Exact port of HOL `panLang$is_exn_decl` (`panLangScript.sml:239-242`):
+true only for `ExnDecl`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_exn_decl_def"]
+def isExnDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .exnDecl _ _ => true
+  | _ => false
+
 /-- Exact port of HOL `panLang$is_function` (`panLangScript.sml:314-317`):
 `is_function (Function _) = T`, `is_function _ = F`, over the same reviewed
 `DeclHOL width` carrier. -/
@@ -190,6 +197,7 @@ def isDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
 def isFunctionHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
   | .function _ => true
   | _ => false
+
 /-- Exact port of HOL `panLang$exceptions` (`panLangScript.sml:328-333`):
 projects the top-level exception declarations of a program in source order,
 returning `(eid, shape)` for each `ExnDecl` and dropping

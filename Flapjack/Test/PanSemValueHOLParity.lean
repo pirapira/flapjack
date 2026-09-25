@@ -19,6 +19,7 @@ Bead: `flapjack-0lj.3.1`.
 namespace Flapjack.Test.PanSemValueHOLParity
 
 open Flapjack
+open Flapjack.Pancake.PanLang (ShapeHOL)
 
 /-- Flatten rows from `pan_flatten_probe.out` (width 64). -/
 def flattenWord : Bool :=
@@ -73,10 +74,31 @@ def primopNonWord : Bool :=
       (panPrimopHOLExact .addCarry
         [.val (.word (5 : BitVec 8)), .rStruct [], .val (.word (3 : BitVec 8))])).isNone
 
+/-- `shape_of_def` rows from `pan_shape_of_probe.out` (width 64):
+`word = One`, `rstruct = Comb [One; One]`, `nstruct = Named «Pair»`.  `ShapeHOL`
+derives only `Repr`, so these compare by pattern match. -/
+def shapeOfWord : Bool :=
+  match shapeOfHOLExact (width := 64) (.val (.word (3 : BitVec 64))) with
+  | .one => true
+  | _ => false
+
+def shapeOfRecord : Bool :=
+  match shapeOfHOLExact (width := 64)
+      (.rStruct [.val (.word (3 : BitVec 64)), .val (.word (5 : BitVec 64))]) with
+  | .comb [.one, .one] => true
+  | _ => false
+
+def shapeOfNamed : Bool :=
+  match shapeOfHOLExact (width := 64)
+      (.nStruct (Flapjack.Basis.Pure.MlString.ofString "Pair") []) with
+  | .named name => decide (name = Flapjack.Basis.Pure.MlString.ofString "Pair")
+  | _ => false
+
 def valueHOLGuard : Bool :=
   flattenWord && flattenRecord && flattenNamed &&
     primopBasic && primopOverflow && primopCarryIsBit &&
-    primopWrongLength && primopNonWord
+    primopWrongLength && primopNonWord &&
+    shapeOfWord && shapeOfRecord && shapeOfNamed
 
 #guard flattenWord
 #guard flattenRecord
@@ -86,15 +108,18 @@ def valueHOLGuard : Bool :=
 #guard primopCarryIsBit
 #guard primopWrongLength
 #guard primopNonWord
+#guard shapeOfWord
+#guard shapeOfRecord
+#guard shapeOfNamed
 #guard valueHOLGuard
 
 /-- Run the exact-`ValueHOL` parity checks. -/
 def runChecks : IO Bool := do
   if valueHOLGuard then
-    IO.println "PASS exact panSem v/flatten/pan_primop over MlString/HolWordLab carriers (8 HOL rows)"
+    IO.println "PASS exact panSem v/flatten/pan_primop/shape_of over MlString/HolWordLab carriers (11 HOL rows)"
     pure true
   else
-    IO.println "FAIL exact panSem v/flatten/pan_primop over MlString/HolWordLab carriers"
+    IO.println "FAIL exact panSem v/flatten/pan_primop/shape_of over MlString/HolWordLab carriers"
     pure false
 
 end Flapjack.Test.PanSemValueHOLParity

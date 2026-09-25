@@ -4377,6 +4377,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "shape_of_def",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "shapeOfHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison; HOL shape_of (panSemScript.sml:80-84) over v with mlstring stcname: ValWord -> One, RStruct vs -> Comb (MAP shape_of vs), NStruct nm _ -> Named nm, rendered exactly over the positive-width ValueHOL carrier (NStruct name is MlS -> ShapeHOL.named); direct HOL rows word=One, rstruct=Comb [One; One], nstruct=Named Pair in pan_shape_of_probe.out reproduced by PanSemValueHOLParity)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "dec_clock_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExact.lean",
     "lean_name": "decClockHOLExact",

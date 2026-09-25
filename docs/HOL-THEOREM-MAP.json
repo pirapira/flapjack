@@ -5004,6 +5004,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mem_comp_field",
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
+    "lean_name": "memCompFieldHOLExact",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Exact port of pan_to_crepProofScript.sml:666: i < LENGTH vs, LENGTH e = size_of_shape (shape_of (RStruct vs)), comp_field i sh e = (es, shp), Comb sh = shape_of (RStruct vs), and MEM ce es imply MEM ce e. Uses exact ShapeHOL, ValueHOL, and CrepExpHOL carriers; [NeZero width] reflects positive HOL word dimension. The source theorem's length premise is retained even though this proof does not need it. Direct HOL-EVAL comp_field rows first/second in scripts/hol-probes/comp_field_probe.out are reproduced over exact carriers in CompFieldParity, which also exercises this theorem at both selections."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
     "hol_name": "mem_comp_field_lem",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileField_mem_or_zero",
@@ -5019,12 +5027,12 @@
     "reviewer": "Codex (Flapjack support: excludes unreachable zero fallback for valid field index)"
   },
   {
-    "hol_path": null,
-    "hol_name": null,
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "mem_comp_field",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep.lean",
     "lean_name": "compileField_mem_of_record_shape",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (tag withdrawn): no HOL declaration named mem_comp_field exists in pan_to_crepProofScript.sml; the Lean analogue additionally uses production String-backed Shape and generic PanValue \u03b1. The related HOL lemma is mem_comp_field_lem."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Production-carrier analogue of HOL mem_comp_field at pan_to_crepProofScript.sml:666. Its hypotheses and conclusion follow the HOL field-selection theorem, but it ranges over String-backed production Shape and generic PanValue/CrepExp α instead of ShapeHOL, ValueHOL, and width-indexed CrepExpHOL. Exact theorem memCompFieldHOLExact is the reviewed HOL port."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

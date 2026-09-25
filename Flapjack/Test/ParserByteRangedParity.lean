@@ -244,4 +244,11 @@ example (r : Option (Option (Flapjack.VarKind × String)))
 example (text : String) (h : StringByteRanged text) :
     TokenNameByteRanged (Token.annotCommentT text) := h
 
+example {width : Nat} (ofInt : Int → BitVec width) (fuel : Nat)
+    (p : Flapjack.Prog (BitVec width))
+    (h : Flapjack.Parser.convNonRecStmt ofInt fuel (ParseTree.lf Token.semiT unknownLoc) = some p) :
+    ProgByteRanged p :=
+  convNonRecStmt_byteRanged ofInt fuel _
+    (parseTreeByteRanged_lf (token := Token.semiT) (locs := unknownLoc) (by simp [TokenNameByteRanged])) p h
+
 end Flapjack.Test.ParserByteRangedParity

@@ -58,12 +58,12 @@ example : word 8 = BitVec.shiftLeft (1 : RiscV.Word 8) 3 :=
 example : canonicalWordBits8 8 =
     bitVecToHolWordBits (BitVec.shiftLeft (1 : BitVec 8) 3) :=
   crepDest2ExpHolWordBits_eq_lsl_support (canonicalWordBits8 8) 3
-    (by native_decide)
+    (by decide +kernel)
 
 example : canonicalWordBits8 128 =
     bitVecToHolWordBits (BitVec.shiftLeft (1 : BitVec 8) 7) :=
   crepDest2ExpHolWordBits_eq_lsl_support (canonicalWordBits8 128) 7
-    (by native_decide)
+    (by decide +kernel)
 
 example : 3 < 8 :=
   crepDest2Exp_lt_width (word 8) 3 (by native_decide)

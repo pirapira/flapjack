@@ -1221,7 +1221,8 @@ DOCUMENTED_MISMATCHES = {
         "production CrepProg, so neither names_as_string nor that boundary makes "
         "this exact. No @[hol] tag is claimed. Faithful replacement depends on "
         "flapjack-pxn.18.3.5.8.13 for exact compile and flapjack-e7w.1 for exact "
-        "compile_inl_top carrier."
+        "inline-map carrier flapjack-e7w.1 and open epic flapjack-e7w.2 for the "
+        "full compile_inl_top and production-inliner port."
     ),
 }
 VALID_STATUSES = {

@@ -49,7 +49,8 @@ open Flapjack.Pancake.PanLang
 -- reproduced by `Flapjack/Test/CompileProgParamsParity.lean`. Faithful-port
 -- dependency `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`; exact
 -- `compile` by `.18.3.5.8.13`, exact `compile_inl_top` carrier by
--- `flapjack-e7w.1`).
+-- inline-map carrier by `flapjack-e7w.1`; the full exact `compile_inl_top`
+-- and production inliner are tracked by open epic `flapjack-e7w.2`).
 def compileProgTopHOL [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat (BitVec width) 0]
     [OfNat (BitVec width) 1]

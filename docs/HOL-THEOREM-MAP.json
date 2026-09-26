@@ -2415,6 +2415,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "free_var_ids_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "freeVarIdsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, bead flapjack-4ac.1.46): HOL free_var_ids_def (cakeml/pancake/panLangScript.sml:347-392) collects the free local variable identifiers of a prog. Every clause is mirrored over the exact ProgHOL/MlS carrier: Dec contributes var_exp e plus the body ids filtered by (≠ vn); Seq/If/While recurse and add the guard's var_exp; Assign and ShMemLoad contribute v only when the kind is Local; Primitive/DecCall contribute the name plus FLAT(MAP var_exp args); Store/Store32/StoreByte/ExtCall/ShMemStore concatenate the operand var_exp lists; Raise/Return contribute the operand's var_exp. All five Call metadata shapes match HOL's five equations: none and SOME(NONE,NONE) contribute only FLAT(MAP var_exp args); SOME(NONE,SOME(_,vn,ep)) adds vn and the handler's ids; SOME(SOME(vk,vn),NONE) and SOME(SOME(vk,vn),SOME(_,en,ep)) add [vn] iff vk = Local and, in the handler case, en plus the handler's ids. The expression collector is the tagged var_exp_def port varExpHOL and the shadowing filter is FILTER ($≠ vn). HOL's catch-all row (Skip and the remaining no-op forms) is the [] clauses. There is no production Pancake free-variable collector to route to (the only production collector is the unrelated crepLang assigned_free_vars), so no executable bridge is required."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "nested_seq_def",
     "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
     "lean_name": "nestedSeqHOL",

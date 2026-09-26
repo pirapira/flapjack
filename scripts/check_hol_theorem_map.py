@@ -1449,6 +1449,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Decl.lean", "sizeOfShapeWithContextHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "inlinableHOL"),
         ("Flapjack/Pancake/PanLang/Prog.lean", "funIdsHOL"),
+        ("Flapjack/Pancake/PanLang/Prog.lean", "freeVarIdsHOL"),
         ("Flapjack/Pancake/PanLang/Prog.lean", "nestedSeqHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "shapeValHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "shapeValsHOL"),

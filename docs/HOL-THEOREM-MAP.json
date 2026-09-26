@@ -11417,6 +11417,20 @@
     "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.2.17): FLAPJACK-SPECIFIC / not an exact HOL port, @[hol] tag withdrawn. HOL make_funcs_def (pan_to_crepScript.sml:366-373) is `make_funcs prog = alist_to_fmap (MAP3 (λx y z. (x,y,z)) (MAP FST prog) (MAP (FST o SND) prog) (MAP (SND o SND o SND) prog))` keyed by funname = mlstring and valued by (varname # shape) list # shape, with alist_to_fmap a right fold of FUPDATE (first duplicate name wins). Lean makeFuncsHOL keys by FunName = String and stores production VarName = String and Shape (named : StructName = String), not HOL's mlstring carriers; its input also mentions the production Prog α body carrier even though make_funcs ignores bodies; and its result is a FiniteMap function (raw α → Option β, admitting infinite support) rather than HOL's fmap, built by FUPDATE_LIST FEMPTY over the reversed association list. The names_as_string qualifier cannot authorize the Shape and Prog carriers or the FiniteMap-vs-fmap representation, and no NameRanged byte witness applies because the output is a finite map of function signatures, not a name. The theorem-map make_funcs_def -> crepToLoopMakeFuncsHOL entry is the exact port of the different crep_to_loopScript.sml declaration, not this one. Direct HOL-EVAL rows make_funcs_empty_params/make_funcs_param_entry/make_funcs_absent/make_funcs_duplicate_first_wins are in scripts/hol-probes/crep_make_funcs_probe.out and exercised by makeFuncsGuard (Flapjack/Test/PanToCrepCodeRelParity.lean) and makeFuncsOracle (Flapjack/Test/CompileToCrepeParity.lean). The faithful exact-carrier port is tracked by flapjack-pxn.18.3.5.8 (parent flapjack-pxn.18.3.5.7.2)."
    },
    {
+     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+     "hol_name": "state",
+     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+     "lean_name": "PanSemStateFiniteExact",
+     "statement_status": "reviewed_fmap_as_finite_support",
+     "fmap_as_finite_support": [
+       "locals",
+       "globals",
+       "code",
+       "eshapes"
+     ],
+     "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.3.8): HOL panSemScript.sml:46-64 declares the 13-field `state` record with exactly the same field order and meanings as PanSemStateFiniteExact. The name-bearing `locals`, `globals`, `code`, `eshapes` fields are HOL finite maps (`varname |-> _`); Lean represents them by the reviewed canonical `HolFiniteMapExact` (lookup plus finiteSupport), witnessed by the same-module roundtrip `holFmapAsFiniteSupportWitness`. `structs` uses the exact StructContextExact context, `memory` the exact `RiscV.Word width -> HolWordLab width` carrier, `memaddrs`/`sh_memaddrs` the address-domain predicates, and `clock`/`be`/`ffi`/`baseAddr`/`topAddr` keep HOL's num/bool/'ffi ffi_state/word meanings. The fmap_as_finite_support qualifier is representation-only and authorizes no change in fields, quantifiers, or meanings."
+   },
+   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "dec_clock_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",

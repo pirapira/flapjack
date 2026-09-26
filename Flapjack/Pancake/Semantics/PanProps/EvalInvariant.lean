@@ -71,16 +71,20 @@ def feveryHOL {α β : Type} (P : α × β → Bool) (fm : HolFiniteMapExact α 
   ∀ key value, fm.lookup key = some value → P (key, value) = true
 
 /-- Exact finite-map port of HOL `FEVERY_res_var_FLOOKUP`
-    (`panPropsScript.sml:1222`). The two HOL map parameters are represented
-    by the named `fm` and `fm2` fields, and the qualifier records only their
-    canonical finite-support representation. -/
+    (`panPropsScript.sml:1222`). The two independent HOL map parameters are
+    bundled as the product fields `fm` and `fm2`: the broad counterpart stores
+    both function maps independently, and the witness roundtrips them without
+    relating their contents. Their finite-support proofs are intrinsic to the
+    HOL fmap carrier. The qualifier records only this canonical representation. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "FEVERY_res_var_FLOOKUP"
   (fmap_as_finite_support := [fm, fm2])]
 theorem feveryResVarFlookupHOL {α β : Type} [DecidableEq α]
     (P : α × β → Bool) (maps : PanPropsResVarMapsExact α β) (name : α) :
-    feveryHOL P maps.fm → feveryHOL P maps.fm2 →
+    (feveryHOL P maps.fm ∧ feveryHOL P maps.fm2) →
       feveryHOL P (maps.fm.resVarEq (name, maps.fm2.lookup name)) := by
-  intro hfm hfm2 key value hresult
+  intro h
+  rcases h with ⟨hfm, hfm2⟩
+  intro key value hresult
   cases hlookup : maps.fm2.lookup name with
   | none =>
       by_cases hkey : key = name

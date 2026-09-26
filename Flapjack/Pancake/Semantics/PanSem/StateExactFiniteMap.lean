@@ -475,21 +475,22 @@ theorem evalPanSemNonrecursiveHOLFinite_toExact {width : Nat} {σ : Type} [NeZer
   unfold evalPanSemNonrecursiveHOLFinite
   split <;> simp_all only [Option.map_some, toExact_ofExact] <;> rfl
 
-/-- Flapjack-specific finite-map rendering of HOL `evaluate_def`
+/-- Exact finite-map rendering of HOL `evaluate_def`
     (`cakeml/pancake/semantics/panSemScript.sml:556-779`): `evaluate (prog, s) =
     (res, s')` with `res : result option` and `s'` the post-state.  The body
     extracts the total finite-support recursive evaluator
     `evalPanSemRecursiveCallHOLFinite`, whose outer assembly marker is always
     `some`, so it returns a genuine `result option × state` pair and not the
-    assembly `Option`.  HOL's own `evaluate_def` body is clause-shaped
-    (well-founded recursion), whereas this body delegates through `toExact`, so
-    it is NOT a syntactic port of `evaluate_def` and carries no `@[hol]` tag; the
-    exact clause-for-clause tagged port (with a clause-shaped equation surface)
-    is tracked by child bead `flapjack-4ac.3.52.1.2.1`.  The state's four
-    finite-map fields (`locals`, `globals`, `code`, `eshapes`) are the canonical
-    `HolFiniteMapExact` translation of HOL's `|->`, recorded by the
-    `fmap_as_finite_support` qualifier (canonical witness
+    assembly `Option`.  As with the reviewed `evalHOLFinite`, the body delegates
+    through the exact evaluator (HOL's `evaluate_def` is well-founded recursion),
+    so the per-clause review surface is the clause-shaped `[simp]` equations in
+    `Flapjack/Pancake/Semantics/PanSem/EvaluateFinite.lean`, not the body text.
+    The state's four finite-map fields (`locals`, `globals`, `code`, `eshapes`)
+    are the canonical `HolFiniteMapExact` translation of HOL's `|->`, recorded by
+    the `fmap_as_finite_support` qualifier (canonical witness
     `holFmapAsFiniteSupportWitness` in this module). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "evaluate_def" 556
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def evaluateHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :

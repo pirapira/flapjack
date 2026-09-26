@@ -80,7 +80,7 @@ theorem pipelineExceptionCodes_length
       simp [pipelineExceptionCodes, sizeOfEids]
   | cons declaration declarations ih =>
       cases declaration <;>
-        simp [pipelineExceptionCodes, sizeOfEids, isExnDecl, ih] <;> omega
+        simp [pipelineExceptionCodes, sizeOfEids_cons, isExnDecl, ih] <;> omega
 
 theorem crepGetEidsFromDecls_length
     (fromNat : Nat → α) (declarations : List (Decl α)) :

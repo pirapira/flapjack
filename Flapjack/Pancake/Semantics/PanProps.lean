@@ -29,18 +29,49 @@ inductive SemanticsRunResHOL (α : Type u) where
   | Incomplete
   deriving DecidableEq, Repr
 
+/-! Source review for HOL `semantics_wrapper_eq`
+(`panPropsScript.sml:1831-1929`): the theorem is generic in arbitrary abstract
+and concrete functions `absf, concf : Nat → SemanticsRunResHOL α × List β`. Its
+six premises are: `semantics_wrapper absf ≠ Fail`; every non-`RunError` abstract
+observation has a matching concrete observation at some extended clock; every
+concrete non-`Incomplete` observation is stable under further clock increase;
+the same stability for abstract observations; and, separately for abstract
+and concrete observations, if the result at `k + k'` is `(Incomplete, ev)`,
+there are `r'` and `ev'` with the result at `k` equal to `(r', ev')` and
+`IS_PREFIX ev ev'`. These premises imply equality of the two
+`semantics_wrapper` results. The closest Flapjack API,
+`PanObservationalSemantics.panSemantics`, specializes the functions to a
+`PanSemanticsHooks` evaluator over `Option PanValueFfiClockResult`, and takes a
+caller-supplied prefix chain/LUB. It has neither the arbitrary result carrier
+nor the generic wrapper equality statement, so it is not a port and receives
+no HOL tag. The faithful theorem port is tracked by
+`flapjack-4ac.4.106.1`, depending on the exact wrapper/LUB carrier work in
+`flapjack-4ac.4.105.1`. -/
+
+/-! Source review for HOL `pan_sem_is_wrapper`
+(`panPropsScript.sml:1931-1954`): with no premises, HOL equates
+`panSem.semantics s start` to `semantics_wrapper` applied to the clock-indexed
+`evaluate (TailCall start [], s with clock := k)`, mapping `TimeOut` to
+`Incomplete`, `FinalFFI e` to `CompleteResult (FFI_outcome e)`, `Return _` to
+`CompleteResult Success`, and every other result to `RunError`; the event
+component is `s.ffi.io_events`. The closest Flapjack definition,
+`PanObservationalSemantics.panSemantics`, instead takes arbitrary
+`PanSemanticsHooks`, uses `PanValueFfiClockResult`/`FfiState` carriers, and
+requires a caller-provided event-prefix chain/LUB. It does not state the HOL
+equality and receives no tag. The faithful theorem port is tracked by
+`flapjack-4ac.4.107.1`, depending on exact `semantics_wrapper_def` carrier work
+in `flapjack-4ac.4.105.1` and the exact PanSem semantics port
+`flapjack-4ac.3.52.2`. -/
+
 /-! Source review for HOL `eval_swap_memory`
 (`panPropsScript.sml:1734-1742`): the exact theorem quantifies `s`, `exp`, `v`,
 and an arbitrary replacement memory `mry`; it assumes successful `eval s exp`
 and equality of the two memories at every address in `s.memaddrs`, then proves
-the same successful result after replacing memory. No tag is claimed here:
-`PanSemStateExact` admits unrestricted function-backed maps, while the exact
-finite-support state and its canonical map witness are declared in
-`PanSem/StateExactFiniteMap.lean`. The finite-map qualifier requires the owner
-and witness in the theorem's module, so importing that carrier here is not
-enough and duplicating the full state is not acceptable. The faithful port is
-tracked by `flapjack-4ac.4.100.1`, dependent on the finite-map carrier work
-`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+the same successful result after replacing memory. The broad
+`PanSemStateExact` analogue remains untagged because its four map fields are
+unrestricted functions. The faithful finite-support port and its same-module
+owner/witness are in `PanProps/EvalInvariant.lean` as
+`evalSwapMemoryHOLFinite`, tracked by `flapjack-4ac.4.100.1`. -/
 
 /-! Source review for HOL `evaluate_decls_swap_memory`
 (`panPropsScript.sml:1750-1763`): HOL quantifies an initial state `s`,
@@ -50,31 +81,35 @@ the memories at every address in the original `s.memaddrs`, implies that
 evaluation from `s` with only its memory replaced succeeds with `s'`'s memory
 also replaced by `mry`. This is a distinct result from expression-level
 `eval_swap_memory`; the HOL proof explicitly relies on that theorem for
-declarations. The nearby Lean `evaluateDeclsHOLExact` and `evalHOLExact` use
+declarations. The broad `evaluateDeclsHOLExact` and `evalHOLExact` use
 `PanSemStateExact`, whose locals/globals/code/eshapes are unrestricted lookup
-functions rather than HOL finite maps. There is no finite-support declaration
-evaluator or exact expression swap-memory theorem in the PanProps counterpart;
-the finite-map tag also requires the owner and witness in that module. Do not
-tag the broad analogues. The faithful port is tracked by
-`flapjack-4ac.4.101.1`, depending on exact `eval_swap_memory` port
-`flapjack-4ac.4.100.1` and the finite-support declaration evaluator
-`flapjack-4ac.4.102.1`. -/
+functions rather than HOL finite maps. The PanProps-local finite-support
+evaluator, its kernel-checked bridge to `evaluateDeclsHOLExact`, and the exact
+expression/declaration memory-swap theorems live in
+`PanProps/EvalInvariant.lean` with its local owner and canonical witness. The
+declaration theorem `evaluateDeclsSwapMemoryHOLFinite` preserves HOL's
+conjunctive success/memory-agreement premise and updates only memory in the
+initial/result states. -/
 
 /-! Source review for HOL `evaluate_decls_memaddrs_mono`
 (`panPropsScript.sml:1766-1778`): HOL quantifies an initial state `s`, program
 `prog`, successful result `s'`, and replacement address set `memaddrs`. From
 `evaluate_decls s prog = SOME s'` and `s.memaddrs ⊆ memaddrs`, it concludes
 successful evaluation from `s` with only `memaddrs` replaced, yielding `s'`
-with the same replacement set. The closest Lean evaluator,
-`evaluateDeclsHOLExact`, has that recursive declaration behavior over
-`PanSemStateExact`, but its locals/globals/code/eshapes are unrestricted lookup
-functions rather than HOL finite maps. The finite-support state currently has
-no corresponding exact declaration evaluator in the PanProps counterpart, and
-the `fmap_as_finite_support` tag requires the owner and witness in the tagged
-module. Thus the broad evaluator is not an exact HOL carrier and cannot receive
-the tag; the faithful port is tracked by
-`flapjack-4ac.4.102.1`, dependent on
-`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+with the same replacement set. The broad Lean `evaluateDeclsHOLExact` remains
+untagged because `PanSemStateExact` uses unrestricted lookup functions for
+locals/globals/code/eshapes. The PanProps-local finite-support evaluator is an
+untagged Flapjack adapter; the faithful PanSem counterpart for
+`evaluate_decls_def` remains open as `flapjack-4ac.3.53`. The theorem
+`evaluateDeclsMemaddrsMonoHOLFinite` is tagged in `PanProps/EvalInvariant.lean`, using the existing
+`PanPropsEvalStateFiniteExact` owner and same-module canonical roundtrip
+witness. The adapter's kernel-checked `_toExact` bridge proves the full
+`Option` result matches `evaluateDeclsHOLExact` on the projected state. Its clauses match the
+source: names skip; expressions evaluate with empty locals before a shape
+check and global update; functions check parameter/return shapes before code
+update; exceptions check absence and shape before exception-shape update. The
+local `evalHOL` adapter has no independent HOL declaration; it delegates to
+the existing exact PanSem evaluator. -/
 
 /-! Source review for HOL `eval_swap_memaddrs`
 (`panPropsScript.sml:1703-1715`): HOL states that successful `eval s exp`
@@ -481,7 +516,10 @@ The production `panIsWfShapeValueHOL`/`panIsWfShapeValueBool` above use the
 (`PanLang/Decl.lean`) are the exact carriers, with `structContextLookupHOL` the
 first-match `ALOOKUP` and `isWfShapeValuesHOLExact` the `EVERY` fold.  Direct
 original-HOL rows are pinned in `scripts/hol-probes/pan_structs_value_validity_probe.out`
-and reproduced by `Flapjack/Test/PanStructsValueValidityParity.lean`. -/
+and reproduced by `Flapjack/Test/PanStructsValueValidityParity.lean`. The exact
+predicate is consumed by `memLoadHOLExact_isWfShapeValueHOLExact` and
+`evalHOLExact_isWfShapeValueHOLExact`; the finite-support state theorem
+`evalIsWfShapeValueHOL` uses the latter through its checked state adapter. -/
 
 /-- The `MAP SND` view of an exact field list does not increase `sizeOf`. -/
 theorem sizeOfValueHOLMapSndLe {width : Nat} [NeZero width]
@@ -1317,7 +1355,9 @@ theorem memLoadHOLExact_some_shapeOf_eq {width : Nat} [NeZero width]
     rendered as the structural helpers `everyExpListHOL` (for `exp list`) and
     `everyExpFieldListHOL` (for the `MAP SND` field list of `NStruct`), matching
     the `isWfShapesExactHOL` convention.  `exps_of` returns the list of all
-    expressions occurring in a program, mirroring the HOL clauses in order. -/
+    expressions occurring in a program, mirroring the HOL clauses in order.
+    `everyExpHOL` is used by the exact `localisedExpHOL` and `namelessExpHOL`
+    definitions and their constructor-equation theorem ports below. -/
 mutual
   /-- Exact port of HOL `panProps$every_exp`. -/
   @[hol "cakeml/pancake/semantics/panPropsScript.sml" "every_exp_def"]
@@ -1356,7 +1396,9 @@ mutual
     | (_, e) :: es => everyExpHOL P e && everyExpFieldListHOL P es
 end
 
-/-- Exact port of HOL `panProps$exps_of`. -/
+/-- Exact port of HOL `panProps$exps_of`.  Its downstream exact proof consumer
+    is `panExpsOfNestedSeqHOL` in `Proofs/PanToWord.lean`, porting
+    `pan_exps_of_nested_seq`. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "exps_of_def"]
 def expsOfHOL {width : Nat} [NeZero width] :
     Flapjack.Pancake.PanLang.ProgHOL width → List (Flapjack.Pancake.PanLang.ExpHOL width)
@@ -1385,7 +1427,8 @@ def expsOfHOL {width : Nat} [NeZero width] :
 
     HOL defines `localised_exp = every_exp (\e. case e of Var tp _ => tp = Local
     | _ => T)`, so the only rejecting pattern is a variable with a global
-    destination. -/
+    destination.  The definition feeds the exact `localisedProgHOL` traversal
+    and the source theorem port `localisedExpSimpsHOL`. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_exp_real_def"]
 def localisedExpHOL {width : Nat} [NeZero width] :
     Flapjack.Pancake.PanLang.ExpHOL width → Bool :=
@@ -1399,7 +1442,8 @@ def localisedExpHOL {width : Nat} [NeZero width] :
     over the MlString/width-indexed `ExpHOL width` carrier.
 
     HOL defines `nameless_exp = every_exp (\e. case e of NStruct _ _ => F |
-    NField _ _ => F | _ => T)`, so structural name introduction is rejected. -/
+    NField _ _ => F | _ => T)`, so structural name introduction is rejected.
+    The exact constructor equations are proved by `namelessExpSimpsHOL`. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "nameless_exp_real_def"]
 def namelessExpHOL {width : Nat} [NeZero width] :
     Flapjack.Pancake.PanLang.ExpHOL width → Bool :=

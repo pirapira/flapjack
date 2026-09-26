@@ -1794,6 +1794,12 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Compiler/Backend/StackNames.lean", "map_fst_compile"),
         ("Flapjack/Pancake/PanStructs.lean", "afindi"),
         ("Flapjack/Misc/Sptree.lean", "NumSet"),
+        ("Flapjack/Pancake/PanSimp.lean", "smartSeqHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "seqCallRetHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "seqAssocHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "retToTailHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "panSimpCompileHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "panSimpDeclsHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

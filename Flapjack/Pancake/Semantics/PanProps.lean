@@ -42,6 +42,22 @@ enough and duplicating the full state is not acceptable. The faithful port is
 tracked by `flapjack-4ac.4.100.1`, dependent on the finite-map carrier work
 `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 
+/-! Source review for HOL `evaluate_decls_memaddrs_mono`
+(`panPropsScript.sml:1766-1778`): HOL quantifies an initial state `s`, program
+`prog`, successful result `s'`, and replacement address set `memaddrs`. From
+`evaluate_decls s prog = SOME s'` and `s.memaddrs ⊆ memaddrs`, it concludes
+successful evaluation from `s` with only `memaddrs` replaced, yielding `s'`
+with the same replacement set. The closest Lean evaluator,
+`evaluateDeclsHOLExact`, has that recursive declaration behavior over
+`PanSemStateExact`, but its locals/globals/code/eshapes are unrestricted lookup
+functions rather than HOL finite maps. The finite-support state currently has
+no corresponding exact declaration evaluator in the PanProps counterpart, and
+the `fmap_as_finite_support` tag requires the owner and witness in the tagged
+module. Thus the broad evaluator is not an exact HOL carrier and cannot receive
+the tag; the faithful port is tracked by
+`flapjack-4ac.4.102.1`, dependent on
+`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+
 /-! Cake's local `dropWhile_eq_cons_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when
 `dropWhile P xs` yields `y :: ys`, there is an in-bounds index `n` at which

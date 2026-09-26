@@ -1393,4 +1393,248 @@ theorem evalPanSemRecursiveCallContextHOLExact_finiteSupport {width : Nat} {σ :
       exact PanSemStateExact.finiteSupport_emptyLocals hfixed
   all_goals closeCase
 
+theorem evalPanSemNonrecursiveHOLExact_memaddrs {width : Nat} {σ : Type}
+    [NeZero width] (program : ProgHOL width) (state : PanSemStateExact width σ)
+    [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs]
+    (output : Option (PanSemResultExact width) × PanSemStateExact width σ)
+    (h : evalPanSemNonrecursiveHOLExact program state = some output) :
+    output.2.memaddrs = state.memaddrs := by
+  cases program with
+  | assign kind name value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      cases hEval : evalHOLExact state value with
+      | none => simp [assignStepHOLExact, hEval]
+      | some v =>
+          by_cases hvalid : isValidValueHOLExact state kind name v = true
+          · cases kind <;> simp [assignStepHOLExact, hEval, hvalid, setKvarHOLExact]
+          · simp [assignStepHOLExact, hEval, hvalid]
+  | primitive name operator args =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      cases hEval : evalListHOLExact state args with
+      | none => simp [primitiveStepHOLExact, hEval]
+      | some values =>
+          cases hPrim : panPrimopHOLExact (width := width) operator values with
+          | none => simp [primitiveStepHOLExact, hEval, hPrim]
+          | some v =>
+              by_cases hvalid : isValidValueHOLExact state .local name v = true
+              · simp [primitiveStepHOLExact, hEval, hPrim, hvalid, setVarHOLExact]
+              · simp [primitiveStepHOLExact, hEval, hPrim, hvalid]
+  | store address value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [storeStepHOLExact]; split
+      · split
+        · split <;> rfl
+        · rfl
+      · rfl
+  | store32 address value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [store32StepHOLExact]; split
+      · split
+        · split <;> rfl
+        · rfl
+      · rfl
+  | storeByte address value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [storeByteStepHOLExact]; split
+      · split
+        · split <;> rfl
+        · rfl
+      · rfl
+  | extCall function configuration configurationLength array arrayLength =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      exact extCallStepHOLExact_memaddrs state
+        (fun _ expression => evalHOLExact state expression) function
+        configuration configurationLength array arrayLength
+  | raise exception value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      cases hEval : evalHOLExact state value with
+      | none => simp [raiseStepHOLExact, hEval]
+      | some v =>
+          cases hshape : state.eshapes exception with
+          | none => simp [raiseStepHOLExact, hEval, hshape]
+          | some shp =>
+              simp only [raiseStepHOLExact, hEval, hshape]
+              split
+              · split <;> rfl
+              · rfl
+  | «return» value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [returnStepHOLExact]; split
+      · split <;> rfl
+      · rfl
+  | shMemLoad size kind name address =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      exact (shMemLoadClauseHOLExact_preservesDomains state size kind name address
+        (fun _ expression => evalHOLExact state expression)).1
+  | shMemStore size address value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      exact (shMemStoreClauseHOLExact_preservesDomains state size address value
+        (fun _ expression => evalHOLExact state expression)).1
+  | tick =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [tickStepHOLExact]; split <;> rfl
+  | skip =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h; rfl
+  | dec _ _ _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | seq _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | ite _ _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | «while» _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | «break» =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h; rfl
+  | «continue» =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h; rfl
+  | call _ _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | decCall _ _ _ _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | annot _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h; rfl
+
+theorem evalPanSemNonrecursiveHOLExact_shMemaddrs {width : Nat} {σ : Type}
+    [NeZero width] (program : ProgHOL width) (state : PanSemStateExact width σ)
+    [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs]
+    (output : Option (PanSemResultExact width) × PanSemStateExact width σ)
+    (h : evalPanSemNonrecursiveHOLExact program state = some output) :
+    output.2.shMemaddrs = state.shMemaddrs := by
+  cases program with
+  | assign kind name value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      cases hEval : evalHOLExact state value with
+      | none => simp [assignStepHOLExact, hEval]
+      | some v =>
+          by_cases hvalid : isValidValueHOLExact state kind name v = true
+          · cases kind <;> simp [assignStepHOLExact, hEval, hvalid, setKvarHOLExact]
+          · simp [assignStepHOLExact, hEval, hvalid]
+  | primitive name operator args =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      cases hEval : evalListHOLExact state args with
+      | none => simp [primitiveStepHOLExact, hEval]
+      | some values =>
+          cases hPrim : panPrimopHOLExact (width := width) operator values with
+          | none => simp [primitiveStepHOLExact, hEval, hPrim]
+          | some v =>
+              by_cases hvalid : isValidValueHOLExact state .local name v = true
+              · simp [primitiveStepHOLExact, hEval, hPrim, hvalid, setVarHOLExact]
+              · simp [primitiveStepHOLExact, hEval, hPrim, hvalid]
+  | store address value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [storeStepHOLExact]; split
+      · split
+        · split <;> rfl
+        · rfl
+      · rfl
+  | store32 address value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [store32StepHOLExact]; split
+      · split
+        · split <;> rfl
+        · rfl
+      · rfl
+  | storeByte address value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [storeByteStepHOLExact]; split
+      · split
+        · split <;> rfl
+        · rfl
+      · rfl
+  | extCall function configuration configurationLength array arrayLength =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      exact extCallStepHOLExact_shMemaddrs state
+        (fun _ expression => evalHOLExact state expression) function
+        configuration configurationLength array arrayLength
+  | raise exception value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      cases hEval : evalHOLExact state value with
+      | none => simp [raiseStepHOLExact, hEval]
+      | some v =>
+          cases hshape : state.eshapes exception with
+          | none => simp [raiseStepHOLExact, hEval, hshape]
+          | some shp =>
+              simp only [raiseStepHOLExact, hEval, hshape]
+              split
+              · split <;> rfl
+              · rfl
+  | «return» value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [returnStepHOLExact]; split
+      · split <;> rfl
+      · rfl
+  | shMemLoad size kind name address =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      exact (shMemLoadClauseHOLExact_preservesDomains state size kind name address
+        (fun _ expression => evalHOLExact state expression)).2
+  | shMemStore size address value =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      exact (shMemStoreClauseHOLExact_preservesDomains state size address value
+        (fun _ expression => evalHOLExact state expression)).2
+  | tick =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h
+      simp only [tickStepHOLExact]; split <;> rfl
+  | skip =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h; rfl
+  | dec _ _ _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | seq _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | ite _ _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | «while» _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | «break» =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h; rfl
+  | «continue» =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h; rfl
+  | call _ _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | decCall _ _ _ _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      exact absurd h (by simp)
+  | annot _ _ =>
+      simp only [evalPanSemNonrecursiveHOLExact] at h
+      obtain rfl := Option.some.inj h; rfl
+
 end Flapjack

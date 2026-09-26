@@ -865,6 +865,34 @@ theorem toExact_callEntryContext_eq {width : Nat} {σ : Type} [NeZero width]
   cases context
   rfl
 
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): the record-update form of the
+    `Call`/`DecCall` entry-context bridge.  The `Call`/`DecCall` projection proofs
+    see the broad entry context as the record update `{ context.toExact.state with
+    ... }` rather than the explicit literal used by `toExact_callEntryContext_eq`,
+    so this restatement is needed to rewrite that occurrence. -/
+theorem toExact_callEntryContext_state {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (callee : HolFiniteMapExact MlS (ValueHOL width))
+    (p1 : ({ context.toExact.state with clock := context.toExact.state.clock - 1, locals := callee.lookup } : PanSemStateExact width σ).memaddrs = context.toExact.state.memaddrs)
+    (p2 : ({ context.toExact.state with clock := context.toExact.state.clock - 1, locals := callee.lookup } : PanSemStateExact width σ).shMemaddrs = context.toExact.state.shMemaddrs) :
+    context.toExact.withState ({ context.toExact.state with clock := context.toExact.state.clock - 1, locals := callee.lookup } : PanSemStateExact width σ) p1 p2 =
+      (context.withState ({ context.state with clock := context.state.clock - 1, locals := callee } : PanSemStateFiniteExact width σ) rfl rfl).toExact := by
+  apply PanSemExactEvalContext.ext
+  cases context
+  rfl
+
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): `toExact_callEntryContext_state`
+    composed with a name for the finite entry context, giving the broad entry
+    context projection directly as `ent.toExact`. -/
+theorem toExact_callEntryContext_ent {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (callee : HolFiniteMapExact MlS (ValueHOL width))
+    (ent : FiniteEvalContext width σ)
+    (hent : context.withState ({ context.state with clock := context.state.clock - 1, locals := callee } : PanSemStateFiniteExact width σ) rfl rfl = ent)
+    (p1 : ({ context.toExact.state with clock := context.toExact.state.clock - 1, locals := callee.lookup } : PanSemStateExact width σ).memaddrs = context.toExact.state.memaddrs)
+    (p2 : ({ context.toExact.state with clock := context.toExact.state.clock - 1, locals := callee.lookup } : PanSemStateExact width σ).shMemaddrs = context.toExact.state.shMemaddrs) :
+    context.toExact.withState ({ context.toExact.state with clock := context.toExact.state.clock - 1, locals := callee.lookup } : PanSemStateExact width σ) p1 p2 =
+      ent.toExact := by
+  rw [toExact_callEntryContext_state context callee p1 p2, hent]
+
 /-- FLAPJACK-SPECIFIC (not a HOL declaration): a finite evaluation context is
     determined by its state; the two `DecidablePred` fields are proof-irrelevant
     for the respective (transported) predicates.  Used to compare contexts built

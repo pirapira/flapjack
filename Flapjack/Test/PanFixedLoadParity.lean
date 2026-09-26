@@ -101,7 +101,17 @@ def crepRv64Load32 (state : CrepHolState (BitVec 64) Unit)
     (address : BitVec 64) : Option (BitVec 64) :=
   evalCrepRuntimeExp (riscvCrepWordTarget state.toRuntime)
     (.load32 (.const address))
+def crepRv64LoadByte (state : CrepHolState (BitVec 64) Unit)
+    (address : BitVec 64) : Option (BitVec 64) :=
+  evalCrepRuntimeExp (riscvCrepWordTarget state.toRuntime)
+    (.loadByte (.const address))
 
+def crepRv64LoadByteLittle : Option (BitVec 64) :=
+  crepRv64LoadByte (crepRv64State false true) (BitVec.ofNat 64 9)
+def crepRv64LoadByteBig : Option (BitVec 64) :=
+  crepRv64LoadByte (crepRv64State true true) (BitVec.ofNat 64 9)
+def crepRv64LoadByteDomainMiss : Option (BitVec 64) :=
+  crepRv64LoadByte (crepRv64State false false) (BitVec.ofNat 64 9)
 def crepRv64Load32Little : Option (BitVec 64) :=
   crepRv64Load32 (crepRv64State false true) (BitVec.ofNat 64 8)
 def crepRv64Load32Big : Option (BitVec 64) :=
@@ -308,6 +318,9 @@ example :
 #guard byteBigEndian == originalByteBigEndian
 #guard load32BigEndian == originalLoad32BigEndian
 #guard load32DomainMiss == originalLoad32DomainMiss
+#guard crepRv64LoadByteLittle == originalByteHit
+#guard crepRv64LoadByteBig == originalByteBigEndian
+#guard crepRv64LoadByteDomainMiss == originalByteMiss
 #guard crepRv64Load32Little == originalLoad32Hit
 #guard crepRv64Load32Big == originalLoad32BigEndian
 #guard crepRv64Load32Unaligned == originalLoad32Unaligned

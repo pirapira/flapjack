@@ -1987,6 +1987,34 @@ theorem bindPanValueParametersLocalsRelOfPanSem
   exact slcTlcWordLabLocalsRelOfPanSem context parameters arguments slots
     hnames hshapeMap hslots hslotsLength hwf
 
+/-! Source-reviewed disposition of HOL
+    `evaluate_shape_invariant_ret_inst`
+    (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:3016`). HOL assumes the
+    exact result equation `evaluate (p, s) = (SOME v, s')`, source/target
+    `state_rel s t`, and `locals_rel ctxt s.locals t_locs`; it concludes that
+    the `Return` payload or `Exception` payload in `v` satisfies
+    `is_wf_shape_v_nil`. Its proof uses HOL's
+    `evaluate_is_wf_shape_invariant` to transfer the state invariant through
+    whole-program evaluation, then `locals_rel_wf_shape` and the HOL
+    `state_rel` fields to establish its premises.
+
+    There is no exact Lean counterpart here. `localsRelWfShape` below only
+    proves well-formedness for a value already present in related locals; the
+    state-based evaluator helper below proves well-formedness of expression
+    results over the production evaluator, not the Return/Exception result of
+    HOL `evaluate`. Those helpers use production `PanSemState`/
+    `CrepRuntimeState`, `PanValue`/`Shape`, and String-keyed
+    `PanToCrepProofContext`/`localsRel`. In particular, production source
+    memory is optional `PanValue` while HOL source memory is total
+    `word_lab`, production state/relations use String identifiers, and the
+    exact HOL value/shape carriers are `ValueHOL`/`ShapeHOL`. The complete
+    finite-support HOL evaluator and exact Pan-to-Crep state/local relations
+    are still missing. Keep these helpers untagged as support, not as ports of
+    `evaluate_shape_invariant_ret_inst`. Its faithful replacement is tracked
+    by bead `flapjack-4ac.5.83`, blocked on `flapjack-4ac.4.67`,
+    `flapjack-pxn.18.3.5.8`, `flapjack-pxn.18.3.7.1.3.1.1.2`, and
+    `flapjack-0lj.5`. -/
+
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port): the statement is keyed by the

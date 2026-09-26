@@ -479,6 +479,43 @@ theorem evalPanSemNonrecursiveHOLFinite_toExact {width : Nat} {σ : Type} [NeZer
   unfold evalPanSemNonrecursiveHOLFinite
   split <;> simp_all only [Option.map_some, toExact_ofExact] <;> rfl
 
+/-- The finite nonrecursive dispatcher preserves the `memaddrs` domain; the
+    post-state is rebuilt through `ofExact`, which copies the address domain. -/
+theorem evalPanSemNonrecursiveHOLFinite_memaddrs {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
+    (program : ProgHOL width)
+    (output : Option (PanSemResultExact width) × PanSemStateFiniteExact width σ)
+    (hout : evalPanSemNonrecursiveHOLFinite state program = some output) :
+    output.2.memaddrs = state.memaddrs := by
+  unfold evalPanSemNonrecursiveHOLFinite at hout
+  split at hout
+  · simp at hout
+  · rename_i pair hres
+    simp only [Option.some.injEq] at hout
+    subst hout
+    have hpair := evalPanSemNonrecursiveHOLExact_memaddrs program state.toExact pair hres
+    change pair.2.memaddrs = state.toExact.memaddrs
+    exact hpair
+
+/-- The finite nonrecursive dispatcher preserves the `shMemaddrs` domain. -/
+theorem evalPanSemNonrecursiveHOLFinite_shMemaddrs {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
+    (program : ProgHOL width)
+    (output : Option (PanSemResultExact width) × PanSemStateFiniteExact width σ)
+    (hout : evalPanSemNonrecursiveHOLFinite state program = some output) :
+    output.2.shMemaddrs = state.shMemaddrs := by
+  unfold evalPanSemNonrecursiveHOLFinite at hout
+  split at hout
+  · simp at hout
+  · rename_i pair hres
+    simp only [Option.some.injEq] at hout
+    subst hout
+    have hpair := evalPanSemNonrecursiveHOLExact_shMemaddrs program state.toExact pair hres
+    change pair.2.shMemaddrs = state.toExact.shMemaddrs
+    exact hpair
+
 /-- FLAPJACK-SPECIFIC (not the tagged HOL `evaluate_def` port): finite-support
     rendering of HOL `evaluate` (`cakeml/pancake/semantics/panSemScript.sml:556`)
     returning a genuine `result option × state` pair.  The body extracts the

@@ -321,6 +321,55 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "collectPanValueStructs_panSimpDecls"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "decs_stcnames_compile_prog",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Prog/Decl carriers; "
+        "HOL states it over the exact mlstring-keyed panLang syntax. Tag withdrawn; exact port "
+        "tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsRetToTailEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "exp_ids_ret_to_tail_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Prog carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsSeqAssocEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "exp_ids_seq_assoc_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Prog carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsCompileEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "exp_ids_compile_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Prog carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "sizeOfEidsPanSimpDeclsEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "size_of_eids_compile_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Decl carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "mapSndFEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "map_snd_f_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production carrier rendering; HOL uses exact panLang. "
+        "Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "functionsCompileProg"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "functions_compile_prog",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Decl carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "firstCompileProgAllDistinctPanSimp"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "first_compile_prog_all_distinct",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Decl carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
     ("Flapjack/Pancake/Proofs/PanGlobals/ShapeInfrastructure.lean", "evaluateDeclsFunctionsWf"): (
         "cakeml/pancake/proofs/pan_globalsProofScript.sml",
         "evaluate_decls_functions_wf",

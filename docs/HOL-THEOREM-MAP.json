@@ -2968,8 +2968,8 @@
     "hol_name": "decs_stcnames_compile_prog",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "collectPanValueStructs_panSimpDecls",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": null,
@@ -6456,48 +6456,48 @@
     "hol_name": "exp_ids_ret_to_tail_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "expIdsRetToTailEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "exp_ids_seq_assoc_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "expIdsSeqAssocEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "exp_ids_compile_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "expIdsCompileEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "size_of_eids_compile_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "sizeOfEidsPanSimpDeclsEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "functions_compile_prog",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "functionsCompileProg",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "first_compile_prog_all_distinct",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "firstCompileProgAllDistinctPanSimp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -6712,8 +6712,8 @@
     "hol_name": "map_snd_f_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "mapSndFEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": null,

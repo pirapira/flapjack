@@ -2842,8 +2842,8 @@
     "hol_name": "evaluate_decls_functions_wf",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals/ShapeInfrastructure.lean",
     "lean_name": "evaluateDeclsFunctionsWf",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.7): HOL pan_globalsProofScript.sml:2367 declares evaluate_decls_functions_wf[local] over the exact panSem evaluate_decls and exact panLang decl/shape carriers, and it is [local] so not exported by the theory. The Lean evaluateDeclsFunctionsWf is stated over the production PanSemDeclarationState/Decl/isWfShape String/Shape carriers. The @[hol] tag was withdrawn; the public consequence evaluate_decls_functions is the exact port (evaluateDeclsHOLFinite_functions)."
   },
   {
     "hol_path": null,

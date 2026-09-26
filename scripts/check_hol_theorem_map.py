@@ -321,6 +321,15 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Proofs/PanGlobals/ShapeInfrastructure.lean", "evaluateDeclsFunctionsWf"): (
+        "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+        "evaluate_decls_functions_wf",
+        "flapjack-ds8 (bead flapjack-4ac.7): HOL declares evaluate_decls_functions_wf[local] "
+        "over the exact panSem evaluate_decls and exact panLang decl/shape carriers; it is not "
+        "exported, and the Lean analogue reads the production PanSemDeclarationState/Decl/isWfShape "
+        "String/Shape carriers. The @[hol] tag was withdrawn; the public consequence "
+        "evaluate_decls_functions is the exact port (evaluateDeclsHOLFinite_functions)."
+    ),
     ("Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean", "evaluateDeclsNamesHOLFinite"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
         "evaluate_decls_names",

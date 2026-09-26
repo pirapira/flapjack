@@ -50,11 +50,12 @@ also replaced by `mry`. This is a distinct result from expression-level
 declarations. The broad `evaluateDeclsHOLExact` and `evalHOLExact` use
 `PanSemStateExact`, whose locals/globals/code/eshapes are unrestricted lookup
 functions rather than HOL finite maps. The PanProps-local finite-support
-evaluator and exact expression swap-memory theorem now live in
+evaluator, its kernel-checked bridge to `evaluateDeclsHOLExact`, and the exact
+expression/declaration memory-swap theorems live in
 `PanProps/EvalInvariant.lean` with its local owner and canonical witness. The
-faithful declaration theorem remains tracked by `flapjack-4ac.4.101.1`, which
-depends on exact `eval_swap_memory` port `flapjack-4ac.4.100.1` and the
-finite-support declaration evaluator port `flapjack-4ac.4.102.1`. -/
+declaration theorem `evaluateDeclsSwapMemoryHOLFinite` preserves HOL's
+conjunctive success/memory-agreement premise and updates only memory in the
+initial/result states. -/
 
 /-! Source review for HOL `evaluate_decls_memaddrs_mono`
 (`panPropsScript.sml:1766-1778`): HOL quantifies an initial state `s`, program
@@ -63,12 +64,13 @@ finite-support declaration evaluator port `flapjack-4ac.4.102.1`. -/
 successful evaluation from `s` with only `memaddrs` replaced, yielding `s'`
 with the same replacement set. The broad Lean `evaluateDeclsHOLExact` remains
 untagged because `PanSemStateExact` uses unrestricted lookup functions for
-locals/globals/code/eshapes. The finite-support evaluator is tagged as
-`evaluate_decls_def` and `evaluateDeclsMemaddrsMonoHOLFinite` is tagged with
-the theorem in `PanProps/EvalInvariant.lean`, using the existing
+locals/globals/code/eshapes. The PanProps-local finite-support evaluator is an
+untagged Flapjack adapter; the faithful PanSem counterpart for
+`evaluate_decls_def` remains open as `flapjack-4ac.3.53`. The theorem
+`evaluateDeclsMemaddrsMonoHOLFinite` is tagged in `PanProps/EvalInvariant.lean`, using the existing
 `PanPropsEvalStateFiniteExact` owner and same-module canonical roundtrip
-witness. Its kernel-checked `_toExact` bridge proves the full `Option` result
-matches `evaluateDeclsHOLExact` on the projected state. Its clauses match the
+witness. The adapter's kernel-checked `_toExact` bridge proves the full
+`Option` result matches `evaluateDeclsHOLExact` on the projected state. Its clauses match the
 source: names skip; expressions evaluate with empty locals before a shape
 check and global update; functions check parameter/return shapes before code
 update; exceptions check absence and shape before exception-shape update. The

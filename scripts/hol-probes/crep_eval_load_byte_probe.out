@@ -3,3 +3,5 @@ eval_loadbyte_addr9=SOME (Word 119w)
 eval_loadbyte_addr10=SOME (Word 102w)
 eval_loadbyte_outside_domain=NONE
 mem_load_byte_addr9=SOME 119w
+eval_loadbyte_w24_addr5=SOME (Word 51w)
+eval_loadbyte_w24_be_addr5=SOME (Word 17w)

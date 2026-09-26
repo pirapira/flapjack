@@ -7,23 +7,26 @@ The exact `evaluate_def` evaluator `evalPanSemRecursiveCallContextHOLExact`
 HOL `panSem$state` instead keeps those fields as finite maps (`varname |-> 'a v`,
 `|->`), so the evaluator is faithful only on the finite-support subcarrier.
 
-The tagged wrapper `PanSemStateFiniteExact.evaluateHOLFinite` lives in
+The state-level `PanSemStateFiniteExact.evaluateHOLFinite` lives in
 `Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean`, the same module as
 the carrier `PanSemStateFiniteExact` and the canonical translation witness
-`holFmapAsFiniteSupportWitness` (the `fmap_as_finite_support` qualifier requires
-the owning structure, the witness, and the tagged declaration to share a module).
-Its body extracts the total finite-support recursive evaluator
-`evalPanSemRecursiveCallHOLFinite`; because HOL `evaluate_def` is well-founded
-recursion, that body delegates rather than syntactically presenting HOL's
-clause-shaped body, exactly as the reviewed `evalHOLFinite` does for `eval_def`.
+`holFmapAsFiniteSupportWitness`.  It is currently a FLAPJACK-SPECIFIC untagged
+adapter, not the tagged HOL `evaluate_def` port: its body extracts the total
+finite-support recursive evaluator `evalPanSemRecursiveCallHOLFinite`; because
+HOL `evaluate_def` is well-founded recursion, that body delegates rather than
+syntactically presenting HOL's clause-shaped body.  The earlier
+`@[hol ... "evaluate_def"]` tag was withdrawn on coordinator review, because a
+delegating body is not sufficient source evidence for the recursive clauses.
 
-This module provides the clause-shaped equations that expose the `evaluate_def`
-clauses over the finite carrier.  `evaluateHOLFinite_of_broad` and
-`evalPanSemRecursiveCallHOLFinite_of_broad` are the generic translation lemmas
-that relate the finite wrapper to the broad exact evaluator for any program and
-any broad result; the per-constructor equations below specialise them to the
-`Skip` / `Break` / `Continue` clauses.  They are the per-clause review surface
-cited by the tagged definition.
+This module currently exposes only three clause-shaped equations over the finite
+carrier: `Skip` / `Break` / `Continue`, via `evaluateHOLFinite_of_broad` and
+`evalPanSemRecursiveCallHOLFinite_of_broad`, the generic translation lemmas that
+relate the finite adapter to the broad exact evaluator for any program and any
+broad result.  The remaining clauses are NOT yet exposed.  The faithful tagged
+`evaluate_def` port over the finite-support carrier requires threading
+`memaddrsDecidable`/`shMemaddrsDecidable` through a finite evaluation context so
+that a direct clause-for-clause definition typechecks; that is tracked by bead
+`flapjack-6yq`, which blocks `flapjack-qj5`.
 -/
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 
@@ -61,7 +64,7 @@ theorem evalPanSemRecursiveCallHOLFinite_of_broad {width : Nat} {σ : Type} [NeZ
     subst hres
     rfl
 
-/-- Generic translation for the tagged finite evaluator: given the broad exact
+/-- Generic translation for the finite adapter: given the broad exact
     evaluator's result on `program`, `evaluateHOLFinite` returns the same
     (`result option × state`) pair with the post-state rebuilt through the
     canonical finite-support carrier. -/

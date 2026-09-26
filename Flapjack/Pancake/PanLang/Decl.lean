@@ -251,7 +251,9 @@ preserves the inline bit in an exact `Function`; every other production
 constructor is represented by an exact non-function `Decl`. Names, bodies,
 and word values are irrelevant to this predicate. The caller filters its
 original production list, so no generic `String`/`α` value is decoded or
-rewritten. -/
+rewritten. Width one is only a well-typed carrier for the dummy declaration:
+HOL `inlinable` observes the function constructor and its inline bit, never a
+word value, so changing the width cannot change the predicate result. -/
 def inlinableThroughHOL {α : Type} : Flapjack.Decl α → Bool
   | .function declaration =>
       inlinableHOL (.function

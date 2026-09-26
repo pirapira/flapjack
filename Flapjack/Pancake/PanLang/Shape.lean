@@ -185,120 +185,6 @@ def shapeToStrHOL : ShapeHOL → MlS
           [Flapjack.Basis.Pure.MlString.ofString "}"])
   | .named name => name
 
-private theorem foldlShapeStrings_append_prefix (fields : List Flapjack.Shape)
-    (leading initial : String) :
-    fields.foldl
-        (fun result field => result ++ "," ++ Flapjack.Shape.shapeToString field)
-        (leading ++ initial) =
-      leading ++ fields.foldl
-        (fun result field => result ++ "," ++ Flapjack.Shape.shapeToString field)
-        initial := by
-  induction fields generalizing leading initial with
-  | nil => simp
-  | cons field fields ih =>
-      simp only [List.foldl_cons]
-      simpa only [String.append_assoc] using
-        ih leading (initial ++ "," ++ Flapjack.Shape.shapeToString field)
-
-private def StringByteRanged (text : String) : Prop :=
-  ∀ character ∈ text.toList, character.toNat < 256
-
-private theorem stringSingletonByteRanged (character : Char)
-    (hcharacter : character.toNat < 256) :
-  StringByteRanged (String.singleton character) := by
-  intro other hother
-  simp only [String.singleton, String.toList_push, String.toList_empty,
-    List.mem_append, List.mem_singleton] at hother
-  rcases hother with hnil | heq
-  · cases hnil
-  · subst other
-    exact hcharacter
-
-private theorem stringByteRanged_append {left right : String}
-    (hleft : StringByteRanged left) (hright : StringByteRanged right) :
-    StringByteRanged (left ++ right) := by
-  intro character hcharacter
-  simp only [String.toList_append, List.mem_append] at hcharacter
-  rcases hcharacter with hleft' | hright'
-  · exact hleft character hleft'
-  · exact hright character hright'
-
-private theorem shapeToStringTail_byteRanged (tail : List Flapjack.Shape)
-    (h : ∀ field ∈ tail,
-      StringByteRanged (Flapjack.Shape.shapeToString field)) :
-    StringByteRanged
-      (tail.foldl
-        (fun result field => result ++ "," ++ Flapjack.Shape.shapeToString field) "") := by
-  induction tail with
-  | nil =>
-      intro character hcharacter
-      change character ∈ ([] : List Char) at hcharacter
-      cases hcharacter
-  | cons field tail ih =>
-      have hfield := h field (by simp)
-      have htail : ∀ nested ∈ tail,
-          StringByteRanged (Flapjack.Shape.shapeToString nested) := by
-        intro nested hmem
-        exact h nested (by simp [hmem])
-      have ihTail := ih htail
-      have hcomma : StringByteRanged "," := by
-        simpa using stringSingletonByteRanged ',' (by decide)
-      have hfirst := stringByteRanged_append hcomma hfield
-      have hfold := foldlShapeStrings_append_prefix tail
-        ("," ++ Flapjack.Shape.shapeToString field) ""
-      have hfold' :
-          tail.foldl
-              (fun result field => result ++ "," ++ Flapjack.Shape.shapeToString field)
-              ("," ++ Flapjack.Shape.shapeToString field) =
-            ("," ++ Flapjack.Shape.shapeToString field) ++
-              tail.foldl
-                (fun result field => result ++ "," ++ Flapjack.Shape.shapeToString field)
-                "" := by
-        simpa using hfold
-      simp only [List.foldl_cons]
-      rw [show "" ++ "," ++ Flapjack.Shape.shapeToString field =
-          "," ++ Flapjack.Shape.shapeToString field by simp, hfold']
-      exact stringByteRanged_append hfirst ihTail
-
-private theorem shapeToString_byteRanged (shape : Flapjack.Shape)
-    (hshape : ShapeByteRanged shape) :
-    StringByteRanged (Flapjack.Shape.shapeToString shape) := by
-  revert hshape
-  fun_induction Flapjack.Shape.shapeToString shape with
-  | case1 =>
-      intro _
-      simpa [Flapjack.Shape.shapeToString] using
-        stringSingletonByteRanged '1' (by decide)
-  | case2 =>
-      intro _
-      have hopen : StringByteRanged (String.singleton '{') :=
-        stringSingletonByteRanged '{' (by decide)
-      have hclose : StringByteRanged (String.singleton '}') :=
-        stringSingletonByteRanged '}' (by decide)
-      simpa [Flapjack.Shape.shapeToString] using stringByteRanged_append hopen hclose
-  | case3 head tail ihHead ihTail =>
-      intro hshape
-      simp only [ShapeByteRanged] at hshape
-      have hhead := ihHead (hshape head (by simp))
-      have htail : ∀ field ∈ tail,
-          StringByteRanged (Flapjack.Shape.shapeToString field) := by
-        intro field hmem
-        exact ihTail field hmem (hshape field (by simp [hmem]))
-      have hfold := shapeToStringTail_byteRanged tail htail
-      have hopen : StringByteRanged ("{" ++ Flapjack.Shape.shapeToString head) := by
-        apply stringByteRanged_append
-        · simpa using stringSingletonByteRanged '{' (by decide)
-        · exact hhead
-      have hclosed := stringByteRanged_append hopen hfold
-      have hbrace : StringByteRanged "}" := by
-        simpa using stringSingletonByteRanged '}' (by decide)
-      simpa [Flapjack.Shape.shapeToString] using
-        stringByteRanged_append hclosed hbrace
-  | case4 name =>
-      intro hname
-      simpa [StringByteRanged, ShapeByteRanged,
-        Flapjack.Shape.shapeToString] using hname
-
 /-! HOL `panLang$with_shape` (`cakeml/pancake/panLangScript.sml:216-220`) splits
     a list into consecutive blocks whose lengths are the `size_of_shape` of each
     shape: `with_shape [] _ = []` and `with_shape (sh::shs) e = TAKE
@@ -416,17 +302,79 @@ theorem ofString_shapeToString (s : Flapjack.Shape) :
         mlstrAppend_implode_nil, mlstrAppend_assoc]
   | case4 name => simp only [Shape.shapeToString, shapeToHOL, shapeToStrHOL]
 
-/-- String-level corollary of `ofString_shapeToString`: the shape-indexed
-    `ShapeByteRanged` premise implies that every production-rendered character
-    is a byte, so `toStringOfBytes` recovers the production String. This is
-    FLAPJACK-SPECIFIC, untagged infrastructure; the exact HOL definition remains
-    tagged as `shapeToStrHOL`. -/
-theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes
-    (s : Flapjack.Shape) (hshape : ShapeByteRanged s) :
+private theorem string_append_bytes {a b : String}
+    (ha : ∀ c ∈ a.toList, c.toNat < 256) (hb : ∀ c ∈ b.toList, c.toNat < 256) :
+    ∀ c ∈ (a ++ b).toList, c.toNat < 256 := by
+  intro c hc
+  simp only [String.toList_append, List.mem_append] at hc
+  rcases hc with h | h
+  · exact ha c h
+  · exact hb c h
+
+private theorem foldl_bytes (fields : List Flapjack.Shape) :
+    ∀ (init : String), (∀ c ∈ init.toList, c.toNat < 256) →
+      (∀ field ∈ fields, ∀ c ∈ (Shape.shapeToString field).toList, c.toNat < 256) →
+      ∀ c ∈ (fields.foldl (fun result field => result ++ "," ++ Shape.shapeToString field) init).toList,
+        c.toNat < 256 := by
+  induction fields with
+  | nil => intro init hinit _; simpa using hinit
+  | cons field rest ih =>
+      intro init hinit hfields
+      simp only [List.foldl_cons]
+      apply ih
+      · apply string_append_bytes
+        · apply string_append_bytes hinit
+          exact (by decide : ∀ c ∈ ("," : String).toList, c.toNat < 256)
+        · exact hfields field (by simp)
+      · intro f hf; exact hfields f (by simp [hf])
+
+/-- Every character of a byte-ranged shape's production rendering is a byte.
+    `Shape.shapeToString` concatenates literal separators and the recursive
+    renderings, so the only source of characters is the `named` case, where
+    `ShapeByteRanged` supplies the bound.  FLAPJACK-SPECIFIC, untagged. -/
+theorem shapeByteRanged_shapeToString_bytes (s : Flapjack.Shape) :
+    ShapeByteRanged s → ∀ c ∈ (Shape.shapeToString s).toList, c.toNat < 256 := by
+  induction s using Flapjack.Shape.shapeToString.induct with
+  | case1 => intro _; simp only [Shape.shapeToString]; decide
+  | case2 => intro _; simp only [Shape.shapeToString]; decide
+  | case3 head tail ihHead ihTail =>
+      intro h
+      simp only [ShapeByteRanged] at h
+      have hhead : ∀ c ∈ (Shape.shapeToString head).toList, c.toNat < 256 :=
+        ihHead (h head (by simp))
+      have htail : ∀ f ∈ tail, ∀ c ∈ (Shape.shapeToString f).toList, c.toNat < 256 :=
+        fun f hf => ihTail f hf (h f (by simp [hf]))
+      intro c hc
+      rw [Shape.shapeToString] at hc
+      have hfold := foldl_bytes tail "" (by decide) htail
+      repeat rw [String.toList_append, List.mem_append] at hc
+      rcases hc with hc | hD
+      · rcases hc with hc | hC
+        · rcases hc with hA | hB
+          · exact (by decide : ∀ c ∈ ("{" : String).toList, c.toNat < 256) c hA
+          · exact hhead c hB
+        · exact hfold c hC
+      · exact (by decide : ∀ c ∈ ("}" : String).toList, c.toNat < 256) c hD
+  | case4 name => intro h; simpa only [ShapeByteRanged, Shape.shapeToString] using h
+
+/-- String-level corollary of `ofString_shapeToString`: when every character of
+    the production rendering is a byte, `toStringOfBytes` inverts `ofString` and
+    recovers `Shape.shapeToString`.  FLAPJACK-SPECIFIC, untagged. -/
+theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes (s : Flapjack.Shape)
+    (h : ∀ c ∈ (Shape.shapeToString s).toList, c.toNat < 256) :
     Shape.shapeToString s =
       Flapjack.Basis.Pure.MlString.toStringOfBytes (shapeToStrHOL (shapeToHOL s)) := by
   rw [← ofString_shapeToString s,
     Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes]
-  exact shapeToString_byteRanged s hshape
+  exact h
+
+/-- Premise-free form of the production bridge: `ShapeByteRanged` already
+    guarantees the byte premise, so this closes the `.1.28` diagnostic-string
+    bridge without an extra hypothesis.  FLAPJACK-SPECIFIC, untagged. -/
+theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes_of_byteRanged (s : Flapjack.Shape)
+    (h : ShapeByteRanged s) :
+    Shape.shapeToString s =
+      Flapjack.Basis.Pure.MlString.toStringOfBytes (shapeToStrHOL (shapeToHOL s)) :=
+  shapeToString_eq_shapeToStrHOL_toStringOfBytes s (shapeByteRanged_shapeToString_bytes s h)
 
 end Flapjack.Pancake.PanLang

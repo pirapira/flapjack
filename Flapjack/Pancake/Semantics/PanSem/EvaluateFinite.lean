@@ -19,9 +19,10 @@ so the recursive clauses typecheck over literal record updates.
 
 This module exposes the clause surface of `evaluateHOLFinite`, clause by clause,
 as the source evidence for the `evaluate_def` port.  Exposed so far:
-`Skip` / `Break` / `Continue`.  The remaining clauses are being added; the
-exact `@[hol ... "evaluate_def" ...]` tag stays withheld until every clause is
-exposed and reviewed (`flapjack-qj5` is blocked on `flapjack-6yq`).
+`Skip` / `Break` / `Continue`, and the `Seq` (three outcomes) and `If`
+(then/else on a word condition) clauses.  The remaining clauses are being
+added; the exact `@[hol ... "evaluate_def" ...]` tag stays withheld until every
+clause is exposed and reviewed (`flapjack-qj5` is blocked on `flapjack-6yq`).
 
 The older delegating adapter `evaluateHOLFiniteViaExact` (and its
 `evalPanSemRecursiveCallHOLFinite_of_broad` / `evaluateHOLFiniteViaExact_of_broad`
@@ -31,7 +32,7 @@ import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (ProgHOL)
+open Flapjack.Pancake.PanLang (ProgHOL ExpHOL)
 
 namespace PanSemStateFiniteExact
 
@@ -144,6 +145,84 @@ theorem evaluateHOLFiniteViaExact_of_broad {width : Nat} {σ : Type} [NeZero wid
     evaluateHOLFinite state (.continue : ProgHOL width) = some (some .continue, state) := by
   unfold evaluateHOLFinite
   simp [evalPanSemRecursiveCallFiniteContext]
+
+/-- HOL `evaluate_def` `Seq` clause: if the first command returns `NONE`
+    (a short-circuit `Break`/`Continue`/`Return`-less normal prefix), the whole
+    sequence has no result. -/
+theorem evalPanSemRecursiveCallFiniteContext_seq_none {width : Nat} {σ : Type} [NeZero width]
+    (first second : ProgHOL width) (context : FiniteEvalContext width σ)
+    (hfirst : evalPanSemRecursiveCallFiniteContext first context = none) :
+    evalPanSemRecursiveCallFiniteContext (.seq first second) context = none := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hfirst]
+
+/-- HOL `evaluate_def` `Seq` clause: a normal (`NONE`) first result runs the
+    second command from the clock-fixed continuation state. -/
+theorem evalPanSemRecursiveCallFiniteContext_seq_some_none {width : Nat} {σ : Type}
+    [NeZero width]
+    (first second : ProgHOL width) (context : FiniteEvalContext width σ)
+    (firstContext : FiniteEvalContext width σ)
+    (hfirst : evalPanSemRecursiveCallFiniteContext first context = some (none, firstContext)) :
+    evalPanSemRecursiveCallFiniteContext (.seq first second) context =
+      evalPanSemRecursiveCallFiniteContext second
+        (firstContext.withState
+          (fixClockHOLFinite context.state
+            ((none : Option (PanSemResultExact width)), firstContext.state)).2 rfl rfl) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hfirst]
+
+/-- HOL `evaluate_def` `Seq` clause: a non-`NONE` first result short-circuits the
+    sequence at the clock-fixed continuation state. -/
+theorem evalPanSemRecursiveCallFiniteContext_seq_some_some {width : Nat} {σ : Type}
+    [NeZero width]
+    (first second : ProgHOL width) (context : FiniteEvalContext width σ)
+    (firstContext : FiniteEvalContext width σ)
+    (firstResult : PanSemResultExact width)
+    (hfirst : evalPanSemRecursiveCallFiniteContext first context =
+      some (some firstResult, firstContext)) :
+    evalPanSemRecursiveCallFiniteContext (.seq first second) context =
+      some (some firstResult,
+        firstContext.withState
+          (fixClockHOLFinite context.state (some firstResult, firstContext.state)).2 rfl rfl) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hfirst]
+
+/-- HOL `evaluate_def` `If` clause, non-zero branch: a word-valued true condition
+    selects the then-branch. -/
+theorem evalPanSemRecursiveCallFiniteContext_ite_then {width : Nat} {σ : Type} [NeZero width]
+    (condition : ExpHOL width) (thenBranch elseBranch : ProgHOL width)
+    (context : FiniteEvalContext width σ)
+    (value : BitVec width)
+    (hcond : evalHOLFinite context.state (h := context.memaddrsDecidable) condition =
+      some (ValueHOL.val (HolWordLab.word value)))
+    (hne : (value != 0) = true) :
+    evalPanSemRecursiveCallFiniteContext (.ite condition thenBranch elseBranch) context =
+      evalPanSemRecursiveCallFiniteContext thenBranch context := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hcond]
+  dsimp only
+  rw [if_pos hne]
+
+/-- HOL `evaluate_def` `If` clause, zero branch: a word-valued false condition
+    selects the else-branch. -/
+theorem evalPanSemRecursiveCallFiniteContext_ite_else {width : Nat} {σ : Type} [NeZero width]
+    (condition : ExpHOL width) (thenBranch elseBranch : ProgHOL width)
+    (context : FiniteEvalContext width σ)
+    (value : BitVec width)
+    (hcond : evalHOLFinite context.state (h := context.memaddrsDecidable) condition =
+      some (ValueHOL.val (HolWordLab.word value)))
+    (hz : (value != 0) = false) :
+    evalPanSemRecursiveCallFiniteContext (.ite condition thenBranch elseBranch) context =
+      evalPanSemRecursiveCallFiniteContext elseBranch context := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hcond]
+  dsimp only
+  rw [if_neg (by rw [hz]; decide)]
 
 end PanSemStateFiniteExact
 

@@ -10576,48 +10576,48 @@
     "hol_name": "left_shift_inst",
     "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
     "lean_name": "leftShiftInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-j815): exact. HOL stackLangScript.sml:80 Overload left_shift_inst = \"%r v. Inst (Arith (Shift Lsl r r (Imm (n2w v))))\"; Lean leftShiftInst register value = .inst (.arith (.shift .lsl register register (.imm (BitVec.ofNat width value)))) over the exact HolProg carrier (HolInst/HolArith/HolRegImm; n2w = BitVec.ofNat). Same register used as destination and source (r r), same Lsl, same Nat->word value. No extra hypotheses beyond [NeZero width] (HOL word dimensions are nonzero)."
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "right_shift_inst",
     "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
     "lean_name": "rightShiftInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-j815): exact. HOL stackLangScript.sml:81 Overload right_shift_inst = \"%r v. Inst (Arith (Shift Lsr r r (Imm (n2w v))))\"; Lean rightShiftInst mirrors it with .lsr and the same r r / Nat->word n2w. [NeZero width] only."
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "const_inst",
     "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
     "lean_name": "constInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-j815): exact. HOL stackLangScript.sml:82 Overload const_inst = \"%r w. Inst (Const r w)\"; Lean constInst register value = .inst (.const register value) with value : BitVec width matching HOL w : 'a word. No side conditions."
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "load_inst",
     "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
     "lean_name": "loadInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-j815): exact. HOL stackLangScript.sml:83 Overload load_inst = \"%r a. Inst (Mem Load r (Addr a 0w))\"; Lean loadInst register address = .inst (.mem .load register (.addr address 0)) with offset 0 : BitVec width matching HOL 0w. No side conditions."
   },
   {
     "hol_path": "cakeml/compiler/backend/stackLangScript.sml",
     "hol_name": "store_inst",
     "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
     "lean_name": "storeInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-j815): exact. HOL stackLangScript.sml:84 Overload store_inst = \"%r a. Inst (Mem Store r (Addr a 0w))\"; Lean storeInst register address = .inst (.mem .store register (.addr address 0)). No side conditions."
   },
   {
     "hol_path": "cakeml/compiler/backend/stack_removeScript.sml",
     "hol_name": "halt_inst_def",
     "lean_path": "Flapjack/Compiler/Backend/StackRemove.lean",
     "lean_name": "haltInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-j815): exact. HOL stack_removeScript.sml:58-60 halt_inst w = Seq (const_inst 1 w) (Halt 1); Lean haltInst value = .seq (.inst (.const 1 value)) (.halt 1) over the exact HolProg carrier, using the reviewed const_inst overload. No extra hypotheses beyond [NeZero width]."
   },
   {
     "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",

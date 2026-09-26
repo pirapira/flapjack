@@ -1511,6 +1511,12 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Compiler/Backend/RegAlloc.lean", "isPhyVar"),
         ("Flapjack/Compiler/Backend/RegAlloc.lean", "isAllocVar"),
         ("Flapjack/Compiler/Backend/RegAlloc.lean", "conventionPartitions"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "leftShiftInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "rightShiftInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "constInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "loadInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "storeInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "haltInst"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

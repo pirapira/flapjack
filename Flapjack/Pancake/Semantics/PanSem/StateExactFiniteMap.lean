@@ -102,7 +102,22 @@ theorem HolFiniteMapExact.lookup_update_pointwise {α β : Type} [BEq α] [Lawfu
 
 /-- Finite-support mirror of `PanSemStateExact`.  The four map-shaped
     components are `HolFiniteMapExact` values, i.e. finite support holds by
-    construction, matching HOL's `|->` fields. -/
+    construction, matching HOL's `|->` fields.
+
+    This is the exact Lean counterpart of the HOL `panSem$state` datatype
+    (`cakeml/pancake/semantics/panSemScript.sml:46-64`): the 13 fields appear in
+    the same order with the same meaning.  The name-bearing maps
+    `locals`/`globals`/`code`/`eshapes` are the reviewed canonical
+    `HolFiniteMapExact` translation of HOL's `|->` fields; the `structs`
+    component is the exact `StructContextExact` context, `memory` is the exact
+    `RiscV.Word width → HolWordLab width` carrier, the address domains are
+    predicates, and `ffi`/`clock`/`be`/`base_addr`/`top_addr` keep HOL's
+    meanings.  The `fmap_as_finite_support` qualifier records only this
+    finite-map representation and authorizes no other difference; the canonical
+    witness `holFmapAsFiniteSupportWitness` below is the roundtrip between this
+    structure and the broad `PanSemStateExact`. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "state"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 structure PanSemStateFiniteExact (width : Nat) (σ : Type) [NeZero width] where
   locals : HolFiniteMapExact MlS (ValueHOL width)
   globals : HolFiniteMapExact MlS (ValueHOL width)

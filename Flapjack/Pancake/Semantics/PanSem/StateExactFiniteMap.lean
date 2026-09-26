@@ -1316,8 +1316,12 @@ theorem evaluateHOLFinite_ne_none {width : Nat} {σ : Type} [NeZero width]
     map-shaped state fields (`locals`, `globals`, `code`, `eshapes`) are
     recorded by the `fmap_as_finite_support` qualifier (canonical witness
     `holFmapAsFiniteSupportWitness` in this module). -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_only_funs_and_exn_decls"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+-- HOL tag withdrawn (bead flapjack-4ac.4.88; coordinator HOLD 2026-09-26): a
+-- panPropsScript.sml declaration must live in its PanProps counterpart, but the
+-- `fmap_as_finite_support` witness must be in the same module as the owning
+-- `PanSemStateFiniteExact` carrier. The faithful placement is tracked by a
+-- prerequisite bead; this is a Flapjack-specific restatement over the canonical
+-- evaluator.
 theorem evaluateDeclsHOLFinite_onlyFunsAndExnDecls {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanSemStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanSemStateFiniteExact width σ),
@@ -1392,8 +1396,12 @@ theorem evaluateDeclsHOLFinite_onlyFunsAndExnDecls {width : Nat} {σ : Type} [Ne
     four map-shaped state fields are recorded by the `fmap_as_finite_support`
     qualifier (canonical witness `holFmapAsFiniteSupportWitness` in this
     module). -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_only_exn_decls"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+-- HOL tag withdrawn (bead flapjack-4ac.4.77; coordinator HOLD 2026-09-26): a
+-- panPropsScript.sml declaration must live in its PanProps counterpart, but the
+-- `fmap_as_finite_support` witness must be in the same module as the owning
+-- `PanSemStateFiniteExact` carrier. The faithful placement is tracked by a
+-- prerequisite bead; this is a Flapjack-specific restatement over the canonical
+-- evaluator.
 theorem evaluateDeclsHOLFinite_onlyExnDecls {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanSemStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanSemStateFiniteExact width σ),
@@ -1471,8 +1479,12 @@ private theorem lookup_none_all_update {map : HolFiniteMapExact MlS ShapeHOL}
     `HolFiniteMapExact.updateList`. The four map-shaped state fields are recorded
     by the `fmap_as_finite_support` qualifier (canonical witness
     `holFmapAsFiniteSupportWitness` in this module). -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "exns_wf_evaluate_decls"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+-- HOL tag withdrawn (bead flapjack-4ac.4.78; coordinator HOLD 2026-09-26): a
+-- panPropsScript.sml declaration must live in its PanProps counterpart, but the
+-- `fmap_as_finite_support` witness must be in the same module as the owning
+-- `PanSemStateFiniteExact` carrier. The faithful placement is tracked by a
+-- prerequisite bead; this is a Flapjack-specific restatement over the canonical
+-- evaluator.
 theorem evaluateDeclsHOLFinite_exnsWf {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [hstate : DecidablePred state.memaddrs]
     (decs : List (DeclHOL width)) :

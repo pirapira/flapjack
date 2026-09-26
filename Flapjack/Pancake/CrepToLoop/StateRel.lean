@@ -1010,7 +1010,7 @@ private theorem writeBytearrayMemRel_step {width : Nat} [NeZero width]
     exact h0
 
 set_option linter.unusedSimpArgs false in
-/-- Exact port of HOL `write_bytearray_mem_rel`
+/-- Flapjack-specific restatement of HOL `write_bytearray_mem_rel`
     (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:251-256`): writing the
     same byte array to two `mem_rel`-related memories keeps them related on the
     same domain. The source `panSem$write_bytearray` (`panWriteBytearrayHOL`)
@@ -1020,10 +1020,14 @@ set_option linter.unusedSimpArgs false in
     `riscvByteAlignHOL_eq_panByteAlignHOL` and
     `panSetByteHOL_eq_riscvSetByteHOL`. The pan memory is the exact `HolWordLab`
     `panSem$word_lab` carrier, read through production `PanWordLab` via
-    `HolWordLab.toPanWordLab` (the kernel-checked isomorphism). `hdiv`
-    (`width % 8 = 0`, the compiler's word widths) is required because the byte
-    codec equality is false otherwise. -/
-@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "write_bytearray_mem_rel"]
+    `HolWordLab.toPanWordLab` (the kernel-checked isomorphism).
+    The HOL tag is withdrawn (bead flapjack-pxn.18.5.6.17.1; coordinator HOLD
+    2026-09-26): the HOL theorem has no width-divisibility premise, while `hdiv`
+    (`width % 8 = 0`) is needed here because the two byte-codec renderings
+    coincide only when `8 ∣ width`; compiler word widths 32/64 do not make the
+    unrestricted HOL theorem exact. A faithful port needs width-free byte
+    renderings or a HOL-derived divisibility argument, tracked by a prerequisite
+    bead. -/
 theorem writeBytearrayMemRel {width : Nat} [NeZero width] (hdiv : width % 8 = 0)
     (smem : BitVec width → HolWordLab width)
     (tmem : BitVec width → LoopValue (BitVec width))

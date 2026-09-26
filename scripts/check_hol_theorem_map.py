@@ -321,6 +321,37 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_onlyFunsAndExnDecls"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "evaluate_decls_only_funs_and_exn_decls",
+        "flapjack-ds8 (bead flapjack-4ac.4.88; coordinator HOLD 2026-09-26T16:50Z): the HOL tag "
+        "was withdrawn because a panPropsScript.sml declaration must live in its PanProps "
+        "counterpart/submodule, while the fmap_as_finite_support witness must be in the same module "
+        "as the owning PanSemStateFiniteExact carrier. Flapjack-specific restatement over the "
+        "canonical tagged evaluator; faithful placement tracked by a prerequisite bead.",
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_onlyExnDecls"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "evaluate_decls_only_exn_decls",
+        "flapjack-ds8 (bead flapjack-4ac.4.77; coordinator HOLD 2026-09-26T16:50Z): the HOL tag "
+        "was withdrawn for the same PanProps-counterpart-placement reason as "
+        "evaluateDeclsHOLFinite_onlyFunsAndExnDecls; faithful placement tracked by a prerequisite bead.",
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_exnsWf"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "exns_wf_evaluate_decls",
+        "flapjack-ds8 (bead flapjack-4ac.4.78; coordinator HOLD 2026-09-26T16:50Z): the HOL tag "
+        "was withdrawn for the same PanProps-counterpart-placement reason as "
+        "evaluateDeclsHOLFinite_onlyFunsAndExnDecls; faithful placement tracked by a prerequisite bead.",
+    ),
+    ("Flapjack/Pancake/CrepToLoop/StateRel.lean", "writeBytearrayMemRel"): (
+        "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+        "write_bytearray_mem_rel",
+        "flapjack-ds8 (bead flapjack-pxn.18.5.6.17.1; coordinator HOLD 2026-09-26T16:41Z): the HOL "
+        "tag was withdrawn because the HOL theorem has no width-divisibility premise while this "
+        "statement carries hdiv : width % 8 = 0 (needed because the byte-codec renderings coincide "
+        "only when 8 divides width). Faithful port tracked by a prerequisite bead.",
+    ),
     ("Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean", "evaluateDeclsNamesHOLFinite"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
         "evaluate_decls_names",
@@ -1629,7 +1660,6 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Compiler/Backend/RegAlloc.lean", "isPhyVar"),
         ("Flapjack/Compiler/Backend/RegAlloc.lean", "isAllocVar"),
         ("Flapjack/Compiler/Backend/RegAlloc.lean", "conventionPartitions"),
-        ("Flapjack/Pancake/CrepToLoop/StateRel.lean", "writeBytearrayMemRel"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_less_than"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_not_in"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_all_distinct"),

@@ -48,6 +48,21 @@ no HOL tag. The faithful theorem port is tracked by
 `flapjack-4ac.4.106.1`, depending on the exact wrapper/LUB carrier work in
 `flapjack-4ac.4.105.1`. -/
 
+/-! Source review for HOL `pan_sem_is_wrapper`
+(`panPropsScript.sml:1931-1954`): with no premises, HOL equates
+`panSem.semantics s start` to `semantics_wrapper` applied to the clock-indexed
+`evaluate (TailCall start [], s with clock := k)`, mapping `TimeOut` to
+`Incomplete`, `FinalFFI e` to `CompleteResult (FFI_outcome e)`, `Return _` to
+`CompleteResult Success`, and every other result to `RunError`; the event
+component is `s.ffi.io_events`. The closest Flapjack definition,
+`PanObservationalSemantics.panSemantics`, instead takes arbitrary
+`PanSemanticsHooks`, uses `PanValueFfiClockResult`/`FfiState` carriers, and
+requires a caller-provided event-prefix chain/LUB. It does not state the HOL
+equality and receives no tag. The faithful theorem port is tracked by
+`flapjack-4ac.4.107.1`, depending on exact `semantics_wrapper_def` carrier work
+in `flapjack-4ac.4.105.1` and the exact PanSem semantics port
+`flapjack-4ac.3.52.2`. -/
+
 /-! Source review for HOL `eval_swap_memory`
 (`panPropsScript.sml:1734-1742`): the exact theorem quantifies `s`, `exp`, `v`,
 and an arbitrary replacement memory `mry`; it assumes successful `eval s exp`

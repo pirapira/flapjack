@@ -18,7 +18,8 @@ the representation qualifier and is invertibly related to `PanSemStateExact`.
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang
-  (MlS StructContextExact ProgHOL ExpHOL ShapeHOL DeclHOL isWfShapeExactHOL)
+  (MlS StructContextExact ProgHOL ExpHOL ShapeHOL DeclHOL isNameHOL isWfShapeExactHOL
+    functionsHOL)
 
 /-! ## Clearing `locals` under the exact broad evaluator
 
@@ -958,6 +959,7 @@ theorem evaluateDeclsPanPropsHOLFinite_toExact {width : Nat} {σ : Type}
               | true => exact False.elim (hcondition hcond)
             simp [evaluateDeclsHOLExact, PanPropsEvalStateFiniteExact.toExact,
               condition, hconditionFalse]
+
 private theorem panMemLoad32HOL_monoDomain {width : Nat} [NeZero width]
     (memory : RiscV.Word width → HolWordLab width)
     (domain1 domain2 : RiscV.Word width → Prop)

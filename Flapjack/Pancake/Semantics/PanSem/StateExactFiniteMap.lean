@@ -1153,19 +1153,11 @@ def evaluateDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width]
         evaluateDeclsHOLFinite updated declarations
       else none
 
-/-- HOL `panProps$evaluate_decls_names` (`panPropsScript.sml:1552-1559`): when
-    every declaration is a `Name`, `evaluate_decls` succeeds and leaves the state
-    unchanged.  This is stated over the canonical tagged finite-map evaluator
-    `evaluateDeclsHOLFinite`, the exact Lean counterpart of HOL
-    `panSem$evaluate_decls`; the `EVERY is_name decs` premise is rendered as
-    `decs.all isNameHOL = true` and the conclusion as
-    `evaluateDeclsHOLFinite state decs = some state`.  The four map-shaped state
-    fields (`locals`, `globals`, `code`, `eshapes`) are recorded by the
-    `fmap_as_finite_support` qualifier (canonical witness
-    `holFmapAsFiniteSupportWitness` in this module); the qualifier is
-    representation-only, so the quantifiers, premise and conclusion match HOL. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_names"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+/-- Flapjack-specific supporting lemma for the PanProps counterpart port of
+    HOL `evaluate_decls_names`. The tagged statement lives under
+    `PanProps/EvalInvariant.lean`, where the PanProps finite-map carrier owns
+    its same-module representation witness and its evaluator is kernel-bridged
+    to this canonical PanSem evaluator. -/
 theorem evaluateDeclsHOLFinite_names {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
     (decs : List (DeclHOL width)) (hnames : decs.all isNameHOL = true) :
@@ -1201,17 +1193,10 @@ private theorem updateList_nil {α β : Type} [BEq α] [LawfulBEq α]
   funext key
   rfl
 
-/-- HOL `panProps$evaluate_decls_functions` (`panPropsScript.sml:1518-1526`):
-    a successful evaluation records exactly the function entries of the program
-    in `code`. Stated over the canonical tagged finite-map evaluator
-    `evaluateDeclsHOLFinite`, the exact Lean counterpart of HOL
-    `panSem$evaluate_decls`. The result state is quantified explicitly and
-    related by `= some result`, the repository's rendering of HOL's `SOME s'`
-    premise; `updateList` is the canonical finite-map `|++`. The
-    `fmap_as_finite_support` qualifier records only the four `|->` fields, so
-    the quantifiers, premise and conclusion match HOL. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_functions"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+/-- Flapjack-specific supporting lemma for the PanProps counterpart port of
+    HOL `evaluate_decls_functions`. The tagged statement lives under
+    `PanProps/EvalInvariant.lean`, with a PanProps-owned finite-map carrier and
+    a checked evaluator bridge to this canonical PanSem evaluator. -/
 theorem evaluateDeclsHOLFinite_functions {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanSemStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanSemStateFiniteExact width σ),

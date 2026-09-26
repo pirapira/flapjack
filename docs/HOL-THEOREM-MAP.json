@@ -1610,8 +1610,14 @@
     "hol_name": "evaluate_decls_names",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
     "lean_name": "evaluateDeclsNamesHOLFinite",
-    "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6 tag audit, fixed by coordinator HOLD 2026-09-26T16:13Z): the theorem is stated over the PanProps duplicate evaluator evaluateDeclsPanPropsHOLFinite, which is not yet kernel-bridged to the canonical tagged PanSem evaluator, so the HOL tag was withdrawn. DS10 has pushed a tagged evaluate_decls_names on fleet-deepseek-v41-ten; this record must be reconciled with that canonical port. The finite-support rendering and its [NeZero width]/DecidablePred guard remain untagged until the bridge is kernel-checked."
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-luna-b (source review, 2026-09-26 coordinator placement HOLD): HOL panPropsScript.sml:1552-1559 states forall s decs, EVERY is_name decs => evaluate_decls s decs = SOME s. The Lean theorem keeps those quantifiers, premise (decs.all isNameHOL = true), and same-state conclusion over PanPropsEvalStateFiniteExact. Its four map fields are HolFiniteMapExact with a same-module holFmapAsFiniteSupportWitness; evaluateDeclsPanPropsHOLFiniteCanonical hides only the Lean DecidablePred implementation detail, and evaluateDeclsPanPropsHOLFinite_toCanonical kernel-checks equality of the complete Option result with the canonical tagged PanSem evaluate_decls_def port. No other statement difference is introduced."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
@@ -11754,23 +11760,9 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
-    "hol_name": "evaluate_decls_names",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
-    "lean_name": "evaluateDeclsHOLFinite_names",
-    "statement_status": "reviewed_fmap_as_finite_support",
-    "fmap_as_finite_support": [
-      "locals",
-      "globals",
-      "code",
-      "eshapes"
-    ],
-    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-4ac.4.87): HOL panPropsScript.sml:1552-1559 states forall s decs, EVERY is_name decs => evaluate_decls s decs = SOME s. Lean quantifies the same state and declaration list over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evaluateDeclsHOLFinite (the reviewed counterpart of panSem evaluate_decls_def), with the exact is_name counterpart isNameHOL (tagged is_name_def) and `decs.all isNameHOL = true` rendering HOL EVERY; conclusion `evaluateDeclsHOLFinite state decs = some state`. This restatement over the canonical finite evaluator resolves the review HOLD that the earlier PanProps-wrapper subject was a duplicate finite evaluator: StateExactFiniteMap.lean hosts the owning carrier PanSemStateFiniteExact and its same-module canonical witness holFmapAsFiniteSupportWitness. The qualifier is representation-only; quantifiers, premise and conclusion are unchanged."
-  },
-  {
-    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "evaluate_decls_functions",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
-    "lean_name": "evaluateDeclsHOLFinite_functions",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsPanPropsHOLFinite_functions",
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": [
       "locals",
@@ -11778,6 +11770,6 @@
       "code",
       "eshapes"
     ],
-    "reviewer": "flapjack-ds10 (source comparison; bead flapjack-4ac.4.86/4ac.4.84): HOL panPropsScript.sml:1518-1526 states forall s pan_code s', evaluate_decls s pan_code = SOME s' => s'.code = s.code |++ functions pan_code. Lean quantifies the same state, program, and result state, with the premise rendered as `evaluateDeclsHOLFinite state program = some result` and the HOL `|++` as the canonical finite-map `HolFiniteMapExact.updateList`; `functionsHOL` is the exact functions port tagged functions_def (panLangScript.sml:319-326). The subject is the canonical tagged PanSem finite-map evaluator evaluateDeclsHOLFinite (the port of evaluate_decls_def in this same module); the former PanProps-local duplicate was withdrawn per the coordinator HOLD so exactly one tagged theorem exists for this HOL declaration. PanSemStateFiniteExact owns locals/globals/code/eshapes as HolFiniteMapExact (the canonical translation) and its same-module holFmapAsFiniteSupportWitness states the toExact/ofExact roundtrips with PanSemStateExact. The only added hypothesis is `[DecidablePred state.memaddrs]`, the executable-decision artifact for HOL word-set membership; the qualifier is representation-only and quantifiers, hypotheses, and conclusion are otherwise unchanged."
+    "reviewer": "flapjack-luna-b (source review, 2026-09-26 coordinator placement HOLD): HOL panPropsScript.sml:1518-1526 states forall s pan_code s', evaluate_decls s pan_code = SOME s' => s'.code = s.code |++ functions pan_code. Lean retains state/program/result quantifiers, successful-evaluation premise, and code-map conclusion with functionsHOL and HolFiniteMapExact.updateList as the reviewed constructor/list-update renderings. PanPropsEvalStateFiniteExact owns all four finite-map fields and the same-module roundtrip witness; its evaluator's complete Option result is kernel-bridged by evaluateDeclsPanPropsHOLFinite_toCanonical to the canonical tagged PanSem evaluate_decls_def port. A classical wrapper removes the Lean-only DecidablePred argument. The qualifier records only [locals, globals, code, eshapes]."
   }
 ]

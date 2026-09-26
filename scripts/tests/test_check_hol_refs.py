@@ -99,7 +99,7 @@ class HolAttributeSitesTest(unittest.TestCase):
             "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL",
             "    (decls : DeclHOL width) (key : MlS) :",
             "    (getEidsFromDeclsHOL decls).lookup key =",
-            "      ((getEidsFromDeclsHOL decls).lookup key) :=",
+            "      (rawDecls decls).lookup key :=",
             "  rfl",
         ]
         errors = CHECKER["fmap_as_finite_support_result_errors"](
@@ -108,6 +108,38 @@ class HolAttributeSitesTest(unittest.TestCase):
             "getEidsFromDeclsHOL",
         )
         self.assertEqual(errors, [])
+
+    def test_fmap_as_finite_support_result_rejects_self_equality(self):
+        lines = [
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) := fun _ => none",
+            "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL",
+            "    (decls : DeclHOL width) (key : MlS) :",
+            "    (getEidsFromDeclsHOL decls).lookup key =",
+            "      (getEidsFromDeclsHOL decls).lookup key :=",
+            "  rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            lines, "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertTrue(any("self-equality" in error for error in errors))
+
+    def test_fmap_as_finite_support_result_rejects_premise_assumed_relation(self):
+        lines = [
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) := fun _ => none",
+            "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL",
+            "    (decls : DeclHOL width) (key : MlS)",
+            "    (h : (getEidsFromDeclsHOL decls).lookup key = (rawDecls decls).lookup key) :",
+            "    (getEidsFromDeclsHOL decls).lookup key = (rawDecls decls).lookup key :=",
+            "  h",
+        ]
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            lines, "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertTrue(any("assumes the target relation" in error for error in errors))
 
     def test_fmap_as_finite_support_result_rejects_raw_option_map(self):
         errors = CHECKER["fmap_as_finite_support_result_errors"](

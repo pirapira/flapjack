@@ -255,10 +255,15 @@ finite map directly, such as `get_eids_from_decls_def`). This is distinct from
 qualifiers are mutually exclusive. The tagged declaration's own signature must
 mention `HolFiniteMapExact`; a raw function-backed `α → Option β` map is
 ineligible. The module must contain a checked canonical witness named
-`holFmapAsFiniteSupportResultWitness_<declaration>`, whose statement mentions the
-tagged declaration and a lookup operation, and states a real lookup-level
-equality/iff conclusion (a missing, vacuous, type-name-only, wrongly-named, or
-unrelated witness is rejected). The reference checker verifies
+`holFmapAsFiniteSupportResultWitness_<declaration>`, whose final equality/iff
+conclusion mentions the tagged declaration on exactly one side, applies a lookup
+operation to that side, and states an unconditional or premise-independent
+lookup-level correspondence to an independent HOL-shaped raw map operation or
+codec on the other side. A witness is rejected when it is missing, vacuous,
+type-name-only, wrongly-named, unrelated, a self-equality (both sides
+syntactically identical), mentions the tagged declaration on both sides or
+neither side, does not apply a lookup to the tagged declaration's side, or
+assumes the target relation in a premise. The reference checker verifies
 carrier/witness shape and Lake checks the proof; neither establishes HOL
 correspondence. The qualifier is a representation statement only: it does not
 authorize changed quantifiers, hypotheses, conclusions, `BEq` side conditions,

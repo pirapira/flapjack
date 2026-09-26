@@ -494,15 +494,48 @@ def fmap_as_finite_support_result_witness_name(decl_name: str) -> str:
     return f"holFmapAsFiniteSupportResultWitness_{decl_name}"
 
 
+def _last_top_level_colon(text: str) -> int:
+    """Index of the last `:` outside any parentheses/brackets, or -1."""
+    depth = 0
+    last = -1
+    for index, char in enumerate(text):
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth = max(0, depth - 1)
+        elif char == ":" and depth == 0 and not text.startswith(":=", index):
+            last = index
+    return last
+
+
+def _split_top_level(text: str, separators: tuple[str, ...]) -> tuple[str, str] | None:
+    """Split at the first top-level separator, ignoring parentheses/brackets."""
+    depth = 0
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth = max(0, depth - 1)
+        elif depth == 0:
+            for separator in separators:
+                if text.startswith(separator, index):
+                    return text[:index], text[index + len(separator):]
+        index += 1
+    return None
+
+
 def has_fmap_result_witness(
     lines: list[str], decl_name: str, module: str
 ) -> tuple[bool, str]:
     """Require the canonical standalone finite-map translation witness.
 
-    The witness is `holFmapAsFiniteSupportResultWitness_<decl>`; it must mention
-    the tagged declaration and a lookup operation, and must state an
-    equality/iff conclusion. A missing, vacuous, wrongly-named, unrelated, or
-    type-name-only witness is rejected.
+    The witness is `holFmapAsFiniteSupportResultWitness_<decl>`; its final
+    equality/iff conclusion must mention the tagged declaration on exactly one
+    side with a lookup operation on that side, and must not be a self-equality
+    or a relation already assumed by a premise. A missing, vacuous,
+    wrongly-named, unrelated, or type-name-only witness is rejected.
     Lake checks the proof; this gate checks presence and shape.
     """
     if decl_name in ("?", ""):
@@ -535,11 +568,64 @@ def has_fmap_result_witness(
                 f"witness `{witness}` does not state a lookup-level "
                 "correspondence to the HOL finite map",
             )
-        if "=" not in statement and "\u2194" not in statement:
+        colon = _last_top_level_colon(statement)
+        conclusion = statement[colon + 1:] if colon >= 0 else statement
+        segments: list[str] = []
+        rest = conclusion
+        while True:
+            split = _split_top_level(rest, ("\u2192", "->"))
+            if split is None:
+                segments.append(rest)
+                break
+            segments.append(split[0])
+            rest = split[1]
+        premises, final = segments[:-1], segments[-1]
+        relation = _split_top_level(final, ("\u2194",)) or _split_top_level(final, ("=",))
+        if relation is None:
             return (
                 False,
                 f"witness `{witness}` is vacuous: no equality/iff conclusion",
             )
+        lhs, rhs = relation
+        if "".join(lhs.split()) == "".join(rhs.split()):
+            return (
+                False,
+                f"witness `{witness}` is a self-equality; it does not "
+                "establish lookup-level correspondence",
+            )
+        in_lhs = identifier_token_occurs(lhs, decl_name)
+        in_rhs = identifier_token_occurs(rhs, decl_name)
+        if not (in_lhs or in_rhs):
+            return (
+                False,
+                f"witness `{witness}` conclusion does not mention the tagged "
+                f"declaration `{decl_name}`",
+            )
+        if in_lhs == in_rhs:
+            return (
+                False,
+                f"witness `{witness}` must mention the tagged declaration on "
+                "exactly one side of its equality/iff",
+            )
+        target_side = lhs if in_lhs else rhs
+        if not re.search(r"(?i)\b(?:lookup|flookup)\b", target_side):
+            return (
+                False,
+                f"witness `{witness}` does not apply a lookup to the tagged "
+                "declaration's side of the conclusion",
+            )
+        binder_zone = statement[:colon] if colon >= 0 else ""
+        for premise in ([binder_zone] if binder_zone else []) + premises:
+            if (
+                identifier_token_occurs(premise, decl_name)
+                and re.search(r"(?i)\b(?:lookup|flookup)\b", premise)
+                and ("=" in premise or "\u2194" in premise)
+            ):
+                return (
+                    False,
+                    f"witness `{witness}` assumes the target relation in a "
+                    "premise instead of proving it",
+                )
     return (True, "")
 
 

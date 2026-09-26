@@ -1,4 +1,6 @@
 import Flapjack.Pancake.PanToCrep.ContextBridge
+import Flapjack.Pancake.PanToCrep.ContextProductionEvidence
+import Flapjack.Pancake.PanLang.Decl
 
 /-!
 Kernel checks for the exact Pan-to-Crep context's finite-map fields and the
@@ -10,6 +12,8 @@ namespace Flapjack.Test.PanToCrepContextExactParity
 
 open Flapjack
 open Flapjack.Pancake.PanLang (MlS ShapeHOL NameRanged ShapeByteRanged shapeOfHOL)
+open Flapjack.Pancake.PanLang (DeclByteRanged FunDeclByteRanged ParamByteRanged
+  ListParamByteRanged ProgByteRanged ExpByteRanged)
 
 private def p : MlS := Flapjack.Basis.Pure.MlString.ofString "p"
 private def f : MlS := Flapjack.Basis.Pure.MlString.ofString "f"
@@ -134,5 +138,56 @@ example : (panToCrepContextExactOfProduction productionSample productionEvidence
     (Flapjack.Basis.Pure.MlString.ofString "E") = productionSample.eids "E" :=
   panToCrepContextExactOfProduction_eids_lookup_roundtrip productionSample productionEvidence
     "E" (by simp [NameRanged])
+
+/-! Production-constructor path: the same `FUPDATE_LIST` maps created by
+`make_vmap`, `make_funcs`, and `get_eids_from_decls` admit the restricted
+bridge when the source declaration byte-range invariant holds. -/
+
+private def compilerParams : List (VarName × Shape) := [("p", .one)]
+
+private def compilerFunction : Flapjack.FunDecl (BitVec 8) :=
+  ⟨"f", false, false, compilerParams, .skip, .one⟩
+
+private def compilerDeclarations : List (Decl (BitVec 8)) :=
+  [Decl.function compilerFunction, Decl.exnDecl "E" .one]
+
+private theorem compilerDeclarationsByteRanged :
+    ∀ d ∈ compilerDeclarations, DeclByteRanged d := by
+  intro d hd
+  have hmem : d = Decl.function compilerFunction ∨
+      d = Decl.exnDecl "E" Shape.one := by
+    simpa [compilerDeclarations] using hd
+  rcases hmem with hfun | hexn
+  · rw [hfun]
+    simp [DeclByteRanged, FunDeclByteRanged, ListParamByteRanged,
+      ParamByteRanged, ProgByteRanged, NameRanged,
+      ShapeByteRanged, compilerFunction, compilerParams]
+  · rw [hexn]
+    simp [DeclByteRanged, NameRanged, ShapeByteRanged]
+
+private def compilerEntry :
+    FunName × List (VarName × Shape) × Prog (BitVec 8) × Shape :=
+  ("f", compilerParams, (Prog.skip : Prog (BitVec 8)), .one)
+
+private theorem compilerEntryMem : compilerEntry ∈ functionEntries compilerDeclarations := by
+  simp [compilerEntry, compilerDeclarations, compilerFunction, compilerParams,
+    functionEntries]
+
+private def compilerContext : PanToCrepHOLContext (BitVec 8) :=
+  panToCrepMkCtxtHOL (panToCrepMakeVmapHOL compilerParams)
+    (functionInfosHOL compilerDeclarations) 0
+    (panToCrepGetEidsFromDeclsHOL compilerDeclarations)
+
+private theorem compilerContextEvidence :
+    PanToCrepContextProductionEvidence compilerContext := by
+  simpa [compilerContext, compilerEntry, compilerParams, Shape.shapeSize,
+    compilerDeclarations, compilerFunction, functionEntries] using
+      panToCrepFunctionContextProductionEvidence compilerDeclarations compilerEntry
+        compilerDeclarationsByteRanged compilerEntryMem
+
+private def compilerContextExact : PanToCrepContextExact 8 :=
+  panToCrepContextExactOfProduction compilerContext compilerContextEvidence
+
+example : compilerContextExact.vmax = 0 := rfl
 
 end Flapjack.Test.PanToCrepContextExactParity

@@ -10624,32 +10624,32 @@
     "hol_name": "comp_def",
     "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
     "lean_name": "progComp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-arzk): exact. HOL stack_namesScript.sml:56-99 comp renaming of register ids; Lean progComp matches clause-for-clause (Halt/Raise/Break/Continue/Return/Inst/LocValue/Seq/If/Loop/Call/Install/ShMemOp/CodeBufferWrite/FFI/JumpLower + catch-all). The Inst case uses the kernel-checked HolInst.ofWordLangInst/toWordLangInst codec (inverses by HolInst.of_to), so it is HOL's Inst (inst_find_name f i); the If case likewise via HolRegImm.ofWordRegImm/toWordRegImm over the reviewed ri_find_name. Only side condition [NeZero width] (HOL word dim nonzero). FFI field is MlString."
   },
   {
     "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
     "hol_name": "prog_comp_def",
     "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
     "lean_name": "progCompEntry",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-arzk): exact. HOL stack_namesScript.sml:101-103 prog_comp f (n,p) = (n, comp f p); Lean progCompEntry names entry = (entry.1, progComp names entry.2) over Nat x HolProg width. No extra hypotheses beyond [NeZero width]."
   },
   {
     "hol_path": "cakeml/compiler/backend/stack_namesScript.sml",
     "hol_name": "compile_def",
     "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
     "lean_name": "compile",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-arzk): exact. HOL stack_namesScript.sml:105-107 compile f prog = MAP (prog_comp f) prog; Lean compile names program = program.map (progCompEntry names). List.map renders HOL MAP. No extra hypotheses beyond [NeZero width]."
   },
   {
     "hol_path": "cakeml/compiler/backend/proofs/stack_namesProofScript.sml",
     "hol_name": "MAP_FST_compile",
     "lean_path": "Flapjack/Compiler/Backend/StackNames.lean",
     "lean_name": "map_fst_compile",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-arzk): exact. HOL stack_namesProofScript.sml:268-272 MAP FST (compile f c) = MAP FST c; Lean map_fst_compile states (compile names program).map Prod.fst = program.map Prod.fst over List (Nat x HolProg width). Same quantifiers (names, program), no extra hypotheses beyond [NeZero width]."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",

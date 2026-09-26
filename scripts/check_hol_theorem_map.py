@@ -1517,6 +1517,10 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Compiler/Backend/StackRemove.lean", "loadInst"),
         ("Flapjack/Compiler/Backend/StackRemove.lean", "storeInst"),
         ("Flapjack/Compiler/Backend/StackRemove.lean", "haltInst"),
+        ("Flapjack/Compiler/Backend/StackNames.lean", "progComp"),
+        ("Flapjack/Compiler/Backend/StackNames.lean", "progCompEntry"),
+        ("Flapjack/Compiler/Backend/StackNames.lean", "compile"),
+        ("Flapjack/Compiler/Backend/StackNames.lean", "map_fst_compile"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

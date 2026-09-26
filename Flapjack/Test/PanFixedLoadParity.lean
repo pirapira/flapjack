@@ -80,6 +80,37 @@ def load32DomainMiss : Option (Word 64) :=
     (fun _ => false) memory
     (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) false
 
+/-! Executed Crep RV64 Load32 rows use the same word-cell fixture and cover
+    both endian modes, alignment rejection, and a missing address domain. The
+    kernel-checked bridge in CrepSem/Eval connects this runtime helper to the
+    exact HOL `mem_load_32_def` operation over the converted state. -/
+def crepRv64State (bigEndian domainEnabled : Bool) : CrepHolState (BitVec 64) Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    code := fun _ => none
+    memory := fun _ => .word (BitVec.ofNat 64 0x0807060504030201)
+    memaddrs := fun address => domainEnabled && address == BitVec.ofNat 64 8
+    shMemaddrs := fun _ => false
+    clock := 0
+    bigEndian := bigEndian
+    ffi := natCrepRuntimeFfiState
+    baseAddress := BitVec.ofNat 64 0
+    topAddress := BitVec.ofNat 64 0xFFFFFFFFFFFFFFFF }
+
+def crepRv64Load32 (state : CrepHolState (BitVec 64) Unit)
+    (address : BitVec 64) : Option (BitVec 64) :=
+  evalCrepRuntimeExp (riscvCrepWordTarget state.toRuntime)
+    (.load32 (.const address))
+
+def crepRv64Load32Little : Option (BitVec 64) :=
+  crepRv64Load32 (crepRv64State false true) (BitVec.ofNat 64 8)
+def crepRv64Load32Big : Option (BitVec 64) :=
+  crepRv64Load32 (crepRv64State true true) (BitVec.ofNat 64 8)
+def crepRv64Load32Unaligned : Option (BitVec 64) :=
+  crepRv64Load32 (crepRv64State false true) (BitVec.ofNat 64 9)
+def crepRv64Load32DomainMiss : Option (BitVec 64) :=
+  crepRv64Load32 (crepRv64State false false) (BitVec.ofNat 64 8)
+
 /-! HOL words are not restricted to the production target width. This small
     word probe checks that the same source-shaped model operations also retain
     the 8-bit result projection used after HOL mem_load_32 returns word32. -/
@@ -277,6 +308,10 @@ example :
 #guard byteBigEndian == originalByteBigEndian
 #guard load32BigEndian == originalLoad32BigEndian
 #guard load32DomainMiss == originalLoad32DomainMiss
+#guard crepRv64Load32Little == originalLoad32Hit
+#guard crepRv64Load32Big == originalLoad32BigEndian
+#guard crepRv64Load32Unaligned == originalLoad32Unaligned
+#guard crepRv64Load32DomainMiss == originalLoad32DomainMiss
 #guard byteHitWidth8 == some (BitVec.ofNat 8 0xa5)
 #guard load32HitWidth8 == some (BitVec.ofNat 8 0xa5)
 #guard holAlignedWidth1Address0

@@ -2689,6 +2689,220 @@ theorem crepHolEvalMemLoadByte_source_eq_riscv64 {σ : Type}
               (instFinHolFiniteDimension (width := 64)))
             (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address)
 
+/-! RV64 Load32 uses the existing PanSem byte-assembly bridge after explicitly
+    viewing a Crep word-lab memory as PanSem word cells. -/
+
+theorem crepHolEvalMemLoad32_riscv64_eq_panMemLoad32HOL {σ : Type}
+    (state : CrepHolState (BitVec 64) σ) (address : BitVec 64) :
+    crepHolEvalMemLoad32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian) (8 : BitVec 64)
+        state address =
+      (panMemLoad32HOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map (fun value => BitVec.ofNat 64 value.toNat) := by
+  let source : PanSemState (BitVec 64) (FfiState σ) :=
+    { locals := fun _ => none
+      globals := fun _ => none
+      structs := []
+      code := []
+      exceptionShapes := fun _ => none
+      memory := fun current => some (.word (panTheWord (state.memory current)))
+      memaddrs := state.memaddrs
+      sharedMemaddrs := state.shMemaddrs
+      clock := state.clock
+      be := state.bigEndian
+      ffi := state.ffi
+      baseAddress := state.baseAddress
+      topAddress := state.topAddress }
+  have hget (byteAddress value : BitVec 64) :
+      panSemBitVec64WordModel.getByte (8 : BitVec 64) byteAddress value
+          state.bigEndian =
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+          (8 : BitVec 64) byteAddress value state.bigEndian := by
+    rw [panSemBitVec64GetByte_eq_panRiscVGetByteEndian]
+    simp [RiscV.panRiscVMemoryModelForEndian]
+  have hmodel :
+      panModelRead32
+          (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+          state.memaddrs
+          (fun current => some (panTheWord (state.memory current)))
+          (8 : BitVec 64) address state.bigEndian =
+        (panSemBitVec64MemoryAccess source).read32
+          (panSemBitVec64MemoryAccess source).domain source.memory
+          panSemBitVec64BytesInWord address := by
+    change panModelRead32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        (8 : BitVec 64) address state.bigEndian =
+      panModelRead32 panSemBitVec64WordModel state.memaddrs
+        (panValueWordMemory source.memory) (8 : BitVec 64) address state.bigEndian
+    unfold panModelRead32
+    have haligned :
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian).aligned 4 address =
+          panSemBitVec64WordModel.aligned 4 address := rfl
+    have hbyteAlign :
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian).byteAlign
+            (8 : BitVec 64) address =
+          panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address := rfl
+    rw [haligned, hbyteAlign]
+    by_cases ha : panSemBitVec64WordModel.aligned 4 address = true
+    · simp only [if_pos ha]
+      by_cases hd : state.memaddrs
+          (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address) = true
+      · simp only [hd, ↓reduceIte]
+        change some ((RiscV.panRiscVMemoryModelForEndian state.bigEndian).wordOfBytes32
+            state.bigEndian
+            [(RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+                (8 : BitVec 64) address
+                (panTheWord (state.memory
+                  (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address))) state.bigEndian,
+             (RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+                (8 : BitVec 64) (address + 1)
+                (panTheWord (state.memory
+                  (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address))) state.bigEndian,
+             (RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+                (8 : BitVec 64) (address + 2)
+                (panTheWord (state.memory
+                  (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address))) state.bigEndian,
+             (RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+                (8 : BitVec 64) (address + 3)
+                (panTheWord (state.memory
+                  (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address))) state.bigEndian]) =
+          (some (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))).bind
+            (fun value => some (panSemBitVec64WordModel.wordOfBytes32 state.bigEndian
+              [panSemBitVec64WordModel.getByte (8 : BitVec 64) address value state.bigEndian,
+               panSemBitVec64WordModel.getByte (8 : BitVec 64) (address + 1) value state.bigEndian,
+               panSemBitVec64WordModel.getByte (8 : BitVec 64) (address + 2) value state.bigEndian,
+               panSemBitVec64WordModel.getByte (8 : BitVec 64) (address + 3) value state.bigEndian]))
+        simp only [Option.bind_some]
+        rw [← hget address
+          (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))]
+        rw [← hget (address + 1)
+          (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))]
+        rw [← hget (address + 2)
+          (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))]
+        rw [← hget (address + 3)
+          (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))]
+        rfl
+      · cases hdom : state.memaddrs
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address) <;>
+          simp_all
+    · simp [ha]
+  calc
+    crepHolEvalMemLoad32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian) (8 : BitVec 64)
+        state address =
+      panModelRead32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        (8 : BitVec 64) address state.bigEndian :=
+          crepHolEvalMemLoad32_eq_panModelRead32 _ _ _ _
+    _ = (panSemBitVec64MemoryAccess source).read32
+        (panSemBitVec64MemoryAccess source).domain source.memory
+        panSemBitVec64BytesInWord address := hmodel
+    _ = (panMemLoad32HOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map
+          (fun value => BitVec.ofNat 64 value.toNat) := by
+            have hread := panSemBitVec64Read32_eq_panMemLoad32HOL
+              source source.memory address
+            have hmemory : panValueWordHOL source.memory =
+                (fun current => (state.memory current).toHolWordLab) := by
+              funext current
+              cases hmem : state.memory current with
+              | word value =>
+                  simp [panValueWordHOL, source, hmem, panTheWord,
+                    PanWordLab.toHolWordLab]
+            have hdomain :
+                (fun current =>
+                  (source.memaddrs current &&
+                    decide (panValueWordDefined source.memory current = true)) = true) =
+                (fun current => state.memaddrs current = true) := by
+              funext current
+              cases hmem : state.memory current with
+              | word value => cases hdomain : state.memaddrs current <;>
+                  simp [source, panValueWordDefined, hdomain]
+            simpa [hmemory, hdomain, source, panValueWordHOL, panValueWordDefined,
+              panValueWordMemory, panSemBitVec64BytesInWord,
+              panSemBitVec64MemoryAccess, panValueMemoryAccessOfModel,
+              PanWordLab.toHolWordLab] using hread
+
+theorem crepRuntimeLoad32_riscv64_eq_panMemLoad32HOL {σ : Type}
+    (state : CrepHolState (BitVec 64) σ) (address : BitVec 64) :
+    crepRuntimeLoad32 (riscvCrepWordTarget state.toRuntime) address =
+      (panMemLoad32HOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map (fun value => BitVec.ofNat 64 value.toNat) := by
+  calc
+    crepRuntimeLoad32 (riscvCrepWordTarget state.toRuntime) address =
+      panModelRead32 (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs (crepRuntimeMemoryView state.memory)
+        (8 : BitVec 64) address state.bigEndian :=
+          crepRuntimeLoad32_wordTarget_eq_riscv state.toRuntime address
+    _ = panModelRead32 (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs (fun current => some (panTheWord (state.memory current)))
+        (8 : BitVec 64) address state.bigEndian := rfl
+    _ = crepHolEvalMemLoad32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian) (8 : BitVec 64)
+        state address := by
+          symm
+          exact crepHolEvalMemLoad32_eq_panModelRead32 _ _ _ _
+    _ = (panMemLoad32HOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map
+          (fun value => BitVec.ofNat 64 value.toNat) :=
+            crepHolEvalMemLoad32_riscv64_eq_panMemLoad32HOL state address
+
+theorem crepHolEvalMemLoad32_source_eq_riscv64 {σ : Type}
+    (state : CrepHolState (Fin 64 → Bool) σ) (address : Fin 64 → Bool) :
+    (crepHolEvalMemLoad32
+        (holFiniteWordSourceMemoryModel
+          (instFinHolFiniteDimension (width := 64)) state.bigEndian)
+        (bitVecToHolWord (instFinHolFiniteDimension (width := 64))
+          (8 : BitVec 64)) state address).map
+          (holWordToBitVec (instFinHolFiniteDimension (width := 64))) =
+      crepRuntimeLoad32
+        (riscvCrepWordTarget
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).toRuntime)
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address) := by
+  calc
+    _ = (panMemLoad32HOL
+        (fun current =>
+          ((state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).memory current).toHolWordLab)
+        (fun current =>
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).memaddrs current = true)
+        state.bigEndian
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address)).map
+          (fun value => BitVec.ofNat 64 value.toNat) := by
+            exact crepHolEvalMemLoad32_source_eq_panMemLoad32HOL
+              (instFinHolFiniteDimension (width := 64))
+              (bitVecToHolWord (instFinHolFiniteDimension (width := 64))
+                (8 : BitVec 64)) state address
+    _ = crepRuntimeLoad32
+        (riscvCrepWordTarget
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).toRuntime)
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address) := by
+          symm
+          exact crepRuntimeLoad32_riscv64_eq_panMemLoad32HOL
+            (state.toHolFiniteBitVecState
+              (instFinHolFiniteDimension (width := 64)))
+            (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address)
+
 theorem crepHolFiniteDimension_local_toBitVec {ι : Type}
     (dimension : HolFiniteDimension ι) (state : CrepHolState (ι → Bool) σ)
     (name : Nat) :

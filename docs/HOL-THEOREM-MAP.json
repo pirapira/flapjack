@@ -9464,16 +9464,16 @@
     "hol_name": "distinct_tar_reg_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "distinctTarReg",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-onwg): exact clause-for-clause port to Flapjack/Pancake/WordConvs.lean distinctTarReg over WordLangInst (BitVec width); HOL ri <> Reg r1 rendered as match ri with Reg r => r != r1 | Imm _ => true; AddCarry r1<>r3/r1<>r4, AddOverflow/SubOverflow r1<>r3, catch-all T; no extra hypotheses."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "two_reg_inst_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "twoRegInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-onwg): exact port to twoRegInst; Binop/Shift/AddCarry/AddOverflow/SubOverflow all require r1 = r2 (Lean r1 == r2), catch-all T; same five clauses, no extra hypotheses."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
@@ -9672,8 +9672,8 @@
     "hol_name": "inst_ok_less_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "instOkLess",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-onwg): exact port to instOkLess over AsmConfig width/WordLangInst (BitVec width). Each clause matches (valid_imm INL/inl; Shift (i=0w==>l=Lsl) and w2n i<dimindex as (!(value==0)||operator==.lsl)&&value.toNat<width; Div ISA set; LongMul/AddCarry/AddOverflow/SubOverflow guard implications; Mem membership sets and addr/hw/byte offset fallback; all FP reg/offset checks; FPMovToReg/FromReg dimindex=32 guard as !(width==32); catch-all T)."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
@@ -9696,8 +9696,8 @@
     "hol_name": "inst_arg_convention_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "instArgConvention",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-onwg): exact port to instArgConvention; AddCarry/AddOverflow/SubOverflow r4=0, Shift (Reg r) r=8 (Imm falls through to T as in HOL), LongMul r1=6/r2=0/r3=0/r4=4, LongDiv r1=0/r2=6/r3=6/r4=0, catch-all T; no extra hypotheses."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",

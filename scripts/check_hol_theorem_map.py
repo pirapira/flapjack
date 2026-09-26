@@ -1528,6 +1528,10 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Compiler/Backend/StackProps.lean", "asmAddrOk"),
         ("Flapjack/Pancake/PanStructs.lean", "afindi"),
         ("Flapjack/Misc/Sptree.lean", "NumSet"),
+        ("Flapjack/Pancake/WordConvs.lean", "distinctTarReg"),
+        ("Flapjack/Pancake/WordConvs.lean", "twoRegInst"),
+        ("Flapjack/Pancake/WordConvs.lean", "instOkLess"),
+        ("Flapjack/Pancake/WordConvs.lean", "instArgConvention"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

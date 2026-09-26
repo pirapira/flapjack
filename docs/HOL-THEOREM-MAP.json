@@ -11582,6 +11582,15 @@
     "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.5.8.13.2): HOL exp_hdl_def (pan_to_crepScript.sml:106-112) quantifies over a finite map varname |-> (shape # num list). expHdlExact reads its input through PanToCrepVarsExact.vars, a HolFiniteMapExact MlS (ShapeHOL × List Nat) (the canonical Lean translation of HOL's `|->`), and reproduces the HOL equations clause-for-clause: miss = Skip, hit = crepNestedSeqHOL (panMap2 Assign ns (loadGlobalsHOL 0w ns.length)). Canonical witness holFmapAsFiniteSupportWitness is in the same module. The raw-map expHdlHOL keeps its withdrawn tag (bead flapjack-2s5); expHdlExact_eq_expHdlHOL is the kernel consumer bridge to it, and scripts/hol-probes/exp_hdl_probe.out rows are replayed by Flapjack/Test/ExpHdlHOLParity.lean. The qualifier is representation-only and does not change the quantifiers, side conditions, or conclusion."
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "make_vmap_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/MakeVmapHOL.lean",
+    "lean_name": "panToCrepMakeVmapHOLExact",
+    "statement_status": "reviewed_fmap_as_finite_support_result",
+    "fmap_as_finite_support_result": true,
+    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-4ac.2.13): HOL make_vmap_def (pan_to_crepScript.sml:327-334) returns the finite map FEMPTY |++ ZIP (pvars, ZIP (shs, with_shape shs (GENLIST I (size_of_shape (Comb shs))))) directly. panToCrepMakeVmapHOLExact reproduces the construction clause-for-clause over the canonical carrier HolFiniteMapExact MlS (ShapeHOL × List Nat): MAP FST/SND = List.map Prod.fst/snd, GENLIST I = List.range, with_shape = tagged withShapeHOL, size_of_shape = tagged sizeOfShapeHOL, and |++ = HolFiniteMapExact.updateList (the FUPDATE_LIST fold, later duplicates winning). The standalone qualifier is justified by the same-module lookup witness holFmapAsFiniteSupportResultWitness_panToCrepMakeVmapHOLExact: (panToCrepMakeVmapHOLExact params).lookup key = panToCrepMakeVmapRaw params key, the raw FUPDATE_LIST-backed HOL map. Direct HOL-EVAL rows make_vmap_shaped/make_vmap_duplicate_lookup from scripts/hol-probes/compile_to_crep_probe.out are replayed by Flapjack/Test/PanToCrepMakeVmapParity.lean. The production String/Shape-keyed panToCrepMakeVmapHOL remains untagged; its exact-carrier replacement is tracked by flapjack-pxn.18.3.5.8. The qualifier is representation-only and does not change the quantifiers, side conditions, or result."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "dropWhile_eq_cons_IMP",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",

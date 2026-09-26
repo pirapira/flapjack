@@ -1373,6 +1373,25 @@ DOCUMENTED_MISMATCHES = {
         "feeds the executed compiler, replacement must connect the production path "
         "or record a measured exception."
     ),
+    ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "compile_prog_def",
+        "flapjack-luna-b (source comparison, 2026-09-26; bead flapjack-4ac.2.20; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL compile_prog_def "
+        "(pan_to_crepScript.sml:393-397) defines compile_inl_top "
+        "(MAP FST (functions (FILTER inlinable prog))) (compile_to_crep prog), "
+        "with input 'a prog and result (mlstring # num list # 'a crepLang$prog) "
+        "list, and no hypotheses or side conditions. Lean compileProgTopHOL "
+        "preserves the let/operand order but takes production Decl (BitVec width), "
+        "uses String FunName and production Shape/CrepProg carriers, and adds "
+        "BEq/LawfulBEq/LawfulHashable/OfNat instances. Even the DeclHOL input "
+        "adapter converts back to production Decl and leaves the result as "
+        "production CrepProg, so neither names_as_string nor that boundary makes "
+        "this exact. No @[hol] tag is claimed. Faithful replacement depends on "
+        "flapjack-pxn.18.3.5.8.13 for exact compile and flapjack-e7w.1 for exact "
+        "inline-map carrier flapjack-e7w.1 and open epic flapjack-e7w.2 for the "
+        "full compile_inl_top and production-inliner port."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",

@@ -599,13 +599,15 @@ def panCompileTap [CakeDisplayWord α]
     adapter: it decodes `DeclHOL` back into production declarations before
     calling that same source-shaped implementation, and the reverse codec is
     lossy for names outside `NameRanged`. `parseTopDecs_declByteRanged` proves
-    the parser result is in range, but that proof is not yet propagated through
-    move-start, simplification, struct compilation, and `globalCompileTopCake`.
-    Until that pass invariant is proved, routing this general pipeline API
-    through the adapter would silently change results for arbitrary production
-    declarations. The missing global-pass invariant is tracked by
-    `flapjack-pxn.18.3.5.8.7.1.2.1`; the faithful exact `compile_prog` port is
-    tracked by `flapjack-pxn.18.3.5.8.13`. Neither is claimed complete here. -/
+    the parser result is in range. `globalCompileTopCake_byteRanged` now proves
+    that the final global pass preserves this invariant when given ranged
+    input. The source-entry pipeline still lacks a composed proof through
+    default-main insertion, move-start, `panSimpDecls`, and struct compilation;
+    the `panSimpDecls` slice is tracked by
+    `flapjack-pxn.18.3.5.8.7.1.2.2`. Routing this general pipeline API through
+    the adapter without that evidence could silently change results for
+    arbitrary production declarations. The faithful exact `compile_prog` port
+    is tracked by `flapjack-pxn.18.3.5.8.13`. Neither is claimed complete here. -/
 def compileFlapjackEntryCake {width : Nat} [NeZero width]
     [BEq (BitVec width)] [OfNat (BitVec width) 0]
     [OfNat (BitVec width) 1] [Add (BitVec width)] [Mul (BitVec width)]

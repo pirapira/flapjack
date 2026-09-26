@@ -302,6 +302,61 @@ theorem ofString_shapeToString (s : Flapjack.Shape) :
         mlstrAppend_implode_nil, mlstrAppend_assoc]
   | case4 name => simp only [Shape.shapeToString, shapeToHOL, shapeToStrHOL]
 
+private theorem string_append_bytes {a b : String}
+    (ha : ∀ c ∈ a.toList, c.toNat < 256) (hb : ∀ c ∈ b.toList, c.toNat < 256) :
+    ∀ c ∈ (a ++ b).toList, c.toNat < 256 := by
+  intro c hc
+  simp only [String.toList_append, List.mem_append] at hc
+  rcases hc with h | h
+  · exact ha c h
+  · exact hb c h
+
+private theorem foldl_bytes (fields : List Flapjack.Shape) :
+    ∀ (init : String), (∀ c ∈ init.toList, c.toNat < 256) →
+      (∀ field ∈ fields, ∀ c ∈ (Shape.shapeToString field).toList, c.toNat < 256) →
+      ∀ c ∈ (fields.foldl (fun result field => result ++ "," ++ Shape.shapeToString field) init).toList,
+        c.toNat < 256 := by
+  induction fields with
+  | nil => intro init hinit _; simpa using hinit
+  | cons field rest ih =>
+      intro init hinit hfields
+      simp only [List.foldl_cons]
+      apply ih
+      · apply string_append_bytes
+        · apply string_append_bytes hinit
+          exact (by decide : ∀ c ∈ ("," : String).toList, c.toNat < 256)
+        · exact hfields field (by simp)
+      · intro f hf; exact hfields f (by simp [hf])
+
+/-- Every character of a byte-ranged shape's production rendering is a byte.
+    `Shape.shapeToString` concatenates literal separators and the recursive
+    renderings, so the only source of characters is the `named` case, where
+    `ShapeByteRanged` supplies the bound.  FLAPJACK-SPECIFIC, untagged. -/
+theorem shapeByteRanged_shapeToString_bytes (s : Flapjack.Shape) :
+    ShapeByteRanged s → ∀ c ∈ (Shape.shapeToString s).toList, c.toNat < 256 := by
+  induction s using Flapjack.Shape.shapeToString.induct with
+  | case1 => intro _; simp only [Shape.shapeToString]; decide
+  | case2 => intro _; simp only [Shape.shapeToString]; decide
+  | case3 head tail ihHead ihTail =>
+      intro h
+      simp only [ShapeByteRanged] at h
+      have hhead : ∀ c ∈ (Shape.shapeToString head).toList, c.toNat < 256 :=
+        ihHead (h head (by simp))
+      have htail : ∀ f ∈ tail, ∀ c ∈ (Shape.shapeToString f).toList, c.toNat < 256 :=
+        fun f hf => ihTail f hf (h f (by simp [hf]))
+      intro c hc
+      rw [Shape.shapeToString] at hc
+      have hfold := foldl_bytes tail "" (by decide) htail
+      repeat rw [String.toList_append, List.mem_append] at hc
+      rcases hc with hc | hD
+      · rcases hc with hc | hC
+        · rcases hc with hA | hB
+          · exact (by decide : ∀ c ∈ ("{" : String).toList, c.toNat < 256) c hA
+          · exact hhead c hB
+        · exact hfold c hC
+      · exact (by decide : ∀ c ∈ ("}" : String).toList, c.toNat < 256) c hD
+  | case4 name => intro h; simpa only [ShapeByteRanged, Shape.shapeToString] using h
+
 /-- String-level corollary of `ofString_shapeToString`: when every character of
     the production rendering is a byte, `toStringOfBytes` inverts `ofString` and
     recovers `Shape.shapeToString`.  FLAPJACK-SPECIFIC, untagged. -/
@@ -312,5 +367,14 @@ theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes (s : Flapjack.Shape)
   rw [← ofString_shapeToString s,
     Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes]
   exact h
+
+/-- Premise-free form of the production bridge: `ShapeByteRanged` already
+    guarantees the byte premise, so this closes the `.1.28` diagnostic-string
+    bridge without an extra hypothesis.  FLAPJACK-SPECIFIC, untagged. -/
+theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes_of_byteRanged (s : Flapjack.Shape)
+    (h : ShapeByteRanged s) :
+    Shape.shapeToString s =
+      Flapjack.Basis.Pure.MlString.toStringOfBytes (shapeToStrHOL (shapeToHOL s)) :=
+  shapeToString_eq_shapeToStrHOL_toStringOfBytes s (shapeByteRanged_shapeToString_bytes s h)
 
 end Flapjack.Pancake.PanLang

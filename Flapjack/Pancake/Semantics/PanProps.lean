@@ -42,6 +42,24 @@ enough and duplicating the full state is not acceptable. The faithful port is
 tracked by `flapjack-4ac.4.100.1`, dependent on the finite-map carrier work
 `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 
+/-! Source review for HOL `evaluate_decls_swap_memory`
+(`panPropsScript.sml:1750-1763`): HOL quantifies an initial state `s`,
+declaration program `prog`, successful result `s'`, and replacement memory
+`mry`. Successful `evaluate_decls s prog = SOME s'`, together with equality of
+the memories at every address in the original `s.memaddrs`, implies that
+evaluation from `s` with only its memory replaced succeeds with `s'`'s memory
+also replaced by `mry`. This is a distinct result from expression-level
+`eval_swap_memory`; the HOL proof explicitly relies on that theorem for
+declarations. The nearby Lean `evaluateDeclsHOLExact` and `evalHOLExact` use
+`PanSemStateExact`, whose locals/globals/code/eshapes are unrestricted lookup
+functions rather than HOL finite maps. There is no finite-support declaration
+evaluator or exact expression swap-memory theorem in the PanProps counterpart;
+the finite-map tag also requires the owner and witness in that module. Do not
+tag the broad analogues. The faithful port is tracked by
+`flapjack-4ac.4.101.1`, depending on exact `eval_swap_memory` port
+`flapjack-4ac.4.100.1` and the finite-support declaration evaluator
+`flapjack-4ac.4.102.1`. -/
+
 /-! Source review for HOL `evaluate_decls_memaddrs_mono`
 (`panPropsScript.sml:1766-1778`): HOL quantifies an initial state `s`, program
 `prog`, successful result `s'`, and replacement address set `memaddrs`. From

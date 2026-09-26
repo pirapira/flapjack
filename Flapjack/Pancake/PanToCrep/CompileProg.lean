@@ -29,8 +29,9 @@ open Flapjack.Pancake.PanLang
 -- `compile_prog` (`pan_to_crepScript.sml:393-397`) is
 -- `compile_inl_top (MAP FST (functions (FILTER inlinable prog)))
 --    (compile_to_crep prog)` over a word-indexed `'a prog`; its result is
--- `(mlstring # num list # 'a crepLang$prog) list`. This definition differs on
--- carriers, not just names: (1) declarations and inline names use
+-- `(mlstring # num list # 'a crepLang$prog) list`, with no additional
+-- hypotheses or side conditions. This definition differs on carriers, not
+-- just names: (1) declarations and inline names use
 -- `FunName` = `String` vs HOL `funname` = `mlstring`; (2) the source is a
 -- production `Decl (BitVec width)` with production `Shape` vs HOL's
 -- word-indexed `decl` carrying `mlstring`/`shape`; (3) the target is
@@ -48,7 +49,9 @@ open Flapjack.Pancake.PanLang
 -- reproduced by `Flapjack/Test/CompileProgParamsParity.lean`. Faithful-port
 -- dependency `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`; exact
 -- `compile` by `.18.3.5.8.13`, exact `compile_inl_top` carrier by
--- `flapjack-e7w.1`). In `compileFlapjackEntryCake` (Pipeline.lean), the
+-- `flapjack-e7w.1`; the full exact `compile_inl_top` and production inliner
+-- are tracked by open epic `flapjack-e7w.2`). In `compileFlapjackEntryCake`
+-- (Pipeline.lean), the
 -- parser-proved branch invokes `compileProgTopHOLWithMetadataOfExact`, which
 -- crosses the `DeclHOL` input boundary and then calls this source-shaped
 -- implementation; it does not make the emitted Crep bodies exact

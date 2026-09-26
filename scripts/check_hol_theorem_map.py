@@ -38,6 +38,22 @@ DATA_DECLARATION_RE = re.compile(
 # inventory small and source-reviewed; a mismatch row is not generated merely
 # because an arbitrary Lean def happens to mention a HOL name.
 WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Pancake/WordLang.lean", "everyVarImm"): (
+        "cakeml/compiler/backend/wordLangScript.sml",
+        "every_var_imm_def",
+        "Coordinator source review (bead flapjack-pxn.18.5.15.1.4): Lean's "
+        "unrestricted width : Nat admits BitVec 0; HOL word dimensions are "
+        "positive. Keep the executable helper untagged until its width binder "
+        "and callers match the original declaration."
+    ),
+    ("Flapjack/Pancake/WordLang.lean", "everyVarInst"): (
+        "cakeml/compiler/backend/wordLangScript.sml",
+        "every_var_inst_def",
+        "Coordinator source review (bead flapjack-pxn.18.5.15.1.4): Lean's "
+        "unrestricted width : Nat admits BitVec 0; HOL word dimensions are "
+        "positive. Keep the executable helper untagged until its width binder "
+        "and callers match the original declaration."
+    ),
     ("Flapjack/Pancake/PanToCrep.lean", "expHdlHOL"): (
         "cakeml/pancake/pan_to_crepScript.sml",
         "exp_hdl_def",

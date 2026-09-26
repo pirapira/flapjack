@@ -9781,16 +9781,16 @@
     "hol_name": "every_var_imm_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarImm",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.5.15.1.4): PROMOTION WITHDRAWN pending review. HOL every_var_imm_def (wordLangScript.sml:93-96) is `every_var_imm P (Reg r) = P r` and `every_var_imm P _ = T`; Lean everyVarImm (P : Nat -> Bool) : WordRegImm (BitVec width) -> Bool has `.reg num => P num` and `_ => true` with WordRegImm.reg/imm matching asm$reg_imm. CONCERN (coordinator safety review): the Lean declaration quantifies `width : Nat` WITHOUT `[NeZero width]`, so it is instantiated at BitVec 0, whereas HOL `word` dimensions are positive; the statement is only justified together with `[NeZero width]`. Reverted from reviewed_exact to pending_statement_review; do not re-promote until the width binder is corrected with full caller review or exact-carrier equivalence is established."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Coordinator source review (bead flapjack-pxn.18.5.15.1.4): HOL every_var_imm_def uses a positive-dimensional word type; Lean everyVarImm allows BitVec 0 because width : Nat has no [NeZero width] binder. The HOL tag was withdrawn. The executable helper remains untagged until the width binder and callers are reviewed."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
     "hol_name": "every_var_inst_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.5.15.1.4): PROMOTION WITHDRAWN pending review. HOL every_var_inst_def (wordLangScript.sml:98-133) clause-for-clause with the Lean everyVarInst over the wordLang arith/mem/reg_imm carriers; the only width use is the `if width = 64` FPMov test mirroring `dimindex(:'a) = 64`. CONCERN (coordinator safety review): the Lean declaration quantifies `width : Nat` WITHOUT `[NeZero width]`, admitting BitVec 0 while HOL word dimensions are positive, so the promotion is not justified without the width binder. Reverted from reviewed_exact to pending_statement_review; do not re-promote until the width binder is corrected with full caller review or exact-carrier equivalence is established."
+    "statement_status": "documented_mismatch",
+    "reviewer": "Coordinator source review (bead flapjack-pxn.18.5.15.1.4): HOL every_var_inst_def uses a positive-dimensional word type; Lean everyVarInst allows BitVec 0 because width : Nat has no [NeZero width] binder. The HOL tag was withdrawn. The executable helper remains untagged until the width binder and callers are reviewed."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

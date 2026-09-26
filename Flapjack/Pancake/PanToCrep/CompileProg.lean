@@ -49,8 +49,16 @@ open Flapjack.Pancake.PanLang
 -- reproduced by `Flapjack/Test/CompileProgParamsParity.lean`. Faithful-port
 -- dependency `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`; exact
 -- `compile` by `.18.3.5.8.13`, exact `compile_inl_top` carrier by
--- inline-map carrier by `flapjack-e7w.1`; the full exact `compile_inl_top`
--- and production inliner are tracked by open epic `flapjack-e7w.2`).
+-- `flapjack-e7w.1`; the full exact `compile_inl_top` and production inliner
+-- are tracked by open epic `flapjack-e7w.2`). In `compileFlapjackEntryCake`
+-- (Pipeline.lean), the
+-- parser-proved branch invokes `compileProgTopHOLWithMetadataOfExact`, which
+-- crosses the `DeclHOL` input boundary and then calls this source-shaped
+-- implementation; it does not make the emitted Crep bodies exact
+-- `CrepProgHOL` values. This is a carrier gap, not a measured performance
+-- exception. Keep the `compile_prog_def` inventory bead open until the exact
+-- `compile_to_crep` and `compile_inl_top` dependencies are routed through the
+-- executed path.
 def compileProgTopHOL [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat (BitVec width) 0]
     [OfNat (BitVec width) 1]

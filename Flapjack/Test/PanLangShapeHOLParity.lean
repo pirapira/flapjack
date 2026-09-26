@@ -82,4 +82,14 @@ the documented side condition. -/
 example (s : Shape) (h : ShapeByteRanged s) : shapeOfHOL (shapeToHOL s) = s :=
   shapeOfHOL_shapeToHOL s h
 
+/-- Production diagnostic rendering is the exact HOL rendering after decoding
+the reviewed MlString port on the byte-ranged domain. -/
+example :
+    Shape.shapeToString (.comb [.one, .named "Bar", .comb [.one, .one]]) =
+      Flapjack.Basis.Pure.MlString.toStringOfBytes
+        (shapeToStrHOL
+          (shapeToHOL (.comb [.one, .named "Bar", .comb [.one, .one]]))) := by
+  exact shapeToString_eq_shapeToStrHOL_toStringOfBytes_of_byteRanged _ (by
+    simp [ShapeByteRanged])
+
 end Flapjack.Test.PanLangShapeHOLParity

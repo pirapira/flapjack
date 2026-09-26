@@ -150,4 +150,34 @@ example (statements : List (Prog (BitVec 8))) :
         (statements.map Flapjack.Pancake.PanLang.progToHOL) :=
   Flapjack.Pancake.PanLang.nestedSeqHOL_progToHOL statements
 
+/-! ## Executable routing helper (bead flapjack-4ac.1.31.1)
+
+`nestedSeqCake` is the executable width-indexed helper that builds the nested
+sequence through the tagged `nestedSeqHOL` (encode, apply, decode).  On
+byte-ranged statements it computes the production `nestedSeq`, so the executed
+compiler can route its initializer sequence through the reviewed definition
+without changing output. -/
+
+private def prodProbe : List (Prog (BitVec 8)) :=
+  [.assign .local "x" (.const 7), .assign .local "y" (.const 9)]
+
+example :
+    Flapjack.Pancake.PanLang.nestedSeqCake prodProbe = nestedSeq prodProbe :=
+  Flapjack.Pancake.PanLang.nestedSeqCake_eq prodProbe (by
+    intro statement hmem
+    simp only [prodProbe, List.mem_cons, List.not_mem_nil, or_false] at hmem
+    rcases hmem with rfl | rfl
+    · refine ⟨?_, ?_⟩
+      · decide
+      · trivial
+    · refine ⟨?_, ?_⟩
+      · decide
+      · trivial)
+
+example (statements : List (Prog (BitVec 8)))
+    (hranged : ∀ statement ∈ statements,
+      Flapjack.Pancake.PanLang.ProgByteRanged statement) :
+    Flapjack.Pancake.PanLang.nestedSeqCake statements = nestedSeq statements :=
+  Flapjack.Pancake.PanLang.nestedSeqCake_eq statements hranged
+
 end Flapjack.Test.PanNestedSeqParity

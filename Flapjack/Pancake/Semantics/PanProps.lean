@@ -268,15 +268,22 @@ private theorem lookupFieldHOL_isWfShapeValuesHOLExact {width : Nat} [NeZero wid
           simpa only [lookupFieldHOL, if_neg hname] using hlookup
         exact ih htail hlookup'
 
-/-! **Unported HOL evaluator invariant** (`evaluate_is_wf_shape_invariant`,
+/-! **Unported HOL evaluator invariants** (`evaluate_invariants`,
+    `evaluate_is_wf_shape_invariant`,
     `panPropsScript.sml:1250`). The source quantifies `p`, initial state `s`,
     result `res`, and post-state `s'`; from `evaluate (p,s) = (res,s')` and
     `FEVERY` well-formedness of both initial `locals` and `globals` under
     `s.structs`, it concludes both post-state maps are well-formed under
     `s'.structs`, and any returned/raised payload is well-formed under the
     initial `s.structs`. No Lean declaration currently states that result.
-    The prerequisite `eval_is_wf_shape_v` (`panPropsScript.sml:126`) is also
-    unported. Its prerequisite `eval_is_wf_shape_v` is now tagged with the
+    `evaluate_invariants` (`panPropsScript.sml:1150`) additionally says a
+    successful whole-program evaluation preserves `memaddrs`, `sh_memaddrs`,
+    `be`, `eshapes`, `base_addr`, `structs`, `code`, and `ffi.oracle`; it has
+    no exact finite-map program-evaluator result carrier yet. The related
+    faithful inventory bead `.4.61` blocks on the finite-support evaluator
+    bead `.3.52.1`.
+    The expression prerequisite `eval_is_wf_shape_v`
+    (`panPropsScript.sml:126`) is now tagged with the
     reviewed finite-map carrier and exact HOL conjunction in
     `PanProps/EvalInvariant.lean`. The untagged
     `evalHOLExact_isWfShapeValueHOLExact` helper remains broad-carrier proof

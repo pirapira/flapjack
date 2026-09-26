@@ -1504,18 +1504,20 @@ theorem lookupCodeWfShapeInvariantStep {width : Nat} {σ : Type} [NeZero width] 
         exact False.elim (hValid hValid')
 
 set_option linter.unusedSimpArgs false in
-/-- Exact finite-support port of HOL `panProps$evaluate_decls_names`
+/-- Finite-support rendering of HOL `panProps$evaluate_decls_names`
     (`cakeml/pancake/semantics/panPropsScript.sml:1552`):
     `!s decs. EVERY is_name decs ==> evaluate_decls s decs = SOME s`.
     HOL `EVERY is_name decs` renders as `decs.all isNameHOL = true` (the tagged
     `is_name_def` counterpart), and the state is the reviewed
     `PanPropsEvalStateFiniteExact` whose four `|->` fields (`locals`, `globals`,
-    `code`, `eshapes`) are the canonical `HolFiniteMapExact` translation recorded
-    by the `fmap_as_finite_support` qualifier. `[NeZero width]` models HOL's
-    positive word dimension and `DecidablePred state.memaddrs` is computation
-    evidence for the HOL word-set guard. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_names"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+    `code`, `eshapes`) are the canonical `HolFiniteMapExact` translation.
+    NOT an exact HOL port: this statement is over the PanProps duplicate
+    evaluator `evaluateDeclsPanPropsHOLFinite`, which is not yet kernel-bridged
+    to the canonical tagged `PanSem` evaluator, so the HOL tag was withdrawn
+    (bead flapjack-4ac.6 audit). The canonical tag is being handled by DS10 on
+    `fleet-deepseek-v41-ten`; restore the qualifier here only after that bridge.
+    `[NeZero width]` models HOL's positive word dimension and `DecidablePred
+    state.memaddrs` is computation evidence for the HOL word-set guard. -/
 theorem evaluateDeclsNamesHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
     (decs : List (DeclHOL width)) :

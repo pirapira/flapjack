@@ -321,6 +321,14 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean", "evaluateDeclsNamesHOLFinite"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "evaluate_decls_names",
+        "flapjack-ds8 (bead flapjack-4ac.6 audit, coordinator HOLD 2026-09-26T16:13Z): the "
+        "theorem is stated over the PanProps duplicate evaluator evaluateDeclsPanPropsHOLFinite, "
+        "not yet kernel-bridged to the canonical tagged PanSem evaluator. The HOL tag was "
+        "withdrawn; DS10 owns the canonical tagged port on fleet-deepseek-v41-ten.",
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem/Eval.lean", "evalCrepHolExp"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
         "eval_nested_decs_seq_res_var_eq",

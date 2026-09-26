@@ -870,6 +870,29 @@ def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width
             some (some .timeOut, context.withState (emptyLocalsHOLFinite state) rfl rfl)
           else
             some (none, context.withState (decClockHOLFinite state) rfl rfl)
+      | .return value =>
+          match evalHOLFinite state value with
+          | none => some (some .error, context)
+          | some returned =>
+              if Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL state.structs
+                  (shapeOfHOLExact returned) ≤ 32 then
+                some (some (.returned returned),
+                  context.withState (emptyLocalsHOLFinite state) rfl rfl)
+              else some (some .error, context)
+      | .raise exception value =>
+          match evalHOLFinite state value with
+          | none => some (some .error, context)
+          | some raised =>
+              match state.eshapes.lookup exception with
+              | none => some (some .error, context)
+              | some shape =>
+                  if shapeEqHOL (shapeOfHOLExact raised) shape then
+                    if Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL state.structs
+                        (shapeOfHOLExact raised) ≤ 32 then
+                      some (some (.exception exception raised),
+                        context.withState (emptyLocalsHOLFinite state) rfl rfl)
+                    else some (some .error, context)
+                  else some (some .error, context)
       | other =>
           match hres : evalPanSemNonrecursiveHOLFinite state other with
           | none => none
@@ -939,11 +962,11 @@ theorem evalPanSemRecursiveCallFiniteContext_total {width : Nat} {σ : Type} [Ne
     (program : ProgHOL width) (context : FiniteEvalContext width σ) :
     ∃ output, evalPanSemRecursiveCallFiniteContext program context = some output := by
   fun_induction evalPanSemRecursiveCallFiniteContext program context <;> simp_all
-  case case55 =>
-    rename_i inst context state other h9 h8 h7 h6 h5 h4 h3 h2 h1 h0 hres
-    cases state <;> simp_all [evalPanSemNonrecursiveHOLFinite, evalPanSemNonrecursiveHOLExact]
-    · exact other _ _ _ _ rfl rfl rfl rfl
-    · exact h5 _ _ _ _ _ rfl rfl rfl rfl rfl
+  case case63 =>
+    rename_i inst context state other x12 x11 x10 x9 x8 x7 x6 x5 x4 x3 x2 x1 x0 hres
+    cases other <;> simp_all [evalPanSemNonrecursiveHOLFinite, evalPanSemNonrecursiveHOLExact]
+    · exact x12 _ _ _ _ rfl rfl rfl rfl
+    · exact x7 _ _ _ _ _ rfl rfl rfl rfl rfl
 
 /-- FLAPJACK-SPECIFIC provisional projection (not a HOL declaration; carries no
     `@[hol]` tag): the state-level view of the clause-for-clause finite context

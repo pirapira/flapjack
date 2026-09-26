@@ -11703,5 +11703,19 @@
     "lean_name": "panToCrepFiniteRaisePayloadShape",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-specific Raise-clause composition over the finite-context evaluator, exact PanSem state, and exact Pan-to-Crep relations. It proves the HOL-shaped empty-context payload conclusion for this clause but has a clause-level evaluator premise, so it is not evaluate_shape_invariant_ret_inst and remains untagged pending the complete evaluator invariant and multi-carrier qualifier."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_names",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsPanPropsHOLFinite_names",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-4ac.4.87): HOL panPropsScript.sml:1552-1559 states forall s decs, EVERY is_name decs => evaluate_decls s decs = SOME s. Lean quantifies the same state and declaration list, with the exact is_name counterpart isNameHOL (tagged is_name_def) and `decs.all isNameHOL = true` rendering HOL EVERY. The subject is the PanProps finite-support rendering evaluateDeclsPanPropsHOLFinite, whose clauses match evaluate_decls_def one-for-one and are kernel-checked to project to the exact evaluateDeclsHOLExact via evaluateDeclsPanPropsHOLFinite_toExact; the tagged PanSem definition evaluate_decls_def is evaluateDeclsHOLFinite. PanPropsEvalStateFiniteExact owns locals/globals/code/eshapes as HolFiniteMapExact (the canonical translation) and its same-module holFmapAsFiniteSupportWitness states the toExact/ofExact roundtrips with PanSemStateExact. The qualifier is representation-only;  quantifiers, hypothesis and conclusion are unchanged."
   }
 ]

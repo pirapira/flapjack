@@ -81,7 +81,10 @@ def shapeSize : Shape → Nat
   | .comb fields => fields.foldl (fun total field => total + shapeSize field) 0
   | .named _ => 1
 
-/-! Exact source counterpart of Pancake's `shape_to_str_def`. -/
+/-! Production String rendering follows Pancake's `shape_to_str_def` equations.
+    It is not an exact HOL port because this shape carrier's named fields use
+    `String` rather than `mlstring`; `Shape.shapeToString_eq_shapeToStrHOL_toStringOfBytes`
+    proves the production bridge on byte-ranged shapes. -/
 def shapeToString : Shape → String
   | .one => "1"
   | .comb [] => "{}"

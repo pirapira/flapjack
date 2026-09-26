@@ -338,12 +338,10 @@ end
 
 /-- HOL `wordLang$every_var_imm` (`wordLangScript.sml:93-96`).
 
-    Statement review pending: this Lean declaration quantifies `width : Nat`
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
     without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
-    dimensions are positive.  The manifest entry is `pending_statement_review`;
-    do not promote to `reviewed_exact` until the width binder is corrected (with
-    caller review) or exact-carrier equivalence is otherwise established. -/
-@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_imm_def"]
+    dimensions are positive. The manifest records this mismatch; restore the
+    HOL tag only after correcting the width binder and reviewing callers. -/
 def everyVarImm {width : Nat} (P : Nat -> Bool) :
     WordRegImm (BitVec width) -> Bool
   | .reg num => P num
@@ -351,12 +349,10 @@ def everyVarImm {width : Nat} (P : Nat -> Bool) :
 
 /-- HOL `wordLang$every_var_inst` (`wordLangScript.sml:98-133`).
 
-    Statement review pending: this Lean declaration quantifies `width : Nat`
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
     without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
-    dimensions are positive.  The manifest entry is `pending_statement_review`;
-    do not promote to `reviewed_exact` until the width binder is corrected (with
-    caller review) or exact-carrier equivalence is otherwise established. -/
-@[hol "cakeml/compiler/backend/wordLangScript.sml" "every_var_inst_def"]
+    dimensions are positive. The manifest records this mismatch; restore the
+    HOL tag only after correcting the width binder and reviewing callers. -/
 def everyVarInst {width : Nat} (P : Nat -> Bool) :
     WordLangInst (BitVec width) -> Bool
   | .const reg _ => P reg

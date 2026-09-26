@@ -212,14 +212,15 @@ instance (priority := 10) panCmpOfLt [LT α]
   lower left right := decide (left < right)
   less left right := decide (left < right)
 
-/-- Exact port of HOL `panLang$shift` (`cakeml/pancake/panLangScript.sml:19`),
-    which is the alias `Type shift = ``:ast$shift`` and whose declaration in
-    `cakeml/semantics/astScript.sml:21` is `shift = Lsl | Lsr | Asr | Ror`.
-
-    The four nullary constructors match one-for-one (Lean naming convention:
-    `lsl`/`lsr`/`asr`/`ror`); there is no payload, side condition, or extra
-    constructor, so this is the exact carrier. -/
-@[hol "cakeml/pancake/panLangScript.sml" "shift"]
+/- FLAPJACK-SPECIFIC (not an exact HOL port of `panLangScript.sml:19`): the
+cited HOL declaration `Type shift = ``:ast$shift``` is a *type alias*, not a
+datatype definition; its four nullary constructors `Lsl | Lsr | Asr | Ror` come
+from the aliased `ast$shift` datatype (`cakeml/semantics/astScript.sml:21`).
+Lean `Shift` below has the same four constructors, so it matches the underlying
+`ast$shift` carrier, but tagging it against the panLang alias declaration would
+conflate an alias with an inductive definition, so no `@[hol]` tag is attached.
+A genuine exact port of `ast$shift` belongs in that theory's counterpart; the
+panLang alias itself (`Type shift`) stays an open inventory item (`flapjack-4ac.1.1`). -/
 inductive Shift where
   | lsl
   | lsr

@@ -1459,7 +1459,6 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean", "panMemLoad32HOL_eq_alt"),
         ("Flapjack/Pancake/Semantics/PanSem/MemStore32Alt.lean", "panMemStore32HOL_eq_alt"),
         ("Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean", "valWordHOL"),
-        ("Flapjack/Pancake/PanLang.lean", "Shift"),
         ("Flapjack/Pancake/PanLang.lean", "Index"),
         ("Flapjack/Pancake/PanLang.lean", "Stcname"),
         ("Flapjack/Pancake/PanLang.lean", "Fldname"),

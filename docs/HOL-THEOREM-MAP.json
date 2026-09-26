@@ -5596,14 +5596,6 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
-    "hol_name": "shift",
-    "lean_path": "Flapjack/Pancake/PanLang.lean",
-    "lean_name": "Shift",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.1). HOL `Type shift = ``:ast$shift`` (panLangScript.sml:19) aliases the `ast$shift` datatype (`cakeml/semantics/astScript.sml:21`) `shift = Lsl | Lsr | Asr | Ror`. Lean `Flapjack.Shift` (PanLang.lean:173, namespace Flapjack) declares exactly four nullary constructors `lsl | lsr | asr | ror` (Lean lowercase naming convention) with no payload, no extra constructor, and no side condition; the constructor correspondence is one-for-one and total, so the carrier is exact."
-  },
-  {
-    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "index",
     "lean_path": "Flapjack/Pancake/PanLang.lean",
     "lean_name": "Index",

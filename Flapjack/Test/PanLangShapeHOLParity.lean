@@ -89,7 +89,7 @@ example :
       Flapjack.Basis.Pure.MlString.toStringOfBytes
         (shapeToStrHOL
           (shapeToHOL (.comb [.one, .named "Bar", .comb [.one, .one]]))) := by
-  exact shapeToString_eq_shapeToStrHOL_toStringOfBytes _ (by
+  exact shapeToString_eq_shapeToStrHOL_toStringOfBytes_of_byteRanged _ (by
     simp [ShapeByteRanged])
 
 end Flapjack.Test.PanLangShapeHOLParity

@@ -29,6 +29,25 @@ inductive SemanticsRunResHOL (α : Type u) where
   | Incomplete
   deriving DecidableEq, Repr
 
+/-! Source review for HOL `semantics_wrapper_eq`
+(`panPropsScript.sml:1831-1929`): the theorem is generic in arbitrary abstract
+and concrete functions `absf, concf : Nat → SemanticsRunResHOL α × List β`. Its
+six premises are: `semantics_wrapper absf ≠ Fail`; every non-`RunError` abstract
+observation has a matching concrete observation at some extended clock; every
+concrete non-`Incomplete` observation is stable under further clock increase;
+the same stability for abstract observations; and, separately for abstract
+and concrete observations, if the result at `k + k'` is `(Incomplete, ev)`,
+there are `r'` and `ev'` with the result at `k` equal to `(r', ev')` and
+`IS_PREFIX ev ev'`. These premises imply equality of the two
+`semantics_wrapper` results. The closest Flapjack API,
+`PanObservationalSemantics.panSemantics`, specializes the functions to a
+`PanSemanticsHooks` evaluator over `Option PanValueFfiClockResult`, and takes a
+caller-supplied prefix chain/LUB. It has neither the arbitrary result carrier
+nor the generic wrapper equality statement, so it is not a port and receives
+no HOL tag. The faithful theorem port is tracked by
+`flapjack-4ac.4.106.1`, depending on the exact wrapper/LUB carrier work in
+`flapjack-4ac.4.105.1`. -/
+
 /-! Source review for HOL `eval_swap_memory`
 (`panPropsScript.sml:1734-1742`): the exact theorem quantifies `s`, `exp`, `v`,
 and an arbitrary replacement memory `mry`; it assumes successful `eval s exp`

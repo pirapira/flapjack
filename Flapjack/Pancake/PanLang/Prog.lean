@@ -583,4 +583,40 @@ def nestedSeqHOL {width : Nat} [NeZero width] : List (ProgHOL width) → ProgHOL
   | cons statement statements ih =>
       simp only [nestedSeqHOL_cons, List.map_cons, Flapjack.nestedSeq, progToHOL, ih]
 
+/-- Executable width-indexed nested sequence that routes through the reviewed
+    `nestedSeqHOL`: encode each production statement with `progToHOL`, apply the
+    tagged definition, and decode the result.  On byte-ranged inputs the codec
+    round-trip `progOfHOL_progToHOL` makes this agree with the production
+    `Flapjack.nestedSeq`; `nestedSeqCake_eq` records that relation.  This is
+    production routing infrastructure, not a HOL declaration, so it carries no
+    `@[hol]` tag (bead flapjack-4ac.1.31.1). -/
+def nestedSeqCake {width : Nat} [NeZero width]
+    (statements : List (Prog (BitVec width))) : Prog (BitVec width) :=
+  progOfHOL (nestedSeqHOL (statements.map progToHOL))
+
+/-- The encoded list of a byte-ranged program list decodes back to itself, i.e.
+    `progOfHOL ∘ progToHOL` is the identity pointwise under `ProgByteRanged`. -/
+theorem map_progOfHOL_progToHOL {width : Nat} [NeZero width]
+    (statements : List (Prog (BitVec width)))
+    (hranged : ∀ statement ∈ statements, ProgByteRanged statement) :
+    (statements.map progToHOL).map progOfHOL = statements := by
+  induction statements with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.map_cons]
+      rw [progOfHOL_progToHOL head (hranged head (by simp))]
+      congr 1
+      exact ih (fun statement hstatement => hranged statement (by simp [hstatement]))
+
+/-- The executable `nestedSeqCake` agrees with the production `Flapjack.nestedSeq`
+    whenever every statement round-trips through the exact codec.  This is the
+    routing bridge used by the executed compiler's nested-sequence path; it is
+    Flapjack-specific infrastructure and is not a HOL theorem. -/
+theorem nestedSeqCake_eq {width : Nat} [NeZero width]
+    (statements : List (Prog (BitVec width)))
+    (hranged : ∀ statement ∈ statements, ProgByteRanged statement) :
+    nestedSeqCake statements = Flapjack.nestedSeq statements := by
+  unfold nestedSeqCake
+  rw [nestedSeqHOL_progOfHOL, map_progOfHOL_progToHOL statements hranged]
+
 end Flapjack.Pancake.PanLang

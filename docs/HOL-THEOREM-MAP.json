@@ -11811,5 +11811,14 @@
     "lean_name": "evaluateDeclsHOLFinite_exnsWf",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-ds8 (bead flapjack-4ac.4.78; coordinator HOLD 2026-09-26T16:50Z): the HOL tag was withdrawn because AGENTS.md requires a exns_wf_evaluate_decls declaration to live in its PanProps counterpart/submodule, while the fmap_as_finite_support witness must be in the same module as the owning PanSemStateFiniteExact carrier. The statement is a Flapjack-specific restatement over the canonical tagged finite-map evaluator evaluateDeclsHOLFinite (not a duplicate evaluator); faithful PanProps-counterpart placement with a same-module witness is tracked by a prerequisite bead. The quantifiers, premises, and conclusion are otherwise unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "get_eids_from_decls_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/ContextExact.lean",
+    "lean_name": "getEidsFromDeclsHOL",
+    "statement_status": "reviewed_fmap_as_finite_support_result",
+    "fmap_as_finite_support_result": true,
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.2.16): HOL pan_to_crepScript.sml:356-364 defines get_eids_from_decls decls = let eids = MAP FST (exceptions decls); ns = GENLIST (fun x => (n2w x):'a word) (LENGTH eids); es = MAP2 (fun x y => (x,y)) eids ns in alist_to_fmap es, where alist_to_fmap is the right fold FOLDR FUPDATE FEMPTY (first entry wins on a duplicate key). Lean quantifies the same word-indexed decl list over the exact DeclHOL carrier and returns the reviewed canonical finite-support map HolFiniteMapExact MlS (BitVec width), with lookup exactly Flapjack.alistToFmap (getEidsEntriesHOL decls) where getEidsEntriesHOL is the literal MAP FST/zip-GENLIST rendering of HOL's let-bound es and Flapjack.alistToFmap is the untagged alist_to_fmap right fold. exceptions is the tagged exceptionsHOL port; n2w is BitVec.ofNat width. The standalone-result qualifier records only that MlS/BitVec-keyed fmap representation; the same-module witness holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL states the unconditional lookup-level equation against the raw alistToFmap operation. No extra hypotheses or side conditions."
   }
 ]

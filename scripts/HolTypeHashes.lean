@@ -28,6 +28,7 @@ import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Pancake.PanToCrep.ExpHdlExact
+import Flapjack.Pancake.PanToCrep.ContextExact
 import Flapjack.Pancake.Proofs.CrepArith
 import Flapjack.Pancake.Proofs.CrepInline
 import Flapjack.Pancake.Proofs.PanGlobals

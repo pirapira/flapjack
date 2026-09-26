@@ -1831,6 +1831,19 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "context",
+    "lean_path": "Flapjack/Pancake/PanToCrep/ContextExact.lean",
+    "lean_name": "PanToCrepContextExact",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "vars",
+      "funcs",
+      "eids"
+    ],
+    "reviewer": "flapjack-luna-b (source comparison, beads flapjack-4ac.2.1 and .2.1.1; pan_to_crepScript.sml:10-16): the record fields match: vars maps MlString/varname to ShapeHOL and List Nat; funcs maps MlString/funname to List (MlString × ShapeHOL) × ShapeHOL; eids maps MlString/eid to BitVec width for HOL 'a word; vmax is Nat. Lean uses the canonical HolFiniteMapExact carrier for HOL fmap fields, with same-module toBroad/ofBroad roundtrip witness holFmapAsFiniteSupportWitness. The qualifier records only this finite-support representation. The field values are checked against the direct HOL `mk_ctxt_fields` record row from `mk_ctxt_def` in scripts/hol-probes/compile_to_crep_probe.out by Flapjack.Test.PanToCrepContextExactParity."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "ret_var_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "retVarHOL",

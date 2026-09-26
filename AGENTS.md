@@ -40,6 +40,18 @@ commit, verification results, or exact blocked reason on the bead, and notify
 the coordinator. Keep dependency beads open until their own acceptance criteria
 are met.
 
+Use `bd ready` to choose the next unblocked, commit-sized task. The shared bead
+database is the source of truth for current priorities; do not hard-code a
+temporary strategic focus here or claim a blocked parent merely because it is
+high priority. The coordinator keeps bead priorities aligned with the current
+goal.
+
+Agents leave completed slices open and report them as ready for review with
+branch, commit, and checks. The coordinator reviews the source and Lean
+statement, merges the commit into the single integration PR, then closes the
+bead only if its acceptance criteria are met. A pushed agent branch alone is
+not completion.
+
 Close a theorem-port bead only after the theorem itself is source-reviewed and
 kernel-checked in Lean, with a justified `@[hol]` qualifier when needed. A
 mismatch classification or other disposition is not a completed port. If an

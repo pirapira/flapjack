@@ -11282,6 +11282,15 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "FEVERY_res_var_FLOOKUP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "feveryResVarFlookupHOL",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["fm", "fm2"],
+    "reviewer": "Codex (direct source comparison, 2026-09-26, panPropsScript.sml:1222): HOL quantifies generic predicate P, finite maps fm/fm2, and nm; from FEVERY P fm and FEVERY P fm2 it concludes FEVERY P (res_var fm (nm,FLOOKUP fm2 nm)). Lean retains the generic key/value/predicate types, both premises, lookup of fm2 at nm, and the resVarEq update/delete conclusion. PanPropsResVarMapsExact packages the two independent maps losslessly as fields fm/fm2 using HolFiniteMapExact; its same-module holFmapAsFiniteSupportWitness roundtrips the pair with PanPropsResVarMapsBroad under the intrinsic finite-support proofs. The qualifier records only those two map representations. DecidableEq implements HOL equality for update/domain-subtraction lookup; it is an instance, not a logical premise."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "write_bytearray_update_byte",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
     "lean_name": "writeBytearrayUpdateByte",

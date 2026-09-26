@@ -17,6 +17,93 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS StructContextExact ProgHOL ExpHOL ShapeHOL)
 
+/-- Two independent HOL finite-map arguments packaged as fields so the
+    canonical `fmap_as_finite_support` qualifier can name each translation. -/
+structure PanPropsResVarMapsExact (α β : Type) where
+  fm : HolFiniteMapExact α β
+  fm2 : HolFiniteMapExact α β
+
+/-- Broad function-map counterpart for the two generic `res_var` inputs. -/
+structure PanPropsResVarMapsBroad (α β : Type) where
+  fm : FiniteMap α β
+  fm2 : FiniteMap α β
+
+namespace PanPropsResVarMapsExact
+
+def toBroad {α β : Type} (maps : PanPropsResVarMapsExact α β) :
+    PanPropsResVarMapsBroad α β :=
+  ⟨maps.fm.lookup, maps.fm2.lookup⟩
+
+def ofBroad {α β : Type} (maps : PanPropsResVarMapsBroad α β)
+    (support : (∃ keys : List α, ∀ key, maps.fm key ≠ none → key ∈ keys) ∧
+      ∃ keys : List α, ∀ key, maps.fm2 key ≠ none → key ∈ keys) :
+    PanPropsResVarMapsExact α β :=
+  ⟨⟨maps.fm, support.1⟩, ⟨maps.fm2, support.2⟩⟩
+
+theorem toBroad_ofBroad {α β : Type} (maps : PanPropsResVarMapsBroad α β)
+    (support : (∃ keys : List α, ∀ key, maps.fm key ≠ none → key ∈ keys) ∧
+      ∃ keys : List α, ∀ key, maps.fm2 key ≠ none → key ∈ keys) :
+    (ofBroad maps support).toBroad = maps := by
+  cases maps
+  rfl
+
+theorem ofBroad_toBroad {α β : Type} (maps : PanPropsResVarMapsExact α β) :
+    ofBroad maps.toBroad ⟨maps.fm.finiteSupport, maps.fm2.finiteSupport⟩ = maps := by
+  cases maps with
+  | mk fm fm2 =>
+      cases fm
+      cases fm2
+      simp [ofBroad, toBroad]
+
+/-- Canonical finite-map witness for the two generic HOL `fmap` arguments. -/
+theorem holFmapAsFiniteSupportWitness {α β : Type} :
+    (∀ (maps : PanPropsResVarMapsBroad α β) support,
+        (ofBroad maps support).toBroad = maps) ∧
+    (∀ maps : PanPropsResVarMapsExact α β,
+        ofBroad maps.toBroad ⟨maps.fm.finiteSupport, maps.fm2.finiteSupport⟩ = maps) :=
+  ⟨fun maps support => toBroad_ofBroad maps support, fun maps => ofBroad_toBroad maps⟩
+
+end PanPropsResVarMapsExact
+
+/-- `FEVERY P fm` on the finite-support carrier. This pointwise definition
+    follows HOL's `FEVERY`/`FLOOKUP` view without adding a membership premise. -/
+def feveryHOL {α β : Type} (P : α × β → Bool) (fm : HolFiniteMapExact α β) : Prop :=
+  ∀ key value, fm.lookup key = some value → P (key, value) = true
+
+/-- Exact finite-map port of HOL `FEVERY_res_var_FLOOKUP`
+    (`panPropsScript.sml:1222`). The two HOL map parameters are represented
+    by the named `fm` and `fm2` fields, and the qualifier records only their
+    canonical finite-support representation. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "FEVERY_res_var_FLOOKUP"
+  (fmap_as_finite_support := [fm, fm2])]
+theorem feveryResVarFlookupHOL {α β : Type} [DecidableEq α]
+    (P : α × β → Bool) (maps : PanPropsResVarMapsExact α β) (name : α) :
+    feveryHOL P maps.fm → feveryHOL P maps.fm2 →
+      feveryHOL P (maps.fm.resVarEq (name, maps.fm2.lookup name)) := by
+  intro hfm hfm2 key value hresult
+  cases hlookup : maps.fm2.lookup name with
+  | none =>
+      by_cases hkey : key = name
+      · subst key
+        simp [HolFiniteMapExact.resVarEq, HolFiniteMapExact.eraseEq,
+          FDOMSUB_HOL, hlookup] at hresult
+      · have hsource : maps.fm.lookup key = some value := by
+          simpa [HolFiniteMapExact.resVarEq, HolFiniteMapExact.eraseEq,
+            FDOMSUB_HOL, hlookup, hkey] using hresult
+        exact hfm key value hsource
+  | some newValue =>
+      by_cases hkey : key = name
+      · subst key
+        have hvalue : newValue = value := by
+          simpa [HolFiniteMapExact.resVarEq, HolFiniteMapExact.updateEq,
+            FUPDATE_HOL, hlookup] using hresult
+        subst value
+        exact hfm2 name newValue hlookup
+      · have hsource : maps.fm.lookup key = some value := by
+          simpa [HolFiniteMapExact.resVarEq, HolFiniteMapExact.updateEq,
+            FUPDATE_HOL, hlookup, hkey] using hresult
+        exact hfm key value hsource
+
 /-- PanProps-local finite-map rendering of HOL's PanSem state. The four
     `HolFiniteMapExact` fields correspond to HOL `|->` fields; all other fields
     retain the exact PanSem carrier types. -/

@@ -26,6 +26,7 @@ import Flapjack.Pancake.PanLang.Shape
 import Flapjack.Pancake.PanLang.Exp
 import Flapjack.Pancake.PanLang.Prog
 import Flapjack.Pancake.PanLang.Decl
+import Flapjack.Pancake.PanSimp
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg

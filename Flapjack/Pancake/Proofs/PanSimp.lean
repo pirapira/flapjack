@@ -36,9 +36,13 @@ theorem collectPanValueStructs_cons (declaration : Decl α) (declarations : List
        | _ => collectPanValueStructs declarations context) := by
   cases declaration <;> rw [collectPanValueStructs.eq_def]
 
-/-- Cake's `decs_stcnames_compile_prog`: `pan_simp` preserves the
-    struct-name context collected from a declaration list. -/
-@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "decs_stcnames_compile_prog"]
+/-- Flapjack-only analogue of Cake's `decs_stcnames_compile_prog`: `pan_simp`
+    preserves the struct-name context collected from a declaration list.  This
+    statement reads the production String-keyed `Prog`/`Decl` carriers, whereas
+    HOL `cakeml/pancake/proofs/pan_simpProofScript.sml` states it over the exact
+    `mlstring`-keyed panLang syntax; the HOL tag was therefore withdrawn (bead
+    flapjack-4ac.8) and the exact port is tracked by flapjack-4ac.8 (blocked by
+    the exact-transformation prerequisite flapjack-4ac.8.1). -/
 theorem collectPanValueStructs_panSimpDecls (declarations : List (Decl α))
     (context : StructContext) :
     collectPanValueStructs (panSimpDecls declarations) context =
@@ -2308,35 +2312,41 @@ theorem evalPanValueDeclarationsWithStructs_resortDecls_imp
     memoryAccess hall] at heval
   exact heval
 
-/-! ## Exact HOL helper slice for `pan_simp`
+/-! ## Flapjack-only `pan_simp` helper slice
 
-The syntactic preservation lemmas below are the exact HOL declarations from
+The syntactic preservation lemmas below are the HOL declarations from
 `cakeml/pancake/proofs/pan_simpProofScript.sml` that the `compile_correct`
-proof uses.  The executable transformations (`expIds`, `retToTail`,
-`seqAssoc`, `panSimpDecls`, `panSimpProg`) live in
-`Flapjack/Pancake/PanSimp.lean`; these tagged restatements record the HOL
-statements over those production definitions. -/
+proof uses, but they are stated over the production String-keyed
+`Prog`/`Decl` transformations (`expIds`, `retToTail`, `seqAssoc`,
+`panSimpDecls`, `panSimpProg`) in `Flapjack/Pancake/PanSimp.lean`, while the
+HOL originals use the exact `mlstring`-keyed panLang syntax.  The `@[hol]`
+tags were therefore withdrawn (bead flapjack-4ac.8) and the exact ports are
+tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite
+flapjack-4ac.8.1). -/
 
-@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_ret_to_tail_eq"]
 theorem expIdsRetToTailEq (program : Prog α) :
     expIds (retToTail program) = expIds program :=
   expIds_retToTail program
 
-@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_seq_assoc_eq"]
 theorem expIdsSeqAssocEq (pre program : Prog α) :
     expIds (seqAssoc pre program) = expIds pre ++ expIds program :=
   expIds_seqAssoc pre program
 
-@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_compile_eq"]
 theorem expIdsCompileEq (program : Prog α) :
     expIds (panSimpProg program) = expIds program :=
   expIds_panSimpProg program
 
-@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "size_of_eids_compile_eq"]
 theorem sizeOfEidsPanSimpDeclsEq (declarations : List (Decl α)) :
     sizeOfEids (panSimpDecls declarations) = sizeOfEids declarations := by
   rw [panSimpDecls_eq_map, sizeOfEids_map_panSimpDecl]
 
+/-- Exact HOL `pan_simpProof$map_snd_f_eq` (`pan_simpProofScript.sml:42-50`):
+    `!p f g. MAP (g ∘ SND ∘ SND ∘ (λ(name,params,body). (name,params,f body))) p
+      = MAP (g ∘ f) (MAP (SND ∘ SND) p)`.
+    This lemma is stated purely over generic nested triples (`List (α × β × γ)`),
+    so no mlstring/word carrier translation is involved: HOL `'a#'b#'c` is the
+    right-nested `α × β × γ`, and HOL `SND ∘ SND` is `entry.2.2`. Unlike its
+    pan_simp siblings it is therefore an exact port and keeps the `@[hol]` tag. -/
 @[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "map_snd_f_eq"]
 theorem mapSndFEq {α β γ δ ε : Type} (entries : List (α × β × γ))
     (f : γ → δ) (g : δ → ε) :
@@ -2345,14 +2355,12 @@ theorem mapSndFEq {α β γ δ ε : Type} (entries : List (α × β × γ))
   rw [List.map_map]
   congr 1
 
-@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "functions_compile_prog"]
 theorem functionsCompileProg (declarations : List (Decl α)) :
     functions (panSimpDecls declarations) =
       (functions declarations).map (fun entry =>
         (entry.1, entry.2.1, panSimpProg entry.2.2.1, entry.2.2.2)) :=
   functions_panSimpDecls declarations
 
-@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "first_compile_prog_all_distinct"]
 theorem firstCompileProgAllDistinctPanSimp (declarations : List (Decl α))
     (hnames : ((functions declarations).map (fun entry => entry.1)).Nodup) :
     ((functions (panSimpDecls declarations)).map (fun entry => entry.1)).Nodup :=

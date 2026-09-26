@@ -143,6 +143,7 @@ import Flapjack.CompileParamVarsBounds
 import Flapjack.CrepeContextBounds
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.ExpHdlExact
+import Flapjack.Pancake.PanToCrep.MakeVmapHOL
 import Flapjack.Pancake.PanToCrep.ContextExact
 import Flapjack.Pancake.PanToCrep.ContextBridge
 import Flapjack.Pancake.PanToCrep.ContextProductionEvidence

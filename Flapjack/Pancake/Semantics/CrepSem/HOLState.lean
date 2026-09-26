@@ -345,14 +345,14 @@ private def crepExpressionProjectionFfi : FfiState Unit :=
     state := ()
     ioEvents := [] }
 
-private def holWordLabToBits {width : Nat} (cell : HolWordLab width) :
+private def holWordLabToBits {width : Nat} [NeZero width] (cell : HolWordLab width) :
     PanWordLab (Fin width → Bool) :=
   match cell with
   | .word word => .word (bitVecToHolWordBits word)
 
 /-- Flapjack representation helper exposing the exact-state word-cell
 projection for carrier-bridge proofs; it has no HOL theorem of its own. -/
-@[simp] theorem holWordLabToBits_word {width : Nat} (word : BitVec width) :
+@[simp] theorem holWordLabToBits_word {width : Nat} [NeZero width] (word : BitVec width) :
     holWordLabToBits (HolWordLab.word word) =
       PanWordLab.word (bitVecToHolWordBits word) := rfl
 

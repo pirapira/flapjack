@@ -23,13 +23,13 @@ namespace Flapjack
 
 /-- Project the sole constructor of exact HOL `word_lab` to the evaluator's
     `PanWordLab` over canonical finite Boolean words. -/
-def holWordLabToCrepSourceWordLab {width : Nat}
+def holWordLabToCrepSourceWordLab {width : Nat} [NeZero width]
     (value : HolWordLab width) : PanWordLab (Fin width → Bool) :=
   match value with
   | .word bits => .word (bitVecToHolWordBits bits)
 
 @[simp] theorem panWordLabWord_panTheWord_holWordLabToCrepSourceWordLab
-    {width : Nat} (value : HolWordLab width) :
+    {width : Nat} [NeZero width] (value : HolWordLab width) :
     PanWordLab.word (panTheWord (holWordLabToCrepSourceWordLab value)) =
       holWordLabToCrepSourceWordLab value := by
   cases value

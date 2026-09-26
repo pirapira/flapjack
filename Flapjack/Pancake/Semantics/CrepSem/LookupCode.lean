@@ -33,7 +33,7 @@ abbrev CrepCodeMapExact (width : Nat) [NeZero width] : Type :=
   Flapjack.Basis.Pure.MlString.MlString → Option (List Nat × CrepProgHOL width)
 
 /-- The exact `lookup_code` local-variable carrier: HOL `varname |-> 'a word_lab`. -/
-abbrev CrepLocalsExact (width : Nat) : Type :=
+abbrev CrepLocalsExact (width : Nat) [NeZero width] : Type :=
   FiniteMap Nat (HolWordLab width)
 
 /-- Exact port of HOL `crepSem$lookup_code_def` (`crepSemScript.sml:76-84`):
@@ -112,7 +112,7 @@ def codeMapProdToExact {width : Nat} [NeZero width]
 
 /-- Zipping declared parameter names with `HolWordLab` arguments and then
 projecting the values back to `PanWordLab` recovers the production zip. -/
-theorem zip_holToPan {width : Nat} (names : List Nat)
+theorem zip_holToPan {width : Nat} [NeZero width] (names : List Nat)
     (args : List (PanWordLab (BitVec width))) :
     ((names.zip (args.map PanWordLab.toHolWordLab)).map
         (fun entry => (entry.1, HolWordLab.toPanWordLab entry.2))) = names.zip args := by

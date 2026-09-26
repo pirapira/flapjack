@@ -1188,6 +1188,23 @@ DOCUMENTED_MISMATCHES = {
         "does not directly apply; exact tagging route tracked by bead "
         "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
     ),
+    ("Flapjack/Pancake/PanToCrep.lean", "compileExp"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "compile_exp_def",
+        "flapjack-luna-b (source comparison, bead flapjack-4ac.2.5; "
+        "pan_to_crepScript.sml:39-108): clauses are structurally aligned, but "
+        "compileExp ranges over production Exp α with generic Const α, String-backed "
+        "names, production Shape/CrepExp α, and InfoMap-backed CompileContext. HOL "
+        "uses word-indexed ExpHOL/CrepExpHOL, ShapeHOL/MlString names, and finite-map "
+        "context; the generic [BEq α]/[OfNat α 0]/[Add α] carrier is not a positive-width "
+        "HOL word. Lean also reads arbitrary context.bytesInWord for Load/BytesInWord "
+        "while HOL uses fixed word-width-derived bytes_in_word. Nearby "
+        "PanToCrepHOLContext still has String keys and production Shape/generic α too. "
+        "No @[hol] tag is claimed. Exact carrier/compiler replacement is "
+        "flapjack-4ac.2.5.1, dependent on flapjack-pxn.18.3.5.8; because compileExp "
+        "feeds the executed compiler, replacement must connect the production path "
+        "or record a measured exception."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",

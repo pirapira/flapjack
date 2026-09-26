@@ -674,6 +674,20 @@ theorem retVar_comb_eq_none (fields : List Shape) (names : List Nat)
 theorem retVar_named (structName : StructName) (names : List Nat) :
     retVar (.named structName) names = none := rfl
 
+/-! FLAPJACK-SPECIFIC source-shaped mirror of HOL
+`compile_exp_def` (`cakeml/pancake/pan_to_crepScript.sml:39-108`). Its
+recursive clauses follow the HOL cases, but it is not an exact port and carries
+no `@[hol]` tag. This definition uses production `Exp α` (generic `Const α`),
+production `Shape`/`CrepExp α` (with String-backed names), and
+`CompileContext.vars : InfoMap ...`; HOL uses word-indexed `ExpHOL width`,
+`ShapeHOL`/`CrepExpHOL width` with `MlString` names, and finite-map `context`.
+The generic `[BEq α] [OfNat α 0] [Add α]` carrier cannot stand for HOL's
+positive-width word type. In addition, Lean reads `bytesInWord` from the
+arbitrary context for `Load`/`BytesInWord`, while HOL uses the fixed
+word-width-derived `bytes_in_word`; `PanToCrepHOLContext` is also not exact yet.
+The faithful exact-carrier port and production-path replacement are tracked by
+`flapjack-4ac.2.5.1`, dependent on the exact PanLang/MlString carriers in
+`flapjack-pxn.18.3.5.8`. -/
 def compileExp [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)

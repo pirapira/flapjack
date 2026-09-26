@@ -823,6 +823,16 @@ theorem evalHOLExact_toExact_eq {width : Nat} {σ : Type} [NeZero width]
         expression :=
   rfl
 
+/-- Argument-list alignment helper: `evalListHOLExact` on `context.toExact` agrees
+    with `evalListHOLExact` on `context.state.toExact` (same instance).  Flapjack-specific. -/
+theorem evalListHOLExact_toExact_eq {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (expressions : List (ExpHOL width)) :
+    @Flapjack.evalListHOLExact width σ _ context.toExact.state context.toExact.memaddrsDecidable
+        expressions =
+      @Flapjack.evalListHOLExact width σ _ context.state.toExact context.memaddrsDecidable
+        expressions :=
+  rfl
+
 /-- Projection-equivalence for the finite `Dec` clause against the broad exact
     evaluator, given the projection hypothesis for the recursive body.  Untagged
     Flapjack-specific support for the `evaluate_def` port. -/

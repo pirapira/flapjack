@@ -97,28 +97,31 @@ HOL equality for named structures/fields. The only implicit Lean parameters
 are the computation instance for the word set and the positive-width carrier;
 neither adds a semantic premise. -/
 
-private theorem memLoadHOLExactSwapMemoryMutual {width : Nat} [NeZero width]
-    (domain : BitVec width → Prop) [DecidablePred domain]
+private theorem memLoadHOLExactTransferMutual {width : Nat} [NeZero width]
+    (domain1 domain2 : BitVec width → Prop)
+    [DecidablePred domain1] [DecidablePred domain2]
     (memory1 memory2 : BitVec width → HolWordLab width)
-    (hagree : ∀ address, domain address → memory1 address = memory2 address) :
+    (htransfer : ∀ address, domain1 address →
+      domain2 address ∧ memory1 address = memory2 address) :
     ∀ shape address context value,
-      memLoadHOLExact shape address domain memory1 context = some value →
-        memLoadHOLExact shape address domain memory2 context = some value := by
-  apply memLoadHOLExact.induct (domain := domain) (memory := memory1)
+      memLoadHOLExact shape address domain1 memory1 context = some value →
+        memLoadHOLExact shape address domain2 memory2 context = some value := by
+  apply memLoadHOLExact.induct (domain := domain1) (memory := memory1)
     (motive1 := fun shape address context => ∀ value,
-      memLoadHOLExact shape address domain memory1 context = some value →
-        memLoadHOLExact shape address domain memory2 context = some value)
+      memLoadHOLExact shape address domain1 memory1 context = some value →
+        memLoadHOLExact shape address domain2 memory2 context = some value)
     (motive2 := fun fields address context => ∀ values,
-      memLoadFldsHOLExact fields address domain memory1 context = some values →
-        memLoadFldsHOLExact fields address domain memory2 context = some values)
+      memLoadFldsHOLExact fields address domain1 memory1 context = some values →
+        memLoadFldsHOLExact fields address domain2 memory2 context = some values)
     (motive3 := fun shapes address context => ∀ values,
-      memLoadsHOLExact shapes address domain memory1 context = some values →
-        memLoadsHOLExact shapes address domain memory2 context = some values)
+      memLoadsHOLExact shapes address domain1 memory1 context = some values →
+        memLoadsHOLExact shapes address domain2 memory2 context = some values)
   · intro address context hdom value hload
     rw [memLoadHOLExact.eq_1, if_pos hdom] at hload
     simp only [Option.some.injEq] at hload
     subst value
-    simp [memLoadHOLExact, hdom, hagree address hdom]
+    rcases htransfer address hdom with ⟨hdom2, hmemory⟩
+    simp [memLoadHOLExact, hdom2, hmemory]
   · intro address context hndom value hload
     rw [memLoadHOLExact.eq_1, if_neg hndom] at hload
     simp at hload
@@ -178,13 +181,15 @@ private theorem memLoadHOLExactSwapMemoryMutual {width : Nat} [NeZero width]
       exact (hcontr value values hload hloads).elim
     · simp at h
 
-private theorem memLoadsHOLExactSwapMemory {width : Nat} [NeZero width]
-    (domain : BitVec width → Prop) [DecidablePred domain]
+private theorem memLoadsHOLExactTransfer {width : Nat} [NeZero width]
+    (domain1 domain2 : BitVec width → Prop)
+    [DecidablePred domain1] [DecidablePred domain2]
     (memory1 memory2 : BitVec width → HolWordLab width)
-    (hagree : ∀ address, domain address → memory1 address = memory2 address) :
+    (htransfer : ∀ address, domain1 address →
+      domain2 address ∧ memory1 address = memory2 address) :
     ∀ shapes address context values,
-      memLoadsHOLExact shapes address domain memory1 context = some values →
-        memLoadsHOLExact shapes address domain memory2 context = some values := by
+      memLoadsHOLExact shapes address domain1 memory1 context = some values →
+        memLoadsHOLExact shapes address domain2 memory2 context = some values := by
   intro shapes
   induction shapes with
   | nil =>
@@ -200,8 +205,8 @@ private theorem memLoadsHOLExactSwapMemory {width : Nat} [NeZero width]
       · rename_i value values' hhead htail
         simp only [Option.some.injEq] at hload
         subst values
-        have hhead' := memLoadHOLExactSwapMemoryMutual
-          domain memory1 memory2 hagree shape address context value hhead
+        have hhead' := memLoadHOLExactTransferMutual
+          domain1 domain2 memory1 memory2 htransfer shape address context value hhead
         have htail' := ih
           (address + bytesInWordHOL width *
             BitVec.ofNat width
@@ -210,13 +215,15 @@ private theorem memLoadsHOLExactSwapMemory {width : Nat} [NeZero width]
         rw [memLoadsHOLExact.eq_2, hhead', htail']
       · simp at hload
 
-private theorem memLoadFldsHOLExactSwapMemory {width : Nat} [NeZero width]
-    (domain : BitVec width → Prop) [DecidablePred domain]
+private theorem memLoadFldsHOLExactTransfer {width : Nat} [NeZero width]
+    (domain1 domain2 : BitVec width → Prop)
+    [DecidablePred domain1] [DecidablePred domain2]
     (memory1 memory2 : BitVec width → HolWordLab width)
-    (hagree : ∀ address, domain address → memory1 address = memory2 address) :
+    (htransfer : ∀ address, domain1 address →
+      domain2 address ∧ memory1 address = memory2 address) :
     ∀ fields address context values,
-      memLoadFldsHOLExact fields address domain memory1 context = some values →
-        memLoadFldsHOLExact fields address domain memory2 context = some values := by
+      memLoadFldsHOLExact fields address domain1 memory1 context = some values →
+        memLoadFldsHOLExact fields address domain2 memory2 context = some values := by
   intro fields
   induction fields with
   | nil =>
@@ -233,8 +240,8 @@ private theorem memLoadFldsHOLExactSwapMemory {width : Nat} [NeZero width]
       · rename_i value values' hhead htail
         simp only [Option.some.injEq] at hload
         subst values
-        have hhead' := memLoadHOLExactSwapMemoryMutual
-          domain memory1 memory2 hagree shape address context value hhead
+        have hhead' := memLoadHOLExactTransferMutual
+          domain1 domain2 memory1 memory2 htransfer shape address context value hhead
         have htail' := ih
           (address + bytesInWordHOL width *
             BitVec.ofNat width
@@ -272,15 +279,68 @@ theorem memLoadHOLExactSwapMemory {width : Nat} [NeZero width] :
   refine ⟨?_, ?_, ?_⟩
   · intro shape address domain hdec memory1 context value memory2 h
     rcases h with ⟨hload, hagree⟩
-    exact memLoadHOLExactSwapMemoryMutual domain memory1 memory2 hagree
+    exact memLoadHOLExactTransferMutual domain domain memory1 memory2
+      (fun address hdom => ⟨hdom, hagree address hdom⟩)
       shape address context value hload
   · intro shapes address domain hdec memory1 context values memory2 h
     rcases h with ⟨hload, hagree⟩
-    exact memLoadsHOLExactSwapMemory domain memory1 memory2 hagree
+    exact memLoadsHOLExactTransfer domain domain memory1 memory2
+      (fun address hdom => ⟨hdom, hagree address hdom⟩)
       shapes address context values hload
   · intro fields address domain hdec memory1 context values memory2 h
     rcases h with ⟨hload, hagree⟩
-    exact memLoadFldsHOLExactSwapMemory domain memory1 memory2 hagree
+    exact memLoadFldsHOLExactTransfer domain domain memory1 memory2
+      (fun address hdom => ⟨hdom, hagree address hdom⟩)
+      fields address context values hload
+
+/-! Exact port of HOL `mem_load_swap_memaddrs`
+(`panPropsScript.sml:1679-1697`): all three successful load results persist
+when the allowed address set is widened. The quantified carriers match the
+source: `ShapeHOL`, `MlString`-keyed structure contexts/fields, `HolWordLab`
+memory, and arbitrary positive word width; `[DecidablePred domain]` is the
+computation evidence for the set predicate. The premise keeps HOL's exact
+conjunction shape: successful evaluation AND address-set inclusion. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "mem_load_swap_memaddrs"]
+theorem memLoadHOLExactSwapMemaddrs {width : Nat} [NeZero width] :
+    (∀ (shape : Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+      (domain : BitVec width → Prop) [DecidablePred domain]
+      (memory : BitVec width → HolWordLab width) (context : StructContextHOLM)
+      (value : ValueHOL width) (domain2 : BitVec width → Prop)
+      [DecidablePred domain2],
+      (memLoadHOLExact shape address domain memory context = some value ∧
+        (∀ address, domain address → domain2 address)) →
+          memLoadHOLExact shape address domain2 memory context = some value) ∧
+    (∀ (shapes : List Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+      (domain : BitVec width → Prop) [DecidablePred domain]
+      (memory : BitVec width → HolWordLab width) (context : StructContextHOLM)
+      (values : List (ValueHOL width)) (domain2 : BitVec width → Prop)
+      [DecidablePred domain2],
+      (memLoadsHOLExact shapes address domain memory context = some values ∧
+        (∀ address, domain address → domain2 address)) →
+          memLoadsHOLExact shapes address domain2 memory context = some values) ∧
+    (∀ (fields : List (MlStringHOLM × Flapjack.Pancake.PanLang.ShapeHOL))
+      (address : BitVec width) (domain : BitVec width → Prop)
+      [DecidablePred domain] (memory : BitVec width → HolWordLab width)
+      (context : StructContextHOLM) (values : List (MlStringHOLM × ValueHOL width))
+      (domain2 : BitVec width → Prop) [DecidablePred domain2],
+      (memLoadFldsHOLExact fields address domain memory context = some values ∧
+        (∀ address, domain address → domain2 address)) →
+          memLoadFldsHOLExact fields address domain2 memory context = some values) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro shape address domain hdec memory context value domain2 hdec2 h
+    rcases h with ⟨hload, hsubset⟩
+    exact memLoadHOLExactTransferMutual domain domain2 memory memory
+      (fun address hdom => ⟨hsubset address hdom, rfl⟩)
+      shape address context value hload
+  · intro shapes address domain hdec memory context values domain2 hdec2 h
+    rcases h with ⟨hload, hsubset⟩
+    exact memLoadsHOLExactTransfer domain domain2 memory memory
+      (fun address hdom => ⟨hsubset address hdom, rfl⟩)
+      shapes address context values hload
+  · intro fields address domain hdec memory context values domain2 hdec2 h
+    rcases h with ⟨hload, hsubset⟩
+    exact memLoadFldsHOLExactTransfer domain domain2 memory memory
+      (fun address hdom => ⟨hsubset address hdom, rfl⟩)
       fields address context values hload
 
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "dropWhile_eq_cons_IMP"]

@@ -10773,6 +10773,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_swap_memaddrs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExactSwapMemaddrs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-b (source comparison, bead flapjack-4ac.4.97; exact HOL panProps$mem_load_swap_memaddrs (panPropsScript.sml:1679-1697). The Lean statement matches HOL's triple conjunction, in mem_load/mem_loads/mem_load_flds order. Each branch quantifies shape/shape-list/fields, address, domain, memory, context, result, and enlarged domain in literal HOL order, with the exact premise shape (successful result AND domain inclusion) implying the same result under the enlarged domain. Carriers are the exact tagged load definitions over ShapeHOL, MlString/StructInfoHOLExact contexts, ValueHOL and HolWordLab; recursive byte-offset arithmetic is unchanged because sizeOfShapeWithContextHOL does not depend on the domain. [DecidablePred] instances are computational evidence for each HOL set predicate; [NeZero width] represents arbitrary nonempty finite HOL word indices. The mutual induction proves One, Comb, Named, field-list, and shape-list clauses."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "mem_loads_some_shape_eq",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "memLoadHOLExact_shape_eq",

@@ -38,6 +38,22 @@ DATA_DECLARATION_RE = re.compile(
 # inventory small and source-reviewed; a mismatch row is not generated merely
 # because an arbitrary Lean def happens to mention a HOL name.
 WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Pancake/WordLang.lean", "everyVarImm"): (
+        "cakeml/compiler/backend/wordLangScript.sml",
+        "every_var_imm_def",
+        "Coordinator source review (bead flapjack-pxn.18.5.15.1.4): Lean's "
+        "unrestricted width : Nat admits BitVec 0; HOL word dimensions are "
+        "positive. Keep the executable helper untagged until its width binder "
+        "and callers match the original declaration."
+    ),
+    ("Flapjack/Pancake/WordLang.lean", "everyVarInst"): (
+        "cakeml/compiler/backend/wordLangScript.sml",
+        "every_var_inst_def",
+        "Coordinator source review (bead flapjack-pxn.18.5.15.1.4): Lean's "
+        "unrestricted width : Nat admits BitVec 0; HOL word dimensions are "
+        "positive. Keep the executable helper untagged until its width binder "
+        "and callers match the original declaration."
+    ),
     ("Flapjack/Pancake/PanToCrep.lean", "expHdlHOL"): (
         "cakeml/pancake/pan_to_crepScript.sml",
         "exp_hdl_def",
@@ -50,6 +66,60 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "production bridge remain untagged; faithful finite-map port is "
         "tracked by flapjack-pxn.18.3.5.8.13.2. Direct HOL rows remain in "
         "Flapjack/Test/ExpHdlHOLParity.lean."
+    ),
+    ("Flapjack/Pancake/PanToCrep.lean", "panToCrepMkCtxtHOL"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "mk_ctxt_def",
+        "flapjack-ds9 (source comparison, bead flapjack-4ac.2.11): "
+        "FLAPJACK-SPECIFIC / not an exact HOL port, @[hol] tag withdrawn. HOL "
+        "mk_ctxt_def (pan_to_crepScript.sml:310-316) is "
+        "`mk_ctxt vmap fs m (es:eid |-> 'a word) = <|vars := vmap; funcs := fs; "
+        "eids := es; vmax := m|>` over context fields "
+        "vars : varname |-> shape # num list, "
+        "funcs : funname |-> ((varname # shape) list # shape), "
+        "eids : eid |-> 'a word, vmax : num, where varname/funname/eid are "
+        "mlstring (panLangScript.sml:24-28) and shape.named is mlstring "
+        "(panLangScript.sml:36-38). Lean panToCrepMkCtxtHOL instead takes "
+        "production VarName/FunName/ExceptionId = String keys, the production "
+        "Shape (named : String) in the vars/funcs values, a generic α for the "
+        "eids value instead of HOL's word-length-indexed 'a word, and the "
+        "extensional FiniteMap α β := α → Option β encoding of fmap rather than "
+        "the literal HOL carrier. The names_as_string qualifier cannot "
+        "authorize the Shape value carrier or the changed α/'a word eids type, "
+        "and no NameRanged byte witness applies because this constructor "
+        "produces a context, not a name. The exact MlString/ShapeHOL/BitVec "
+        "context carrier replacement is tracked by flapjack-pxn.18.3.5.8.13 "
+        "(under flapjack-pxn.18.3.5.8, parent flapjack-pxn.18.3.5.7.2)."
+    ),
+    ("Flapjack/Pancake/PanToCrep/Compile.lean", "makeFuncsHOL"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "make_funcs_def",
+        "flapjack-ds9 (source comparison, bead flapjack-4ac.2.17): "
+        "FLAPJACK-SPECIFIC / not an exact HOL port, @[hol] tag withdrawn. HOL "
+        "make_funcs_def (pan_to_crepScript.sml:366-373) is "
+        "`make_funcs prog = alist_to_fmap (MAP3 (λx y z. (x,y,z)) (MAP FST prog) "
+        "(MAP (FST o SND) prog) (MAP (SND o SND o SND) prog))` keyed by "
+        "funname = mlstring and valued by (varname # shape) list # shape, with "
+        "alist_to_fmap a right fold of FUPDATE (first duplicate name wins). Lean "
+        "makeFuncsHOL keys by FunName = String and stores production "
+        "VarName = String and Shape (named : StructName = String), not HOL's "
+        "mlstring carriers; its input also mentions the production Prog α body "
+        "carrier even though make_funcs ignores bodies; and its result is a "
+        "FiniteMap function (raw α → Option β, admitting infinite support) "
+        "rather than HOL's fmap, built by FUPDATE_LIST FEMPTY over the reversed "
+        "association list. The names_as_string qualifier cannot authorize the "
+        "Shape and Prog carriers or the FiniteMap-vs-fmap representation, and "
+        "no NameRanged byte witness applies because the output is a finite map "
+        "of function signatures, not a name. The theorem-map make_funcs_def -> "
+        "crepToLoopMakeFuncsHOL entry is the exact port of the different "
+        "crep_to_loopScript.sml declaration, not this one. Direct HOL-EVAL rows "
+        "make_funcs_empty_params/make_funcs_param_entry/make_funcs_absent/"
+        "make_funcs_duplicate_first_wins are in "
+        "scripts/hol-probes/crep_make_funcs_probe.out and exercised by "
+        "makeFuncsGuard (Flapjack/Test/PanToCrepCodeRelParity.lean) and "
+        "makeFuncsOracle (Flapjack/Test/CompileToCrepeParity.lean). The faithful "
+        "exact-carrier port is tracked by flapjack-pxn.18.3.5.8 (parent "
+        "flapjack-pxn.18.3.5.7.2)."
     ),
     ("Flapjack/Pancake/Proofs/PanToCrep.lean", "tlc"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -1409,6 +1479,10 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     # These source/theorem pairs were checked against their HOL declaration
     # statements in the active review task, not merely copied from attributes.
     reviewed_exact = {
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isStackVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isPhyVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isAllocVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "conventionPartitions"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_less_than"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_not_in"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_all_distinct"),

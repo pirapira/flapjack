@@ -598,4 +598,128 @@ theorem globalCompileTopCake_byteRanged [LawfulBEq String]
           exact hnewMain
       · exact hcompiled.2.1 declaration hfunction
 
+/-! ## Routing the executed nested-sequence path through `nestedSeqHOL`
+
+`globalCompileTopForStartSomeCakeOfExact` is the byte-range-threaded sibling of
+`globalCompileTopForStartSomeCake` whose synthesized `main` body nests the
+global initializers with the reviewed `nestedSeqHOL` (via `nestedSeqCake`)
+instead of the generic production `Flapjack.nestedSeq`.  The byte-range
+hypothesis selects the exact codec round-trip so `nestedSeqCake_eq` recovers the
+original output; the equality theorems below establish that the executed
+compiler's observable result is unchanged.  These are Flapjack-specific routing
+helpers, not HOL declarations (bead flapjack-4ac.1.31.1). -/
+
+/-- Executable companion of `globalCompileTopForStartSomeCake` that builds the
+    initializer sequence through `nestedSeqCake` (i.e. `nestedSeqHOL`).  The
+    byte-range premise is carried for the routing bridge and is not needed to
+    compute the result. -/
+def globalCompileTopForStartSomeCakeOfExact [LawfulBEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName)
+    (_hinput : ∀ declaration ∈ declarations, DeclByteRanged declaration) :
+    Option (List (Decl (BitVec width))) :=
+  match globalFindFunction start declarations with
+  | none => none
+  | some entry =>
+      let resorted := globalResortDecls declarations
+      let renamedStart := globalNewMainName declarations
+      let renamed := globalRenameDecls start renamedStart resorted
+      let maxGlobalsSize :=
+        cakeBytesInWord width * BitVec.ofNat width
+          ((globalDeclShapes renamed).map Shape.shapeSize |>.foldl (· + ·) 0)
+      let initial : GlobalPassContext (BitVec width) :=
+        { globals := []
+          globalsSize := BitVec.ofNat width 0
+          maxGlobalsSize := maxGlobalsSize
+          bytesInWord := cakeBytesInWord width
+          fromNat := BitVec.ofNat width }
+      let compiled := compileDecsCake (cakeContextOfPass initial) renamed
+      let parameters := entry.params.map (fun (name, _) => Exp.var .local name)
+      let newMain : Decl (BitVec width) :=
+        .function
+          { name := start
+            inline := false
+            exported := false
+            params := entry.params
+            body := .seq (nestedSeqCake compiled.initializers)
+              (.call none renamedStart parameters)
+            returnShape := entry.returnShape }
+      some (compiled.exceptions ++ [newMain] ++ compiled.functions)
+
+/-- The `nestedSeqCake`-routed compiler computes exactly the production
+    `globalCompileTopForStartSomeCake` output on byte-ranged declarations. -/
+theorem globalCompileTopForStartSomeCakeOfExact_eq [LawfulBEq String]
+    {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName)
+    (hinput : ∀ declaration ∈ declarations, DeclByteRanged declaration) :
+    globalCompileTopForStartSomeCakeOfExact declarations start hinput =
+      globalCompileTopForStartSomeCake declarations start := by
+  unfold globalCompileTopForStartSomeCakeOfExact globalCompileTopForStartSomeCake
+  cases hfind : globalFindFunction start declarations with
+  | none => rfl
+  | some entry =>
+      dsimp only
+      have hentry := globalFindFunction_byteRanged start declarations hinput entry hfind
+      have hstartEq := (globalFindFunction_name_mem start declarations entry hfind).1
+      have hstart : NameRanged start := by
+        rw [← hstartEq]
+        exact hentry.1
+      have hrenamedStart : NameRanged (globalNewMainName declarations) :=
+        holMlStringWitness_globalNewMainName declarations
+      let resorted := globalResortDecls declarations
+      have hresorted : ∀ declaration ∈ resorted, DeclByteRanged declaration :=
+        globalResortDecls_byteRanged declarations hinput
+      let renamedStart := globalNewMainName declarations
+      let renamed := globalRenameDecls start renamedStart resorted
+      have hrenamed : ∀ declaration ∈ renamed, DeclByteRanged declaration :=
+        globalRenameDecls_byteRanged start renamedStart hstart hrenamedStart resorted hresorted
+      let maxGlobalsSize := cakeBytesInWord width * BitVec.ofNat width
+        ((globalDeclShapes renamed).map Shape.shapeSize |>.foldl (· + ·) 0)
+      let initial : GlobalPassContext (BitVec width) :=
+        { globals := []
+          globalsSize := BitVec.ofNat width 0
+          maxGlobalsSize := maxGlobalsSize
+          bytesInWord := cakeBytesInWord width
+          fromNat := BitVec.ofNat width }
+      have hinitialContext : GlobalContextShapesByteRanged initial := by
+        intro name shape address hlookup
+        simp [initial, lookupInfo] at hlookup
+      have hcanonical : initial.IsCakeCanonical := ⟨rfl, fun value => rfl⟩
+      have hthreaded := globalCompileDecsThreaded_byteRanged initial hinitialContext renamed hrenamed
+      have hcompiled :
+          ∀ program ∈ (compileDecsCake (cakeContextOfPass initial) renamed).initializers,
+            ProgByteRanged program := by
+        intro program hprogram
+        rw [compileDecsCake_cakeContextOfPass initial hcanonical renamed] at hprogram
+        exact hthreaded.1 program hprogram
+      rw [nestedSeqCake_eq _ hcompiled]
+
+/-- `.getD []` wrapper of the `nestedSeqCake`-routed compiler, mirroring
+    `globalCompileTopCake`. -/
+def globalCompileTopCakeOfExact [LawfulBEq String] {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName)
+    (hinput : ∀ declaration ∈ declarations, DeclByteRanged declaration) :
+    List (Decl (BitVec width)) :=
+  (globalCompileTopForStartSomeCakeOfExact declarations start hinput).getD []
+
+/-- The `nestedSeqHOL`-routed executed compiler agrees with `globalCompileTopCake`. -/
+theorem globalCompileTopCakeOfExact_eq [LawfulBEq String]
+    {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName)
+    (hinput : ∀ declaration ∈ declarations, DeclByteRanged declaration) :
+    globalCompileTopCakeOfExact declarations start hinput =
+      globalCompileTopCake declarations start := by
+  simp only [globalCompileTopCakeOfExact, globalCompileTopCake,
+    globalCompileTopForStartSomeCakeOfExact_eq declarations start hinput]
+
+/-- Byte-range preservation for the `nestedSeqCake`-routed compiler, obtained
+    from the production preservation lemma through the routing equality. -/
+theorem globalCompileTopCakeOfExact_byteRanged [LawfulBEq String]
+    {width : Nat} [NeZero width]
+    (declarations : List (Decl (BitVec width))) (start : FunName)
+    (hinput : ∀ declaration ∈ declarations, DeclByteRanged declaration) :
+    ∀ declaration ∈ globalCompileTopCakeOfExact declarations start hinput,
+      DeclByteRanged declaration := by
+  rw [globalCompileTopCakeOfExact_eq declarations start hinput]
+  exact globalCompileTopCake_byteRanged declarations start hinput
+
 end Flapjack

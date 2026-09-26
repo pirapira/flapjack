@@ -645,7 +645,19 @@ def compileFlapjackEntryCake {width : Nat} [NeZero width]
   let moved := panTargetMoveStartToFront start declarations
   let simplified := panSimpDecls moved
   let structured := structCompileTop simplified
-  let cakeDeclarations := globalCompileTopCake structured start
+  let compiled :=
+    match hdeclarations with
+    | some (.isTrue hinput) =>
+        let hmoved := panTargetMoveStartToFront_byteRanged start declarations hinput
+        let hsimplified := panSimpDecls_byteRanged moved hmoved
+        let hstructured := structCompileTop_byteRanged simplified hsimplified
+        let cakeDeclarations := globalCompileTopCakeOfExact structured start hstructured
+        let hcake := globalCompileTopCakeOfExact_byteRanged structured start hstructured
+        (cakeDeclarations, compileProgTopHOLWithMetadataOfExact cakeDeclarations hcake)
+    | _ =>
+        let cakeDeclarations := globalCompileTopCake structured start
+        (cakeDeclarations, compileProgTopHOLWithMetadata cakeDeclarations)
+  let cakeDeclarations := compiled.1
   match cakeDeclarations with
   | [] => none
   | _ :: _ =>
@@ -653,16 +665,7 @@ def compileFlapjackEntryCake {width : Nat} [NeZero width]
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let metadata := globalCompileTop bytesInWord fromNat prepared
       let globals := { metadata with declarations := cakeDeclarations }
-      let crepe := crepSimpFunctions fromNat
-        (match hdeclarations with
-        | none => compileProgTopHOLWithMetadata cakeDeclarations
-        | some (.isTrue hinput) =>
-            let hmoved := panTargetMoveStartToFront_byteRanged start declarations hinput
-            let hsimplified := panSimpDecls_byteRanged moved hmoved
-            let hstructured := structCompileTop_byteRanged simplified hsimplified
-            let hcake := globalCompileTopCake_byteRanged structured start hstructured
-            compileProgTopHOLWithMetadataOfExact cakeDeclarations hcake
-        | some (.isFalse _) => compileProgTopHOLWithMetadata cakeDeclarations)
+      let crepe := crepSimpFunctions fromNat compiled.2
       let loop := pipelineLoopFunctionsSource architecture 1 crepe
       let word := pipelineWordFunctionsSource loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)

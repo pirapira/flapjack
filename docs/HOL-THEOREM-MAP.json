@@ -11515,5 +11515,21 @@
     "lean_name": "panExpsOfNestedSeqHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-luna-c (direct source comparison, 2026-09-26; pan_to_wordProofScript.sml:1018-1025): HOL universally quantifies a list of PanLang programs and states exps_of (panLang$nested_seq es) = FLAT (MAP exps_of es). Lean quantifies List (ProgHOL width), uses the exact nestedSeqHOL and expsOfHOL ports, and states the same flattened mapped list. [NeZero width] represents HOL's positive word dimension; no extra hypothesis or representation qualifier is added. This theorem is the named proof consumer of expsOfHOL requested by bead flapjack-p12."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
+    "lean_name": "panToCrepLocalsRelFiniteExact_shapeProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific projection support over exact finite-support PanSem/CrepSem map carriers. It only extracts the final shape-invariant conjunct of the local relation for a present local; it is not a port of locals_rel_wf_shape. Kept untagged because the current fmap_as_finite_support qualifier cannot represent this two-state carrier relation; the faithful theorem path remains flapjack-4ac.5.83."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
+    "lean_name": "panToCrepStateRelFiniteExact_structs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific projection support for the exact finite-support state-relation adapter. It exposes the source structural-context field used by the HOL proof but is not itself a port of state_rel_def. Kept untagged pending multi-carrier finite-map qualifier support and the faithful theorem path flapjack-4ac.5.83."
   }
 ]

@@ -1,4 +1,6 @@
 empty_lub_0=NONE
+singleton_lub_0=SOME 1
+singleton_lub_1=LNTH 1 (1:::LUNFOLD (build_lprefix_lub_f (λll. ll = [|1|])) 1)
 conflicting_prefixes_lub_0=LNTH 0
   (case
      OPTION_MAP (λx. (1,x))

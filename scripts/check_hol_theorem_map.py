@@ -153,6 +153,27 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Semantics/CrepSem/TotalEval.lean", "evalCrepClockProg"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "evaluate_nested_decs_load_globals",
+        "flapjack-luna-b (source comparison, 2026-09-26; bead flapjack-4ac.5.60; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL "
+        "evaluate_nested_decs_load_globals (pan_to_crepProofScript.sml:4139-4176) "
+        "implicitly universally quantifies s, rv, rvs, vs, p, with all four "
+        "premises: globals_lookup s rv = SOME rvs; size_of_shape (shape_of rv) "
+        "<= 32; ALL_DISTINCT vs; LENGTH vs = size_of_shape (shape_of rv). The "
+        "conclusion is the exact evaluate equation for nested_decs vs "
+        "(load_globals 0w ...) p and the let-bound FOLDL res_var restoration of "
+        "original locals. The existing globalsLookup takes String-backed "
+        "PanValue and CrepRuntimeState, not HOL panSem$value and crepSem$state. "
+        "Although loadGlobalsHOL/nestedDecsHOL and positive-width "
+        "ValueHOL/CrepSemHOLState carriers exist, Flapjack has no full evaluate "
+        "over CrepProgHOL/CrepSemHOLState and no exact globals_lookup bridge. "
+        "This evalCrepClockProg is restricted to CrepClockProg/CrepExp/CrepHolState "
+        "and cannot state the HOL theorem. No @[hol] tag is claimed. "
+        "Faithful theorem replacement is flapjack-4ac.5.60.1, gated on "
+        "flapjack-4ac.5.82 and flapjack-pxn.18.3.5.8.8."
+    ),
     ("Flapjack/Pancake/Semantics/PanSemStateEval.lean", "holValueWord"): (
         "cakeml/pancake/semantics/panSemScript.sml",
         "theValWord_def",

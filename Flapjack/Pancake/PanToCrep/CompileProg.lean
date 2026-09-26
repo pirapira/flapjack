@@ -73,11 +73,13 @@ def compileProgTopHOLWithMetadata [BEq FunName] [LawfulBEq FunName]
 
 /-! Exact-carrier interface for the `compile_prog` boundary (bead
     flapjack-pxn.18.3.5.8.6). It consumes the MLString-keyed declaration
-    carrier `DeclHOL` and converts byte-ranged names at the boundary via
-    `declOfHOL`, so the exact HOL carriers are the interface type of the
-    declaration-level compiler boundary. The executed source path still builds
-    production `Decl` from `Parser.parseTopDecs`; see the nonbyte blocker
-    recorded in `Flapjack/Test/PanLangDeclHOLParity.lean`. -/
+carrier `DeclHOL` and converts byte-ranged names at the boundary via
+`declOfHOL`, so the exact HOL carriers are the interface type of the
+declaration-level compiler boundary. The parser-backed source entrypoints pass
+their proved byte-range invariant into `compileProgTopHOLWithMetadataOfExact`,
+which routes the compiler body through this interface. Its result still uses
+Flapjack's source-shaped Crep carrier; the explicit carrier mismatch and
+unported HOL `compile`/`compile_inl_top` dependencies remain documented above. -/
 def compileProgTopHOLOfExact {width : Nat} [NeZero width]
     [BEq FunName] [LawfulBEq FunName]
     [LawfulHashable FunName] [OfNat (BitVec width) 0]
@@ -85,6 +87,21 @@ def compileProgTopHOLOfExact {width : Nat} [NeZero width]
     (declarations : List (DeclHOL width)) :
     List (FunName × List Nat × CrepProg (BitVec width)) :=
   compileProgTopHOL (declarations.map declOfHOL)
+
+/-- Metadata adapter whose compiler input crosses the exact `DeclHOL` carrier
+    boundary.  Its side condition is the byte-range premise used by the
+    production-to-HOL declaration codec; it is preserved by the executed
+    entry transforms before this adapter is called. -/
+def compileProgTopHOLWithMetadataOfExact {width : Nat} [NeZero width]
+    [BEq FunName] [LawfulBEq FunName]
+    [LawfulHashable FunName] [OfNat (BitVec width) 0]
+    [OfNat (BitVec width) 1]
+    (declarations : List (Decl (BitVec width)))
+    (_h : ∀ d ∈ declarations, DeclByteRanged d) :
+    List (CompiledFunction (BitVec width)) :=
+  (compileToCrepHOLWithMetadata declarations).zipWith
+    (fun original (_, _, body) => { original with body })
+    (compileProgTopHOLOfExact (declarations.map declToHOL))
 
 /-- Byte-ranged production declarations round-trip through the exact carrier. -/
 theorem map_declOfHOL_declToHOL {width : Nat} [NeZero width]
@@ -110,5 +127,18 @@ theorem compileProgTopHOLOfExact_declToHOL {width : Nat} [NeZero width]
       compileProgTopHOL declarations := by
   unfold compileProgTopHOLOfExact
   rw [map_declOfHOL_declToHOL declarations h]
+
+/-- The exact-carrier metadata adapter preserves the current pipeline result
+    for every declaration list satisfying the codec's byte-range premise. -/
+theorem compileProgTopHOLWithMetadataOfExact_eq {width : Nat} [NeZero width]
+    [BEq FunName] [LawfulBEq FunName]
+    [LawfulHashable FunName] [OfNat (BitVec width) 0]
+    [OfNat (BitVec width) 1]
+    (declarations : List (Decl (BitVec width)))
+    (h : ∀ d ∈ declarations, DeclByteRanged d) :
+    compileProgTopHOLWithMetadataOfExact declarations h =
+      compileProgTopHOLWithMetadata declarations := by
+  unfold compileProgTopHOLWithMetadataOfExact compileProgTopHOLWithMetadata
+  rw [compileProgTopHOLOfExact_declToHOL declarations h]
 
 end Flapjack

@@ -29,8 +29,9 @@ open Flapjack.Pancake.PanLang
 -- `compile_prog` (`pan_to_crepScript.sml:393-397`) is
 -- `compile_inl_top (MAP FST (functions (FILTER inlinable prog)))
 --    (compile_to_crep prog)` over a word-indexed `'a prog`; its result is
--- `(mlstring # num list # 'a crepLang$prog) list`. This definition differs on
--- carriers, not just names: (1) declarations and inline names use
+-- `(mlstring # num list # 'a crepLang$prog) list`, with no additional
+-- hypotheses or side conditions. This definition differs on carriers, not
+-- just names: (1) declarations and inline names use
 -- `FunName` = `String` vs HOL `funname` = `mlstring`; (2) the source is a
 -- production `Decl (BitVec width)` with production `Shape` vs HOL's
 -- word-indexed `decl` carrying `mlstring`/`shape`; (3) the target is

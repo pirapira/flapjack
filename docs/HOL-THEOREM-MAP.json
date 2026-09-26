@@ -2281,6 +2281,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "inlinable_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "inlinableHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.47): HOL inlinable (cakeml/pancake/panLangScript.sml:389-391) is `inlinable (Function fi) = fi.inline` and `inlinable _ = F` over the declaration list. inlinableHOL matches clause-for-clause over the exact DeclHOL carrier, reading the same inline bit of the reviewed FunDeclHOL. The kernel-checked inlinable_declOfHOL and inlinable_map_declOfHOL (Flapjack/Pancake/PanLang/Decl.lean) relate it to production Flapjack.inlinable, the latter matching the executed optimizer's functions (FILTER inlinable prog) selection; direct routing is unavailable because production is polymorphic over generic Decl α with String identifiers. Direct HOL-EVAL rows inline_true=T, inline_false=F, non_function=F in scripts/hol-probes/pan_lang_inlinable_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangInlinableParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "varExpHOL",

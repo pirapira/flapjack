@@ -198,6 +198,46 @@ def isFunctionHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
   | .function _ => true
   | _ => false
 
+/-- Exact port of HOL `panLang$inlinable` (`panLangScript.sml:389-391`):
+`inlinable (Function fi) = fi.inline` and `inlinable _ = F`.  The inspected
+`inline` bit is the same field of the reviewed `FunDeclHOL`/`fun_decl` carrier,
+so this is exact over the word-indexed `DeclHOL width`.  Production
+`Flapjack.inlinable` is polymorphic over generic `Decl α` and cannot literally
+call this word-indexed definition; the checked bridges `inlinable_declOfHOL`
+and `inlinable_map_declOfHOL` relate them, the latter matching the executed
+optimizer's `functions (FILTER inlinable prog)` selection. -/
+@[hol "cakeml/pancake/panLangScript.sml" "inlinable_def"]
+def inlinableHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .function declaration => declaration.inline
+  | _ => false
+
+@[simp] theorem inlinable_declOfHOL {width : Nat} [NeZero width]
+    (declaration : DeclHOL width) :
+    Flapjack.inlinable (declOfHOL declaration) = inlinableHOL declaration := by
+  cases declaration <;> rfl
+
+/-- The exact `inlinableHOL` selects exactly the same declarations as the
+production `Flapjack.inlinable` under the `declOfHOL` codec, so an executable
+`FILTER inlinable` over production declarations corresponds to filtering the
+word-indexed declarations by the reviewed predicate.  Direct executable routing
+is unavailable because production is polymorphic over generic `Decl α` with
+`String` names while this definition is over the word-indexed `DeclHOL`. -/
+theorem inlinable_map_declOfHOL {width : Nat} [NeZero width]
+    (declarations : List (DeclHOL width)) :
+    (declarations.map declOfHOL).filter Flapjack.inlinable =
+      (declarations.filter inlinableHOL).map declOfHOL := by
+  induction declarations with
+  | nil => simp
+  | cons declaration declarations ih =>
+    cases declaration with
+    | function declaration =>
+      cases h : declaration.inline <;>
+        simp only [List.map_cons, List.filter_cons, Flapjack.inlinable, inlinableHOL,
+          declOfHOL, funDeclOfHOL, h, Bool.false_eq_true, if_false, if_true, ih]
+    | decl _ _ _ => simp [Flapjack.inlinable, inlinableHOL, declOfHOL, ih]
+    | exnDecl _ _ => simp [Flapjack.inlinable, inlinableHOL, declOfHOL, ih]
+    | name _ _ => simp [Flapjack.inlinable, inlinableHOL, declOfHOL, ih]
+
 /-- Exact port of HOL `panLang$size_of_eids` (`panLangScript.sml:249-251`):
 `size_of_eids prog = LENGTH (FILTER is_exn_decl prog)`, the number of top-level
 exception declarations.  `List.filter` is the ordinary constructor-by-constructor

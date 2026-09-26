@@ -29,6 +29,29 @@ inductive SemanticsRunResHOL (α : Type u) where
   | Incomplete
   deriving DecidableEq, Repr
 
+/-! Source review for the unported HOL `semantics_wrapper_def`
+(`panPropsScript.sml:1824-1829`): the divergence branch applies
+`LUB`/`build_lprefix_lub` to the set
+`IMAGE (fromList ∘ SND ∘ f) UNIV` without a chain premise. The HOL helper
+`build_lprefix_lub` is defined by `LUNFOLD` of `build_lprefix_lub_f`; each
+unfold step uses `lprefix_chain_nth`, whose `some` selects an element when
+one exists. Its theorem `build_lprefix_lub_thm` establishes the least-upper-
+bound property only when the family is an `lprefix_chain`. Thus the arbitrary
+function accepted by the definition includes non-chain families, for which
+the selected conflicting event at an index is not characterized by that
+theorem. The existing Lean `LoopLprefixLub`/`buildLoopLprefixLub` instead
+requires a chain proof and chooses an indexed event using Lean's classical
+choice; it gives no translation of HOL's unconstrained selection on
+non-chains. This is a carrier/choice mismatch in the definition's behavior,
+not merely a missing proof premise. No `@[hol]` tag is appropriate until a
+reviewed Lean representation of the generic lazy-list LUB and its HOL choice
+boundary is available. The current `LoopLList := Nat → Option α` observation
+carrier also admits holes, whereas HOL `llist` values are prefix-shaped; the
+repository has no reviewed qualifier/witness for translating HOL `llist` to
+this carrier. Both the choice boundary and carrier translation are tracked by
+`flapjack-4ac.4.105.2`; the dependent wrapper port is
+`flapjack-4ac.4.105.1`. -/
+
 /-! Source review for HOL `semantics_wrapper_eq`
 (`panPropsScript.sml:1831-1929`): the theorem is generic in arbitrary abstract
 and concrete functions `absf, concf : Nat → SemanticsRunResHOL α × List β`. Its
@@ -62,6 +85,22 @@ equality and receives no tag. The faithful theorem port is tracked by
 `flapjack-4ac.4.107.1`, depending on exact `semantics_wrapper_def` carrier work
 in `flapjack-4ac.4.105.1` and the exact PanSem semantics port
 `flapjack-4ac.3.52.2`. -/
+
+/-! Source review for HOL `semantics_decls_has_main'`
+(`panPropsScript.sml:1628-1638`): HOL assumes
+`semantics_decls s start code <> Fail` and proves that
+`FLOOKUP (s.code |++ functions code) start` contains a zero-argument function
+body and return shape. The exact `evaluate_decls_def` finite-map definition is
+available as `evaluateDeclsHOLFinite`, but Flapjack has no HOL-shaped
+`semantics_decls` composition or clocked `semantics` result over that carrier.
+The existing `PanObservationalSemantics.panSemantics` takes arbitrary hooks and
+a caller-supplied prefix-chain/LUB contract; it does not implement HOL's
+`Fail`/termination/divergence choice in `semantics_def`. Consequently there is
+no exact Lean theorem to tag here: adding the desired implication over that
+different wrapper would change the source semantics. The faithful theorem
+replacement is tracked by `flapjack-4ac.4.110`, depending on exact
+`evaluate_def`, `evaluate_decls_def`, and wrapper/LUB carrier ports
+(`flapjack-4ac.3.45`, `.3.53`, `.4.105.1`). -/
 
 /-! Source review for HOL `eval_swap_memory`
 (`panPropsScript.sml:1734-1742`): the exact theorem quantifies `s`, `exp`, `v`,

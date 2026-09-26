@@ -41,6 +41,8 @@ structure PanToCrepContextExact (width : Nat) [NeZero width] where
 
 namespace PanToCrepContextExact
 
+open Flapjack.Basis.Pure.MlString
+
 /-- Forget the finite-map wrappers while retaining their finite-support
     witnesses. -/
 def toBroad {width : Nat} [NeZero width] (context : PanToCrepContextExact width) :
@@ -67,6 +69,79 @@ theorem holFmapAsFiniteSupportWitness {width : Nat} [NeZero width]
     ofBroad (toBroad context) = context := by
   cases context
   rfl
+
+/-! Production boundary adapter for callers that still consume
+`PanToCrepHOLContext`. This conversion is total from the exact context: HOL
+`MlString` keys decode to byte-valued `String`s, `ShapeHOL` payloads decode
+through the existing shape codec, and the word-indexed exception codes retain
+their width. It is an untagged representation bridge, not a port of a
+consumer theorem. It is intentionally one-way for arbitrary production
+contexts: their raw function maps carry no finite-support evidence, and
+production `String` keys / `Shape` names can contain values outside HOL's byte
+range. A reverse bridge needs explicit finite-support, `NameRanged`, and
+`ShapeByteRanged` evidence; this adapter does not claim that arbitrary
+production contexts round-trip. -/
+def toProduction {width : Nat} [NeZero width]
+    (context : PanToCrepContextExact width) :
+    PanToCrepHOLContext (BitVec width) where
+  vars := fun name =>
+    (context.vars.lookup (ofString name)).map
+      fun (shape, names) => (Flapjack.Pancake.PanLang.shapeOfHOL shape, names)
+  funcs := fun name =>
+    (context.funcs.lookup (ofString name)).map fun (params, resultShape) =>
+      (params.map fun (paramName, shape) =>
+        (toStringOfBytes paramName, Flapjack.Pancake.PanLang.shapeOfHOL shape),
+       Flapjack.Pancake.PanLang.shapeOfHOL resultShape)
+  eids := fun name => context.eids.lookup (ofString name)
+  vmax := context.vmax
+
+@[simp] theorem toProduction_vars_lookup {width : Nat} [NeZero width]
+    (context : PanToCrepContextExact width) (name : MlS) :
+    context.toProduction.vars (toStringOfBytes name) =
+      (context.vars.lookup name).map
+        fun (shape, names) => (Flapjack.Pancake.PanLang.shapeOfHOL shape, names) := by
+  simp [toProduction, ofString_toStringOfBytes]
+
+@[simp] theorem toProduction_funcs_lookup {width : Nat} [NeZero width]
+    (context : PanToCrepContextExact width) (name : MlS) :
+    context.toProduction.funcs (toStringOfBytes name) =
+      (context.funcs.lookup name).map fun (params, resultShape) =>
+        (params.map fun (paramName, shape) =>
+          (toStringOfBytes paramName, Flapjack.Pancake.PanLang.shapeOfHOL shape),
+         Flapjack.Pancake.PanLang.shapeOfHOL resultShape) := by
+  simp [toProduction, ofString_toStringOfBytes]
+
+@[simp] theorem toProduction_eids_lookup {width : Nat} [NeZero width]
+    (context : PanToCrepContextExact width) (name : MlS) :
+    context.toProduction.eids (toStringOfBytes name) = context.eids.lookup name := by
+  simp [toProduction, ofString_toStringOfBytes]
+
+theorem toProduction_key_nameRanged (name : MlS) :
+    Flapjack.Pancake.PanLang.NameRanged (toStringOfBytes name) := by
+  intro character hcharacter
+  unfold toStringOfBytes at hcharacter
+  rw [String.toList_ofList] at hcharacter
+  obtain ⟨byte, hbyte, rfl⟩ := List.mem_map.mp hcharacter
+  rw [ofNat_toNat_char]
+  have hlt := byte.isLt
+  simpa using hlt
+
+theorem toProduction_shapeByteRanged : (shape : ShapeHOL) →
+    Flapjack.Pancake.PanLang.ShapeByteRanged
+      (Flapjack.Pancake.PanLang.shapeOfHOL shape)
+  | .one => by
+      simp [Flapjack.Pancake.PanLang.shapeOfHOL,
+        Flapjack.Pancake.PanLang.ShapeByteRanged]
+  | .comb fields => by
+      simp only [Flapjack.Pancake.PanLang.shapeOfHOL,
+        Flapjack.Pancake.PanLang.ShapeByteRanged]
+      intro productionShape hproductionShape
+      obtain ⟨shape, hshape, rfl⟩ := List.mem_map.mp hproductionShape
+      exact toProduction_shapeByteRanged shape
+  | .named name => by
+      simpa [Flapjack.Pancake.PanLang.shapeOfHOL,
+        Flapjack.Pancake.PanLang.ShapeByteRanged] using
+        toProduction_key_nameRanged name
 
 end PanToCrepContextExact
 

@@ -1,1 +1,67 @@
 empty_lub_0=NONE
+singleton_lub_0=SOME 1
+singleton_lub_1=LNTH 1 (1:::LUNFOLD (build_lprefix_lub_f (λll. ll = [|1|])) 1)
+prefix_chain_lub_0=LNTH 0
+  (case
+     OPTION_MAP ($, 1)
+       (if (∃x l. (l = [|1|] ∨ l = [|1; 2|]) ∧ LNTH 0 l = SOME x) then
+          SOME (@x. ∃l. (l = [|1|] ∨ l = [|1; 2|]) ∧ LNTH 0 l = SOME x)
+        else NONE)
+   of
+     NONE => [||]
+   | SOME (v1,v2) =>
+     v2:::LUNFOLD (build_lprefix_lub_f (λll. ll = [|1|] ∨ ll = [|1; 2|])) v1)
+prefix_chain_lub_1=LNTH 1
+  (case
+     OPTION_MAP ($, 1)
+       (if (∃x l. (l = [|1|] ∨ l = [|1; 2|]) ∧ LNTH 0 l = SOME x) then
+          SOME (@x. ∃l. (l = [|1|] ∨ l = [|1; 2|]) ∧ LNTH 0 l = SOME x)
+        else NONE)
+   of
+     NONE => [||]
+   | SOME (v1,v2) =>
+     v2:::LUNFOLD (build_lprefix_lub_f (λll. ll = [|1|] ∨ ll = [|1; 2|])) v1)
+conflicting_prefixes_lub_0=LNTH 0
+  (case
+     OPTION_MAP ($, 1)
+       (if (∃x l. (l = [|1|] ∨ l = [|2|]) ∧ LNTH 0 l = SOME x) then
+          SOME (@x. ∃l. (l = [|1|] ∨ l = [|2|]) ∧ LNTH 0 l = SOME x)
+        else NONE)
+   of
+     NONE => [||]
+   | SOME (v1,v2) =>
+     v2:::LUNFOLD (build_lprefix_lub_f (λll. ll = [|1|] ∨ ll = [|2|])) v1)
+conflicting_prefixes_lub_1=LNTH 1
+  (case
+     OPTION_MAP ($, 1)
+       (if (∃x l. (l = [|1|] ∨ l = [|2|]) ∧ LNTH 0 l = SOME x) then
+          SOME (@x. ∃l. (l = [|1|] ∨ l = [|2|]) ∧ LNTH 0 l = SOME x)
+        else NONE)
+   of
+     NONE => [||]
+   | SOME (v1,v2) =>
+     v2:::LUNFOLD (build_lprefix_lub_f (λll. ll = [|1|] ∨ ll = [|2|])) v1)
+conflicting_suffixes_lub_0=LNTH 0
+  (case
+     OPTION_MAP ($, 1)
+       (if (∃x l. (l = [|1; 2|] ∨ l = [|1; 3|]) ∧ LNTH 0 l = SOME x) then
+          SOME (@x. ∃l. (l = [|1; 2|] ∨ l = [|1; 3|]) ∧ LNTH 0 l = SOME x)
+        else NONE)
+   of
+     NONE => [||]
+   | SOME (v1,v2) =>
+     v2:::
+         LUNFOLD (build_lprefix_lub_f (λll. ll = [|1; 2|] ∨ ll = [|1; 3|]))
+           v1)
+conflicting_suffixes_lub_1=LNTH 1
+  (case
+     OPTION_MAP ($, 1)
+       (if (∃x l. (l = [|1; 2|] ∨ l = [|1; 3|]) ∧ LNTH 0 l = SOME x) then
+          SOME (@x. ∃l. (l = [|1; 2|] ∨ l = [|1; 3|]) ∧ LNTH 0 l = SOME x)
+        else NONE)
+   of
+     NONE => [||]
+   | SOME (v1,v2) =>
+     v2:::
+         LUNFOLD (build_lprefix_lub_f (λll. ll = [|1; 2|] ∨ ll = [|1; 3|]))
+           v1)

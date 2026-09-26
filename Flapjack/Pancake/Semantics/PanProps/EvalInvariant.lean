@@ -885,7 +885,15 @@ theorem feveryResVarFlookupHOL {α β : Type} [DecidableEq α]
 
 /-- PanProps-local finite-map rendering of HOL's PanSem state. The four
     `HolFiniteMapExact` fields correspond to HOL `|->` fields; all other fields
-    retain the exact PanSem carrier types. -/
+    retain the exact PanSem carrier types.
+
+    This is intentionally a distinct structure from `PanSemStateFiniteExact`:
+    the `fmap_as_finite_support` checker requires the qualified fields' owning
+    structure and its checked roundtrip witness to live in the same module as
+    each tagged PanProps declaration. The canonical PanSem carrier is owned by
+    another counterpart module, so reusing it here would make the PanProps
+    qualifier unverifiable. `toPanSemFinite`/`ofPanSemFinite` are field-for-field
+    codecs; this local carrier changes no state field or evaluator behavior. -/
 structure PanPropsEvalStateFiniteExact (width : Nat) (σ : Type) [NeZero width] where
   locals : HolFiniteMapExact MlS (ValueHOL width)
   globals : HolFiniteMapExact MlS (ValueHOL width)
@@ -1189,11 +1197,20 @@ theorem evalEmptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
   rw [evalHOL_emptyLocalsForStructsSimps state expression] at h
   exact evalHOLExact_emptyLocalsHOLExact state.toExact expression value h
 
-/-- Flapjack-specific PanProps adapter for recursive declaration evaluation.
-    It has no independent HOL tag: the faithful `evaluate_decls_def` belongs
-    in the PanSem counterpart and is tracked by `flapjack-4ac.3.53`. Its
-    successful and failing results are kernel-checked equivalent through
-    `toExact` to the existing function-backed `evaluateDeclsHOLExact`. -/
+/-- Flapjack-specific PanProps proof adapter for recursive declaration
+    evaluation. It has no independent HOL tag: the faithful
+    `evaluate_decls_def` belongs in the PanSem counterpart. Its clauses were
+    compared with `panSemScript.sml:814-837`: `[]` preserves the state, `Name`
+    recurses unchanged, `Decl` evaluates with empty locals then checks the
+    shape and updates globals, `Function` checks parameter/return shapes then
+    updates code, and `ExnDecl` checks freshness/shape then updates eshapes.
+    The `HolFiniteMapExact.update`/`lookup` operations implement the source
+    `FUPDATE`/`FLOOKUP`, and the expression evaluator is the reviewed exact
+    PanSem evaluator. The complete Option-result codec below proves this helper
+    equal to the canonical tagged PanSem finite-map evaluator for every program,
+    including failure. It is proof infrastructure for theorem statements over
+    the local carrier, not a second production compiler route. The removal or
+    migration of this helper remains tracked by `flapjack-p5wm`. -/
 def evaluateDeclsPanPropsHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs] :
     List (DeclHOL width) → Option (PanPropsEvalStateFiniteExact width σ)

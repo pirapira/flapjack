@@ -29,6 +29,53 @@ inductive SemanticsRunResHOL (α : Type u) where
   | Incomplete
   deriving DecidableEq, Repr
 
+/-! Source review for HOL `eval_swap_memory`
+(`panPropsScript.sml:1734-1742`): the exact theorem quantifies `s`, `exp`, `v`,
+and an arbitrary replacement memory `mry`; it assumes successful `eval s exp`
+and equality of the two memories at every address in `s.memaddrs`, then proves
+the same successful result after replacing memory. No tag is claimed here:
+`PanSemStateExact` admits unrestricted function-backed maps, while the exact
+finite-support state and its canonical map witness are declared in
+`PanSem/StateExactFiniteMap.lean`. The finite-map qualifier requires the owner
+and witness in the theorem's module, so importing that carrier here is not
+enough and duplicating the full state is not acceptable. The faithful port is
+tracked by `flapjack-4ac.4.100.1`, dependent on the finite-map carrier work
+`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+
+/-! Source review for HOL `evaluate_decls_swap_memory`
+(`panPropsScript.sml:1750-1763`): HOL quantifies an initial state `s`,
+declaration program `prog`, successful result `s'`, and replacement memory
+`mry`. Successful `evaluate_decls s prog = SOME s'`, together with equality of
+the memories at every address in the original `s.memaddrs`, implies that
+evaluation from `s` with only its memory replaced succeeds with `s'`'s memory
+also replaced by `mry`. This is a distinct result from expression-level
+`eval_swap_memory`; the HOL proof explicitly relies on that theorem for
+declarations. The nearby Lean `evaluateDeclsHOLExact` and `evalHOLExact` use
+`PanSemStateExact`, whose locals/globals/code/eshapes are unrestricted lookup
+functions rather than HOL finite maps. There is no finite-support declaration
+evaluator or exact expression swap-memory theorem in the PanProps counterpart;
+the finite-map tag also requires the owner and witness in that module. Do not
+tag the broad analogues. The faithful port is tracked by
+`flapjack-4ac.4.101.1`, depending on exact `eval_swap_memory` port
+`flapjack-4ac.4.100.1` and the finite-support declaration evaluator
+`flapjack-4ac.4.102.1`. -/
+
+/-! Source review for HOL `evaluate_decls_memaddrs_mono`
+(`panPropsScript.sml:1766-1778`): HOL quantifies an initial state `s`, program
+`prog`, successful result `s'`, and replacement address set `memaddrs`. From
+`evaluate_decls s prog = SOME s'` and `s.memaddrs ⊆ memaddrs`, it concludes
+successful evaluation from `s` with only `memaddrs` replaced, yielding `s'`
+with the same replacement set. The closest Lean evaluator,
+`evaluateDeclsHOLExact`, has that recursive declaration behavior over
+`PanSemStateExact`, but its locals/globals/code/eshapes are unrestricted lookup
+functions rather than HOL finite maps. The finite-support state currently has
+no corresponding exact declaration evaluator in the PanProps counterpart, and
+the `fmap_as_finite_support` tag requires the owner and witness in the tagged
+module. Thus the broad evaluator is not an exact HOL carrier and cannot receive
+the tag; the faithful port is tracked by
+`flapjack-4ac.4.102.1`, dependent on
+`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+
 /-! Cake's local `dropWhile_eq_cons_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when
 `dropWhile P xs` yields `y :: ys`, there is an in-bounds index `n` at which
@@ -291,7 +338,15 @@ private theorem lookupFieldHOL_isWfShapeValuesHOLExact {width : Nat} [NeZero wid
     `be`, `eshapes`, `base_addr`, `structs`, `code`, and `ffi.oracle`; it has
     no exact finite-map program-evaluator result carrier yet. The related
     faithful inventory bead `.4.61` blocks on the finite-support evaluator
-    bead `.3.52.1`.
+    bead `.3.52.1`. The source theorem `evaluate_global_shape_invariant`
+    (`panPropsScript.sml:1183`) quantifies over `p`, initial state `s`, result
+    `res`, post-state `st`, global name `n`, and initial value `v`; from
+    `evaluate (p,s) = (res,st)` and `FLOOKUP s.globals n = SOME v`, it concludes
+    that some `v'` remains at `n` in `st.globals` with `shape_of v' =
+    shape_of v`. The Lean finite-map evaluator currently covers expressions
+    only (`evalHOLFinite`), with no exact whole-program result/post-state
+    evaluator to state this theorem over. The faithful inventory bead `.4.62`
+    therefore depends on `.3.52.1`; no HOL tag is claimed here.
     The expression prerequisite `eval_is_wf_shape_v`
     (`panPropsScript.sml:126`) is now tagged with the
     reviewed finite-map carrier and exact HOL conjunction in

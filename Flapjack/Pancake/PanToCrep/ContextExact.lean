@@ -1,5 +1,7 @@
 import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.Semantics.CrepSem.HOLState
+import Flapjack.Pancake.Semantics.PanCommonProps
+import Flapjack.Pancake.PanLang.Decl
 
 /-!
 The exact finite-map carrier for `pan_to_crep$context`.
@@ -14,7 +16,7 @@ HOL `fmap`; the field qualifier is justified by the roundtrip witness below.
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (MlS ShapeHOL)
+open Flapjack.Pancake.PanLang (MlS ShapeHOL DeclHOL)
 
 /-- Broad function-backed representation paired with support evidence, used
     only to state the finite-support representation roundtrip. -/
@@ -144,5 +146,49 @@ theorem toProduction_shapeByteRanged : (shape : ShapeHOL) →
         toProduction_key_nameRanged name
 
 end PanToCrepContextExact
+
+/-- HOL `pan_to_crep$get_eids_from_decls`' association list
+    (`pan_to_crepScript.sml:356-364`): the exception names of a declaration list
+    paired with their `GENLIST`-indexed word codes (`MAP FST (exceptions decls)`
+    zipped with `GENLIST (n2w x) (LENGTH eids)`). Flapjack-only infrastructure
+    naming that list; not a separate HOL declaration. -/
+def getEidsEntriesHOL {width : Nat} [NeZero width] (decls : List (DeclHOL width)) :
+    List (MlS × BitVec width) :=
+  let eids := (Flapjack.Pancake.PanLang.exceptionsHOL decls).map Prod.fst
+  eids.zip ((List.range eids.length).map (BitVec.ofNat width))
+
+/-- Exact port of HOL `pan_to_crep$get_eids_from_decls`
+    (`cakeml/pancake/pan_to_crepScript.sml:356-364`):
+    `get_eids_from_decls decls = let eids = MAP FST (exceptions decls);
+    ns = GENLIST (λx. (n2w x):'a word) (LENGTH eids); es = MAP2 (λx y. (x,y))
+    eids ns in alist_to_fmap es`. The result carrier is the canonical
+    finite-support `HolFiniteMapExact MlS (BitVec width)`, whose `lookup` is the
+    HOL-shaped right-fold association-list rendering `alistToFmap` (HOL
+    `alist_to_fmap`), and HOL `n2w` is `BitVec.ofNat width`. The standalone
+    `fmap_as_finite_support_result` qualifier records only that finite-support
+    representation; the quantifier, input carrier, and result values match HOL,
+    and the same-module witness below states the unconditional lookup-level
+    correspondence. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "get_eids_from_decls_def"
+  (fmap_as_finite_support_result)]
+def getEidsFromDeclsHOL {width : Nat} [NeZero width] (decls : List (DeclHOL width)) :
+    HolFiniteMapExact MlS (BitVec width) where
+  lookup := Flapjack.alistToFmap (getEidsEntriesHOL decls)
+  finiteSupport := by
+    refine ⟨(getEidsEntriesHOL decls).map Prod.fst, ?_⟩
+    intro key hkey
+    obtain ⟨value, hvalue⟩ := Option.ne_none_iff_exists'.mp hkey
+    obtain ⟨entry, hentry, hkeyeq, -⟩ :=
+      Flapjack.flookupAlistToFmap_mem (getEidsEntriesHOL decls) key value hvalue
+    exact List.mem_map.mpr ⟨entry, hentry, hkeyeq⟩
+
+/-- Canonical standalone finite-map witness for `getEidsFromDeclsHOL`: its
+    `lookup` is exactly the HOL-shaped raw association-list map rendering
+    `alistToFmap` (HOL `alist_to_fmap`), with no premises and no dependence on
+    the canonical `HolFiniteMapExact` wrapper. -/
+theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL
+    {width : Nat} [NeZero width] (decls : List (DeclHOL width)) (key : MlS) :
+    ((getEidsFromDeclsHOL decls : HolFiniteMapExact MlS (BitVec width))).lookup key =
+      Flapjack.FLOOKUP (Flapjack.alistToFmap (getEidsEntriesHOL decls)) key := rfl
 
 end Flapjack

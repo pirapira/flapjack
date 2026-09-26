@@ -2423,6 +2423,30 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "TailCall",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "tailCallHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, bead flapjack-4ac.1.19): HOL declares Overload TailCall = Call NONE (cakeml/pancake/panLangScript.sml:127), a named constant equal to the partially-applied Call constructor with call-info NONE, of type funname -> 'a exp list -> 'a prog. tailCallHOL is the identical partial application .call none over the exact ProgHOL/MlS/ExpHOL carrier (Lean currying matches HOL's ->), so body and type match definitionally. No hypotheses or side conditions. The HOL declaration is an Overload, which the reference checker indexes."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "AssignCall",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "assignCallHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, bead flapjack-4ac.1.20): HOL declares Overload AssignCall = (\\s h. Call (SOME (SOME s , h))) (cakeml/pancake/panLangScript.sml:128), a named constant returning the partial application Call (SOME (SOME s, h)) for s : varkind # varname and h : (eid # varname # prog) option. assignCallHOL takes the same s/h and returns the identical partial application .call (some (some s, h)) over ProgHOL/MlS/ExpHOL. Same info carrier as the tagged ProgHOL.call; exact modulo Lean's definitional currying."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "StandAloneCall",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "standAloneCallHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, bead flapjack-4ac.1.21): HOL declares Overload StandAloneCall = (\\h. Call (SOME (NONE , h))) (cakeml/pancake/panLangScript.sml:129), a named constant returning Call (SOME (NONE, h)) for h : (eid # varname # prog) option (destination NONE). standAloneCallHOL takes the same h and returns .call (some (none, h)) over ProgHOL/MlS/ExpHOL. Same info carrier as the tagged ProgHOL.call; exact modulo Lean's definitional currying."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "free_var_ids_def",
     "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
     "lean_name": "freeVarIdsHOL",
@@ -5561,6 +5585,14 @@
     "lean_name": "holValueWord",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.7): HOL theValWord_def (panSemScript.sml:42) is the partial inverse over the exact v/word_lab carrier (theValWord (ValWord w) = w; unspecified on other constructors). The Lean helper holValueWord (PanSemStateEval.lean:1362) is the totalized production/string-backed variant returning 0 on non-word inputs, over HolValue width whose names are String and whose word carrier is the tag-withheld HolWordLab. Since the non-ValWord branch picks 0 instead of HOL's unspecified value, this is not a statement-exact port; it is used only after the EVERY isValWord guard where HOL's case is total. The @[hol] tag stays withheld; HOL's unspecified branch is tracked by flapjack-yaq, separately from positive-width carrier work flapjack-0lj.5 (umbrella flapjack-pxn.18.3.5.8). flapjack-ds5 (bead flapjack-yaq, 2026-09-25) has now added the exact specified-equation port: `theValWordHOL_val_word` over the exact `ValueHOL` carrier is tagged for `theValWord_def` (ValueHOL.lean), leaving both this total production helper and the exact total rendering `theValWordHOL` untagged; the exact evaluator helper is linked by `theValWordHOL_eq_valueWord` (EvalExact.lean)."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "ValWord",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "valWordHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.3.3). HOL `Overload ValWord = \"\\w. Val (Word w)\"` (panSemScript.sml:26) has no quantifier/side condition of its own: it is the total abbreviation sending `w : 'a word` to `Val (Word w)` over `panSem$v = Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)` with `word_lab = Word ('a word)`. Lean `valWordHOL {width} [NeZero width] (word : BitVec width) : ValueHOL width := .val (.word word)` is the exact rendering over the tagged exact `ValueHOL` carrier (`@[hol ... \"v\"]`, ctor arities 1/1/2, `HolWordLab.word` payload); the `[NeZero width]` binder mirrors HOL's positive `dimindex`. Exact partial application, no extra hypotheses or side conditions."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

@@ -11678,5 +11678,21 @@
     "lean_name": "panToCrepExactInitialShapeInvariant",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-specific composition of the exact finite-support Pan-to-Crep local and state relation support. It derives precisely the locals/globals well-formedness premises needed by the evaluator invariant: local values use locals_rel's literal is_wf_shape_nil (shape_of v) conjunct, source structs are empty by state_rel, and source globals are FEMPTY. It is not a port of evaluate_is_wf_shape_invariant or locals_rel_wf_shape; kept untagged pending the multi-carrier relation qualifier and complete evaluator invariant for flapjack-4ac.5.83."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
+    "lean_name": "panToCrepFiniteReturnPayloadShape",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific Return-clause composition over the finite-context evaluator, exact PanSem state, and exact Pan-to-Crep relations. It proves the HOL-shaped empty-context payload conclusion for this clause but has a clause-level evaluator premise, so it is not evaluate_shape_invariant_ret_inst and remains untagged pending the complete evaluator invariant and multi-carrier qualifier."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
+    "lean_name": "panToCrepFiniteRaisePayloadShape",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific Raise-clause composition over the finite-context evaluator, exact PanSem state, and exact Pan-to-Crep relations. It proves the HOL-shaped empty-context payload conclusion for this clause but has a clause-level evaluator premise, so it is not evaluate_shape_invariant_ret_inst and remains untagged pending the complete evaluator invariant and multi-carrier qualifier."
   }
 ]

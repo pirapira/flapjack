@@ -83,6 +83,7 @@ import Flapjack.Pancake.Semantics.PanSem.ShMemExact
 import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
 import Flapjack.Pancake.Semantics.PanProps.EvalInvariant
 import Flapjack.Pancake.Semantics.PanProps.LocalisedExpSimps
+import Flapjack.Pancake.Semantics.PanProps.NamelessExpSimps
 import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.PanObservationalSemantics

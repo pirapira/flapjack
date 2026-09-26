@@ -5497,8 +5497,8 @@
     "hol_name": "word_lab",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "HolWordLab",
-    "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.1): HOL Datatype word_lab (panSemScript.sml:16) is Word ('a word), one constructor wrapping a word payload; HolWordLab (PanSem.lean:86) has the same single constructor .word with payload BitVec width. The mismatch is the width binder: HOL 'a word requires positive dimindex, while HolWordLab (width : Nat) admits width = 0, so Lean carries an extra width-zero instance with no HOL counterpart. Adding [NeZero width] to the inductive propagates through HolValue, CrepLocalsExact/CrepCodeMapExact, and the frozen PanSemStateEval.lean, so the @[hol] tag stays withheld until the dependency slice flapjack-0lj.5 lands. Exact-isomorphism helpers HolWordLab.toPanWordLab / PanWordLab.toHolWordLab and their roundtrips are Flapjack-specific infrastructure (production PanWordLab is generic over any alpha), not HOL ports. The exact v port ValueHOL records the same withheld-payload caveat."
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-b (source comparison, 2026-09-26; beads flapjack-0lj.5.1/.5.2): HOL Datatype word_lab at panSemScript.sml:17 is the single constructor Word ('a word). Lean HolWordLab has the same one-constructor/one-field shape, with payload BitVec width. HOL word types have positive dimindex; [NeZero width] excludes the extra zero-width Lean instance, and BitVec width is the canonical finite-word representation used by this port. Every HolWordLab consumer now carries positive width; the exact ValueHOL payload and PanSem/Crep state and lookup carriers use this type. Constructor arity and payload correspondence were compared directly with the HOL source; no String/name, evaluator, or state-map translation is part of this datatype declaration. HolWordLab.toPanWordLab / PanWordLab.toHolWordLab and their roundtrips remain untagged Flapjack-specific infrastructure."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

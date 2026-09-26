@@ -518,6 +518,32 @@ theorem evalPanSemNonrecursiveHOLFinite_shMemaddrs {width : Nat} {σ : Type} [Ne
     change pair.2.shMemaddrs = state.toExact.shMemaddrs
     exact hpair
 
+/-- Finite nonrecursive dispatcher on `Skip`. -/
+@[simp] theorem evalPanSemNonrecursiveHOLFinite_skip {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
+    evalPanSemNonrecursiveHOLFinite state (.skip : ProgHOL width) = some (none, state) := by
+  unfold evalPanSemNonrecursiveHOLFinite
+  simp [evalPanSemNonrecursiveHOLExact, ofExact_toExact]
+
+/-- Finite nonrecursive dispatcher on `Break`. -/
+@[simp] theorem evalPanSemNonrecursiveHOLFinite_break {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
+    evalPanSemNonrecursiveHOLFinite state (.break : ProgHOL width) =
+      some (some .break, state) := by
+  unfold evalPanSemNonrecursiveHOLFinite
+  simp [evalPanSemNonrecursiveHOLExact, ofExact_toExact]
+
+/-- Finite nonrecursive dispatcher on `Continue`. -/
+@[simp] theorem evalPanSemNonrecursiveHOLFinite_continue {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
+    evalPanSemNonrecursiveHOLFinite state (.continue : ProgHOL width) =
+      some (some .continue, state) := by
+  unfold evalPanSemNonrecursiveHOLFinite
+  simp [evalPanSemNonrecursiveHOLExact, ofExact_toExact]
+
 /-- FLAPJACK-SPECIFIC (not the tagged HOL `evaluate_def` port): finite-support
     rendering of HOL `evaluate` (`cakeml/pancake/semantics/panSemScript.sml:556`)
     returning a genuine `result option × state` pair.  The body extracts the
@@ -530,7 +556,7 @@ theorem evalPanSemNonrecursiveHOLFinite_shMemaddrs {width : Nat} {σ : Type} [Ne
     requires threading `memaddrsDecidable`/`shMemaddrsDecidable` through a
     finite eval context; tracked by `flapjack-6yq` (which blocks
     `flapjack-qj5`). -/
-def evaluateHOLFinite {width : Nat} {σ : Type} [NeZero width]
+def evaluateHOLFiniteViaExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
     ProgHOL width →
@@ -543,30 +569,30 @@ def evaluateHOLFinite {width : Nat} {σ : Type} [NeZero width]
 /-- Result bridge: the finite evaluator is exactly the `some` output of
     the total finite-support recursive evaluator, so it is the canonical
     finite-map rendering of HOL `evaluate` (Flapjack-specific, untagged). -/
-theorem evaluateHOLFinite_eq_some {width : Nat} {σ : Type} [NeZero width]
+theorem evaluateHOLFiniteViaExact_eq_some {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
     (program : ProgHOL width) :
     evalPanSemRecursiveCallHOLFinite state program =
-      some (evaluateHOLFinite state program) := by
+      some (evaluateHOLFiniteViaExact state program) := by
   obtain ⟨pair, hp⟩ := evalPanSemRecursiveCallHOLFinite_exists state program
-  unfold evaluateHOLFinite
+  unfold evaluateHOLFiniteViaExact
   simp only [hp]
 
 /-- Projection bridge: forgetting the finite support of the finite evaluator's
     post-state recovers the broad exact evaluator's output, transported along
     `toExact`. -/
-theorem evaluateHOLFinite_snd_toExact_eq {width : Nat} {σ : Type} [NeZero width]
+theorem evaluateHOLFiniteViaExact_snd_toExact_eq {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
     (program : ProgHOL width) :
     ∃ pair,
       evalPanSemRecursiveCallHOLFinite state program = some pair ∧
-        evaluateHOLFinite state program = pair ∧
-          (Prod.snd (evaluateHOLFinite state program)).toExact = pair.2.toExact := by
+        evaluateHOLFiniteViaExact state program = pair ∧
+          (Prod.snd (evaluateHOLFiniteViaExact state program)).toExact = pair.2.toExact := by
   obtain ⟨pair, hp⟩ := evalPanSemRecursiveCallHOLFinite_exists state program
-  have heq : evaluateHOLFinite state program = pair := by
-    unfold evaluateHOLFinite
+  have heq : evaluateHOLFiniteViaExact state program = pair := by
+    unfold evaluateHOLFiniteViaExact
     simp only [hp]
   exact ⟨pair, hp, heq, by rw [heq]⟩
 
@@ -597,6 +623,15 @@ def withState {width : Nat} {σ : Type} [NeZero width]
     (hmem : state.memaddrs = context.state.memaddrs)
     (hshared : state.shMemaddrs = context.state.shMemaddrs) :
     (withState context state hmem hshared).state = state := rfl
+
+/-- Threading a context through its own state is the identity. -/
+@[simp] theorem withState_self {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ)
+    (hmem : context.state.memaddrs = context.state.memaddrs)
+    (hshared : context.state.shMemaddrs = context.state.shMemaddrs) :
+    context.withState context.state hmem hshared = context := by
+  cases context
+  simp [FiniteEvalContext.withState]
 
 end FiniteEvalContext
 
@@ -796,6 +831,10 @@ def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width
                         | some other =>
                             some (some other, fixedContext.withState
                               (emptyLocalsHOLFinite fixedContext.state) rfl rfl)
+      | .skip => some (none, context)
+      | .break => some (some .break, context)
+      | .continue => some (some .continue, context)
+      | .annot _ _ => some (none, context)
       | other =>
           match hres : evalPanSemNonrecursiveHOLFinite state other with
           | none => none
@@ -856,6 +895,20 @@ decreasing_by
     exact Nat.lt_of_le_of_lt
       (fixClockHOLFinite_clock_le entry (bodyResult, bodyContext.state))
       (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
+
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): the state-level projection of the
+    clause-for-clause finite context evaluator
+    `evalPanSemRecursiveCallFiniteContext`, returning HOL `evaluate_def`'s
+    genuine `result option × state` pair.  Exposed clause-by-clause in
+    `Flapjack.Pancake.Semantics.PanSem.EvaluateFinite`. -/
+def evaluateHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
+    ProgHOL width → Option (PanSemResultExact width) × PanSemStateFiniteExact width σ
+  | program =>
+      match evalPanSemRecursiveCallFiniteContext program ⟨state, h, hshared⟩ with
+      | some (result, context) => (result, context.state)
+      | none => (none, state)
 
 end PanSemStateFiniteExact
 

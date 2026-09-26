@@ -1,5 +1,5 @@
 /-
-FINITE-SUPPORT CARRIER PROGRAM EVALUATION (flapjack-qj5).
+FINITE-SUPPORT CARRIER PROGRAM EVALUATION (flapjack-6yq / flapjack-qj5).
 
 The exact `evaluate_def` evaluator `evalPanSemRecursiveCallContextHOLExact`
 (`TotalEvalExact.lean`) quantifies over `PanSemStateExact`, whose
@@ -7,26 +7,22 @@ The exact `evaluate_def` evaluator `evalPanSemRecursiveCallContextHOLExact`
 HOL `panSem$state` instead keeps those fields as finite maps (`varname |-> 'a v`,
 `|->`), so the evaluator is faithful only on the finite-support subcarrier.
 
-The state-level `PanSemStateFiniteExact.evaluateHOLFinite` lives in
-`Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean`, the same module as
-the carrier `PanSemStateFiniteExact` and the canonical translation witness
-`holFmapAsFiniteSupportWitness`.  It is currently a FLAPJACK-SPECIFIC untagged
-adapter, not the tagged HOL `evaluate_def` port: its body extracts the total
-finite-support recursive evaluator `evalPanSemRecursiveCallHOLFinite`; because
-HOL `evaluate_def` is well-founded recursion, that body delegates rather than
-syntactically presenting HOL's clause-shaped body.  The earlier
-`@[hol ... "evaluate_def"]` tag was withdrawn on coordinator review, because a
-delegating body is not sufficient source evidence for the recursive clauses.
+`PanSemStateFiniteExact.evaluateHOLFinite` (in the carrier module
+`StateExactFiniteMap.lean`) is the state-level projection of the direct,
+clause-for-clause finite context evaluator `evalPanSemRecursiveCallFiniteContext`,
+returning HOL `evaluate_def`'s genuine `result option × state` pair.  The finite
+context threads `memaddrsDecidable`/`shMemaddrsDecidable` (bead `flapjack-6yq`)
+so the recursive clauses typecheck over literal record updates.
 
-This module currently exposes only three clause-shaped equations over the finite
-carrier: `Skip` / `Break` / `Continue`, via `evaluateHOLFinite_of_broad` and
-`evalPanSemRecursiveCallHOLFinite_of_broad`, the generic translation lemmas that
-relate the finite adapter to the broad exact evaluator for any program and any
-broad result.  The remaining clauses are NOT yet exposed.  The faithful tagged
-`evaluate_def` port over the finite-support carrier requires threading
-`memaddrsDecidable`/`shMemaddrsDecidable` through a finite evaluation context so
-that a direct clause-for-clause definition typechecks; that is tracked by bead
-`flapjack-6yq`, which blocks `flapjack-qj5`.
+This module exposes the clause surface of `evaluateHOLFinite`, clause by clause,
+as the source evidence for the `evaluate_def` port.  Exposed so far:
+`Skip` / `Break` / `Continue`.  The remaining clauses are being added; the
+exact `@[hol ... "evaluate_def" ...]` tag stays withheld until every clause is
+exposed and reviewed (`flapjack-qj5` is blocked on `flapjack-6yq`).
+
+The older delegating adapter `evaluateHOLFiniteViaExact` (and its
+`evalPanSemRecursiveCallHOLFinite_of_broad` / `evaluateHOLFiniteViaExact_of_broad`
+translation lemmas) remains as untagged Flapjack-specific infrastructure.
 -/
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 
@@ -65,10 +61,10 @@ theorem evalPanSemRecursiveCallHOLFinite_of_broad {width : Nat} {σ : Type} [NeZ
     rfl
 
 /-- Generic translation for the finite adapter: given the broad exact
-    evaluator's result on `program`, `evaluateHOLFinite` returns the same
+    evaluator's result on `program`, `evaluateHOLFiniteViaExact` returns the same
     (`result option × state`) pair with the post-state rebuilt through the
     canonical finite-support carrier. -/
-theorem evaluateHOLFinite_of_broad {width : Nat} {σ : Type} [NeZero width]
+theorem evaluateHOLFiniteViaExact_of_broad {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
     (program : ProgHOL width)
@@ -76,51 +72,75 @@ theorem evaluateHOLFinite_of_broad {width : Nat} {σ : Type} [NeZero width]
     (hb : evalPanSemRecursiveCallContextHOLExact program
         { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared } =
       some output) :
-    evaluateHOLFinite state program =
+    evaluateHOLFiniteViaExact state program =
       (output.1, ofExact output.2.state
         (evalPanSemRecursiveCallContextHOLExact_finiteSupport program
           { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared }
           state.toExact_finiteSupport output hb)) := by
   have hw := evalPanSemRecursiveCallHOLFinite_of_broad state program output hb
-  unfold evaluateHOLFinite
+  unfold evaluateHOLFiniteViaExact
   dsimp only
   rw [hw]
 
 /-- HOL `evaluate_def` `Skip` clause: `evaluate (Skip, s) = (NONE, s)`. -/
-@[simp] theorem evaluateHOLFinite_skip {width : Nat} {σ : Type} [NeZero width]
+@[simp] theorem evaluateHOLFiniteViaExact_skip {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
-    evaluateHOLFinite state (.skip : ProgHOL width) = (none, state) := by
+    evaluateHOLFiniteViaExact state (.skip : ProgHOL width) = (none, state) := by
   have hb : evalPanSemRecursiveCallContextHOLExact (.skip : ProgHOL width)
       { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared } =
         some (none, { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared }) := by
     rw [evalPanSemRecursiveCallContextHOLExact.eq_def]
-  rw [evaluateHOLFinite_of_broad state _ _ hb]
+  rw [evaluateHOLFiniteViaExact_of_broad state _ _ hb]
   simp only [ofExact_toExact]
 
 /-- HOL `evaluate_def` `Break` clause: `evaluate (Break, s) = (SOME Break, s)`. -/
-@[simp] theorem evaluateHOLFinite_break {width : Nat} {σ : Type} [NeZero width]
+@[simp] theorem evaluateHOLFiniteViaExact_break {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
-    evaluateHOLFinite state (.break : ProgHOL width) = (some .break, state) := by
+    evaluateHOLFiniteViaExact state (.break : ProgHOL width) = (some .break, state) := by
   have hb : evalPanSemRecursiveCallContextHOLExact (.break : ProgHOL width)
       { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared } =
         some (some .break, { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared }) := by
     rw [evalPanSemRecursiveCallContextHOLExact.eq_def]
-  rw [evaluateHOLFinite_of_broad state _ _ hb]
+  rw [evaluateHOLFiniteViaExact_of_broad state _ _ hb]
   simp only [ofExact_toExact]
 
 /-- HOL `evaluate_def` `Continue` clause: `evaluate (Continue, s) = (SOME Continue, s)`. -/
-@[simp] theorem evaluateHOLFinite_continue {width : Nat} {σ : Type} [NeZero width]
+@[simp] theorem evaluateHOLFiniteViaExact_continue {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
-    evaluateHOLFinite state (.continue : ProgHOL width) = (some .continue, state) := by
+    evaluateHOLFiniteViaExact state (.continue : ProgHOL width) = (some .continue, state) := by
   have hb : evalPanSemRecursiveCallContextHOLExact (.continue : ProgHOL width)
       { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared } =
         some (some .continue, { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared }) := by
     rw [evalPanSemRecursiveCallContextHOLExact.eq_def]
-  rw [evaluateHOLFinite_of_broad state _ _ hb]
+  rw [evaluateHOLFiniteViaExact_of_broad state _ _ hb]
   simp only [ofExact_toExact]
+
+/-- HOL `evaluate_def` `Skip` clause over the direct finite context evaluator. -/
+@[simp] theorem evaluateHOLFinite_skip {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
+    evaluateHOLFinite state (.skip : ProgHOL width) = (none, state) := by
+  unfold evaluateHOLFinite
+  simp [evalPanSemRecursiveCallFiniteContext]
+
+/-- HOL `evaluate_def` `Break` clause over the direct finite context evaluator. -/
+@[simp] theorem evaluateHOLFinite_break {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
+    evaluateHOLFinite state (.break : ProgHOL width) = (some .break, state) := by
+  unfold evaluateHOLFinite
+  simp [evalPanSemRecursiveCallFiniteContext]
+
+/-- HOL `evaluate_def` `Continue` clause over the direct finite context evaluator. -/
+@[simp] theorem evaluateHOLFinite_continue {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
+    evaluateHOLFinite state (.continue : ProgHOL width) = (some .continue, state) := by
+  unfold evaluateHOLFinite
+  simp [evalPanSemRecursiveCallFiniteContext]
 
 end PanSemStateFiniteExact
 

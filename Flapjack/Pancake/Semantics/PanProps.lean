@@ -90,8 +90,9 @@ qualifier requires its owning carrier structure and witness in the tagged
 module, so the imported carrier cannot be tagged from this counterpart and a
 duplicate state carrier is not an acceptable shortcut. No exact theorem tag is
 claimed. The faithful PanProps port is tracked by
-`flapjack-4ac.4.98.1`, blocked on the canonical finite-map carrier work
-`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+`flapjack-4ac.4.98.1`. The canonical finite-map carrier bead
+`flapjack-pxn.18.3.7.1.3.1.1.2` is complete; the remaining gap is a
+checker-supported owner/witness placement for this PanProps theorem. -/
 
 /-! Cake's local `dropWhile_eq_cons_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when

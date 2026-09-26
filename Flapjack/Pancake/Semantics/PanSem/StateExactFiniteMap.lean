@@ -121,7 +121,7 @@ structure PanSemStateFiniteExact (width : Nat) (σ : Type) [NeZero width] where
 namespace PanSemStateFiniteExact
 
 /-- Forget the finite-support witnesses, reading every map through `.lookup`. -/
-def toExact {width : Nat} {σ : Type} [NeZero width]
+@[reducible] def toExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) : PanSemStateExact width σ where
   locals := state.locals.lookup
   globals := state.globals.lookup
@@ -425,6 +425,26 @@ theorem evalPanSemRecursiveCallHOLFinite_toExact {width : Nat} {σ : Type} [NeZe
   unfold evalPanSemRecursiveCallHOLFinite
   dsimp only
   split <;> simp_all only [Option.map_some, toExact_ofExact] <;> rfl
+
+/-- The finite-support recursive evaluator is total: its assembly marker is
+    always `some`, so it is a genuine `result × post-state` evaluator over the
+    exact finite-map state carrier. -/
+theorem evalPanSemRecursiveCallHOLFinite_exists {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
+    (program : ProgHOL width) :
+    ∃ pair, evalPanSemRecursiveCallHOLFinite state program = some pair := by
+  obtain ⟨output, houtput⟩ :=
+    evalPanSemRecursiveCallContextHOLExact_total program
+      { state := state.toExact, memaddrsDecidable := h, shMemaddrsDecidable := hshared }
+  cases hv : evalPanSemRecursiveCallHOLFinite state program with
+  | none =>
+      have hproj := evalPanSemRecursiveCallHOLFinite_toExact state program
+      rw [hv] at hproj
+      simp only [Option.map_none] at hproj
+      rw [houtput] at hproj
+      simp at hproj
+  | some pair => exact ⟨pair, rfl⟩
 
 end PanSemStateFiniteExact
 

@@ -3018,6 +3018,38 @@ theorem evalCrepHolFiniteWordSourceExpWordLab_op_eq_wordOpHOL
   simp [holFiniteWordSourceMemoryModel, mapCrepHolWordLab,
     holWordToBitVec_bitVecToHolWord, Option.map_map, Function.comp_def]
 
+/-- The finite-index source evaluator's successful `Op` clause agrees with
+    the executed RISC-V runtime evaluator on the word-converted expression
+    and operand values.  The hypotheses expose recursive child evaluation on
+    both sides; this pins the constructor dispatch without claiming that the
+    source and production memory/state carriers agree. -/
+theorem evalCrepHolFiniteWordSourceExp_op_eq_riscvRuntime
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : BinOp)
+    (expressions : List (CrepExp (ι → Bool))) (values : List (ι → Bool))
+    (hSource : expressions.mapM
+      (evalCrepHolFiniteWordSourceExp dimension state) = some values)
+    (hRuntime : (expressions.map (mapCrepExpWord (holWordToBitVec dimension))).mapM
+      (evalCrepRuntimeExp (riscvCrepWordTarget
+        (state.toHolFiniteBitVecState dimension).toRuntime)) =
+        some (values.map (holWordToBitVec dimension))) :
+    (evalCrepHolFiniteWordSourceExp dimension state
+      (.op operator expressions)).map (holWordToBitVec dimension) =
+    evalCrepRuntimeExp (riscvCrepWordTarget
+      (state.toHolFiniteBitVecState dimension).toRuntime)
+      (.op operator (expressions.map
+        (mapCrepExpWord (holWordToBitVec dimension)))) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp only [evalCrepHolFiniteWordSourceExp, Option.bind_eq_bind, hSource,
+    Option.bind_some]
+  simp only [evalCrepRuntimeExp, hRuntime]
+  simpa [riscvCrepWordTarget, CrepHolState.toHolFiniteBitVecState,
+    CrepHolState.toRuntime,
+    holFiniteWordSourceMemoryModel, Option.map_map, Function.comp_def]
+    using (holFiniteWordSourceModel_ops_eq_riscvWordTarget dimension
+      state.bigEndian operator values .mul [] .equal .lsl (values.headD 0)
+      (values.headD 0)).1
+
 /-- The recursive source `Load` clause transports to the tagged width-indexed
     HOL `mem_load_def`: it checks the same address domain and returns the same
     complete `word_lab` cell after converting the finite-index word state to

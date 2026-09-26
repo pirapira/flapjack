@@ -1593,6 +1593,20 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_empty_locals_IMP",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evalEmptyLocalsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.90; panPropsScript.sml:1584-1593): HOL quantifies state s, expression e, value v and states eval (s with locals := FEMPTY) e = SOME v ==> eval s e = SOME v. Lean preserves that quantifier order, the FEMPTY-cleared-locals premise, and the same-value conclusion. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields (locals/globals/code/eshapes) and the same-module canonical holFmapAsFiniteSupportWitness; emptyLocalsForStructsSimps clears locals via HolFiniteMapExact.empty (the exact FEMPTY translation) and evalHOL delegates to the already-reviewed evalHOLExact through toExact. Proof: an untagged broad-carrier lemma evalHOLExact_emptyLocalsHOLExact over PanSemStateExact by the mutual evalHOLExact.induct, using the tagged opt_mmap_eq_some_helper for the OPT_MMAP list clauses; the finite statement is its canonical finite-map translation. [NeZero width] models HOL's positive word dimension and DecidablePred state.memaddrs renders HOL word-set membership. The qualifier records only the four finite-map fields."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "structs_simps",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
     "lean_name": "structsSimpsHOLFinite",
@@ -6390,6 +6404,14 @@
     "lean_name": "firstCompileProgAllDistinct",
     "statement_status": "documented_mismatch",
     "reviewer": "Codex (HOL source comparison, flapjack-wur): HOL panLang prog uses the DeclHOL declaration carrier with mlstring identifiers and HOL expression/shape types, and compile_prog returns HOL-shaped CrepProgHOL bodies. Lean quantifies over production Decl (BitVec width) and concludes over compileProgTopHOL's production FunName/generic CrepProg output. These input and output type differences exceed identifier representation, so names_as_string cannot qualify this analogue. It is untagged; exact-carrier replacement depends on DeclHOL and compiler-boundary work, tracked by flapjack-wur.1."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "compile_prog_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/CompileProg.lean",
+    "lean_name": "compileProgTopHOL",
+    "statement_status": "documented_mismatch",
+    "reviewer": "Codex (source review of HOL Definition compile_prog_def at pan_to_crepScript.sml:393-397): HOL's equation is compile_inl_top (MAP FST (functions (FILTER inlinable prog))) (compile_to_crep prog), with input 'a prog and result (mlstring # num list # 'a crepLang$prog) list, and no hypotheses or side conditions. Lean compileProgTopHOL preserves the let/operand order but takes production Decl (BitVec width), uses String FunName and production Shape/CrepProg carriers, and adds BEq/LawfulBEq/LawfulHashable/OfNat instances. The output remains production CrepProg even in compileProgTopHOLOfExact after the DeclHOL boundary conversion, so neither names_as_string nor that boundary bridge makes this an exact port. Untagged mismatch; faithful replacement depends on flapjack-pxn.18.3.5.8.13 for exact compile, flapjack-e7w.1 for the exact inline-map carrier, and open epic flapjack-e7w.2 for full compile_inl_top and production-inliner porting."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

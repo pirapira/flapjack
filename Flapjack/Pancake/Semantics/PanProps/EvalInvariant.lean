@@ -1503,6 +1503,47 @@ theorem lookupCodeWfShapeInvariantStep {width : Nat} {σ : Type} [NeZero width] 
           exact hLookup'.1.2.2 pair.1.1 pair.1.2 pair.2 hpair
         exact False.elim (hValid hValid')
 
+set_option linter.unusedSimpArgs false in
+/-- Exact finite-support port of HOL `panProps$evaluate_decls_names`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1552`):
+    `!s decs. EVERY is_name decs ==> evaluate_decls s decs = SOME s`.
+    HOL `EVERY is_name decs` renders as `decs.all isNameHOL = true` (the tagged
+    `is_name_def` counterpart), and the state is the reviewed
+    `PanPropsEvalStateFiniteExact` whose four `|->` fields (`locals`, `globals`,
+    `code`, `eshapes`) are the canonical `HolFiniteMapExact` translation recorded
+    by the `fmap_as_finite_support` qualifier. `[NeZero width]` models HOL's
+    positive word dimension and `DecidablePred state.memaddrs` is computation
+    evidence for the HOL word-set guard. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_names"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsNamesHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+    (decs : List (DeclHOL width)) :
+    decs.all (fun declaration => Flapjack.Pancake.PanLang.isNameHOL declaration) = true →
+      evaluateDeclsPanPropsHOLFinite state decs = some state := by
+  induction decs generalizing state with
+  | nil => intro _; rfl
+  | cons declaration rest ih =>
+      intro hall
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hd, hrest⟩ := hall
+      cases declaration with
+      | name name fields =>
+          simp only [evaluateDeclsPanPropsHOLFinite]
+          exact ih state hrest
+      | decl shape name expression =>
+          rw [show Flapjack.Pancake.PanLang.isNameHOL
+            (DeclHOL.decl shape name expression) = false from rfl] at hd
+          exact (Bool.false_eq_true.mp hd).elim
+      | function declaration =>
+          rw [show Flapjack.Pancake.PanLang.isNameHOL
+            (DeclHOL.function declaration) = false from rfl] at hd
+          exact (Bool.false_eq_true.mp hd).elim
+      | exnDecl exceptionName shape =>
+          rw [show Flapjack.Pancake.PanLang.isNameHOL
+            (DeclHOL.exnDecl exceptionName shape) = false from rfl] at hd
+          exact (Bool.false_eq_true.mp hd).elim
+
 end PanPropsEvalStateFiniteExact
 
 end Flapjack

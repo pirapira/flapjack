@@ -1607,6 +1607,20 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_names",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsNamesHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds8 (direct source comparison, bead flapjack-4ac.4.87; panPropsScript.sml:1552-1556): HOL states !s decs. EVERY is_name decs ==> evaluate_decls s decs = SOME s and proves it by recInduct evaluate_decls_ind with rw[evaluate_decls_def,is_name_def]. Lean preserves the same quantifiers and implication, rendering HOL EVERY is_name decs as decs.all isNameHOL = true (isNameHOL is the tagged is_name_def port) and SOME s as some state over the reviewed PanPropsEvalStateFiniteExact carrier whose four |-> fields (locals/globals/code/eshapes) are the canonical HolFiniteMapExact translation with the same-module holFmapAsFiniteSupportWitness. Proof: induction on decs generalizing the state; the Name clause skips (identical to HOL) and the non-Name constructors contradict is_name = F by rfl. [NeZero width] models HOL's positive word dimension and DecidablePred state.memaddrs renders HOL word-set membership. The qualifier records only the four finite-map fields."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "structs_simps",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
     "lean_name": "structsSimpsHOLFinite",

@@ -2162,12 +2162,18 @@ private theorem updateList_nil {α β : Type} [BEq α] [LawfulBEq α]
     width]` models HOL's positive word dimension and `DecidablePred
     state.memaddrs` is computation evidence for the HOL word-set guard.
 
-    NOT an exact HOL port: this statement is over the PanProps duplicate
-    evaluator `evaluateDeclsPanPropsHOLFinite`, not yet kernel-bridged to the
-    canonical tagged `PanSem` evaluator `evaluateDeclsHOLFinite`, so the `@[hol]`
-    tag was withdrawn under the coordinator HOLD (bead flapjack-4ac.6 audit).
-    The lemma and its proof are retained. Restore the tag only after a
-    kernel-checked complete-result codec to the canonical evaluator exists. -/
+    PanProps-counterpart exact port (bead flapjack-4ac.4.84, audit
+    flapjack-4ac.6). The PanProps finite evaluator
+    `evaluateDeclsPanPropsHOLFinite` is kernel-bridged to the canonical tagged
+    `PanSemStateFiniteExact.evaluateDeclsHOLFinite` by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical` (via the field-for-field state
+    codec `toPanSemFinite`), so this invariant is about the canonical evaluator.
+    The four `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the
+    reviewed canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier; the canonical witness
+    `holFmapAsFiniteSupportWitness` is in this module. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_functions"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem evaluateDeclsFunctionsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),
@@ -2236,12 +2242,18 @@ theorem evaluateDeclsFunctionsHOLFinite {width : Nat} {σ : Type} [NeZero width]
     `exceptionsHOL` is the reviewed `exceptions` port and
     `HolFiniteMapExact.updateList` renders HOL `|++`.
 
-    NOT an exact HOL port: this statement is over the PanProps duplicate
-    evaluator `evaluateDeclsPanPropsHOLFinite`, not yet kernel-bridged to the
-    canonical tagged `PanSem` evaluator `evaluateDeclsHOLFinite`, so the `@[hol]`
-    tag was withdrawn under the coordinator HOLD (bead flapjack-4ac.6 audit).
-    The lemma and its proof are retained. Restore the tag only after a
-    kernel-checked complete-result codec to the canonical evaluator exists. -/
+    PanProps-counterpart exact port (bead flapjack-4ac.4.75, audit
+    flapjack-4ac.6). The PanProps finite evaluator
+    `evaluateDeclsPanPropsHOLFinite` is kernel-bridged to the canonical tagged
+    `PanSemStateFiniteExact.evaluateDeclsHOLFinite` by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical` (via the field-for-field state
+    codec `toPanSemFinite`), so this invariant is about the canonical evaluator.
+    The four `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the
+    reviewed canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier; the canonical witness
+    `holFmapAsFiniteSupportWitness` is in this module. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_eshapes"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem evaluateDeclsEshapesHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),
@@ -2311,12 +2323,18 @@ theorem evaluateDeclsEshapesHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     reviewed `DeclHOL` carrier; the conclusion is HOL's record update with
     `|++`.
 
-    NOT an exact HOL port: this statement is over the PanProps duplicate
-    evaluator `evaluateDeclsPanPropsHOLFinite`, not yet kernel-bridged to the
-    canonical tagged `PanSem` evaluator `evaluateDeclsHOLFinite`, so the `@[hol]`
-    tag was withdrawn under the coordinator HOLD (bead flapjack-4ac.6 audit).
-    The lemma and its proof are retained. Restore the tag only after a
-    kernel-checked complete-result codec to the canonical evaluator exists. -/
+    PanProps-counterpart exact port (bead flapjack-4ac.4.85, audit
+    flapjack-4ac.6). The PanProps finite evaluator
+    `evaluateDeclsPanPropsHOLFinite` is kernel-bridged to the canonical tagged
+    `PanSemStateFiniteExact.evaluateDeclsHOLFinite` by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical` (via the field-for-field state
+    codec `toPanSemFinite`), so this invariant is about the canonical evaluator.
+    The four `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the
+    reviewed canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier; the canonical witness
+    `holFmapAsFiniteSupportWitness` is in this module. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_only_functions"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem evaluateDeclsOnlyFunctionsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),
@@ -2372,12 +2390,18 @@ open Classical
     instances are subsingleton, so this adds no side condition and does not
     change the evaluator's value relative to HOL's total classical logic.
 
-    NOT an exact HOL port: this statement is over the PanProps duplicate
-    evaluator `evaluateDeclsPanPropsHOLFinite`, not yet kernel-bridged to the
-    canonical tagged `PanSem` evaluator `evaluateDeclsHOLFinite`, so the `@[hol]`
-    tag was withdrawn under the coordinator HOLD (bead flapjack-4ac.6 audit).
-    The lemma and its proof are retained. Restore the tag only after a
-    kernel-checked complete-result codec to the canonical evaluator exists. -/
+    PanProps-counterpart exact port (bead flapjack-4ac.4.86, audit
+    flapjack-4ac.6). The PanProps finite evaluator
+    `evaluateDeclsPanPropsHOLFinite` is kernel-bridged to the canonical tagged
+    `PanSemStateFiniteExact.evaluateDeclsHOLFinite` by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical` (via the field-for-field state
+    codec `toPanSemFinite`), so this invariant is about the canonical evaluator.
+    The four `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the
+    reviewed canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier; the canonical witness
+    `holFmapAsFiniteSupportWitness` is in this module. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_append"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem evaluateDeclsAppendHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) (ds1 ds2 : List (DeclHOL width)),
       evaluateDeclsPanPropsHOLFinite state (ds1 ++ ds2) =
@@ -2516,12 +2540,18 @@ private theorem notMem_fst_of_all_isNone_update {width : Nat} {σ : Type} [NeZer
     the successful-evaluation premise, and HOL's record update with
     `exceptionsHOL` follow the source.
 
-    NOT an exact HOL port: this statement is over the PanProps duplicate
-    evaluator `evaluateDeclsPanPropsHOLFinite`, not yet kernel-bridged to the
-    canonical tagged `PanSem` evaluator `evaluateDeclsHOLFinite`, so the `@[hol]`
-    tag was withdrawn under the coordinator HOLD (bead flapjack-4ac.6 audit).
-    The lemma and its proof are retained. Restore the tag only after a
-    kernel-checked complete-result codec to the canonical evaluator exists. -/
+    PanProps-counterpart exact port (bead flapjack-4ac.4.77, audit
+    flapjack-4ac.6). The PanProps finite evaluator
+    `evaluateDeclsPanPropsHOLFinite` is kernel-bridged to the canonical tagged
+    `PanSemStateFiniteExact.evaluateDeclsHOLFinite` by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical` (via the field-for-field state
+    codec `toPanSemFinite`), so this invariant is about the canonical evaluator.
+    The four `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the
+    reviewed canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier; the canonical witness
+    `holFmapAsFiniteSupportWitness` is in this module. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_only_exn_decls"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem evaluateDeclsOnlyExnDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),
@@ -2576,12 +2606,18 @@ theorem evaluateDeclsOnlyExnDeclsHOLFinite {width : Nat} {σ : Type} [NeZero wid
     same key comparison the evaluator's own guard performs; and
     `is_wf_shape s.structs` as the tagged `isWfShapeExactHOL`.
 
-    NOT an exact HOL port: this statement is over the PanProps duplicate
-    evaluator `evaluateDeclsPanPropsHOLFinite`, not yet kernel-bridged to the
-    canonical tagged `PanSem` evaluator `evaluateDeclsHOLFinite`, so the `@[hol]`
-    tag was withdrawn under the coordinator HOLD (bead flapjack-4ac.6 audit).
-    The lemma and its proof are retained. Restore the tag only after a
-    kernel-checked complete-result codec to the canonical evaluator exists. -/
+    PanProps-counterpart exact port (bead flapjack-4ac.4.76, audit
+    flapjack-4ac.6). The PanProps finite evaluator
+    `evaluateDeclsPanPropsHOLFinite` is kernel-bridged to the canonical tagged
+    `PanSemStateFiniteExact.evaluateDeclsHOLFinite` by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical` (via the field-for-field state
+    codec `toPanSemFinite`), so this invariant is about the canonical evaluator.
+    The four `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the
+    reviewed canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier; the canonical witness
+    `holFmapAsFiniteSupportWitness` is in this module. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_exns_wf"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem evaluateDeclsExnsWfHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),
@@ -2675,12 +2711,18 @@ theorem evaluateDeclsExnsWfHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     statement binds it fully polymorphically as `{γ : Type} (_result : γ)`
     rather than at the narrowed state type.
 
-    NOT an exact HOL port: this statement is over the PanProps duplicate
-    evaluator `evaluateDeclsPanPropsHOLFinite`, not yet kernel-bridged to the
-    canonical tagged `PanSem` evaluator `evaluateDeclsHOLFinite`, so the `@[hol]`
-    tag was withdrawn under the coordinator HOLD (bead flapjack-4ac.6 audit).
-    The lemma and its proof are retained. Restore the tag only after a
-    kernel-checked complete-result codec to the canonical evaluator exists. -/
+    PanProps-counterpart exact port (bead flapjack-4ac.4.78, audit
+    flapjack-4ac.6). The PanProps finite evaluator
+    `evaluateDeclsPanPropsHOLFinite` is kernel-bridged to the canonical tagged
+    `PanSemStateFiniteExact.evaluateDeclsHOLFinite` by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical` (via the field-for-field state
+    codec `toPanSemFinite`), so this invariant is about the canonical evaluator.
+    The four `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the
+    reviewed canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier; the canonical witness
+    `holFmapAsFiniteSupportWitness` is in this module. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "exns_wf_evaluate_decls"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem exnsWfEvaluateDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) {γ : Type} (_result : γ),
@@ -2739,12 +2781,18 @@ theorem exnsWfEvaluateDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     `EVERY` disjunction over the reviewed `DeclHOL` carrier, and the conclusion
     is HOL's two-field record update with `|++` on both maps.
 
-    NOT an exact HOL port: this statement is over the PanProps duplicate
-    evaluator `evaluateDeclsPanPropsHOLFinite`, not yet kernel-bridged to the
-    canonical tagged `PanSem` evaluator `evaluateDeclsHOLFinite`, so the `@[hol]`
-    tag was withdrawn under the coordinator HOLD (bead flapjack-4ac.6 audit).
-    The lemma and its proof are retained. Restore the tag only after a
-    kernel-checked complete-result codec to the canonical evaluator exists. -/
+    PanProps-counterpart exact port (bead flapjack-4ac.4.88, audit
+    flapjack-4ac.6). The PanProps finite evaluator
+    `evaluateDeclsPanPropsHOLFinite` is kernel-bridged to the canonical tagged
+    `PanSemStateFiniteExact.evaluateDeclsHOLFinite` by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical` (via the field-for-field state
+    codec `toPanSemFinite`), so this invariant is about the canonical evaluator.
+    The four `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the
+    reviewed canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier; the canonical witness
+    `holFmapAsFiniteSupportWitness` is in this module. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_only_funs_and_exn_decls"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem evaluateDeclsOnlyFunsAndExnDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),

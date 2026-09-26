@@ -11735,6 +11735,78 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_append",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsAppendHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.4.86; audit flapjack-4ac.6; panPropsScript.sml:1540): HOL evaluates `evaluate_decls s (ds1 ++ ds2)` as the monadic bind of `evaluate_decls s ds1` into `evaluate_decls s' ds2`; the Lean statement preserves the `s ds1 ds2` quantifiers, the `ds1 ++ ds2` left side, and HOL's `case ... of NONE => NONE | SOME s' => ...` rendered as `Option.bind`. The nested evaluation over HOL's abstract existential result state is discharged by Lean's classical decidability of the `memaddrs` word-set guard, a subsingleton `Decidable` instance that adds no logical side condition and does not change the evaluator's value. The PanProps finite evaluator evaluateDeclsPanPropsHOLFinite is kernel-bridged to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite by evaluateDeclsPanPropsHOLFinite_toCanonical, which maps the complete Option result through the field-for-field state codec toPanSemFinite, so the invariant is about the canonical evaluator. The four |-> fields (locals, globals, code, eshapes) are the reviewed canonical HolFiniteMapExact translation recorded by the fmap_as_finite_support qualifier; the same-module canonical witness is holFmapAsFiniteSupportWitness. The qualifier is representation-only and changes no quantifier, hypothesis, or conclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_eshapes",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsEshapesHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.4.75; audit flapjack-4ac.6; panPropsScript.sml:1409): HOL `evaluate_decls s ds = SOME s'` implies `s'.eshapes = s.eshapes |++ exceptions ds`; the Lean statement preserves the `s ds s'` quantifier order, the successful-evaluation premise, and the eshapes/exceptionsHOL/HolFiniteMapExact.updateList conclusion. The PanProps finite evaluator evaluateDeclsPanPropsHOLFinite is kernel-bridged to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite by evaluateDeclsPanPropsHOLFinite_toCanonical, which maps the complete Option result through the field-for-field state codec toPanSemFinite, so the invariant is about the canonical evaluator. The four |-> fields (locals, globals, code, eshapes) are the reviewed canonical HolFiniteMapExact translation recorded by the fmap_as_finite_support qualifier; the same-module canonical witness is holFmapAsFiniteSupportWitness. The qualifier is representation-only and changes no quantifier, hypothesis, or conclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_exns_wf",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsExnsWfHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.4.76; audit flapjack-4ac.6; panPropsScript.sml:1419): HOL relates a successful `evaluate_decls s ds = SOME s'` to the three exception-table well-formedness conjuncts (distinct exception ids, every id absent from the original eshapes, every exception shape well formed in the original structs); Lean preserves the conjunction, order, and HOL's use of `s'` by the success hypothesis, rendering `ALL_DISTINCT (MAP FST ...)` as `Nodup` of the projected id list, `FLOOKUP s.eshapes eid = NONE` as the evaluator's own Bool `... .isNone = true`, and `is_wf_shape s.structs` as the tagged isWfShapeExactHOL. The PanProps finite evaluator evaluateDeclsPanPropsHOLFinite is kernel-bridged to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite by evaluateDeclsPanPropsHOLFinite_toCanonical, which maps the complete Option result through the field-for-field state codec toPanSemFinite, so the invariant is about the canonical evaluator. The four |-> fields (locals, globals, code, eshapes) are the reviewed canonical HolFiniteMapExact translation recorded by the fmap_as_finite_support qualifier; the same-module canonical witness is holFmapAsFiniteSupportWitness. The qualifier is representation-only and changes no quantifier, hypothesis, or conclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_functions",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsFunctionsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.4.84; audit flapjack-4ac.6; panPropsScript.sml:1518): HOL `evaluate_decls s pan_code = SOME s'` implies `s'.code = s.code |++ functions pan_code`; the Lean statement preserves the `s pan_code s'` quantifier order, the successful-evaluation premise, and the code/functionsHOL/HolFiniteMapExact.updateList conclusion. The PanProps finite evaluator evaluateDeclsPanPropsHOLFinite is kernel-bridged to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite by evaluateDeclsPanPropsHOLFinite_toCanonical, which maps the complete Option result through the field-for-field state codec toPanSemFinite, so the invariant is about the canonical evaluator. The four |-> fields (locals, globals, code, eshapes) are the reviewed canonical HolFiniteMapExact translation recorded by the fmap_as_finite_support qualifier; the same-module canonical witness is holFmapAsFiniteSupportWitness. The qualifier is representation-only and changes no quantifier, hypothesis, or conclusion. This theorem duplicates the withdrawn PanSem-side tag evaluate_decls_functions (now a documented_mismatch in PanSem/StateExactFiniteMap.lean) and is its correct-PanProps relocation."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_only_exn_decls",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsOnlyExnDeclsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.4.77; audit flapjack-4ac.6; panPropsScript.sml:1436): HOL, under `EVERY is_exn_decl ds` and a successful `evaluate_decls s ds = SOME s'`, concludes that the whole state is unchanged except that the exception table becomes `s.eshapes |++ exceptions ds`; Lean preserves the `s ds s'` order, renders `EVERY is_exn_decl` as the Bool `program.all isExnDeclHOL = true`, keeps the successful-evaluation premise, and uses HOL's record update with exceptionsHOL. The PanProps finite evaluator evaluateDeclsPanPropsHOLFinite is kernel-bridged to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite by evaluateDeclsPanPropsHOLFinite_toCanonical, which maps the complete Option result through the field-for-field state codec toPanSemFinite, so the invariant is about the canonical evaluator. The four |-> fields (locals, globals, code, eshapes) are the reviewed canonical HolFiniteMapExact translation recorded by the fmap_as_finite_support qualifier; the same-module canonical witness is holFmapAsFiniteSupportWitness. The qualifier is representation-only and changes no quantifier, hypothesis, or conclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_only_funs_and_exn_decls",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsOnlyFunsAndExnDeclsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.4.88; audit flapjack-4ac.6; panPropsScript.sml:1561): HOL, under `EVERY (\\d. is_function d \\/ is_exn_decl d) ds` and a successful evaluation, concludes that only code and eshapes change, appending `functions ds` and `exceptions ds`; Lean preserves the `s ds s'` order, renders the disjunction as `program.all (fun d => isFunctionHOL d || isExnDeclHOL d) = true`, keeps the successful-evaluation premise, and uses HOL's two-field record update with `|++` on both maps. The PanProps finite evaluator evaluateDeclsPanPropsHOLFinite is kernel-bridged to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite by evaluateDeclsPanPropsHOLFinite_toCanonical, which maps the complete Option result through the field-for-field state codec toPanSemFinite, so the invariant is about the canonical evaluator. The four |-> fields (locals, globals, code, eshapes) are the reviewed canonical HolFiniteMapExact translation recorded by the fmap_as_finite_support qualifier; the same-module canonical witness is holFmapAsFiniteSupportWitness. The qualifier is representation-only and changes no quantifier, hypothesis, or conclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_only_functions",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsOnlyFunctionsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.4.85; audit flapjack-4ac.6; panPropsScript.sml:1528): HOL, under `EVERY is_function pan_code` and a successful evaluation, concludes that only code changes, appending the function entries; Lean preserves the `s pan_code s'` order, renders the premise as `program.all isFunctionHOL = true`, keeps the successful-evaluation premise, and uses HOL's record update with `|++`. The PanProps finite evaluator evaluateDeclsPanPropsHOLFinite is kernel-bridged to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite by evaluateDeclsPanPropsHOLFinite_toCanonical, which maps the complete Option result through the field-for-field state codec toPanSemFinite, so the invariant is about the canonical evaluator. The four |-> fields (locals, globals, code, eshapes) are the reviewed canonical HolFiniteMapExact translation recorded by the fmap_as_finite_support qualifier; the same-module canonical witness is holFmapAsFiniteSupportWitness. The qualifier is representation-only and changes no quantifier, hypothesis, or conclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "exns_wf_evaluate_decls",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "exnsWfEvaluateDeclsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.4.78; audit flapjack-4ac.6; panPropsScript.sml:1448): HOL's converse characterization: under `EVERY is_exn_decl ds` plus the three well-formedness conditions (distinct ids, ids absent from the table, well-formed shapes), evaluation succeeds and yields exactly the state with the exception table updated by `exceptions ds`. Lean preserves the `s ds s'` order and the three Bool premises using the same all/isNone/isWfShapeExactHOL vocabulary as evaluateDeclsExnsWfHOLFinite; because HOL's `s'` occurs in no hypothesis or conclusion, HOL type inference gives it a fresh independent type variable and Lean binds it fully polymorphically rather than at the narrowed state type. The PanProps finite evaluator evaluateDeclsPanPropsHOLFinite is kernel-bridged to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite by evaluateDeclsPanPropsHOLFinite_toCanonical, which maps the complete Option result through the field-for-field state codec toPanSemFinite, so the invariant is about the canonical evaluator. The four |-> fields (locals, globals, code, eshapes) are the reviewed canonical HolFiniteMapExact translation recorded by the fmap_as_finite_support qualifier; the same-module canonical witness is holFmapAsFiniteSupportWitness. The qualifier is representation-only and changes no quantifier, hypothesis, or conclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "write_bytearray_update_byte",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
     "lean_name": "writeBytearrayUpdateByte",

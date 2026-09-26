@@ -4588,8 +4588,9 @@ pan_code)`, `s.eshapes = FEMPTY`, requires `EVERY (λx. is_function x ∨
 is_exn_decl x) pan_code`, and concludes `semantics t start = semantics_decls s
 start pan_code` from `semantics_decls s start pan_code <> Fail`.
 `state_rel_imp_semantics_decls` (`pan_to_crepProofScript.sml:5042-5059`) is the
-same statement with `t.code = alist_to_fmap (compile_prog pan_code)` and an
-additional `s.eshapes = FEMPTY`. Both quantify over the same `mlstring`-keyed
+same statement except that `t.code = alist_to_fmap (compile_prog pan_code)`
+rather than `alist_to_fmap (compile_to_crep pan_code)`; both require
+`s.eshapes = FEMPTY`. Both quantify over the same `mlstring`-keyed
 `panSem$state`/`crepSem$state`, use the HOL `state_rel`, `semantics_decls`,
 `compile_to_crep`/`compile_prog` and `is_function`/`is_exn_decl`, none of which
 has a Lean counterpart; Flapjack's `stateRel` relates production String-keyed

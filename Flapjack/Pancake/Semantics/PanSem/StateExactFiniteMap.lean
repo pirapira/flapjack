@@ -663,6 +663,27 @@ def withState {width : Nat} {σ : Type} [NeZero width]
   cases context
   simp [FiniteEvalContext.withState]
 
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): forgetful projection of a finite
+    evaluation context to the exact (unrestricted-map) evaluation context, by
+    translating the state through `toExact` and reusing the two address-domain
+    deciders.  This is the context-level relation used to relate the finite
+    evaluator to `evalPanSemRecursiveCallContextHOLExact`. -/
+def toExact {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) : PanSemExactEvalContext width σ :=
+  { state := context.state.toExact
+    memaddrsDecidable := context.memaddrsDecidable
+    shMemaddrsDecidable := context.shMemaddrsDecidable }
+
+/-- `toExact` commutes with `withState`. -/
+@[simp] theorem toExact_withState {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (state : PanSemStateFiniteExact width σ)
+    (hmem : state.memaddrs = context.state.memaddrs)
+    (hshared : state.shMemaddrs = context.state.shMemaddrs) :
+    (withState context state hmem hshared).toExact =
+      context.toExact.withState state.toExact hmem hshared := by
+  cases context
+  rfl
+
 end FiniteEvalContext
 
 /-- The finite fix-clock never increases the clock. -/

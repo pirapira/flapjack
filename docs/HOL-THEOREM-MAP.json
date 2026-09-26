@@ -1818,8 +1818,8 @@
     "hol_name": "afindi_def",
     "lean_path": "Flapjack/Pancake/PanStructs.lean",
     "lean_name": "afindi",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-5ldn): clause-for-clause exact vs pan_structsScript.sml:25-34: nil -> none; matching head key -> some 0; otherwise recurse and add 1 to some index. Polymorphic over (alpha x beta) as in HOL; Lean DecidableEq alpha is HOL's computable equality. No extra hypotheses or side conditions."
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
@@ -9640,8 +9640,8 @@
     "hol_name": "addr_ok_def",
     "lean_path": "Flapjack/Compiler/Backend/StackProps.lean",
     "lean_name": "asmAddrOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-5ldn): clause-for-clause exact vs stackPropsScript.sml:801-808 over the faithful asm address carrier: reg_ok -> asmRegOk; op in {Load;Store;Load32;Store32} -> addr_offset_ok; op in {Load16;Store16} -> hw_offset_ok && ISA <> Ag32; else byte_offset_ok; HOL conjunction rendered as Lean &&. No extra hypotheses."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
@@ -9752,16 +9752,16 @@
     "hol_name": "every_var_imm_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarImm",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-5ldn): clause-for-clause exact vs wordLangScript.sml:93-96; HOL `every_var_imm P (Reg r) = P r` and `every_var_imm P _ = T` are Lean `everyVarImm P (.reg num) = P num` and `everyVarImm P _ = true` over the faithful WordRegImm (BitVec width) carrier (asm$reg_imm). Only OH Bool coincidence vs HOL T."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
     "hol_name": "every_var_inst_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-5ldn): clause-for-clause exact vs wordLangScript.sml:98-125 over the faithful WordLangInst (BitVec width) carrier (asm$inst): Const/Arith Binop/Shift/Div/AddCarry/AddOverflow/SubOverflow/LongMul/LongDiv/Mem Load/Store/Load32/Store32/Load8/Store8/FP FPLess/FPLessEqual/FPEqual/FPMovToReg/FPMovFromReg plus the catch-all, with dimindex(:'a)=64 rendered as width=64 and HOL conjunction/NF as Lean &&/!. No extra hypotheses."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -10560,8 +10560,8 @@
     "hol_name": "num_set",
     "lean_path": "Flapjack/Misc/Sptree.lean",
     "lean_name": "NumSet",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-5ldn): exact alias match: HOL `Type num_set = ``:unit spt``` (miscScript.sml:787) is Lean `abbrev NumSet := Spt Unit` over the exact spt datatype. No extra hypotheses."
   },
   {
     "hol_path": "cakeml/pancake/loopLangScript.sml",

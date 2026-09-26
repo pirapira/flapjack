@@ -80,6 +80,8 @@ import Flapjack.Pancake.Semantics.PanSem.StateDefsExact
 import Flapjack.Pancake.WordLang
 import Flapjack.Pancake.WordConvs
 import Flapjack.RiscV.CorrectnessEncoding
+import Flapjack.Compiler.Backend.StackProps
+import Flapjack.Pancake.PanStructs
 
 open Lean Elab Command Flapjack
 

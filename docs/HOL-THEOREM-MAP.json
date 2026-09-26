@@ -2297,11 +2297,35 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "inlinable_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "inlinableHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.47): HOL inlinable (cakeml/pancake/panLangScript.sml:389-391) is `inlinable (Function fi) = fi.inline` and `inlinable _ = F` over the declaration list. inlinableHOL matches clause-for-clause over the exact DeclHOL carrier, reading the same inline bit of the reviewed FunDeclHOL. The kernel-checked inlinable_declOfHOL and inlinable_map_declOfHOL (Flapjack/Pancake/PanLang/Decl.lean) relate it to production Flapjack.inlinable, the latter matching the executed optimizer's functions (FILTER inlinable prog) selection; direct routing is unavailable because production is polymorphic over generic Decl α with String identifiers. Direct HOL-EVAL rows inline_true=T, inline_false=F, non_function=F in scripts/hol-probes/pan_lang_inlinable_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangInlinableParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "varExpHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.38): HOL var_exp (cakeml/pancake/panLangScript.sml:253-276) collects the Local-variable names of an expression in order (Const/Var Global/BaseAddr/TopAddr/BytesInWord empty; Var Local singleton; RStruct/Op/Panop flatten over the list; NStruct flattens over the field values; RField/NField/Load/Load32/LoadByte recurse; Cmp/Shift concatenate), with termination over exp_size. varExpHOL matches clause-for-clause over the exact ExpHOL carrier with MlS names and MlS x ExpHOL nstruct fields, matching HOL's mlstring names, and termination_by sizeOf mirrors the HOL measure. Direct HOL-EVAL rows local_var/nested in scripts/hol-probes/pan_lang_var_exp_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangVarExpParity.lean. Production expLocalVars (String carrier) stays untagged. global_var_exp is tracked separately (flapjack-4ac.1.39)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape_val_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "shapeValHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.29): HOL shape_val (cakeml/pancake/panLangScript.sml:190-196) is the mutual shape_val/shape_vals pair: shape_val One = Const 0w, shape_val (Comb shapes) = RStruct (shape_vals shapes), shape_val (Named nm) = Const 0w, with shape_vals the list map. shapeValHOL/shapeValsHOL match clause-for-clause over the exact ShapeHOL/ExpHOL carriers, and shapeValsHOL_eq_map records that shape_vals is the list map. Direct HOL-EVAL rows one/comb/named in scripts/hol-probes/pan_lang_shape_val_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangExpHOLParity.lean. The kernel-checked expOfHOL_shapeValHOL (Flapjack/PanValues.lean) bridges to the executed production shapeVal through expOfHOL/shapeOfHOL; production shapeVal stays untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape_val_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "shapeValsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.29): this is the shape_vals list clause within the same HOL mutual definition shape_val_def (cakeml/pancake/panLangScript.sml:190-196), not a separate HOL declaration. shapeValsHOL matches [] = [] and shape :: shapes = shapeValHOL shape :: shapeValsHOL shapes over exact List ShapeHOL and List (ExpHOL width) carriers. Direct HOL-EVAL comb row in scripts/hol-probes/pan_lang_shape_val_probe.out exercises this clause. shapeValsHOL_eq_map is a Lean-only helper with no separate HOL theorem."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",

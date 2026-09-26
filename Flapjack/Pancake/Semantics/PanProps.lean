@@ -354,9 +354,8 @@ private theorem lookupFieldHOL_isWfShapeValuesHOLExact {width : Nat} [NeZero wid
     `evalHOLExact_isWfShapeValueHOLExact` helper remains broad-carrier proof
     support. The full recursive program evaluator still has an assembly marker
     over function-backed state and is not assembled over the finite-map
-    carrier. Inventory bead `flapjack-4ac.4.67` is closed
-    by this source-reviewed disposition; faithful theorem path bead
-    `flapjack-4ac.5.83` remains open. -/
+    carrier. Inventory bead `flapjack-4ac.4.67` is closed by source-review;
+    faithful theorem path bead `flapjack-4ac.5.83` remains open. -/
 
 /-- Untagged support: the exact value-level well-formedness predicate implies
     that the exact `shape_of` image is well-formed (`is_wf_shape_of_v`

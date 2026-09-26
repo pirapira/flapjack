@@ -670,6 +670,26 @@ def compileFlapjackEntryCake {width : Nat} [NeZero width]
       let word := pipelineWordFunctionsSource loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
 
+/-- The parser-proved exact-carrier route returns the same entire pipeline
+    result as the compatibility route. This composes the two reviewed pass
+    equalities at the entrypoint, so the optional proof changes which tagged
+    definitions execute, not the compiler output. -/
+theorem compileFlapjackEntryCake_ofExact_eq {width : Nat} [NeZero width]
+    [BEq (BitVec width)] [OfNat (BitVec width) 0]
+    [OfNat (BitVec width) 1] [Add (BitVec width)] [Mul (BitVec width)]
+    [AndOp (BitVec width)] [ShiftRight (BitVec width)]
+    [PanShiftWidth (BitVec width)]
+    (architecture : RiscV.Architecture) (bytesInWord : BitVec width)
+    (fromNat : Nat → BitVec width) (start : FunName)
+    (declarations : List (Decl (BitVec width)))
+    (h : ∀ declaration ∈ declarations, DeclByteRanged declaration) :
+    compileFlapjackEntryCake architecture bytesInWord fromNat start declarations
+        (some (.isTrue h)) =
+      compileFlapjackEntryCake architecture bytesInWord fromNat start declarations none := by
+  unfold compileFlapjackEntryCake
+  simp only [globalCompileTopCakeOfExact_eq,
+    compileProgTopHOLWithMetadataOfExact_eq]
+
 /-! Executable mirror of the missing-`main` branch of `pan_to_target_all`
     (`cakeml/pancake/pan_passesScript.sml:20-37`): when the program has no
     `main` declaration the original synthesizes `main = «return 0»` and

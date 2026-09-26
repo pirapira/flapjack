@@ -869,6 +869,43 @@ theorem evalPanSemRecursiveCallFiniteContext_dec_projection {width : Nat} {σ : 
               FiniteEvalContext.withState_state, toExact_resVarEq_locals]
       · rw [if_neg hshape, if_neg hshape]; rfl
 
+/-- The `If` clause recurses on the same context, so its projection follows
+    directly from the two branch IHs.  Flapjack-specific. -/
+theorem evalPanSemRecursiveCallFiniteContext_ite_projection {width : Nat} {σ : Type}
+    [NeZero width] (condition : ExpHOL width) (thenBranch elseBranch : ProgHOL width)
+    (context : FiniteEvalContext width σ)
+    (ihThen : ∀ (o : Option (Option (PanSemResultExact width) × FiniteEvalContext width σ)),
+        evalPanSemRecursiveCallFiniteContext thenBranch context = o →
+        evalPanSemRecursiveCallContextHOLExact thenBranch context.toExact =
+          Option.map (fun p => (p.1, p.2.toExact)) o)
+    (ihElse : ∀ (o : Option (Option (PanSemResultExact width) × FiniteEvalContext width σ)),
+        evalPanSemRecursiveCallFiniteContext elseBranch context = o →
+        evalPanSemRecursiveCallContextHOLExact elseBranch context.toExact =
+          Option.map (fun p => (p.1, p.2.toExact)) o) :
+    Option.map (fun p => (p.1, p.2.toExact))
+        (evalPanSemRecursiveCallFiniteContext (.ite condition thenBranch elseBranch) context) =
+      evalPanSemRecursiveCallContextHOLExact (.ite condition thenBranch elseBranch) context.toExact := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_3, evalPanSemRecursiveCallContextHOLExact.eq_3]
+  rw [evalHOLFinite_eq_toExact context.state (h := context.memaddrsDecidable) condition]
+  rw [evalHOLExact_toExact_eq context condition]
+  generalize hcond : @Flapjack.evalHOLExact width σ _ context.state.toExact
+      context.memaddrsDecidable condition = result
+  cases result with
+  | none => rfl
+  | some v =>
+      cases v with
+      | val wordLab =>
+          cases wordLab with
+          | word value =>
+              simp only []
+              by_cases hz : (value != 0) = true
+              · rw [if_pos hz, if_pos hz]
+                exact (ihThen (evalPanSemRecursiveCallFiniteContext thenBranch context) rfl).symm
+              · rw [if_neg hz, if_neg hz]
+                exact (ihElse (evalPanSemRecursiveCallFiniteContext elseBranch context) rfl).symm
+      | rStruct fields => rfl
+      | nStruct name fields => rfl
+
 end PanSemStateFiniteExact
 
 end Flapjack

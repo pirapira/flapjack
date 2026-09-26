@@ -21,6 +21,15 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS ExpHOL ProgHOL ShapeHOL)
 
+/-- The `.state` projection of a context rebuilt by `withState` is the supplied
+    state: this is definitional, and lets the recursive preservation proof
+    normalize the `withState` wrappers introduced by `fun_induction`. -/
+theorem PanSemExactEvalContext.withState_state {width : Nat} {σ : Type} [NeZero width]
+    (context : PanSemExactEvalContext width σ) (state : PanSemStateExact width σ)
+    (hmem : state.memaddrs = context.state.memaddrs)
+    (hshared : state.shMemaddrs = context.state.shMemaddrs) :
+    (context.withState state hmem hshared).state = state := rfl
+
 /-- The state-update primitives used by the clause steps preserve finite support. -/
 macro "finiteSupport_simp" : tactic =>
   `(tactic|

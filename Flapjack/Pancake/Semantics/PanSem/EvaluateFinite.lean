@@ -823,6 +823,52 @@ theorem evalHOLExact_toExact_eq {width : Nat} {σ : Type} [NeZero width]
         expression :=
   rfl
 
+/-- Projection-equivalence for the finite `Dec` clause against the broad exact
+    evaluator, given the projection hypothesis for the recursive body.  Untagged
+    Flapjack-specific support for the `evaluate_def` port. -/
+theorem evalPanSemRecursiveCallFiniteContext_dec_projection {width : Nat} {σ : Type}
+    [NeZero width] (name : MlS) (shape : ShapeHOL) (initializer : ExpHOL width)
+    (body : ProgHOL width) (context : FiniteEvalContext width σ)
+    (ihBody : ∀ (bc : FiniteEvalContext width σ)
+        (o : Option (Option (PanSemResultExact width) × FiniteEvalContext width σ)),
+        evalPanSemRecursiveCallFiniteContext body bc = o →
+        evalPanSemRecursiveCallContextHOLExact body bc.toExact =
+          Option.map (fun p => (p.1, p.2.toExact)) o) :
+    Option.map (fun p => (p.1, p.2.toExact))
+        (evalPanSemRecursiveCallFiniteContext (.dec name shape initializer body) context) =
+      evalPanSemRecursiveCallContextHOLExact (.dec name shape initializer body) context.toExact := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_1, evalPanSemRecursiveCallContextHOLExact.eq_1]
+  rw [evalHOLFinite_eq_toExact context.state (h := context.memaddrsDecidable) initializer]
+  rw [evalHOLExact_toExact_eq context initializer]
+  generalize hval : @Flapjack.evalHOLExact width σ _ context.state.toExact
+      context.memaddrsDecidable initializer = result
+  cases result with
+  | none => rfl
+  | some value =>
+      simp only []
+      by_cases hshape : shapeEqHOL shape (shapeOfHOLExact value) = true
+      · rw [if_pos hshape, if_pos hshape]
+        generalize hbc : context.withState (setVarHOLFinite name value context.state) rfl rfl = bc
+        generalize hbcb : context.toExact.withState
+            (setVarHOLExact name value context.toExact.state) rfl rfl = bbc
+        have hbbc : bbc = bc.toExact := by
+          rw [← hbcb, ← hbc]
+          apply PanSemExactEvalContext.ext
+          change setVarHOLExact name value context.state.toExact =
+            (setVarHOLFinite name value context.state).toExact
+          rw [toExact_setVarHOLFinite]
+        cases hbody : evalPanSemRecursiveCallFiniteContext body bc with
+        | none => rw [hbbc, ihBody bc none hbody]; simp only [Option.map_none]
+        | some pair =>
+            obtain ⟨result, postContext⟩ := pair
+            rw [hbbc, ihBody bc (some (result, postContext)) hbody]
+            simp only [Option.map_some, Option.some.injEq]
+            refine congrArg (fun c => (result, c)) ?_
+            apply PanSemExactEvalContext.ext
+            simp only [FiniteEvalContext.toExact, PanSemExactEvalContext.withState_state,
+              FiniteEvalContext.withState_state, toExact_resVarEq_locals]
+      · rw [if_neg hshape, if_neg hshape]; rfl
+
 end PanSemStateFiniteExact
 
 end Flapjack

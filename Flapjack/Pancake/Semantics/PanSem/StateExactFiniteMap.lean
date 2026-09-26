@@ -55,6 +55,7 @@
 
 import Flapjack.Pancake.Semantics.PanSem.StateExactFinite
 import Flapjack.Pancake.Semantics.PanSem.EvalExact
+import Flapjack.Pancake.Semantics.PanSem.FiniteSupportStep
 
 namespace Flapjack
 

@@ -1,5 +1,6 @@
 import Flapjack.Pancake.PanLang
 import Flapjack.Parser.Grammar
+import Flapjack.Pancake.PanLang.Exp
 
 /-!
 Parse tree to Flapjack AST.
@@ -333,7 +334,10 @@ def convShifts (ofInt : Int → α) : Nat → List ParseTree → Exp α → Opti
 
 end
 
-/-- `panLang$shape_val`: the zero value of a shape. -/
+/-- Generic recursive shape-value helper retained for parser invariants and
+compatibility. The executed `add_with_carry` conversion below calls the exact
+HOL-shaped `shapeValHOL` bridge directly. This helper has no exact HOL port:
+it accepts arbitrary word type `α` and the production String-backed `Shape`. -/
 def shapeVal (ofInt : Int → α) : Shape → Exp α
   | .one => .const (ofInt 0)
   | .named _ => .const (ofInt 0)
@@ -342,6 +346,46 @@ where
   shapeVals (ofInt : Int → α) : List Shape → List (Exp α)
     | [] => []
     | shape :: shapes => shapeVal ofInt shape :: shapeVals ofInt shapes
+
+mutual
+  /-- The generic helper agrees with the result transported from exact
+  `shapeValHOL`; used to discharge existing parser representation proofs. -/
+  theorem shapeValViaHOL_eq_shapeVal (ofInt : Int → α) :
+      (shape : Shape) →
+        Flapjack.Pancake.PanLang.shapeValViaHOL ofInt shape = shapeVal ofInt shape
+    | .one => by
+        simp [Flapjack.Pancake.PanLang.shapeValViaHOL,
+          Flapjack.Pancake.PanLang.shapeToHOL,
+          Flapjack.Pancake.PanLang.shapeValHOL,
+          Flapjack.Pancake.PanLang.decodeShapeValHOL, shapeVal]
+    | .named _ => by
+        simp [Flapjack.Pancake.PanLang.shapeValViaHOL,
+          Flapjack.Pancake.PanLang.shapeToHOL,
+          Flapjack.Pancake.PanLang.shapeValHOL,
+          Flapjack.Pancake.PanLang.decodeShapeValHOL, shapeVal]
+    | .comb shapes => by
+        simp only [Flapjack.Pancake.PanLang.shapeValViaHOL,
+          Flapjack.Pancake.PanLang.shapeToHOL,
+          Flapjack.Pancake.PanLang.shapeValHOL,
+          Flapjack.Pancake.PanLang.decodeShapeValHOL,
+          shapeVal, Exp.rStruct.injEq]
+        exact shapeValsViaHOL_eq_shapeVals ofInt shapes
+
+  theorem shapeValsViaHOL_eq_shapeVals (ofInt : Int → α) :
+      (shapes : List Shape) →
+        (Flapjack.Pancake.PanLang.shapeValsHOL
+          (shapes.map Flapjack.Pancake.PanLang.shapeToHOL) :
+            List (Flapjack.Pancake.PanLang.ExpHOL 1)).map
+            (Flapjack.Pancake.PanLang.decodeShapeValHOL ofInt) =
+          shapeVal.shapeVals ofInt shapes
+    | [] => by simp [shapeVal.shapeVals]
+    | shape :: shapes => by
+        simp only [Flapjack.Pancake.PanLang.shapeValsHOL, List.map_cons,
+          shapeVal.shapeVals]
+        congr 1
+        · exact shapeValViaHOL_eq_shapeVal ofInt shape
+        · exact shapeValsViaHOL_eq_shapeVals ofInt shapes
+end
 
 /-- `is_add_with_carry`. -/
 def addWithCarryName : String := "__add_with_carry__"
@@ -515,7 +559,8 @@ def convProg (ofInt : Int → α) (locations : Bool) : Nat → ParseTree → Opt
               let body ← convProg ofInt locations fuel bodyTree
               if function == addWithCarryName then
                 pure (addLocsAnnot locations tree
-                  (.dec name shape (shapeVal ofInt shape)
+                  (.dec name shape
+                    (Flapjack.Pancake.PanLang.shapeValViaHOL ofInt shape)
                     (.seq (.primitive name .addCarry args) body)))
               else
                 pure (addLocsAnnot locations tree (.decCall name shape function args body))

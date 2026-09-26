@@ -523,10 +523,12 @@ def panValueShape (context : StructContext) : PanValue α → Shape
 termination_by value => sizeOf value
 
 mutual
-  /-- Counterpart of Cake's `shape_val` (`cakeml/pancake/panLangScript.sml:190`):
-      the canonical zero-valued expression of a shape.  A scalar and a named
-      shape both evaluate to the zero word; a combination evaluates to a record
-      of the component expressions. -/
+  /-- Flapjack-only generic helper for the canonical zero-valued expression of
+      a production shape. It is not tagged as HOL `shape_val`: its expression
+      carrier accepts arbitrary `α`, whereas HOL's `Const` is indexed by a
+      fixed word width. The production parser's add-with-carry initializer now
+      calls the exact `shapeValHOL` through `shapeValViaHOL`; this helper stays
+      for evaluator proofs and the checked bridge below. -/
   def shapeVal [OfNat α 0] : Shape → Exp α
     | .one => .const 0
     | .comb shapes => .rStruct (shapeVals shapes)
@@ -535,7 +537,8 @@ mutual
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-  /-- Counterpart of Cake's `shape_vals` (`cakeml/pancake/panLangScript.sml:194`). -/
+  /-- Flapjack-only generic list helper; HOL declares no separate theorem or
+      definition named `shape_vals` beyond the mutual `shape_val_def`. -/
   def shapeVals [OfNat α 0] : List Shape → List (Exp α)
     | [] => []
     | shape :: shapes => shapeVal shape :: shapeVals shapes
@@ -544,18 +547,19 @@ mutual
     all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
-/-- `shape_vals` is the list map of `shape_val`. -/
+/-- Flapjack-specific equation: the generic list helper is a map. HOL's
+`shape_val_def` defines this behavior recursively and has no separate map
+theorem. -/
 theorem shapeVals_eq_map {α : Type} [OfNat α 0] (shapes : List Shape) :
     shapeVals (α := α) shapes = shapes.map shapeVal := by
   induction shapes with
   | nil => simp [shapeVals]
   | cons shape shapes ih => simp [shapeVals, ih]
 
-/-- The exact `panLang$shape_val` port agrees with Flapjack's production
-`shapeVal` through the reviewed shape/expression codecs.  This is the checked
-bridge between `Flapjack.Pancake.PanLang.shapeValHOL`
-(`@[hol panLangScript.sml shape_val_def]`) and the executed `shapeVal`
-(bead `flapjack-4ac.1.29`). -/
+/-- The exact `panLang$shape_val` result, decoded through the reviewed
+shape/expression codecs, agrees with the generic evaluator helper. This is a
+Flapjack-specific bridge: the generic helper's carrier is not itself the HOL
+definition, while parser execution uses `shapeValViaHOL`. -/
 theorem expOfHOL_shapeValHOL {width : Nat} [NeZero width] :
     (shape : Flapjack.Pancake.PanLang.ShapeHOL) →
       Flapjack.Pancake.PanLang.expOfHOL

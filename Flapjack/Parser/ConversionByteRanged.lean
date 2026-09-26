@@ -1751,7 +1751,8 @@ theorem convProg_convProgSeq_byteRanged {width : Nat} (ofInt : Int → BitVec wi
                         apply addLocsAnnot_byteRanged
                         refine ⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using hname,
                           hshape, ?_, ?_⟩
-                        · exact shapeVal_byteRanged ofInt shape hshape
+                        · simpa [shapeValViaHOL_eq_shapeVal] using
+                            shapeVal_byteRanged ofInt shape hshape
                         · exact ⟨⟨by simpa [NameRanged, StringByteRanged, CharsByteRanged] using hname,
                             hargs⟩, ihP b (ht' b (by simp)) body hb⟩
                       · simp [hd, hb, hf] at h

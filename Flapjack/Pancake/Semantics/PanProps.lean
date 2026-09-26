@@ -45,8 +45,12 @@ choice; it gives no translation of HOL's unconstrained selection on
 non-chains. This is a carrier/choice mismatch in the definition's behavior,
 not merely a missing proof premise. No `@[hol]` tag is appropriate until a
 reviewed Lean representation of the generic lazy-list LUB and its HOL choice
-boundary is available. The exact prerequisite and dependent wrapper port are
-tracked by `flapjack-4ac.4.105.2` and `flapjack-4ac.4.105.1`. -/
+boundary is available. The current `LoopLList := Nat → Option α` observation
+carrier also admits holes, whereas HOL `llist` values are prefix-shaped; the
+repository has no reviewed qualifier/witness for translating HOL `llist` to
+this carrier. Both the choice boundary and carrier translation are tracked by
+`flapjack-4ac.4.105.2`; the dependent wrapper port is
+`flapjack-4ac.4.105.1`. -/
 
 /-! Source review for HOL `semantics_wrapper_eq`
 (`panPropsScript.sml:1831-1929`): the theorem is generic in arbitrary abstract

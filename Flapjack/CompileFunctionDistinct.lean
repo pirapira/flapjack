@@ -165,7 +165,7 @@ theorem compileFunctionsSource_params_nodup
           intro function hfunction
           simp only [compileFunctionsSource, List.mem_cons] at hfunction
           rcases hfunction with rfl | hfunction
-          · simp [compileFunDeclSource, panToCrepVars, List.nodup_range]
+          · simp [compileFunDeclSource, panToCrepVars_eq, List.nodup_range]
           · exact ih function hfunction
       | decl shape name value =>
           simpa [compileFunctionsSource] using ih

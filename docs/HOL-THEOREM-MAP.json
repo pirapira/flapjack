@@ -2350,6 +2350,14 @@
     "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.29): this is the shape_vals list clause within the same HOL mutual definition shape_val_def (cakeml/pancake/panLangScript.sml:190-196), not a separate HOL declaration. shapeValsHOL matches [] = [] and shape :: shapes = shapeValHOL shape :: shapeValsHOL shapes over exact List ShapeHOL and List (ExpHOL width) carriers. Direct HOL-EVAL comb row in scripts/hol-probes/pan_lang_shape_val_probe.out exercises this clause. shapeValsHOL_eq_map is a Lean-only helper with no separate HOL theorem."
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "crep_vars_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "crepVarsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.2.18): HOL crep_vars_def (cakeml/pancake/pan_to_crepScript.sml:376-381) is `crep_vars params = let shapes = MAP SND params; len = size_of_shape (Comb shapes) in GENLIST I len`, polymorphic in the first component of each parameter pair. crepVarsHOL {α} params = List.range (sizeOfShapeHOL (.comb (params.map Prod.snd))) matches clause-for-clause: MAP SND -> List.map Prod.snd, Comb -> .comb, size_of_shape -> the tagged exact sizeOfShapeHOL, GENLIST I len -> List.range len (List.range n = [0,1,...,n-1]). The parameter name component is never inspected, so no names_as_string qualifier applies. Production panToCrepVars is routed through crepVarsHOL (compileFunDeclSource/compileToCrepHOL), so the executed compiler uses the reviewed definition. Direct HOL-EVAL rows crep_vars_empty/crep_vars_nested in scripts/hol-probes/compile_to_crep_probe.out are replayed by crepVarsOracle in Flapjack/Test/CompileToCrepeParity.lean."
+  },
+  {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "load_op_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",

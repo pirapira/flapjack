@@ -310,10 +310,11 @@ def updCrepHolLocals (varargs : List (Nat × PanWordLab α))
     state-carrier gap. The source-shaped `CrepSemHOLState` now has finite
     support, and its `upd_locals` helper plus kernel-checked bridge to this
     executable state live in `CrepSem/HOLState.lean`
-    (`CrepSemHOLState.updLocals`, `toBitVecEvaluatorState_updLocals`); they stay
-    untagged there because the word index is the positive `BitVec width`
-    representation rather than an arbitrary HOL `finite_index`. The tag withdrawn by
-    `flapjack-pxn.18.3.7.1.3.1.1.3` therefore remains withheld here. -/
+    (`CrepSemHOLState.updLocals`, `toBitVecEvaluatorState_updLocals`). The former
+    is tagged over the reviewed positive-width `BitVec width` word carrier and
+    finite-map translation; this broader raw-function variant remains untagged.
+    The tag withdrawn by `flapjack-pxn.18.3.7.1.3.1.1.3` therefore remains
+    withheld here. -/
 def updCrepHolLocalsW {width : Nat} [NeZero width] {σ : Type}
     (varargs : List (Nat × PanWordLab (BitVec width)))
     (state : CrepHolState (BitVec width) σ) : CrepHolState (BitVec width) σ :=

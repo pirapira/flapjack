@@ -71,7 +71,10 @@ end PanToCrepVarsExact
     clause-for-clause over the reviewed finite-map translation. The statement is
     tagged with the `fmap_as_finite_support` qualifier because `vars` is a field
     of the same-module carrier `PanToCrepVarsExact` typed by
-    `HolFiniteMapExact`, with the canonical witness above. -/
+    `HolFiniteMapExact`, with the canonical witness above. HOL takes the bare
+    finite map `fm`; Lean wraps that map in the one-field `PanToCrepVarsExact`
+    solely to attach the qualifier to a named field. Projection through `vars`
+    is an isomorphism and adds no condition or behavior to `exp_hdl`. -/
 @[hol "cakeml/pancake/pan_to_crepScript.sml" "exp_hdl_def"
   (fmap_as_finite_support := [vars])]
 def expHdlExact {width : Nat} [NeZero width] (context : PanToCrepVarsExact)

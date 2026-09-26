@@ -14,6 +14,17 @@ successful `Return` or `FinalFFI` witness, and otherwise returns the
 The prefix-LUB relation is shared with the already source-shaped loop
 semantics port; the aliases below keep the Pancake boundary source-named
 without introducing a second divergent LUB proof.
+
+-- FLAPJACK-SPECIFIC (not an exact port of HOL `panSem$semantics_def` or
+-- `panSem$semantics_decls_def`): `panSemantics` takes an arbitrary evaluator
+-- hook and a caller-provided proof of the event-prefix chain, whereas HOL
+-- quantifies the source state and start name, runs its total `evaluate` at
+-- every clock, and constructs the divergence LUB from those executions.
+-- `semantics_decls` additionally composes the fresh `decs_stcnames` context,
+-- `evaluate_decls`, and that exact source semantics. The individual exact
+-- finite-map declaration helpers exist, but this faithful composition waits
+-- on the total finite-map evaluator and event-chain proof tracked by
+-- `flapjack-pxn.18.4.3.77.17` (blocked by `.77.2`).
 -/
 
 namespace Flapjack

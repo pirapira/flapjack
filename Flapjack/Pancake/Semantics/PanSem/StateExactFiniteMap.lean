@@ -600,6 +600,263 @@ def withState {width : Nat} {σ : Type} [NeZero width]
 
 end FiniteEvalContext
 
+/-- The finite fix-clock never increases the clock. -/
+theorem fixClockHOLFinite_clock_le {width : Nat} {σ : Type} [NeZero width] {β : Type}
+    (oldState : PanSemStateFiniteExact width σ)
+    (step : β × PanSemStateFiniteExact width σ) :
+    (fixClockHOLFinite oldState step).2.clock ≤ oldState.clock := by
+  change (if oldState.clock < step.2.clock then oldState.clock else step.2.clock) ≤
+    oldState.clock
+  split <;> omega
+
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): clause-for-clause finite-support
+    rendering of the exact recursive program evaluator
+    `evalPanSemRecursiveCallContextHOLExact`, returning a `FiniteEvalContext`
+    so that the `memaddrs`/`shMemaddrs` deciders are threaded through recursive
+    calls on updated finite states.  This is the prerequisite for the tagged
+    `evaluate_def` port (bead `flapjack-6yq`). -/
+def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width] :
+    ProgHOL width → FiniteEvalContext width σ →
+      Option (Option (PanSemResultExact width) × FiniteEvalContext width σ)
+  | program, context => by
+      let state := context.state
+      letI : DecidablePred state.memaddrs := context.memaddrsDecidable
+      letI : DecidablePred state.shMemaddrs := context.shMemaddrsDecidable
+      exact match program with
+      | .dec name shape initializer body =>
+          match evalHOLFinite state initializer with
+          | none => some (some .error, context)
+          | some value =>
+              if shapeEqHOL shape (shapeOfHOLExact value) then
+                let bodyState := setVarHOLFinite name value state
+                let bodyContext := context.withState bodyState rfl rfl
+                match evalPanSemRecursiveCallFiniteContext body bodyContext with
+                | none => none
+                | some (result, postContext) =>
+                    let restored := { postContext.state with
+                      locals := HolFiniteMapExact.resVarEq postContext.state.locals
+                        (name, state.locals.lookup name) }
+                    some (result, postContext.withState restored rfl rfl)
+              else some (some .error, context)
+      | .seq first second =>
+          match evalPanSemRecursiveCallFiniteContext first context with
+          | none => none
+          | some (firstResult, firstContext) =>
+              let fixed := fixClockHOLFinite state (firstResult, firstContext.state)
+              let fixedContext := firstContext.withState fixed.2 rfl rfl
+              match firstResult with
+              | none => evalPanSemRecursiveCallFiniteContext second fixedContext
+              | some _ => some (firstResult, fixedContext)
+      | .ite condition thenBranch elseBranch =>
+          match evalHOLFinite state condition with
+          | some (.val (.word value)) =>
+              if value != 0 then
+                evalPanSemRecursiveCallFiniteContext thenBranch context
+              else
+                evalPanSemRecursiveCallFiniteContext elseBranch context
+          | _ => some (some .error, context)
+      | .while condition body =>
+          match evalHOLFinite state condition with
+          | some (.val (.word word)) =>
+              if word ≠ 0 then
+                if state.clock = 0 then
+                  some (some .timeOut,
+                    context.withState (emptyLocalsHOLFinite state) rfl rfl)
+                else
+                  let entry := decClockHOLFinite state
+                  let entryContext := context.withState entry rfl rfl
+                  match evalPanSemRecursiveCallFiniteContext body entryContext with
+                  | none => none
+                  | some (bodyResult, bodyContext) =>
+                      let fixed := fixClockHOLFinite entry (bodyResult, bodyContext.state)
+                      let fixedContext := bodyContext.withState fixed.2 rfl rfl
+                      match bodyResult with
+                      | some .continue | none =>
+                          evalPanSemRecursiveCallFiniteContext
+                            (.while condition body) fixedContext
+                      | some .break => some (none, fixedContext)
+                      | _ => some (bodyResult, fixedContext)
+              else some (none, context)
+          | _ => some (some .error, context)
+      | .call info function arguments =>
+          match evalListHOLFinite state arguments with
+          | none => some (some .error, context)
+          | some values =>
+              match hlookup : lookupCodeHOLExact state.code.lookup function values with
+              | none => some (some .error, context)
+              | some (body, calleeLocals, returnShape) =>
+                  if state.clock = 0 then
+                    some (some .timeOut,
+                      context.withState (emptyLocalsHOLFinite state) rfl rfl)
+                  else
+                    let callee : HolFiniteMapExact MlS (ValueHOL width) :=
+                      { lookup := calleeLocals, finiteSupport := lookupCodeHOLExact_calleeLocals_finiteSupport state.code.lookup function values body calleeLocals returnShape hlookup }
+                    let entry : PanSemStateFiniteExact width σ := { state with clock := state.clock - 1, locals := callee }
+                    let entryContext := context.withState entry rfl rfl
+                    match evalPanSemRecursiveCallFiniteContext body entryContext with
+                    | none => none
+                    | some (bodyResult, bodyContext) =>
+                        let fixed := fixClockHOLFinite entry (bodyResult, bodyContext.state)
+                        let fixedContext := bodyContext.withState fixed.2 rfl rfl
+                        match bodyResult with
+                        | none => some (some .error, fixedContext)
+                        | some .break => some (some .error, fixedContext)
+                        | some .continue => some (some .error, fixedContext)
+                        | some (.returned value) =>
+                            if shapeEqHOL (shapeOfHOLExact value) returnShape then
+                              match info with
+                              | none =>
+                                  some (some (.returned value),
+                                    fixedContext.withState
+                                      (emptyLocalsHOLFinite fixedContext.state) rfl rfl)
+                              | some (none, _) =>
+                                  some (none, fixedContext.withState
+                                    { fixedContext.state with locals := state.locals } rfl rfl)
+                              | some (some (kind, name), _) =>
+                                  if isValidValueHOLExact state.toExact kind name value then
+                                    some (none, fixedContext.withState
+                                      (setKvarHOLFinite kind name value
+                                        { fixedContext.state with locals := state.locals })
+                                      (by cases kind <;> rfl) (by cases kind <;> rfl))
+                                  else some (some .error, fixedContext)
+                            else some (some .error, fixedContext)
+                        | some (.exception exceptionId value) =>
+                            match info with
+                            | none =>
+                                some (some (.exception exceptionId value),
+                                  fixedContext.withState
+                                    (emptyLocalsHOLFinite fixedContext.state) rfl rfl)
+                            | some (_, none) =>
+                                some (some (.exception exceptionId value),
+                                  fixedContext.withState
+                                    (emptyLocalsHOLFinite fixedContext.state) rfl rfl)
+                            | some (_, some (handlerId, handlerVar, handlerProgram)) =>
+                                if exceptionId = handlerId then
+                                  match state.eshapes.lookup exceptionId with
+                                  | some shape =>
+                                      if shapeEqHOL (shapeOfHOLExact value) shape &&
+                                          isValidValueHOLExact state.toExact .local handlerVar value then
+                                        let handlerState := setVarHOLFinite handlerVar value
+                                          { fixedContext.state with locals := state.locals }
+                                        let handlerContext := fixedContext.withState
+                                          handlerState rfl rfl
+                                        evalPanSemRecursiveCallFiniteContext handlerProgram
+                                          handlerContext
+                                      else some (some .error, fixedContext)
+                                  | none => some (some .error, fixedContext)
+                                else
+                                  some (some (.exception exceptionId value),
+                                    fixedContext.withState
+                                      (emptyLocalsHOLFinite fixedContext.state) rfl rfl)
+                        | some other =>
+                            some (some other, fixedContext.withState
+                              (emptyLocalsHOLFinite fixedContext.state) rfl rfl)
+      | .decCall resultName shape function arguments continuation =>
+          match evalListHOLFinite state arguments with
+          | none => some (some .error, context)
+          | some values =>
+              match hlookup : lookupCodeHOLExact state.code.lookup function values with
+              | none => some (some .error, context)
+              | some (body, calleeLocals, returnShape) =>
+                  if state.clock = 0 then
+                    some (some .timeOut,
+                      context.withState (emptyLocalsHOLFinite state) rfl rfl)
+                  else
+                    let callee : HolFiniteMapExact MlS (ValueHOL width) :=
+                      { lookup := calleeLocals, finiteSupport := lookupCodeHOLExact_calleeLocals_finiteSupport state.code.lookup function values body calleeLocals returnShape hlookup }
+                    let entry : PanSemStateFiniteExact width σ := { state with clock := state.clock - 1, locals := callee }
+                    let entryContext := context.withState entry rfl rfl
+                    match evalPanSemRecursiveCallFiniteContext body entryContext with
+                    | none => none
+                    | some (bodyResult, bodyContext) =>
+                        let fixed := fixClockHOLFinite entry (bodyResult, bodyContext.state)
+                        let fixedContext := bodyContext.withState fixed.2 rfl rfl
+                        match bodyResult with
+                        | none => some (some .error, fixedContext)
+                        | some .break => some (some .error, fixedContext)
+                        | some .continue => some (some .error, fixedContext)
+                        | some (.returned value) =>
+                            if shapeEqHOL (shapeOfHOLExact value) shape &&
+                                shapeEqHOL (shapeOfHOLExact value) returnShape then
+                              let continuationState := setVarHOLFinite resultName value
+                                { fixedContext.state with locals := state.locals }
+                              let continuationContext := fixedContext.withState
+                                continuationState rfl rfl
+                              match evalPanSemRecursiveCallFiniteContext continuation
+                                  continuationContext with
+                              | none => none
+                              | some (continuationResult, continuationPost) =>
+                                  let restored := { continuationPost.state with
+                                    locals := HolFiniteMapExact.resVarEq
+                                      continuationPost.state.locals
+                                      (resultName, state.locals.lookup resultName) }
+                                  some (continuationResult,
+                                    continuationPost.withState restored rfl rfl)
+                            else some (some .error, fixedContext)
+                        | some other =>
+                            some (some other, fixedContext.withState
+                              (emptyLocalsHOLFinite fixedContext.state) rfl rfl)
+      | other =>
+          match hres : evalPanSemNonrecursiveHOLFinite state other with
+          | none => none
+          | some pair =>
+              some (pair.1, context.withState pair.2
+                (evalPanSemNonrecursiveHOLFinite_memaddrs state other pair hres)
+                (evalPanSemNonrecursiveHOLFinite_shMemaddrs state other pair hres))
+termination_by _program context => (context.state.clock, sizeOf _program)
+decreasing_by
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
+  · simp only [FiniteEvalContext.withState]
+    by_cases hlt : fixed.2.clock < state.clock
+    · apply Prod.Lex.left
+      exact hlt
+    · have hle : fixed.2.clock ≤ state.clock :=
+        fixClockHOLFinite_clock_le state (firstResult, firstContext.state)
+      have heq : fixed.2.clock = state.clock := by omega
+      rw [heq]
+      apply Prod.Lex.right
+      simp_wf
+      omega
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
+  · simp_wf
+    apply Prod.Lex.right
+    simp_wf
+    omega
+  · simp only [FiniteEvalContext.withState]
+    apply Prod.Lex.left
+    exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)
+  · simp only [FiniteEvalContext.withState]
+    apply Prod.Lex.left
+    exact Nat.lt_of_le_of_lt
+      (fixClockHOLFinite_clock_le entry (bodyResult, bodyContext.state))
+      (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
+  · simp only [FiniteEvalContext.withState]
+    apply Prod.Lex.left
+    exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)
+  · simp only [FiniteEvalContext.withState, setVarHOLFinite]
+    apply Prod.Lex.left
+    exact Nat.lt_of_le_of_lt
+      (fixClockHOLFinite_clock_le entry (bodyResult, bodyContext.state))
+      (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
+  · simp only [FiniteEvalContext.withState]
+    apply Prod.Lex.left
+    exact Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide)
+  · simp only [FiniteEvalContext.withState, setVarHOLFinite]
+    apply Prod.Lex.left
+    exact Nat.lt_of_le_of_lt
+      (fixClockHOLFinite_clock_le entry (bodyResult, bodyContext.state))
+      (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
+
 end PanSemStateFiniteExact
 
 end Flapjack

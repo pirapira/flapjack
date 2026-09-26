@@ -693,6 +693,22 @@ def toExact {width : Nat} {σ : Type} [NeZero width]
   cases context
   rfl
 
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): a finite evaluation context is
+    determined by its state; the two `DecidablePred` fields are proof-irrelevant
+    for the respective (transported) predicates.  Used to compare contexts built
+    by different `withState` call sites without unfolding their proof terms. -/
+theorem ext {width : Nat} {σ : Type} [NeZero width]
+    {c1 c2 : FiniteEvalContext width σ} (h : c1.state = c2.state) : c1 = c2 := by
+  cases c1 with
+  | mk s1 m1 sh1 =>
+  cases c2 with
+  | mk s2 m2 sh2 =>
+  dsimp only at h
+  subst h
+  congr
+  · exact Subsingleton.elim _ _
+  · exact Subsingleton.elim _ _
+
 end FiniteEvalContext
 
 /-- The finite fix-clock never increases the clock. -/

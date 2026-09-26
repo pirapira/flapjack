@@ -115,4 +115,27 @@ theorem panToCrepStateRelFiniteExact_structs {width : Nat} {σ : Type}
     (hrel : panToCrepStateRelFiniteExact source target) :
     source.structs = [] := hrel.2.2.2.1
 
+/-- The exact Pan-to-Crep relations provide the initial locals/globals shape
+    hypotheses used by the PanSem evaluator invariant. -/
+theorem panToCrepExactInitialShapeInvariant {width : Nat} {σ : Type}
+    [NeZero width] (source : PanSemStateFiniteExact width σ)
+    (target : CrepSemHOLState width σ)
+    (context : PanToCrepContextExact width)
+    (hstate : panToCrepStateRelFiniteExact source target)
+    (hlocals : panToCrepLocalsRelFiniteExact context source.locals target.locals) :
+    (∀ name value, source.locals.lookup name = some value →
+      isWfShapeValueHOLExact source.structs value = true) ∧
+    (∀ name value, source.globals.lookup name = some value →
+      isWfShapeValueHOLExact source.structs value = true) := by
+  constructor
+  · intro name value hlookup
+    have hshape := panToCrepLocalsRelFiniteExact_valueShapeProjection
+      context source.locals target.locals name value hlocals hlookup
+    have hstruct := panToCrepStateRelFiniteExact_structs source target hstate
+    simpa [hstruct] using hshape
+  · intro name value hlookup
+    have hglobals : source.globals.lookup = (fun _ => none) := hstate.2.2.2.2.1
+    rw [hglobals] at hlookup
+    simp at hlookup
+
 end Flapjack

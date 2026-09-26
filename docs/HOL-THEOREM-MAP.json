@@ -2848,8 +2848,8 @@
     "hol_name": "evaluate_decls_functions_wf",
     "lean_path": "Flapjack/Pancake/Proofs/PanGlobals/ShapeInfrastructure.lean",
     "lean_name": "evaluateDeclsFunctionsWf",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.7): HOL pan_globalsProofScript.sml:2367 declares evaluate_decls_functions_wf[local] over the exact panSem evaluate_decls and exact panLang decl/shape carriers, and it is [local] so not exported by the theory. The Lean evaluateDeclsFunctionsWf is stated over the production PanSemDeclarationState/Decl/isWfShape String/Shape carriers. The @[hol] tag was withdrawn; the public consequence evaluate_decls_functions is the exact port (evaluateDeclsHOLFinite_functions)."
   },
   {
     "hol_path": null,
@@ -2968,8 +2968,8 @@
     "hol_name": "decs_stcnames_compile_prog",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "collectPanValueStructs_panSimpDecls",
-    "statement_status": "pending_statement_review",
-    "reviewer": "Codex (reference inventory)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": null,
@@ -6456,48 +6456,48 @@
     "hol_name": "exp_ids_ret_to_tail_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "expIdsRetToTailEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "exp_ids_seq_assoc_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "expIdsSeqAssocEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "exp_ids_compile_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "expIdsCompileEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "size_of_eids_compile_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "sizeOfEidsPanSimpDeclsEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "functions_compile_prog",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "functionsCompileProg",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
     "hol_name": "first_compile_prog_all_distinct",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "firstCompileProgAllDistinctPanSimp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_structsProofScript.sml",
@@ -6712,8 +6712,8 @@
     "hol_name": "map_snd_f_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "mapSndFEq",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): exact. HOL pan_simpProofScript.sml:42-50 states map_snd_f_eq over purely generic triples (HOL 'a#'b#'c = Lean α × β × γ) with HOL SND ∘ SND rendered as entry.2.2; no mlstring or word-width carrier appears, so no representation translation is involved. The Lean proof and statement are unchanged."
   },
   {
     "hol_path": null,
@@ -11827,6 +11827,15 @@
     "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.2.16): HOL pan_to_crepScript.sml:356-364 defines get_eids_from_decls decls = let eids = MAP FST (exceptions decls); ns = GENLIST (fun x => (n2w x):'a word) (LENGTH eids); es = MAP2 (fun x y => (x,y)) eids ns in alist_to_fmap es, where alist_to_fmap is the right fold FOLDR FUPDATE FEMPTY (first entry wins on a duplicate key). Lean quantifies the same word-indexed decl list over the exact DeclHOL carrier and returns the reviewed canonical finite-support map HolFiniteMapExact MlS (BitVec width), with lookup exactly Flapjack.alistToFmap (getEidsEntriesHOL decls) where getEidsEntriesHOL is the literal MAP FST/zip-GENLIST rendering of HOL's let-bound es and Flapjack.alistToFmap is the untagged alist_to_fmap right fold. exceptions is the tagged exceptionsHOL port; n2w is BitVec.ofNat width. The standalone-result qualifier records only that MlS/BitVec-keyed fmap representation; the same-module witness holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL states the unconditional lookup-level equation against the raw alistToFmap operation. No extra hypotheses or side conditions."
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "make_funcs_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/ContextExact.lean",
+    "lean_name": "makeFuncsExactHOL",
+    "statement_status": "reviewed_fmap_as_finite_support_result",
+    "fmap_as_finite_support_result": true,
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.2.17): HOL pan_to_crepScript.sml:366-374 defines make_funcs prog = let fnames = MAP FST prog; params = MAP (FST o SND) prog; returns = MAP (SND o SND o SND) prog; fs = MAP3 (fun x y z => (x,y,z)) fnames params returns in alist_to_fmap fs, where alist_to_fmap is the right fold FOLDR FUPDATE FEMPTY (first entry wins on a duplicate key). Lean quantifies the same program list (the output of the tagged functionsHOL, entries (name, params, body, return)) and returns the reviewed canonical finite-support map HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ShapeHOL), with lookup exactly Flapjack.alistToFmap (makeFuncsEntriesHOL prog) where makeFuncsEntriesHOL is the literal MAP3 rendering of HOL's let-bound fs and Flapjack.alistToFmap is the untagged alist_to_fmap right fold. The standalone-result qualifier records only that MlS-keyed fmap representation; the same-module witness holFmapAsFiniteSupportResultWitness_makeFuncsExactHOL states the unconditional lookup-level equation against the raw alistToFmap operation. No extra hypotheses or side conditions."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "evaluate_decl_commute",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
@@ -11839,5 +11848,53 @@
       "eshapes"
     ],
     "reviewer": "flapjack-ds10 (bead flapjack-4ac.4.79, 2026-09-26; relocated per coordinator HOLD): HOL panPropsScript.sml:1472-1480 quantifies s, fi, sh, v', e, ds and concludes evaluate_decls s (Function fi::Decl sh v' e::ds) = evaluate_decls s (Decl sh v' e::Function fi::ds). Lean preserves the same quantifier order and the same adjacent-swap conclusion. The state is the PanProps counterpart carrier PanPropsEvalStateFiniteExact, which owns the four HolFiniteMapExact fields and the same-module canonical holFmapAsFiniteSupportWitness, so the fmap_as_finite_support qualifier is checker-valid. The statement is over evaluateDeclsPanPropsHOLFinite, but the kernel codec evaluateDeclsPanPropsHOLFinite_toCanonical transports the canonical tagged evaluateDeclsHOLFinite_declCommute equation back through the injective toPanSemFinite/ofPanSemFinite roundtrip, so it is about the canonical evaluator rather than a similar duplicate. Proof: canonical finite commutation plus optionMapToPanSemFinite_injective. [NeZero width] models HOL's positive word dimension and DecidablePred state.memaddrs renders HOL word-set membership. The qualifier records only the four finite-map fields."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_simpScript.sml",
+    "hol_name": "SmartSeq_def",
+    "lean_path": "Flapjack/Pancake/PanSimp.lean",
+    "lean_name": "smartSeqHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8.1): HOL pan_simpScript.sml:13 SmartSeq p q = if p = Skip then q else Seq p q, over exact panLang prog. Lean smartSeqHOL over the exact word-indexed ProgHOL carrier renders the if as the two clauses .skip,program => program | pre,program => .seq pre program, i.e. clause-for-clause the same, with HOL Skip = ProgHOL.skip and HOL Seq = ProgHOL.seq."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_simpScript.sml",
+    "hol_name": "seq_call_ret_def",
+    "lean_path": "Flapjack/Pancake/PanSimp.lean",
+    "lean_name": "seqCallRetHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8.1): HOL pan_simpScript.sml:42-49 seq_call_ret pattern-matches Seq (Call (SOME (SOME (Local,rv1),NONE)) trgt args) (Return (Var Local rv2)) and returns TailCall trgt args when rv1 = rv2 (TailCall = Call NONE overload), else the original prog, with a fallback. Lean seqCallRetHOL states the same single pattern over ProgHOL with the nested-option call info and the tagged TailCall rendering .call none, exact clause-for-clause and with the same equality guard."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_simpScript.sml",
+    "hol_name": "seq_assoc_def",
+    "lean_path": "Flapjack/Pancake/PanSimp.lean",
+    "lean_name": "seqAssocHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8.1): HOL pan_simpScript.sml:18-40 seq_assoc recurses through Skip/Dec/Seq/If/While/Call (rewriting the handler with seq_assoc Skip)/DecCall/Annot with fallback SmartSeq p q. Lean seqAssocHOL mirrors every clause over ProgHOL, including the same info match on the nested-option Call handler and the same SmartSeq wrapping (smartSeqHOL); carrier and clause correspondence exact."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_simpScript.sml",
+    "hol_name": "ret_to_tail_def",
+    "lean_path": "Flapjack/Pancake/PanSimp.lean",
+    "lean_name": "retToTailHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8.1): HOL pan_simpScript.sml:50-66 ret_to_tail recurses through Skip/Dec/Seq (via seq_call_ret)/If/While/Call (rewriting the handler with ret_to_tail)/DecCall and leaves other programs unchanged. Lean retToTailHOL mirrors each clause over ProgHOL with the same handler rewrite and fallback, exact clause-for-clause."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_simpScript.sml",
+    "hol_name": "compile_def",
+    "lean_path": "Flapjack/Pancake/PanSimp.lean",
+    "lean_name": "panSimpCompileHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8.1): HOL pan_simpScript.sml:68-72 compile p = let p = seq_assoc Skip p in ret_to_tail p. Lean panSimpCompileHOL program = retToTailHOL (seqAssocHOL .skip program), the same let-structure with HOL Skip = ProgHOL.skip, over the exact ProgHOL carrier."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_simpScript.sml",
+    "hol_name": "compile_prog_def",
+    "lean_path": "Flapjack/Pancake/PanSimp.lean",
+    "lean_name": "panSimpDeclsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8.1): HOL pan_simpScript.sml:74-81 compile_prog prog = MAP (lambda decl. case decl of Function fi => Function (fi with body := compile fi.body) | _ => decl) prog. Lean panSimpDeclsHOL maps DeclHOL.function declarations with body := panSimpCompileHOL body and leaves all other declarations unchanged, exact clause-for-clause over the exact DeclHOL/FunDeclHOL carrier (record update on the body field)."
   }
 ]

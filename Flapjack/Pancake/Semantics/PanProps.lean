@@ -1821,6 +1821,23 @@ theorem shapeOfHOLExact_val {width : Nat} [NeZero width] (value : HolWordLab wid
       Flapjack.Pancake.PanLang.ShapeHOL.one := by
   simp [shapeOfHOLExact]
 
+/-- Partial exact-carrier rendering of the only equation specified by HOL
+    `panProps$v2word_def` (`panPropsScript.sml:10`): `v2word (ValWord v) =
+    Word v`. The HOL definition gives no equation for `RStruct` or `NStruct`,
+    so this `Option` helper records the specified graph without choosing a
+    total-function extension. It is Flapjack proof infrastructure, not a
+    tagged port of the total HOL constant; the faithful replacement is tracked
+    by `flapjack-4ac.4.1.1`. -/
+def v2wordSpecifiedHOL {width : Nat} [NeZero width] :
+    ValueHOL width → Option (BitVec width)
+  | .val (.word word) => some word
+  | .rStruct _ => none
+  | .nStruct _ _ => none
+
+/-- The exact word case constrained by HOL `v2word_def`. -/
+theorem v2wordSpecifiedHOL_word {width : Nat} [NeZero width] (word : BitVec width) :
+    v2wordSpecifiedHOL (.val (.word word) : ValueHOL width) = some word := rfl
+
 /-- Function-backed rendering of HOL `panProps$FLOOKUP_pan_res_var_thm`
     (`panPropsScript.sml:236`). Untagged because HOL's `lc` is a finite map,
     while this Lean statement quantifies over every `MlS → Option _` function.

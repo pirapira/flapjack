@@ -193,6 +193,26 @@ DOCUMENTED_MISMATCHES = {
         "it. Exact port over List (DeclHOL width) with a reviewed ARB rendering "
         "is tracked by flapjack-4ac.4.109 (gated on flapjack-pxn.18.3.5.8). "
     ),
+    ("Flapjack/PanObservationalSemantics.lean", "panSemantics"): (
+        "cakeml/pancake/semantics/panSemScript.sml",
+        "semantics_def",
+        "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.52; "
+        "FLAPJACK-SPECIFIC, documented_mismatch). HOL semantics_def "
+        "(panSemScript.sml:785-812) is the concrete semantics s start: with "
+        "prog = Call NONE start [], Fail when some clock yields a forbidden "
+        "result, else Terminate the first FinalFFI/Return run's outcome and "
+        "io_events, else Diverge the build_lprefix_lub of per-clock io_events. "
+        "The Lean analogue panSemantics (PanObservationalSemantics.lean:104, via "
+        "panSemanticsWithLub) has the same fail/success/diverge structure and "
+        "existential-clock shape (panHasForbiddenRun/panHasSuccessfulRun) but is "
+        "abstracted over a PanSemanticsHooks record exposing evaluate : Nat -> "
+        "Option (PanValueFfiClockResult alpha sigma) instead of fixing the "
+        "concrete Call/evaluate, and uses PanValueFfiClockResult/FfiState rather "
+        "than HOL's result x panSem$state. Hook parameterization and the result "
+        "carrier are differences beyond names_as_string. The concrete faithful "
+        "port depends on the exact panSem evaluate and is tracked by "
+        "flapjack-pxn.18.4.4 / flapjack-pxn.18.4.3 and flapjack-pxn.18.3.6.9. "
+    ),
     ("Flapjack/Pancake/Semantics/PanSem/ClockExact.lean", "fixClockHOLExact_IMP_LESS_EQ"): (
         "cakeml/pancake/semantics/panSemScript.sml",
         "fix_clock_IMP_LESS_EQ",

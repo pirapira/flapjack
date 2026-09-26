@@ -204,6 +204,18 @@ example : (functionsHOL (exactDecls.filter isDeclHOL)).length = 0 := by
   simp [functionsHOL_filter_isDecl]
 
 example :
+    functionsHOL [DeclHOL.function fdH, DeclHOL.decl .one (s "z") expH] =
+      ([DeclHOL.function fdH, DeclHOL.decl .one (s "z") expH].filter
+          isFunctionHOL).map
+        (fun declaration =>
+          match declaration with
+          | .function fi => (fi.name, fi.params, fi.body, fi.returnShape)
+          | _ =>
+              (Flapjack.Basis.Pure.MlString.ofString "",
+                [], ProgHOL.skip, ShapeHOL.one)) :=
+  functionsHOL_eq_FILTER _
+
+example :
     decsStcnamesHOLExact (width := 64) ([] : StructContextExact)
       [ .function fdH, .decl .one (s "z") expH, .exnDecl (s "ex") .one ] = some [] := by
   apply decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls

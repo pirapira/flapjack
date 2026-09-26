@@ -2117,7 +2117,23 @@
     "lean_path": "Flapjack/Pancake/PanSimp.lean",
     "lean_name": "functions_eq_filterMap",
     "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.80; FLAPJACK-SPECIFIC, documented_mismatch): HOL functions_eq_FILTER (panPropsScript.sml:1487) states functions prog = MAP (fun x => case x of Function fi => (fi.name,fi.params,fi.body,fi.return) | _ => ARB) (FILTER is_function prog) over the word-indexed 'a decl carrier with mlstring names. The Lean analogue functions_eq_filterMap (Flapjack/Pancake/PanSimp.lean:110) is generic over the production Decl alpha (FunName = String, arbitrary word element type) and states the same content with List.filterMap/none instead of MAP-with-ARB, so both the declaration carrier and the ARB fallback differ and names_as_string cannot bridge it. An exact port over List (DeclHOL width) with a reviewed ARB rendering is tracked by flapjack-4ac.4.109 (gated on flapjack-pxn.18.3.5.8); the sibling functionsHOL_filter_isDecl entry records the same deliberate exclusion."
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.80; FLAPJACK-SPECIFIC, documented_mismatch): HOL functions_eq_FILTER (panPropsScript.sml:1487) states functions prog = MAP (fun x => case x of Function fi => (fi.name,fi.params,fi.body,fi.return) | _ => ARB) (FILTER is_function prog) over the word-indexed 'a decl carrier with mlstring names. The Lean analogue functions_eq_filterMap (Flapjack/Pancake/PanSimp.lean:110) is generic over the production Decl alpha (FunName = String, arbitrary word element type) and states the same content with List.filterMap/none instead of MAP-with-ARB, so both the declaration carrier and the ARB fallback differ and names_as_string cannot bridge it. The exact port over List (DeclHOL width) is functionsHOL_eq_FILTER (Flapjack/Pancake/Semantics/PanProps.lean, reviewed_exact, bead flapjack-4ac.4.109); the sibling functionsHOL_filter_isDecl entry records the same deliberate exclusion."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "functions_eq_FILTER",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "functionsHOL_eq_FILTER",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.4.109): HOL functions_eq_FILTER (panPropsScript.sml:1487-1492) states functions prog = MAP (fun x => case x of Function fi => (fi.name,fi.params,fi.body,fi.return) | _ => ARB) (FILTER is_function prog). functionsHOL_eq_FILTER is over the reviewed word-indexed List (DeclHOL width) carrier (DeclHOL is the exact port of 'a decl, MlS of mlstring, ProgHOL/ShapeHOL of the word-indexed body and return shape) and reproduces the same MAP-after-FILTER shape: List.filter isFunctionHOL (isFunctionHOL is the exact port of is_function) then List.map with the Function branch returning (fi.name,fi.params,fi.body,fi.returnShape). HOL's ARB default is rendered by the concrete inhabitant (ofString \"\", [], ProgHOL.skip, ShapeHOL.one); HOL ARB is unspecified and this branch is unreachable because the list is filtered by is_function, so the entry map agrees with HOL on every element it is applied to. Direct HOL rows in scripts/hol-probes/pan_lang_functions_probe.out. The production functions_eq_filterMap (List.filterMap/none over Decl alpha) remains documented_mismatch."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "semantics_def",
+    "lean_path": "Flapjack/PanObservationalSemantics.lean",
+    "lean_name": "panSemantics",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.52; FLAPJACK-SPECIFIC, documented_mismatch): HOL semantics_def (panSemScript.sml:785-812) is the concrete top-level semantics semantics s start: with prog = Call NONE start [], it is Fail when some clock k has FST (evaluate (prog, s with clock := k)) neither TimeOut nor FinalFFI nor Return, else Terminate outcome (io_events of the first clock whose evaluate returns FinalFFI/Return, outcome via FFI_outcome/Success), else Diverge the build_lprefix_lub of the per-clock io_events. The Lean analogue panSemantics (Flapjack/PanObservationalSemantics.lean:104, via panSemanticsWithLub) has the same fail/success/diverge structure and the same existential-clock shape (panHasForbiddenRun / panHasSuccessfulRun), but it is abstracted over a PanSemanticsHooks record exposing evaluate : Nat -> Option (PanValueFfiClockResult alpha sigma) instead of fixing the concrete Call NONE start []/evaluate, and its result/state carriers are PanValueFfiClockResult/FfiState rather than HOL's result x panSem$state. Hook parameterization and the result carrier are differences beyond names_as_string, so no @[hol] tag. The concrete faithful semantics port depends on the exact panSem evaluate and is tracked by flapjack-pxn.18.4.4 / flapjack-pxn.18.4.3 (exact pc_compile_correct) and the exact-evaluator epic flapjack-pxn.18.3.6.9."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
@@ -10625,8 +10641,8 @@
     "hol_name": "mem_store_32_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSemStateEval.lean",
     "lean_name": "panMemStore32HOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.21): HOL mem_store_32_def (panSemScript.sml:327-346) is the aligned-2 mem_store_32: when aligned 2 w, m (byte_align w) = Word v, and byte_align w IN dm, the four word32 bytes get_byte 0w..3w hw be are written with set_byte at w,w+1,w+2,w+3 and the aligned cell FUPDATE'd to Word v3, else NONE. panMemStore32HOL (PanSemStateEval.lean:280) matches clause-for-clause: aligned 2 w rendered as address.toNat % 4 = 0 (same convention as the reviewed_exact sibling panMemLoad32HOL), byte_align via panByteAlignHOL, the total word_lab memory as a total HolWordLab map with the word set a Prop/DecidablePred domain, and get_byte/set_byte via panGetByteHOL/panSetByteHOL at the same addresses and byte order. Direct HOL rows in scripts/hol-probes/pan_sem_mem_store_32_probe.out (6 rows) reproduced by Flapjack/Test/PanMemStore32HOLParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

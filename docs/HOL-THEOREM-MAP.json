@@ -9449,7 +9449,7 @@
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "compile_def",
     "statement_status": "documented_mismatch",
-    "reviewer": "Flapjack-only bridge, not HOL compile_def: the equations match structurally, but compileProgRiscV uses production Prog/CrepProg/Exp/Shape carriers and String identifiers, and admits width 0; HOL compile_def uses positive-width ProgHOL/CrepProgHOL/ExpHOL/ShapeHOL and mlstring identifiers. The exact-carrier replacement is tracked by flapjack-pxn.18.3.5.8.13."
+    "reviewer": "flapjack-luna-c (source comparison, bead flapjack-4ac.2.10, 2026-09-26): compared HOL pan_to_crepScript.sml:139-307 constructor equations and fallbacks with the structurally corresponding compileProgHOL/compileProgRiscV definitions. This bridge is Flapjack-specific, not an exact HOL compile_def port: it uses production Prog/CrepProg/Exp/Shape with String identifiers and permits width 0, while HOL uses positive-width ProgHOL/CrepProgHOL/ExpHOL/ShapeHOL with mlstring identifiers. The names_as_string qualifier does not authorize those carrier and width differences; no NameRanged witness applies because the output is CrepProg. Direct HOL-EVAL rows are in scripts/hol-probes/compile_def_probe.out and reproduced by Flapjack/Test/CompileDefParity.lean. Keep the tag withdrawn; exact-carrier replacement is flapjack-pxn.18.3.5.8.13. No claim is made that this proof-side helper is the executed compiler route."
   },
   {
     "hol_path": null,

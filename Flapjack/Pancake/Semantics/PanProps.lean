@@ -76,6 +76,23 @@ the tag; the faithful port is tracked by
 `flapjack-4ac.4.102.1`, dependent on
 `flapjack-pxn.18.3.7.1.3.1.1.2`. -/
 
+/-! Source review for HOL `eval_swap_memaddrs`
+(`panPropsScript.sml:1703-1715`): HOL states that successful `eval s exp`
+remains successful with the same value when only `s.memaddrs` is widened.
+The conjunction premise is successful evaluation AND `s.memaddrs ⊆ memaddrs`;
+the conclusion evaluates the record update `s with memaddrs := memaddrs`.
+Lean's `evalHOLExact` has the corresponding broad-state behavior, but its
+`PanSemStateExact` carrier uses unrestricted lookup functions for locals,
+globals, code, and exception shapes. HOL's state uses finite maps for those
+fields. The finite-support evaluator/carrier is in
+`PanSem/StateExactFiniteMap.lean`; the canonical `fmap_as_finite_support`
+qualifier requires its owning carrier structure and witness in the tagged
+module, so the imported carrier cannot be tagged from this counterpart and a
+duplicate state carrier is not an acceptable shortcut. No exact theorem tag is
+claimed. The faithful PanProps port is tracked by
+`flapjack-4ac.4.98.1`, blocked on the canonical finite-map carrier work
+`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+
 /-! Cake's local `dropWhile_eq_cons_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when
 `dropWhile P xs` yields `y :: ys`, there is an in-bounds index `n` at which

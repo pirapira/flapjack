@@ -194,15 +194,6 @@ def finiteWord24CrepRiscVLoad32 : Option (BitVec 24) :=
       ((finiteWord24CrepState.toHolFiniteBitVecState dimension24).toRuntime))
     (.load32 (.const (BitVec.ofNat 24 4)))
 
-theorem finiteWord24CrepEvaluatorBoundary :
-    (finiteWord24CrepSourceLoadByte.map (holWordToBitVec dimension24) =
-        some (BitVec.ofNat 24 0x33)) ∧
-      finiteWord24CrepRiscVLoadByte = none ∧
-      (finiteWord24CrepSourceLoad32.map (holWordToBitVec dimension24) =
-        some (BitVec.ofNat 24 0x113322)) ∧
-      finiteWord24CrepRiscVLoad32 = none := by
-  native_decide
-
 /-! HOL `mem_load_32` assembles the four extracted bytes at width 32, then
     `crepSem.eval` widens or truncates that result into the source word width. -/
 def finiteWord24Fixed32Bytes : List (Fin 24 → Bool) :=

@@ -412,6 +412,24 @@ theorem compileField_map_codecs {width : Nat} [NeZero width] (index : Nat)
         rw [← List.map_drop]
         exact ih (index - 1) (expressions.drop (Shape.shapeSize shape))
 
+/-- Kernel bridge: the executed `withShape` splits the value list exactly like
+    the reviewed exact `withShapeHOL` after encoding every shape through the
+    `shapeToHOL` codec.  The executed `withShape` measures blocks with the
+    production `Shape.shapeSize`, while `withShapeHOL` uses `sizeOfShapeHOL`;
+    `sizeOfShapeHOL_shapeToHOL` identifies the two on every shape (names are
+    inert in both), so no byte-rangedness hypothesis is needed.  This is a
+    Flapjack-specific production bridge (the HOL `panLang$with_shape` port is
+    the tagged `withShapeHOL`), so it carries no `@[hol]` tag. -/
+theorem withShape_codec {α : Type} (shapes : List Shape) (values : List α) :
+    withShape shapes values =
+      Flapjack.Pancake.PanLang.withShapeHOL
+        (shapes.map Flapjack.Pancake.PanLang.shapeToHOL) values := by
+  induction shapes generalizing values with
+  | nil => simp [withShape, Flapjack.Pancake.PanLang.withShapeHOL]
+  | cons shape shapes ih =>
+      simp only [List.map_cons, withShape, Flapjack.Pancake.PanLang.withShapeHOL]
+      rw [sizeOfShapeHOL_shapeToHOL shape, ih]
+
 
 /-! Flapjack-only helper modeled on the commented-out `shape_vars_def` text
     (`cakeml/pancake/pan_to_crepScript.sml:319-324`); HOL does not define this

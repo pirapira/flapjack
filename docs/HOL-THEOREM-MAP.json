@@ -11783,5 +11783,19 @@
       "eshapes"
     ],
     "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.4.88): HOL panPropsScript.sml:1561-1573 states forall s ds s', EVERY (\\u03bbd. is_function d \\u2228 is_exn_decl d) ds \\u2227 evaluate_decls s ds = SOME s' => s' = s with <| code := s.code |++ functions ds; eshapes := s.eshapes |++ exceptions ds |>. Lean quantifies the same state, program, and result state over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evaluateDeclsHOLFinite (the reviewed counterpart of panSem evaluate_decls_def, in this same module), with the HOL EVERY premise rendered as `program.all (fun d => isFunctionHOL d || isExnDeclHOL d) = true` (isFunctionHOL/isExnDeclHOL are the tagged is_function_def/is_exn_decl_def ports), the HOL |++ as the canonical finite-map HolFiniteMapExact.updateList, and functions/exceptions as the tagged functionsHOL/exceptionsHOL ports. PanSemStateFiniteExact owns locals/globals/code/eshapes as HolFiniteMapExact and its same-module holFmapAsFiniteSupportWitness states the toExact/ofExact roundtrips with PanSemStateExact. The only added hypothesis is `[DecidablePred state.memaddrs]`, the executable-decision artifact for HOL word-set membership; the qualifier is representation-only and the quantifiers, premise, and conclusion are otherwise unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_only_exn_decls",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evaluateDeclsHOLFinite_onlyExnDecls",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.4.77): HOL panPropsScript.sml:1436-1447 states forall s ds s', EVERY is_exn_decl ds \\u2227 evaluate_decls s ds = SOME s' => s' = s with eshapes := s.eshapes |++ exceptions ds. Lean quantifies the same state, program, and result state over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evaluateDeclsHOLFinite (the reviewed counterpart of panSem evaluate_decls_def, in this same module), with the HOL EVERY premise rendered as `program.all isExnDeclHOL = true` (isExnDeclHOL is the tagged is_exn_decl_def port), the HOL |++ as the canonical finite-map HolFiniteMapExact.updateList, and exceptions as the tagged exceptionsHOL port. PanSemStateFiniteExact owns locals/globals/code/eshapes as HolFiniteMapExact and its same-module holFmapAsFiniteSupportWitness states the toExact/ofExact roundtrips with PanSemStateExact. The only added hypothesis is `[DecidablePred state.memaddrs]`, the executable-decision artifact for HOL word-set membership; the qualifier is representation-only and the quantifiers, premise, and conclusion are otherwise unchanged."
   }
 ]

@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.Pancake.CrepToLoop
 import Flapjack.Pancake.Semantics.CrepSem
+import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.LoopStateResult
 import Flapjack.Compiler.Encoders.Asm
 import Flapjack.Misc.Sptree
@@ -938,5 +939,112 @@ theorem sptListInsert_append (xs ys : List Nat) (tree : NumSet) :
   | cons x xs ih =>
     simp only [List.cons_append, sptListInsert]
     rw [ih (sptInsert x () tree), sptListInsert_insert x ys tree]
+
+set_option linter.unusedSimpArgs false in
+/-- One byte-store step of `writeBytearrayMemRel`: the pan and loop `mem_store_byte`
+    updates preserve the relation on `dom` when the alignments and set-byte
+    operations agree.  `smemRec`/`tmemRec` are the recursively written memories
+    that the store reads, while `smem0`/`tmem0` are the original memories HOL
+    returns when the store fails.  The pan memory is carried on the exact
+    `HolWordLab` port; `crepToLoopMemRel` reads it through production `PanWordLab`
+    via `HolWordLab.toPanWordLab`. -/
+private theorem writeBytearrayMemRel_step {width : Nat} [NeZero width]
+    (hdiv : width % 8 = 0) (address : BitVec width) (byte : UInt8)
+    (bigEndian : Bool)
+    (smemRec : BitVec width → HolWordLab width)
+    (tmemRec : BitVec width → LoopValue (BitVec width))
+    (smem0 : BitVec width → HolWordLab width)
+    (tmem0 : BitVec width → LoopValue (BitVec width))
+    (dom : BitVec width → Bool)
+    (hrec : crepToLoopMemRel (fun a => (smemRec a).toPanWordLab) tmemRec dom)
+    (h0 : crepToLoopMemRel (fun a => (smem0 a).toPanWordLab) tmem0 dom) :
+    crepToLoopMemRel
+      (fun a => (match panMemStoreByteHOL smemRec (fun a => dom a = true) bigEndian address byte with
+        | some updated => updated
+        | none => smem0) a |>.toPanWordLab)
+      (match memStoreByteAuxHOL tmemRec (fun a => dom a = true) bigEndian address byte with
+       | some updated => updated
+       | none => tmem0)
+      dom := by
+  by_cases hdom : dom (panByteAlignHOL (width := width) address) = true
+  · cases hsmem : smemRec (panByteAlignHOL (width := width) address) with
+    | word cell =>
+      have hA : wlabWloc ((smemRec (panByteAlignHOL (width := width) address)).toPanWordLab) =
+          tmemRec (panByteAlignHOL (width := width) address) := hrec _ hdom
+      rw [hsmem, HolWordLab.toPanWordLab_word, wlabWloc] at hA
+      have htmem : tmemRec (panByteAlignHOL (width := width) address) = .word cell := hA.symm
+      have hpan : panMemStoreByteHOL smemRec (fun a => dom a = true) bigEndian address byte =
+          some (fun current => if current = panByteAlignHOL (width := width) address
+            then .word (panSetByteHOL address (BitVec.ofNat width byte.toNat) cell bigEndian)
+            else smemRec current) := by
+        simp only [panMemStoreByteHOL, hsmem, if_pos hdom]
+      have htgt : memStoreByteAuxHOL tmemRec (fun a => dom a = true) bigEndian address byte =
+          some (fun current => if current = panByteAlignHOL (width := width) address
+            then .word (riscvSetByteHOL bigEndian address cell byte)
+            else tmemRec current) := by
+        have halign : riscvByteAlignHOL address = panByteAlignHOL (width := width) address :=
+          riscvByteAlignHOL_eq_panByteAlignHOL address
+        simp only [memStoreByteAuxHOL, halign, htmem, if_pos hdom]
+      rw [hpan, htgt]
+      dsimp only
+      intro ad had
+      by_cases hcur : ad = panByteAlignHOL (width := width) address
+      · subst hcur
+        simp only [if_pos rfl, HolWordLab.toPanWordLab_word, wlabWloc]
+        exact congrArg LoopValue.word
+          (panSetByteHOL_eq_riscvSetByteHOL hdiv address cell byte bigEndian)
+      · simp only [if_neg hcur]
+        exact hrec ad had
+  · have hpan : panMemStoreByteHOL smemRec (fun a => dom a = true) bigEndian address byte = none := by
+      cases hsmem : smemRec (panByteAlignHOL (width := width) address) with
+      | word cell => simp only [panMemStoreByteHOL, hsmem, if_neg hdom]
+    have htgt : memStoreByteAuxHOL tmemRec (fun a => dom a = true) bigEndian address byte = none := by
+      have halign : riscvByteAlignHOL address = panByteAlignHOL (width := width) address :=
+        riscvByteAlignHOL_eq_panByteAlignHOL address
+      simp only [memStoreByteAuxHOL, halign]
+      cases htm : tmemRec (panByteAlignHOL (width := width) address) with
+      | word v => simp only [htm, if_neg hdom]
+      | loc i o => simp only [htm]
+    rw [hpan, htgt]
+    dsimp only
+    exact h0
+
+set_option linter.unusedSimpArgs false in
+/-- Exact port of HOL `write_bytearray_mem_rel`
+    (`cakeml/pancake/proofs/crep_to_loopProofScript.sml:251-256`): writing the
+    same byte array to two `mem_rel`-related memories keeps them related on the
+    same domain. The source `panSem$write_bytearray` (`panWriteBytearrayHOL`)
+    and target `wordSem$write_bytearray` (`writeBytearrayHOL`) are the
+    total-function renderings, `dom` is HOL's address set as a `Bool` predicate,
+    and the two `mem_store_byte` steps agree through
+    `riscvByteAlignHOL_eq_panByteAlignHOL` and
+    `panSetByteHOL_eq_riscvSetByteHOL`. The pan memory is the exact `HolWordLab`
+    `panSem$word_lab` carrier, read through production `PanWordLab` via
+    `HolWordLab.toPanWordLab` (the kernel-checked isomorphism). `hdiv`
+    (`width % 8 = 0`, the compiler's word widths) is required because the byte
+    codec equality is false otherwise. -/
+@[hol "cakeml/pancake/proofs/crep_to_loopProofScript.sml" "write_bytearray_mem_rel"]
+theorem writeBytearrayMemRel {width : Nat} [NeZero width] (hdiv : width % 8 = 0)
+    (smem : BitVec width → HolWordLab width)
+    (tmem : BitVec width → LoopValue (BitVec width))
+    (dom : BitVec width → Bool)
+    (bytes : List UInt8) (address : BitVec width) (bigEndian : Bool) :
+    crepToLoopMemRel (fun a => (smem a).toPanWordLab) tmem dom →
+    crepToLoopMemRel
+      (fun a => (panWriteBytearrayHOL address bytes smem (fun a => dom a = true) bigEndian a).toPanWordLab)
+      (writeBytearrayHOL address bytes tmem (fun a => dom a = true) bigEndian)
+      dom := by
+  revert address
+  induction bytes with
+  | nil =>
+      intro address h
+      simpa only [panWriteBytearrayHOL, writeBytearrayHOL] using h
+  | cons byte rest ih =>
+      intro address h
+      simp only [panWriteBytearrayHOL, writeBytearrayHOL]
+      exact writeBytearrayMemRel_step hdiv address byte bigEndian
+        (panWriteBytearrayHOL (address + 1) rest smem (fun a => dom a = true) bigEndian)
+        (writeBytearrayHOL (address + 1) rest tmem (fun a => dom a = true) bigEndian)
+        smem tmem dom (ih (address + 1) h) h
 
 end Flapjack

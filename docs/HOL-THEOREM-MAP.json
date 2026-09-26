@@ -9904,6 +9904,14 @@
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
+    "hol_name": "write_bytearray_mem_rel",
+    "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
+    "lean_name": "writeBytearrayMemRel",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (exact HOL write_bytearray_mem_rel crep_to_loopProofScript.sml:251-256 port: mem_rel sm tm dm ==> mem_rel (panSem write_bytearray w nb sm dm be) (wordSem write_bytearray w nb tm dm be) dm. Proved by induction on the byte list with the per-byte store step handled by writeBytearrayMemRel_step, which matches the HOL proof; the two mem_store_byte renderings agree through riscvByteAlignHOL_eq_panByteAlignHOL and panSetByteHOL_eq_riscvSetByteHOL. The panSem word_lab memory is the exact HolWordLab port read through production PanWordLab via the kernel-checked isomorphism HolWordLab.toPanWordLab, matching the rendering of the tagged crepToLoopMemRel (mem_rel_def); dom is HOL's address set as a Bool predicate; hdiv (width % 8 = 0, satisfied by the compiler's 32/64-bit word widths) is the Lean rendering side condition required for the two set_byte renderings to coincide. Bead flapjack-pxn.18.5.6.17.1.)"
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
     "hol_name": "distinct_funcs_def",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",
     "lean_name": "crepToLoopDistinctFuncs",

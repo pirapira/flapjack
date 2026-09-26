@@ -32,7 +32,7 @@ import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (ProgHOL ExpHOL)
+open Flapjack.Pancake.PanLang (ProgHOL ExpHOL MlS ShapeHOL)
 
 namespace PanSemStateFiniteExact
 
@@ -223,6 +223,144 @@ theorem evalPanSemRecursiveCallFiniteContext_ite_else {width : Nat} {σ : Type} 
   rw [hcond]
   dsimp only
   rw [if_neg (by rw [hz]; decide)]
+
+/-- HOL `evaluate_def` `Dec` clause: an initializer that fails to evaluate yields
+    the error result at the unchanged context. -/
+theorem evalPanSemRecursiveCallFiniteContext_dec_init_none {width : Nat} {σ : Type}
+    [NeZero width]
+    (name : MlS) (shape : ShapeHOL) (initializer : ExpHOL width) (body : ProgHOL width)
+    (context : FiniteEvalContext width σ)
+    (hinit : evalHOLFinite context.state (h := context.memaddrsDecidable) initializer = none) :
+    evalPanSemRecursiveCallFiniteContext (.dec name shape initializer body) context =
+      some (some .error, context) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hinit]
+
+/-- HOL `evaluate_def` `Dec` clause: an initializer whose value does not match the
+    declared shape yields the error result at the unchanged context. -/
+theorem evalPanSemRecursiveCallFiniteContext_dec_shape_false {width : Nat} {σ : Type}
+    [NeZero width]
+    (name : MlS) (shape : ShapeHOL) (initializer : ExpHOL width) (body : ProgHOL width)
+    (context : FiniteEvalContext width σ) (value : ValueHOL width)
+    (hinit : evalHOLFinite context.state (h := context.memaddrsDecidable) initializer =
+      some value)
+    (hshape : shapeEqHOL shape (shapeOfHOLExact value) = false) :
+    evalPanSemRecursiveCallFiniteContext (.dec name shape initializer body) context =
+      some (some .error, context) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hinit]
+  dsimp only
+  rw [if_neg (by rw [hshape]; decide)]
+
+/-- HOL `evaluate_def` `Dec` clause: once the initializer matches the shape, the
+    recursive body result is restored by `res_var` on the local binding. -/
+theorem evalPanSemRecursiveCallFiniteContext_dec_body_some {width : Nat} {σ : Type}
+    [NeZero width]
+    (name : MlS) (shape : ShapeHOL) (initializer : ExpHOL width) (body : ProgHOL width)
+    (context : FiniteEvalContext width σ) (value : ValueHOL width)
+    (result : Option (PanSemResultExact width)) (postContext : FiniteEvalContext width σ)
+    (hinit : evalHOLFinite context.state (h := context.memaddrsDecidable) initializer =
+      some value)
+    (hshape : shapeEqHOL shape (shapeOfHOLExact value) = true)
+    (hbody : evalPanSemRecursiveCallFiniteContext body
+      (context.withState (setVarHOLFinite name value context.state) rfl rfl) =
+        some (result, postContext)) :
+    evalPanSemRecursiveCallFiniteContext (.dec name shape initializer body) context =
+      some (result, postContext.withState
+        { postContext.state with
+          locals := HolFiniteMapExact.resVarEq postContext.state.locals
+            (name, context.state.locals.lookup name) } rfl rfl) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hinit]
+  dsimp only
+  rw [if_pos hshape]
+  rw [hbody]
+
+/-- HOL `evaluate_def` `While` clause: a zero-valued condition exits the loop with
+    the `NONE` result at the unchanged context. -/
+theorem evalPanSemRecursiveCallFiniteContext_while_word_zero {width : Nat} {σ : Type}
+    [NeZero width]
+    (condition : ExpHOL width) (body : ProgHOL width) (context : FiniteEvalContext width σ)
+    (word : BitVec width)
+    (hcond : evalHOLFinite context.state (h := context.memaddrsDecidable) condition =
+      some (ValueHOL.val (HolWordLab.word word)))
+    (hzero : ¬ word ≠ 0) :
+    evalPanSemRecursiveCallFiniteContext (.while condition body) context =
+      some (none, context) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hcond]
+  dsimp only
+  rw [if_neg hzero]
+
+/-- HOL `evaluate_def` `While` clause: on an exhausted clock the loop returns
+    `TimeOut` with emptied locals. -/
+theorem evalPanSemRecursiveCallFiniteContext_while_clock_zero {width : Nat} {σ : Type}
+    [NeZero width]
+    (condition : ExpHOL width) (body : ProgHOL width) (context : FiniteEvalContext width σ)
+    (word : BitVec width)
+    (hcond : evalHOLFinite context.state (h := context.memaddrsDecidable) condition =
+      some (ValueHOL.val (HolWordLab.word word)))
+    (hw : word ≠ 0) (hclock : context.state.clock = 0) :
+    evalPanSemRecursiveCallFiniteContext (.while condition body) context =
+      some (some .timeOut,
+        context.withState (emptyLocalsHOLFinite context.state) rfl rfl) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hcond]
+  dsimp only
+  rw [if_pos hw]
+  rw [if_pos hclock]
+
+/-- HOL `evaluate_def` `While` clause: a `Continue` (or `NONE`) body result
+    re-enters the loop at the clock-fixed continuation state. -/
+theorem evalPanSemRecursiveCallFiniteContext_while_body_continue {width : Nat} {σ : Type}
+    [NeZero width]
+    (condition : ExpHOL width) (body : ProgHOL width) (context : FiniteEvalContext width σ)
+    (word : BitVec width) (bodyContext : FiniteEvalContext width σ)
+    (hcond : evalHOLFinite context.state (h := context.memaddrsDecidable) condition =
+      some (ValueHOL.val (HolWordLab.word word)))
+    (hw : word ≠ 0) (hclock : ¬ context.state.clock = 0)
+    (hbody : evalPanSemRecursiveCallFiniteContext body
+      (context.withState (decClockHOLFinite (width := width) (σ := σ) context.state) rfl rfl) =
+        some (some PanSemResultExact.continue, bodyContext)) :
+    evalPanSemRecursiveCallFiniteContext (.while condition body) context =
+      evalPanSemRecursiveCallFiniteContext (.while condition body)
+        (bodyContext.withState (fixClockHOLFinite (width := width) (σ := σ) (decClockHOLFinite (width := width) (σ := σ) context.state)
+          ((some PanSemResultExact.continue, bodyContext.state) : Option (PanSemResultExact width) × PanSemStateFiniteExact width σ)).2 rfl rfl) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hcond]
+  dsimp only
+  rw [if_pos hw]
+  rw [if_neg hclock]
+  rw [hbody]
+
+/-- HOL `evaluate_def` `While` clause: a `Break` body result exits the loop with
+    the `NONE` result at the clock-fixed continuation state. -/
+theorem evalPanSemRecursiveCallFiniteContext_while_body_break {width : Nat} {σ : Type}
+    [NeZero width]
+    (condition : ExpHOL width) (body : ProgHOL width) (context : FiniteEvalContext width σ)
+    (word : BitVec width) (bodyContext : FiniteEvalContext width σ)
+    (hcond : evalHOLFinite context.state (h := context.memaddrsDecidable) condition =
+      some (ValueHOL.val (HolWordLab.word word)))
+    (hw : word ≠ 0) (hclock : ¬ context.state.clock = 0)
+    (hbody : evalPanSemRecursiveCallFiniteContext body
+      (context.withState (decClockHOLFinite (width := width) (σ := σ) context.state) rfl rfl) =
+        some (some PanSemResultExact.break, bodyContext)) :
+    evalPanSemRecursiveCallFiniteContext (.while condition body) context =
+      some (none, bodyContext.withState (fixClockHOLFinite (width := width) (σ := σ) (decClockHOLFinite (width := width) (σ := σ) context.state)
+        ((some PanSemResultExact.break, bodyContext.state) : Option (PanSemResultExact width) × PanSemStateFiniteExact width σ)).2 rfl rfl) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hcond]
+  dsimp only
+  rw [if_pos hw]
+  rw [if_neg hclock]
+  rw [hbody]
 
 end PanSemStateFiniteExact
 

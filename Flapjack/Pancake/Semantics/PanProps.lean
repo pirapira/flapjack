@@ -516,7 +516,10 @@ The production `panIsWfShapeValueHOL`/`panIsWfShapeValueBool` above use the
 (`PanLang/Decl.lean`) are the exact carriers, with `structContextLookupHOL` the
 first-match `ALOOKUP` and `isWfShapeValuesHOLExact` the `EVERY` fold.  Direct
 original-HOL rows are pinned in `scripts/hol-probes/pan_structs_value_validity_probe.out`
-and reproduced by `Flapjack/Test/PanStructsValueValidityParity.lean`. -/
+and reproduced by `Flapjack/Test/PanStructsValueValidityParity.lean`. The exact
+predicate is consumed by `memLoadHOLExact_isWfShapeValueHOLExact` and
+`evalHOLExact_isWfShapeValueHOLExact`; the finite-support state theorem
+`evalIsWfShapeValueHOL` uses the latter through its checked state adapter. -/
 
 /-- The `MAP SND` view of an exact field list does not increase `sizeOf`. -/
 theorem sizeOfValueHOLMapSndLe {width : Nat} [NeZero width]
@@ -1352,7 +1355,9 @@ theorem memLoadHOLExact_some_shapeOf_eq {width : Nat} [NeZero width]
     rendered as the structural helpers `everyExpListHOL` (for `exp list`) and
     `everyExpFieldListHOL` (for the `MAP SND` field list of `NStruct`), matching
     the `isWfShapesExactHOL` convention.  `exps_of` returns the list of all
-    expressions occurring in a program, mirroring the HOL clauses in order. -/
+    expressions occurring in a program, mirroring the HOL clauses in order.
+    `everyExpHOL` is used by the exact `localisedExpHOL` and `namelessExpHOL`
+    definitions and their constructor-equation theorem ports below. -/
 mutual
   /-- Exact port of HOL `panProps$every_exp`. -/
   @[hol "cakeml/pancake/semantics/panPropsScript.sml" "every_exp_def"]
@@ -1391,7 +1396,9 @@ mutual
     | (_, e) :: es => everyExpHOL P e && everyExpFieldListHOL P es
 end
 
-/-- Exact port of HOL `panProps$exps_of`. -/
+/-- Exact port of HOL `panProps$exps_of`.  Its downstream exact proof consumer
+    is `panExpsOfNestedSeqHOL` in `Proofs/PanToWord.lean`, porting
+    `pan_exps_of_nested_seq`. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "exps_of_def"]
 def expsOfHOL {width : Nat} [NeZero width] :
     Flapjack.Pancake.PanLang.ProgHOL width → List (Flapjack.Pancake.PanLang.ExpHOL width)
@@ -1420,7 +1427,8 @@ def expsOfHOL {width : Nat} [NeZero width] :
 
     HOL defines `localised_exp = every_exp (\e. case e of Var tp _ => tp = Local
     | _ => T)`, so the only rejecting pattern is a variable with a global
-    destination. -/
+    destination.  The definition feeds the exact `localisedProgHOL` traversal
+    and the source theorem port `localisedExpSimpsHOL`. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "localised_exp_real_def"]
 def localisedExpHOL {width : Nat} [NeZero width] :
     Flapjack.Pancake.PanLang.ExpHOL width → Bool :=
@@ -1434,7 +1442,8 @@ def localisedExpHOL {width : Nat} [NeZero width] :
     over the MlString/width-indexed `ExpHOL width` carrier.
 
     HOL defines `nameless_exp = every_exp (\e. case e of NStruct _ _ => F |
-    NField _ _ => F | _ => T)`, so structural name introduction is rejected. -/
+    NField _ _ => F | _ => T)`, so structural name introduction is rejected.
+    The exact constructor equations are proved by `namelessExpSimpsHOL`. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "nameless_exp_real_def"]
 def namelessExpHOL {width : Nat} [NeZero width] :
     Flapjack.Pancake.PanLang.ExpHOL width → Bool :=

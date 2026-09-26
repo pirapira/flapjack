@@ -663,6 +663,15 @@ def withState {width : Nat} {σ : Type} [NeZero width]
   cases context
   simp [FiniteEvalContext.withState]
 
+/-- `withState` is independent of the particular equality proofs. -/
+theorem withState_congr {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (state : PanSemStateFiniteExact width σ)
+    (h1 h1' : state.memaddrs = context.state.memaddrs)
+    (h2 h2' : state.shMemaddrs = context.state.shMemaddrs) :
+    withState context state h1 h2 = withState context state h1' h2' := by
+  cases context
+  simp only [withState]
+
 /-- FLAPJACK-SPECIFIC (not a HOL declaration): forgetful projection of a finite
     evaluation context to the exact (unrestricted-map) evaluation context, by
     translating the state through `toExact` and reusing the two address-domain

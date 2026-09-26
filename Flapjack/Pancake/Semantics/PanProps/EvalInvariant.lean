@@ -18,7 +18,8 @@ the representation qualifier and is invertibly related to `PanSemStateExact`.
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang
-  (MlS StructContextExact ProgHOL ExpHOL ShapeHOL DeclHOL isWfShapeExactHOL varExpHOL)
+  (MlS StructContextExact ProgHOL ExpHOL ShapeHOL DeclHOL isWfShapeExactHOL varExpHOL
+   functionsHOL exceptionsHOL isFunctionHOL isNameHOL)
 
 /-! ## Clearing `locals` under the exact broad evaluator
 
@@ -1877,6 +1878,291 @@ theorem optMmapUpdateLocalsNotVarsEvalEqHOLFinite {width : Nat} {σ : Type} [NeZ
   rw [evalListHOL_updateLocalsForVarsSimps,
     evalListHOLExact_updLocals_not_mem state.toExact name word expressions h.1]
   exact h.2
+
+/-! ## HOL `evaluate_decls_functions`, `evaluate_decls_eshapes`,
+    `evaluate_decls_only_functions`
+
+The ports below inspect only the final state's `code`/`eshapes` (or the whole
+final state under an `EVERY is_function` premise); none of them evaluates a
+declaration in an abstract result state, so each is stated over the reviewed
+finite-map carrier exactly as its HOL source. -/
+
+/-- `|++` after `|+` is `|++` with the entry prepended (`FUPDATE_LIST_cons` on
+    the finite-support carrier). Untagged finite-map helper. -/
+private theorem updateList_cons {α β : Type} [BEq α] [LawfulBEq α]
+    (map : HolFiniteMapExact α β) (entry : α × β) (entries : List (α × β)) :
+    (map.update entry).updateList entries = map.updateList (entry :: entries) := by
+  apply HolFiniteMapExact.ext
+  rfl
+
+/-- `|++` of the empty list is the identity (`FUPDATE_LIST_nil` on the
+    finite-support carrier). Untagged finite-map helper. -/
+private theorem updateList_nil {α β : Type} [BEq α] [LawfulBEq α]
+    (map : HolFiniteMapExact α β) : map.updateList [] = map := by
+  apply HolFiniteMapExact.ext
+  rfl
+
+/-- Exact finite-support port of HOL `panProps$evaluate_decls_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1518`):
+    `evaluate_decls s pan_code = SOME s' ==> s'.code = s.code |++ functions
+    pan_code`. The quantifier order `s pan_code s'`, the successful-evaluation
+    premise, and the code conclusion follow the source. `functionsHOL` is the
+    reviewed word-indexed `functions` port and `HolFiniteMapExact.updateList` is
+    the canonical finite-support rendering of HOL `|++`. The four `|->` fields
+    (`locals`, `globals`, `code`, `eshapes`) are the reviewed canonical
+    `HolFiniteMapExact` translation recorded by the `fmap_as_finite_support`
+    qualifier (canonical witness `holFmapAsFiniteSupportWitness`). `[NeZero
+    width]` models HOL's positive word dimension and `DecidablePred
+    state.memaddrs` is computation evidence for the HOL word-set guard. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_functions"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsFunctionsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),
+      evaluateDeclsPanPropsHOLFinite state program = some result →
+        result.code = state.code.updateList (functionsHOL program) := by
+  intro state hdec program
+  induction program generalizing state with
+  | nil =>
+      intro result hEval
+      injection hEval with hEq
+      subst hEq
+      simp [functionsHOL, updateList_nil]
+  | cons declaration rest ih =>
+      intro result hEval
+      cases declaration with
+      | name name fields =>
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          simpa [functionsHOL] using ih state result hEval
+      | decl shape name expression =>
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          cases heval : evalHOL { state with locals := HolFiniteMapExact.empty } expression with
+          | none => simp [heval] at hEval
+          | some value =>
+              by_cases hshape : shapeEqHOL shape (shapeOfHOLExact value)
+              · simp only [heval, if_pos hshape] at hEval
+                have htail := ih
+                  { state with globals := state.globals.update (name, value) } result hEval
+                simpa [functionsHOL] using htail
+              · simp [heval, hshape] at hEval
+      | function declaration =>
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          let condition := declaration.params.all
+              (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+            isWfShapeExactHOL state.structs declaration.returnShape
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_pos] at hEval
+            have htail := ih
+              { state with code := state.code.update (declaration.name,
+                (declaration.params, declaration.body, declaration.returnShape)) } result hEval
+            rw [htail]
+            simp [functionsHOL, updateList_cons]
+          · have hconditionFalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact False.elim (hcondition hcond)
+            simp [condition, hconditionFalse] at hEval
+      | exnDecl exceptionName shape =>
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          let condition := (state.eshapes.lookup exceptionName).isNone &&
+            isWfShapeExactHOL state.structs shape
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_pos] at hEval
+            have htail := ih
+              { state with eshapes := state.eshapes.update (exceptionName, shape) } result hEval
+            simpa [functionsHOL] using htail
+          · have hconditionFalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact False.elim (hcondition hcond)
+            simp [condition, hconditionFalse] at hEval
+
+/-- Exact finite-support port of HOL `panProps$evaluate_decls_eshapes`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1409`):
+    `evaluate_decls s ds = SOME s' ==> s'.eshapes = s.eshapes |++ exceptions
+    ds`. Quantifier order, premise, and conclusion follow the source;
+    `exceptionsHOL` is the reviewed `exceptions` port and
+    `HolFiniteMapExact.updateList` renders HOL `|++`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_eshapes"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsEshapesHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),
+      evaluateDeclsPanPropsHOLFinite state program = some result →
+        result.eshapes = state.eshapes.updateList (exceptionsHOL program) := by
+  intro state hdec program
+  induction program generalizing state with
+  | nil =>
+      intro result hEval
+      injection hEval with hEq
+      subst hEq
+      simp [exceptionsHOL, updateList_nil]
+  | cons declaration rest ih =>
+      intro result hEval
+      cases declaration with
+      | name name fields =>
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          simpa [exceptionsHOL] using ih state result hEval
+      | decl shape name expression =>
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          cases heval : evalHOL { state with locals := HolFiniteMapExact.empty } expression with
+          | none => simp [heval] at hEval
+          | some value =>
+              by_cases hshape : shapeEqHOL shape (shapeOfHOLExact value)
+              · simp only [heval, if_pos hshape] at hEval
+                have htail := ih
+                  { state with globals := state.globals.update (name, value) } result hEval
+                simpa [exceptionsHOL] using htail
+              · simp [heval, hshape] at hEval
+      | function declaration =>
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          let condition := declaration.params.all
+              (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+            isWfShapeExactHOL state.structs declaration.returnShape
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_pos] at hEval
+            have htail := ih
+              { state with code := state.code.update (declaration.name,
+                (declaration.params, declaration.body, declaration.returnShape)) } result hEval
+            simpa [exceptionsHOL] using htail
+          · have hconditionFalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact False.elim (hcondition hcond)
+            simp [condition, hconditionFalse] at hEval
+      | exnDecl exceptionName shape =>
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          let condition := (state.eshapes.lookup exceptionName).isNone &&
+            isWfShapeExactHOL state.structs shape
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_pos] at hEval
+            have htail := ih
+              { state with eshapes := state.eshapes.update (exceptionName, shape) } result hEval
+            rw [htail]
+            simp [exceptionsHOL, updateList_cons]
+          · have hconditionFalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact False.elim (hcondition hcond)
+            simp [condition, hconditionFalse] at hEval
+
+/-- Exact finite-support port of HOL `panProps$evaluate_decls_only_functions`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1528`): under `EVERY
+    is_function pan_code`, a successful declaration evaluation changes only
+    `code`, appending the function entries. The premise is rendered as `program.all
+    isFunctionHOL = true`, the exact `EVERY is_function` reading over the
+    reviewed `DeclHOL` carrier; the conclusion is HOL's record update with
+    `|++`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_only_functions"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsOnlyFunctionsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (program : List (DeclHOL width)) (result : PanPropsEvalStateFiniteExact width σ),
+      program.all isFunctionHOL = true →
+      evaluateDeclsPanPropsHOLFinite state program = some result →
+        result = { state with code := state.code.updateList (functionsHOL program) } := by
+  intro state hdec program
+  induction program generalizing state with
+  | nil =>
+      intro result _ hEval
+      injection hEval with hEq
+      subst hEq
+      rw [show functionsHOL ([] : List (DeclHOL width)) = [] from rfl, updateList_nil]
+  | cons declaration rest ih =>
+      intro result hall hEval
+      cases declaration with
+      | function declaration =>
+          simp only [List.all_cons, isFunctionHOL, Bool.true_and] at hall
+          simp only [evaluateDeclsPanPropsHOLFinite] at hEval
+          let condition := declaration.params.all
+              (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+            isWfShapeExactHOL state.structs declaration.returnShape
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_pos] at hEval
+            have htail := ih
+              { state with code := state.code.update (declaration.name,
+                (declaration.params, declaration.body, declaration.returnShape)) }
+              result hall hEval
+            rw [htail]
+            simp [functionsHOL, updateList_cons]
+          · have hconditionFalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact False.elim (hcondition hcond)
+            simp [condition, hconditionFalse] at hEval
+      | name name fields =>
+          exact absurd hall (by simp [List.all_cons, isFunctionHOL])
+      | decl shape name expression =>
+          exact absurd hall (by simp [List.all_cons, isFunctionHOL])
+      | exnDecl exceptionName shape =>
+          exact absurd hall (by simp [List.all_cons, isFunctionHOL])
+
+section
+open Classical
+
+/-- Exact finite-support port of HOL `panProps$evaluate_decls_append`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1540`): evaluating `ds1 ++ ds2`
+    is the monadic bind of evaluating `ds1` and then `ds2` in the resulting
+    state. HOL's `case ... of NONE => NONE | SOME s' => ...` is rendered as
+    `Option.bind`. The finite-map qualifier records only the four HOL `|->`
+    fields. The nested evaluation on HOL's existential result state uses Lean's
+    classical decidability for the `memaddrs` word-set guard; `Decidable`
+    instances are subsingleton, so this adds no side condition and does not
+    change the evaluator's value relative to HOL's total classical logic. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_append"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsAppendHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) (ds1 ds2 : List (DeclHOL width)),
+      evaluateDeclsPanPropsHOLFinite state (ds1 ++ ds2) =
+        Option.bind (evaluateDeclsPanPropsHOLFinite state ds1)
+          (fun state' => evaluateDeclsPanPropsHOLFinite state' ds2) := by
+  intro state ds1 ds2
+  induction ds1 generalizing state with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration with
+      | name name fields =>
+          simp only [List.cons_append, evaluateDeclsPanPropsHOLFinite]
+          exact ih state
+      | decl shape name expression =>
+          simp only [List.cons_append, evaluateDeclsPanPropsHOLFinite]
+          cases heval : evalHOL { state with locals := HolFiniteMapExact.empty } expression with
+          | none => rfl
+          | some value =>
+              by_cases hshape : shapeEqHOL shape (shapeOfHOLExact value)
+              · simp only [if_pos hshape]
+                exact ih { state with globals := state.globals.update (name, value) }
+              · simp [hshape]
+      | function declaration =>
+          simp only [List.cons_append, evaluateDeclsPanPropsHOLFinite]
+          let condition := declaration.params.all
+              (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+            isWfShapeExactHOL state.structs declaration.returnShape
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_pos]
+            exact ih
+              { state with code := state.code.update (declaration.name,
+                (declaration.params, declaration.body, declaration.returnShape)) }
+          · have hconditionFalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact False.elim (hcondition hcond)
+            simp [condition, hconditionFalse]
+      | exnDecl exceptionName shape =>
+          simp only [List.cons_append, evaluateDeclsPanPropsHOLFinite]
+          let condition := (state.eshapes.lookup exceptionName).isNone &&
+            isWfShapeExactHOL state.structs shape
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_pos]
+            exact ih
+              { state with eshapes := state.eshapes.update (exceptionName, shape) }
+          · have hconditionFalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact False.elim (hcondition hcond)
+            simp [condition, hconditionFalse]
+
+end
 
 end PanPropsEvalStateFiniteExact
 

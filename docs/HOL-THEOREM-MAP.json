@@ -11692,6 +11692,42 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_append",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsAppendHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.86; panPropsScript.sml:1540-1549): HOL quantifies s, ds1, ds2 and states evaluate_decls s (ds1 ++ ds2) = case evaluate_decls s ds1 of NONE => NONE | SOME s' => evaluate_decls s' ds2. Lean preserves that quantifier order, the append argument, and the case/bind conclusion, rendering HOL's case as Option.bind. The four |-> fields (locals/globals/code/eshapes) are the reviewed HolFiniteMapExact translation recorded by the qualifier, with the same-module canonical holFmapAsFiniteSupportWitness. The nested evaluation on HOL's existential result state is typed with Lean's classical decidability (open Classical) for the memaddrs word-set guard because the result state's memaddrs is not syntactically known; Decidable instances are subsingleton, so this adds no hypothesis and does not change the evaluator's value relative to HOL's total classical logic. Proof: induction on ds1 following evaluateDeclsPanPropsHOLFinite clause for clause; each head branch reduces both sides to the induction hypothesis on the tail. [NeZero width] models HOL's positive word dimension."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_eshapes",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsEshapesHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.75; panPropsScript.sml:1409-1416): HOL quantifies s, ds, s' and states evaluate_decls s ds = SOME s' ==> s'.eshapes = s.eshapes |++ exceptions ds. Lean preserves that quantifier order, the successful-evaluation premise, and the eshapes conclusion. exceptionsHOL is the tagged panLang exceptions_def port and HolFiniteMapExact.updateList renders HOL |++ (FUPDATE_LIST). PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and this module has the same-module canonical holFmapAsFiniteSupportWitness; the qualifier records only those HOL |-> fields. Proof: induction on the program following evaluateDeclsPanPropsHOLFinite; only ExnDecl clauses contribute and prepend via the untagged updateList_cons helper. [NeZero width] models HOL's positive word dimension and DecidablePred state.memaddrs is computation evidence for the HOL word-set guard."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_functions",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsFunctionsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.84; panPropsScript.sml:1518-1524): HOL quantifies s, pan_code, s' and states evaluate_decls s pan_code = SOME s' ==> s'.code = s.code |++ functions pan_code. Lean preserves that quantifier order, the successful-evaluation premise, and the code conclusion. functionsHOL is the tagged panLang functions_def port and HolFiniteMapExact.updateList is the canonical finite-support rendering of HOL |++ (FUPDATE_LIST). PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and this module has the same-module canonical holFmapAsFiniteSupportWitness; the qualifier records only those HOL |-> fields. Proof: induction on the declaration program following evaluateDeclsPanPropsHOLFinite clause for clause; Function clauses prepend via the untagged updateList_cons helper. [NeZero width] models HOL's positive word dimension and DecidablePred state.memaddrs is computation evidence for the HOL word-set guard."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_only_functions",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsOnlyFunctionsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.85; panPropsScript.sml:1528-1536): HOL quantifies s, pan_code, s' with the conjunction EVERY is_function pan_code AND evaluate_decls s pan_code = SOME s', concluding s' = s with code := s.code |++ functions pan_code. Lean preserves the quantifier order, renders EVERY is_function as program.all isFunctionHOL = true over the reviewed DeclHOL carrier, keeps the successful-evaluation premise, and states HOL's record update with functionsHOL and HolFiniteMapExact.updateList. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical witness, which the qualifier records. Proof: induction on the program; the all-isFunction premise forces every head to be Function, so only code changes and the conclusion follows by updateList_cons and the induction hypothesis. [NeZero width] and DecidablePred state.memaddrs retain the reviewed HOL word/set encodings."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "write_bytearray_update_byte",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
     "lean_name": "writeBytearrayUpdateByte",

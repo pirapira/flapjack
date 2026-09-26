@@ -6,6 +6,7 @@ import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
+import Flapjack.Pancake.Semantics.PanSem.EvalExact
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
@@ -209,6 +210,64 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+private theorem isWfShapeValuesHOLExact_of_mem {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact)
+    (values : List (ValueHOL width))
+    (h : ∀ value, value ∈ values → isWfShapeValueHOLExact context value = true) :
+    isWfShapeValuesHOLExact context values = true := by
+  induction values with
+  | nil => simp [isWfShapeValuesHOLExact]
+  | cons head tail ih =>
+      simp only [isWfShapeValuesHOLExact, Bool.and_eq_true]
+      exact ⟨h head (by simp), ih (fun value hv => h value (by simp [hv]))⟩
+
+private theorem isWfShapeValuesHOLExact_mem {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact)
+    (values : List (ValueHOL width))
+    (h : isWfShapeValuesHOLExact context values = true)
+    {value : ValueHOL width} (hmem : value ∈ values) :
+    isWfShapeValueHOLExact context value = true := by
+  induction values with
+  | nil => simp at hmem
+  | cons head tail ih =>
+      simp only [isWfShapeValuesHOLExact, Bool.and_eq_true] at h
+      simp only [List.mem_cons] at hmem
+      rcases hmem with rfl | hmem
+      · exact h.1
+      · exact ih h.2 hmem
+
+private theorem getElemOption_mem {α : Type} (values : List α) (index : Nat)
+    (value : α) (hget : values[index]? = some value) : value ∈ values := by
+  induction values generalizing index value with
+  | nil => simp at hget
+  | cons head tail ih =>
+      cases index with
+      | zero => simp only [List.getElem?_cons_zero] at hget; cases hget; simp
+      | succ index =>
+          simp only [List.getElem?_cons_succ] at hget
+          exact List.mem_cons_of_mem head (ih index value hget)
+
+private theorem lookupFieldHOL_isWfShapeValuesHOLExact {width : Nat} [NeZero width]
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (name : MlS)
+    (fields : List (MlStringHOL × ValueHOL width))
+    (hfields : isWfShapeValuesHOLExact context (fields.map Prod.snd) = true)
+    (value : ValueHOL width) (hlookup : lookupFieldHOL name fields = some value) :
+    isWfShapeValueHOLExact context value = true := by
+  induction fields with
+  | nil => simp [lookupFieldHOL] at hlookup
+  | cons pair rest ih =>
+      rcases pair with ⟨fieldName, fieldValue⟩
+      simp only [List.map_cons, isWfShapeValuesHOLExact, Bool.and_eq_true] at hfields
+      by_cases hname : fieldName = name
+      · simp only [lookupFieldHOL, if_pos hname] at hlookup
+        cases hlookup
+        exact hfields.1
+      · have htail : isWfShapeValuesHOLExact context (rest.map Prod.snd) = true :=
+          hfields.2
+        have hlookup' : lookupFieldHOL name rest = some value := by
+          simpa only [lookupFieldHOL, if_neg hname] using hlookup
+        exact ih htail hlookup'
+
 /-! **Unported HOL evaluator invariant** (`evaluate_is_wf_shape_invariant`,
     `panPropsScript.sml:1250`). The source quantifies `p`, initial state `s`,
     result `res`, and post-state `s'`; from `evaluate (p,s) = (res,s')` and
@@ -217,14 +276,13 @@ end
     `s'.structs`, and any returned/raised payload is well-formed under the
     initial `s.structs`. No Lean declaration currently states that result.
     The prerequisite `eval_is_wf_shape_v` (`panPropsScript.sml:126`) is also
-    unported. `evalHOLExact` in `PanSem/EvalExact.lean` has the exact expression
-    and value syntax but takes `PanSemStateExact`, whose four map fields are
-    unrestricted lookup functions. `PanSemStateFiniteExact.evalHOLFinite` has
-    the reviewed finite-map carrier and expression evaluator, but no invariant
-    proof; the recursive program evaluator still has an assembly marker and is
-    not assembled over that finite-map carrier. Consequently neither a theorem
-    over `evalHOLExact` nor one over the partial recursive dispatcher has the
-    required HOL statement/carrier. Inventory bead `flapjack-4ac.4.67` is closed
+    unported. Its prerequisite `eval_is_wf_shape_v` is now tagged with the
+    reviewed finite-map carrier and exact HOL conjunction in
+    `PanProps/EvalInvariant.lean`. The untagged
+    `evalHOLExact_isWfShapeValueHOLExact` helper remains broad-carrier proof
+    support. The full recursive program evaluator still has an assembly marker
+    over function-backed state and is not assembled over the finite-map
+    carrier. Inventory bead `flapjack-4ac.4.67` is closed
     by this source-reviewed disposition; faithful theorem path bead
     `flapjack-4ac.5.83` remains open. -/
 
@@ -596,9 +654,127 @@ theorem memLoadHOLExact_isWfShapeValueHOLExact {width : Nat} [NeZero width] :
     exact memLoadHOLExact_isWfShapeValueHOLExact_flds domain memory fields address context values h
 
 
-/-- Exact port of HOL `panProps$mem_loads_some_shape_eq` (`panPropsScript.sml:194`):
-    `mem_load`, `mem_loads` and `mem_load_flds` return values whose shapes are
-    exactly the requested shapes. -/
+/-! The function-backed exact evaluator is intermediate proof support for HOL
+    `eval_is_wf_shape_v`. It is intentionally untagged because
+    `PanSemStateExact` admits unrestricted maps rather than HOL finite maps. -/
+theorem evalHOLExact_isWfShapeValueHOLExact {width : Nat} {σ : Type}
+    [NeZero width] (state : PanSemStateExact width σ)
+    [DecidablePred state.memaddrs]
+    (hlocals : ∀ name value, state.locals name = some value →
+      isWfShapeValueHOLExact state.structs value = true)
+    (hglobals : ∀ name value, state.globals name = some value →
+      isWfShapeValueHOLExact state.structs value = true) :
+    ∀ (expression : Flapjack.Pancake.PanLang.ExpHOL width) (value : ValueHOL width),
+      evalHOLExact state expression = some value →
+        isWfShapeValueHOLExact state.structs value = true := by
+  intro expression
+  induction expression using evalHOLExact.induct (state := state)
+      (motive_2 := fun fields => ∀ values,
+        evalListFieldsHOLExact state fields = some values →
+          ∀ pair, pair ∈ values →
+            isWfShapeValueHOLExact state.structs pair.2 = true)
+      (motive_3 := fun expressions => ∀ values,
+        evalListHOLExact state expressions = some values →
+          ∀ value, value ∈ values →
+            isWfShapeValueHOLExact state.structs value = true)
+  case case2 name =>
+    intro value hEval
+    exact hlocals name value hEval
+  case case3 name =>
+    intro value hEval
+    exact hglobals name value hEval
+  case case4 fields ih =>
+    intro value hEval
+    cases hList : evalListHOLExact state fields with
+    | none => simp [evalHOLExact, hList] at hEval
+    | some values =>
+        have hValue : value = .rStruct values := by
+          simpa [evalHOLExact, hList] using hEval.symm
+        subst value
+        have hValues : isWfShapeValuesHOLExact state.structs values = true :=
+          isWfShapeValuesHOLExact_of_mem state.structs values (ih values hList)
+        simpa [isWfShapeValueHOLExact] using hValues
+  case case5 index expression values hChild ih =>
+    intro value hEval
+    have hGet : values[index]? = some value := by
+      simpa only [evalHOLExact, hChild] using hEval
+    have hValues : isWfShapeValuesHOLExact state.structs values = true := by
+      simpa only [isWfShapeValueHOLExact.eq_2] using ih (.rStruct values) hChild
+    apply isWfShapeValuesHOLExact_mem state.structs values hValues
+    exact getElemOption_mem values index value hGet
+  case case9 name fields info hLookup hNames fieldValues hFields hShapes ih =>
+    intro value hEval
+    simp only [evalHOLExact, hLookup, if_pos hNames, hFields,
+      if_pos hShapes, Option.some.injEq] at hEval
+    cases hEval
+    have hValueMem : ∀ value, value ∈ fieldValues.map Prod.snd →
+        isWfShapeValueHOLExact state.structs value = true := by
+      intro fieldValue hmem
+      obtain ⟨pair, hpair, hvalue⟩ := List.mem_map.mp hmem
+      cases pair with
+      | mk fieldName fieldValue' =>
+          cases hvalue
+          exact ih fieldValues hFields (fieldName, fieldValue') hpair
+    have hValues := isWfShapeValuesHOLExact_of_mem state.structs
+      (fieldValues.map Prod.snd) hValueMem
+    simp [isWfShapeValueHOLExact, hLookup, hValues]
+  case case10 name fields info hLookup hNames fieldValues hFields hBad ih =>
+    intro value hEval
+    simp [evalHOLExact, hLookup, hNames, hFields] at hEval
+    rcases hEval with ⟨hShapes, _⟩
+    have hAll :
+        ((List.map Prod.snd info.fields).zip
+          (List.map (fun pair => shapeOfHOLExact pair.2) fieldValues)).all
+          (fun pair => shapeEqHOL pair.1 pair.2) = true := by
+      apply List.all_eq_true.mpr
+      intro pair hmem
+      exact hShapes pair.1 pair.2 (by simpa using hmem)
+    exact (hBad hAll).elim
+  case case12 name expression structName values hChild hHas ih =>
+    intro value hEval
+    have hValueWF := ih (.nStruct structName values) hChild
+    have hValues : isWfShapeValuesHOLExact state.structs (values.map Prod.snd) = true := by
+      have hParts :
+          (Flapjack.Pancake.PanLang.structContextLookupHOL structName state.structs).isSome = true ∧
+            isWfShapeValuesHOLExact state.structs (values.map Prod.snd) = true := by
+        simpa only [isWfShapeValueHOLExact.eq_3, Bool.and_eq_true] using hValueWF
+      exact hParts.2
+    have hLookup : lookupFieldHOL name values = some value := by
+      simpa [evalHOLExact, hChild, hHas] using hEval
+    exact lookupFieldHOL_isWfShapeValuesHOLExact state.structs name values
+      hValues value hLookup
+  case case15 shape address hShape word hAddress ih =>
+    intro value hEval
+    have hLoad : memLoadHOLExact shape word state.memaddrs state.memory state.structs =
+        some value := by
+      simpa only [evalHOLExact, if_pos hShape, hAddress] using hEval
+    exact memLoadHOLExact_isWfShapeValueHOLExact.1 shape word state.memaddrs
+      state.memory state.structs value hLoad
+  case case23 operator arguments values hList hNotWords ih =>
+    intro value hEval
+    simp [evalHOLExact, hList, hNotWords] at hEval
+  case case26 operator arguments values hList hNotWords ih =>
+    intro value hEval
+    simp [evalHOLExact, hList, hNotWords] at hEval
+  case case36 expression rest head tail hRest hExpr ihHead ihTail values value hEq hMem =>
+    simp [evalListHOLExact, hExpr, hRest] at value
+    subst values
+    rcases List.mem_cons.mp hMem with hHead | hTailMem
+    · cases hHead
+      exact ihHead head hExpr
+    · exact ihTail tail hRest hEq hTailMem
+  case case39 name expression rest head tail hRest hExpr ihHead ihTail values pair hEq hMem =>
+    simp [evalListFieldsHOLExact, hExpr, hRest] at pair
+    subst values
+    rcases List.mem_cons.mp hMem with hHead | hTailMem
+    · have hValue : hEq.2 = head := congrArg Prod.snd hHead
+      rw [hValue]
+      exact ihHead head hExpr
+    · exact ihTail tail hRest hEq hTailMem
+  all_goals
+    simp_all [evalHOLExact, evalListHOLExact, evalListFieldsHOLExact,
+      isWfShapeValueHOLExact, List.all_eq_true]
+
 private theorem memLoadHOLExact_shape_eq_shape {width : Nat} [NeZero width]
     (domain : BitVec width → Prop) [DecidablePred domain]
     (memory : BitVec width → HolWordLab width) :

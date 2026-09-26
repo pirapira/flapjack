@@ -2028,10 +2028,13 @@ theorem bindPanValueParametersLocalsRelOfPanSem
     exact HOL value/shape carriers are `ValueHOL`/`ShapeHOL`. The complete
     finite-support HOL evaluator and exact Pan-to-Crep state/local relations
     are still missing. Keep these helpers untagged as support, not as ports of
-    `evaluate_shape_invariant_ret_inst`. Its faithful replacement is tracked
-    by bead `flapjack-4ac.5.83`, blocked on `flapjack-4ac.4.67`,
-    `flapjack-pxn.18.3.5.8`, `flapjack-pxn.18.3.7.1.3.1.1.2`, and
-    `flapjack-0lj.5`.
+    `evaluate_shape_invariant_ret_inst`. Its faithful replacement remains open
+    on bead `flapjack-4ac.5.83`. The expression-level prerequisite
+    `eval_is_wf_shape_v` is now tagged over the reviewed finite-map carrier in
+    `PanProps/EvalInvariant.lean`; the complete recursive program invariant is
+    still missing. Current theorem-path blockers include the exact lookup-code
+    invariant `.4.66.1`, finite-support program evaluation, and exact
+    PanLang/Pan-to-Crep carriers.
 
     Separate source-reviewed disposition for HOL
     `evaluate_shape_invariant_ret_inst2` (`pan_to_crepProofScript.sml:3031-3044`):
@@ -2045,11 +2048,12 @@ theorem bindPanValueParametersLocalsRelOfPanSem
     these are proved facts, not additional theorem premises. Existing
     `localsRelWfShape` and `evalPanSemStateExpsWfShapeOfStateRel` cover only
     production String-backed relations and a 64-bit expression evaluator.
-    The full source evaluator, exact finite-map state, and exact
-    MlString-keyed relations needed to state this theorem are not available as
-    one exact carrier, so this theorem stays untagged. Its faithful replacement
-    is `flapjack-4ac.5.47.1`, dependent on `flapjack-4ac.3.52.1`,
-    `flapjack-4ac.5.83`, and exact PanSem state/name carriers. -/
+    The full source evaluator and exact MlString-keyed Pan-to-Crep state/local
+    relations are not available as one exact carrier, so this theorem stays
+    untagged. Its faithful replacement is `flapjack-4ac.5.47.1`, dependent on
+    `flapjack-4ac.3.52.1`, `flapjack-4ac.5.83`, and exact PanSem state/name
+    carriers. The exact lookup invariant is tracked separately by
+    `flapjack-4ac.4.66.1`. -/
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/

@@ -2119,7 +2119,14 @@ theorem panSemEvaluateCodeState_decCallSkip_ofEntry
         .skip : Prog α) = tail + 5 := by
     simpa [program] using hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
+  have hsucc1 : tail + 1 = Nat.succ tail := by omega
+  have hsucc2 : tail + 2 = Nat.succ (tail + 1) := by omega
+  have hsucc3 : tail + 3 = Nat.succ (tail + 2) := by omega
+  have hsucc4 : tail + 4 = Nat.succ (tail + 3) := by omega
+  have hsucc5 : tail + 5 = Nat.succ (tail + 4) := by omega
+  rw [hsucc5, hsucc4, hsucc3, hsucc2, hsucc1]
+  simp [evalPanValueFfiClockCodeProg,
+    evalPanValueFfiClockCodeDecCall, evalPanValueFfiClockCodeCall, panValueCallArgumentsValue,
     evalPanValueFfiClockLeaf, evalPanValueFfiProgSteps,
     panValueReturnResult, evalPanValueExpCounted, evalPanValueExp, hargs, hcallee, hclock,
     panValueShape, panShapeMatches, panValueFfiClockRestoreLocal,
@@ -2218,7 +2225,8 @@ theorem panSemEvaluateCodeState_decCallTick_ofEntry
       (.decCall name .one function [.const value] .tick : Prog α) = tail + 5 := by
     simpa [program] using hfuel
   rw [hfuelConcrete]
-  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+  simp [evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeDecCall,
+    evalPanValueFfiClockCodeCall,
     panValueCallArgumentsValue, evalPanValueFfiClockLeaf,
     evalPanValueFfiProgSteps, panValueReturnResult, evalPanValueExpCounted,
     evalPanValueExp, hargs, hcallee, hclockNonzero,
@@ -2382,38 +2390,46 @@ theorem panToCrepDecCallTickContinuationSeqOfSourceRunIH
     (fuel : Nat)
     (sourceContinuationResult : PanValueFfiClockResult (RiscV.Word 64) σ)
     (sourceContinuationState : PanSemState (RiscV.Word 64) (FfiState σ))
-    (targetCallStart targetCallPost targetContinuationState :
+    (targetCallStart targetCallPost :
       CrepRuntimeState (RiscV.Word 64) σ)
     (slots : List Nat) (function : FunName)
     (arguments : List (CrepExp (RiscV.Word 64)))
     (hsourceContinuation :
       panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
         sourceContinuationState .tick = some sourceContinuationResult)
-    (hstate : stateRel sourceContinuationState targetContinuationState)
+    (hstate : stateRel sourceContinuationState
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2)
     (hcode : codeRel context
-      (panSemCodeAsLookup sourceContinuationState.code) targetContinuationState.code)
+      (panSemCodeAsLookup sourceContinuationState.code)
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2.code)
     (hexcp : excpRel context.eids sourceContinuationState.exceptionShapes)
     (hlocals : localsRel context sourceContinuationState.locals
-      targetContinuationState.locals)
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2.locals)
     (hcallPrefix :
       evalCrepRuntimeResult targetHandler targetPrimitive fuel targetCallStart
         (.call (some (slots, none)) function arguments) =
           some (.normal, targetCallPost))
-    (hcallClockRestore :
-      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
-        (.normal, targetCallPost)).2 =
-        targetContinuationState)
     (hcontinuationIH :
-      stateRel sourceContinuationState targetContinuationState →
+      stateRel sourceContinuationState
+        (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+          (.normal, targetCallPost)).2 →
       codeRel context (panSemCodeAsLookup sourceContinuationState.code)
-        targetContinuationState.code →
+        (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+          (.normal, targetCallPost)).2.code →
       excpRel context.eids sourceContinuationState.exceptionShapes →
-      localsRel context sourceContinuationState.locals targetContinuationState.locals →
+      localsRel context sourceContinuationState.locals
+        (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+          (.normal, targetCallPost)).2.locals →
       panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
           sourceContinuationState .tick = some sourceContinuationResult →
         ∃ targetResult targetPost,
           evalCrepRuntimeResult targetHandler targetPrimitive fuel
-            targetContinuationState (compileCodeRelProg context .tick) =
+            (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+              (.normal, targetCallPost)).2
+            (compileCodeRelProg context .tick) =
               some (targetResult, targetPost) ∧
           stateRel (panSemCodeStateAfter sourceContinuationState
             sourceContinuationResult) targetPost ∧
@@ -2458,14 +2474,180 @@ theorem panToCrepDecCallTickContinuationSeqOfSourceRunIH
   change evalCrepRuntimeProg targetHandler targetPrimitive fuel targetCallStart
     (.call (some (slots, none)) function arguments) =
       some (.normal, targetCallPost) at hcallPrefix
-  change evalCrepRuntimeProg targetHandler targetPrimitive fuel targetContinuationState
+  change evalCrepRuntimeProg targetHandler targetPrimitive fuel
+    (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+      (.normal, targetCallPost)).2
     (compileCodeRelProg context .tick) = some (targetResult, targetPost)
     at hcontinuationRun
-  rw [← hcallClockRestore] at hcontinuationRun
-  simp only [fixCrepRuntimeClock] at hcontinuationRun
-  rw [evalCrepRuntimeProg, hcallPrefix]
-  simp only [fixCrepRuntimeClock]
-  simp only [hcontinuationRun]
+  have hcont : evalCrepRuntimeProg targetHandler targetPrimitive fuel
+      { targetCallPost with
+        clock := min targetCallStart.clock targetCallPost.clock }
+      (compileCodeRelProg context .tick) = some (targetResult, targetPost) := by
+    simpa [fixCrepRuntimeClock] using hcontinuationRun
+  simp [evalCrepRuntimeProg, hcallPrefix, fixCrepRuntimeClock, hcont]
+
+/-! Produce the identity-callee prefix and continuation-entry relations from
+the actual source/target code relation. This removes the free target-call-run
+and post-call relation assumptions for the one-word `return parameter`
+DecCall slice; the remaining continuation simulation is supplied by its
+recursive Tick IH below. -/
+theorem panToCrepDecCallReturnParameterPrefixFromCodeRel
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ)
+    (function name : FunName) (value : RiscV.Word 64)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals)
+    (hentry : panSemCodeLookup sourceState.code function =
+      some ([ ("parameter", .one) ],
+        .return (.var .local "parameter"), .one))
+    (hclock : sourceState.clock ≠ 0) :
+    let targetSlot := context.vmax + 1
+    let continuationContext : PanToCrepProofContext (RiscV.Word 64) :=
+      { context with
+        vars := FUPDATE context.vars (name, (.one, [targetSlot]))
+        vmax := context.vmax + 1 }
+    let sourceContinuation : PanSemState (RiscV.Word 64) (FfiState σ) :=
+      { sourceState with
+        locals := updatePanValueMap sourceState.locals name (.word value)
+        clock := decPanClock sourceState.clock }
+    let targetCallStart : CrepRuntimeState (RiscV.Word 64) σ :=
+      { targetState with
+        locals := updateCrepRuntimeLocal targetState.locals targetSlot (.word 0) }
+    let targetCallPost : CrepRuntimeState (RiscV.Word 64) σ :=
+      { decCrepClock targetCallStart with
+        locals := updateCrepRuntimeLocal targetCallStart.locals targetSlot
+          (.word value) }
+    evalCrepRuntimeResult targetHandler targetPrimitive 3 targetCallStart
+      (.call (some ([targetSlot], none)) function [.const value]) =
+        some (.normal, targetCallPost) ∧
+    stateRel sourceContinuation
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2 ∧
+    codeRel continuationContext (panSemCodeAsLookup sourceContinuation.code)
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2.code ∧
+    excpRel continuationContext.eids sourceContinuation.exceptionShapes ∧
+    localsRel continuationContext sourceContinuation.locals
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2.locals := by
+  let targetSlot := context.vmax + 1
+  let continuationContext : PanToCrepProofContext (RiscV.Word 64) :=
+    { context with
+      vars := FUPDATE context.vars (name, (.one, [targetSlot]))
+      vmax := context.vmax + 1 }
+  let sourceContinuation : PanSemState (RiscV.Word 64) (FfiState σ) :=
+    { sourceState with
+      locals := updatePanValueMap sourceState.locals name (.word value)
+      clock := decPanClock sourceState.clock }
+  let targetCallStart : CrepRuntimeState (RiscV.Word 64) σ :=
+    { targetState with
+      locals := updateCrepRuntimeLocal targetState.locals targetSlot (.word 0) }
+  let targetCallPost : CrepRuntimeState (RiscV.Word 64) σ :=
+    { decCrepClock targetCallStart with
+      locals := updateCrepRuntimeLocal targetCallStart.locals targetSlot
+        (.word value) }
+  rcases hstate with ⟨hmem, hmemaddrs, hshared, hstructs, hglobals,
+    hclockRel, hbe, hffi, hbase, htop⟩
+  have hsourceLookup : FLOOKUP (panSemCodeAsLookup sourceState.code) function =
+      some ([ ("parameter", .one) ],
+        .return (.var .local "parameter"), .one) := by
+    change panSemCodeLookup sourceState.code function = _
+    exact hentry
+  have hcodeEntry := codeRelImp context
+    (panSemCodeAsLookup sourceState.code) targetState.code hcode function
+    [ ("parameter", .one) ] (.return (.var .local "parameter")) .one hsourceLookup
+  rcases hcodeEntry with ⟨_hbodyLocalized, _hfunc, htargetLookup⟩
+  have htargetCodeLookup : FLOOKUP targetState.code function =
+      some ([0], .return [.var 0]) := by
+    simpa [Shape.shapeSize, ctxtFc, withShape, FUPDATE_LIST, FUPDATE,
+      FLOOKUP_update, compileCodeRelProg, compileProgHOL, compileExpHOL] using
+        htargetLookup
+  have htargetCallLookup : lookupCrepRuntimeCode function [value]
+      targetCallStart.code =
+        some (.return [.var 0], fun key =>
+          if key == 0 then some (.word value) else none) := by
+    simp [targetCallStart, lookupCrepRuntimeCode, lookupCrepHolCode,
+      htargetCodeLookup, FUPDATE_LIST]
+    funext key
+    by_cases hkey : key = 0
+    · subst key
+      simp [FUPDATE]
+    · have hzero : (0 == key) = false := by simp [Ne.symm hkey]
+      simp [FUPDATE, FEMPTY, hzero, hkey]
+  have htargetClock : targetCallStart.clock ≠ 0 := by
+    simp [targetCallStart]
+    omega
+  have hcallNames : ([targetSlot].eraseDups).length = 1 := by
+    simp [targetSlot, List.eraseDups, List.eraseDupsBy,
+      List.eraseDupsBy.loop]
+  have hcallInfo : crepRuntimeCallInfoValid
+      (some ([targetSlot], none) : Option (List Nat ×
+        Option ((RiscV.Word 64) × CrepProg (RiscV.Word 64)))) = true := by
+    simp [crepRuntimeCallInfoValid, hcallNames]
+  have hwordShape : panValueShape [] (.word value) = .one := by
+    simp [panValueShape]
+  have hwordShapeSize : Shape.shapeSize .one = 1 := by
+    exact Shape.shapeSize_one
+  have hwordSize : Shape.shapeSize (panValueShape [] (.word value)) = 1 := by
+    rw [hwordShape, hwordShapeSize]
+  have htargetRun : evalCrepRuntimeResult targetHandler targetPrimitive 3
+      targetCallStart (.call (some ([targetSlot], none)) function [.const value]) =
+        some (.normal, targetCallPost) := by
+    simp [evalCrepRuntimeResult, evalCrepRuntimeProg, evalCrepRuntimeCall,
+      evalCrepRuntimeExps, evalCrepRuntimeExp, htargetCallLookup,
+      hcallInfo, htargetClock, decCrepClock, fixCrepRuntimeClock,
+      crepRuntimeCallerState, clearCrepRuntimeLocals,
+      setCrepRuntimeLocalsExisting, setCrepRuntimeLocal,
+      updateCrepRuntimeLocal, panTheWord, targetCallPost, targetCallStart]
+    all_goals rfl
+  have hlocalsPost : localsRel continuationContext sourceContinuation.locals
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2.locals := by
+    have hfresh := localsRelExtendNewVar context sourceState.locals
+      targetState.locals (.word value) name [targetSlot] hlocals
+      (by simp [hwordShape, isWfShape])
+      (by simp [targetSlot])
+      (by intro slot hslot
+          simp only [List.mem_singleton] at hslot
+          subst slot
+          constructor
+          · simp [targetSlot]
+          · rw [hwordSize]
+            simp [targetSlot])
+      (by simp [hwordSize])
+    have hsourceUpdate : FUPDATE sourceState.locals (name, .word value) =
+        updatePanValueMap sourceState.locals name (.word value) := by
+      funext key
+      by_cases hkey : name = key
+      · subst key
+        simp [FUPDATE, updatePanValueMap]
+      · simp [FUPDATE, updatePanValueMap, beq_eq_false_iff_ne.mpr hkey,
+          beq_eq_false_iff_ne.mpr (Ne.symm hkey)]
+    have htargetUpdate : FUPDATE_LIST targetState.locals
+        ([targetSlot].zip ((panValueFlatten (.word value)).map PanWordLab.word)) =
+          targetCallPost.locals := by
+      funext key
+      by_cases hkey : targetSlot = key
+      · subst key
+        simp [targetCallPost, targetSlot,
+          updateCrepRuntimeLocal, FUPDATE_LIST, panValueFlatten, FUPDATE]
+      · simp [targetCallPost, targetCallStart, targetSlot,
+          updateCrepRuntimeLocal, FUPDATE_LIST, panValueFlatten, FUPDATE,
+          beq_eq_false_iff_ne.mpr hkey]
+    simpa [continuationContext, sourceContinuation, targetSlot,
+      fixCrepRuntimeClock, hsourceUpdate, htargetUpdate,
+      hwordShape, hwordShapeSize] using hfresh
+  refine ⟨htargetRun, ?_, ?_, ?_, hlocalsPost⟩
+  · simp [stateRel, fixCrepRuntimeClock, decPanClock, decCrepClock,
+      hmem, hmemaddrs, hstructs,
+      hshared, hglobals, hclockRel, hbe, hffi, hbase, htop]
+  · exact hcode
+  · exact hexcp
 
 /-! This specialization connects the continuation composition to the actual
 state-owned DecCall source evaluator. The source code entry is looked up from
@@ -2489,27 +2671,28 @@ theorem panToCrepDecCallTickSourceRunComposeWithTickIH
         .return (.var .local "parameter"), .one))
     (hclock : 2 ≤ sourceState.clock)
     (targetContinuationContext : PanToCrepProofContext (RiscV.Word 64))
-    (targetCallStart targetCallPost targetContinuationState :
+    (targetCallStart targetCallPost :
       CrepRuntimeState (RiscV.Word 64) σ)
     (slots : List Nat)
     (hstate : stateRel
       { sourceState with
         locals := updatePanValueMap sourceState.locals name (.word value)
         clock := decPanClock sourceState.clock }
-      targetContinuationState)
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2)
     (hcode : codeRel targetContinuationContext
-      (panSemCodeAsLookup sourceState.code) targetContinuationState.code)
+      (panSemCodeAsLookup sourceState.code)
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2.code)
     (hexcp : excpRel targetContinuationContext.eids sourceState.exceptionShapes)
     (hlocals : localsRel targetContinuationContext
       (updatePanValueMap sourceState.locals name (.word value))
-      targetContinuationState.locals)
+      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+        (.normal, targetCallPost)).2.locals)
     (hcallPrefix :
       evalCrepRuntimeResult targetHandler targetPrimitive (fuel + 1)
         targetCallStart (.call (some (slots, none)) function [.const value]) =
-          some (.normal, targetCallPost))
-    (hcallClockRestore :
-      (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
-        (.normal, targetCallPost)).2 = targetContinuationState) :
+          some (.normal, targetCallPost)) :
     let sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ :=
       (.control (.normal sourceState.locals sourceState.globals
         sourceState.memory sourceState.ffi),
@@ -2550,6 +2733,9 @@ theorem panToCrepDecCallTickSourceRunComposeWithTickIH
     (.control (.normal sourceState.locals sourceState.globals
       sourceState.memory sourceState.ffi),
       decPanClock (decPanClock sourceState.clock))
+  let targetContinuationState : CrepRuntimeState (RiscV.Word 64) σ :=
+    (fixCrepRuntimeClock (ε := FfiFinalEvent) targetCallStart
+      (.normal, targetCallPost)).2
   have hcontinuationClock : continuationState.clock ≠ 0 := by
     simp [continuationState, decPanClock]
     omega
@@ -2620,14 +2806,105 @@ theorem panToCrepDecCallTickSourceRunComposeWithTickIH
   have hsegment := panToCrepDecCallTickContinuationSeqOfSourceRunIH
     targetContinuationContext sourceContext sourcePrimitive sourceHandler
     targetHandler targetPrimitive (fuel + 1) continuationResult continuationState
-    targetCallStart targetCallPost targetContinuationState slots function
+    targetCallStart targetCallPost slots function
     [.const value] hsourceContinuation hstate hcode hexcp hlocals hcallPrefix
-    hcallClockRestore hIH
+    hIH
   rcases hsegment with ⟨targetResult, targetPost, htargetSegment,
     hpostState, hpostCode, hpostExcp, hpostLocals, htargetNormal⟩
   rcases htargetNormal with ⟨_, hresultNormal⟩
   exact ⟨hsource, targetResult, targetPost, htargetSegment, hpostState,
     hpostCode, hpostExcp, hpostLocals, hresultNormal hcontinuationClock⟩
+
+/-! Close the previous DecCall/Tick slice over a concrete `code_rel` entry.
+The target Call prefix and all continuation-entry relations are derived from
+the initial source/target state relation, finite state-owned source code, and
+the compiled target code map; callers provide only the recursive Tick proof
+boundary. -/
+theorem panToCrepDecCallTickFromInitialCodeRel
+    (context : PanToCrepProofContext (RiscV.Word 64))
+    (sourceContext : PanValueFfiContext (RiscV.Word 64))
+    (sourcePrimitive : PanPrimitiveHandler (RiscV.Word 64))
+    (sourceHandler : PanValueStatefulFfiHandler (RiscV.Word 64) σ)
+    (targetHandler : CrepRuntimeFfiHandler (RiscV.Word 64) σ FfiFinalEvent)
+    (targetPrimitive : CrepPrimitiveHandler (RiscV.Word 64))
+    (sourceState : PanSemState (RiscV.Word 64) (FfiState σ))
+    (targetState : CrepRuntimeState (RiscV.Word 64) σ)
+    (function name : FunName) (value : RiscV.Word 64)
+    (hstate : stateRel sourceState targetState)
+    (hcode : codeRel context (panSemCodeAsLookup sourceState.code) targetState.code)
+    (hexcp : excpRel context.eids sourceState.exceptionShapes)
+    (hlocals : localsRel context sourceState.locals targetState.locals)
+    (hentry : panSemCodeLookup sourceState.code function =
+      some ([ ("parameter", .one) ],
+        .return (.var .local "parameter"), .one))
+    (hclock : 2 ≤ sourceState.clock) :
+    let program : Prog (RiscV.Word 64) :=
+      .decCall name .one function [.const value] .tick
+    let sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ :=
+      (.control (.normal sourceState.locals sourceState.globals
+        sourceState.memory sourceState.ffi),
+        decPanClock (decPanClock sourceState.clock))
+    let targetSlot := context.vmax + 1
+    let continuationContext : PanToCrepProofContext (RiscV.Word 64) :=
+      { context with
+        vars := FUPDATE context.vars (name, (.one, [targetSlot]))
+        vmax := context.vmax + 1 }
+    let targetCallStart : CrepRuntimeState (RiscV.Word 64) σ :=
+      { targetState with
+        locals := updateCrepRuntimeLocal targetState.locals targetSlot (.word 0) }
+    panSemEvaluateRiscV64CodeState sourceContext sourcePrimitive sourceHandler
+      sourceState program = some sourceResult ∧
+    ∃ targetResult targetPost,
+      evalCrepRuntimeResult targetHandler targetPrimitive 4 targetCallStart
+        (.seq (.call (some ([targetSlot], none)) function [.const value])
+          (compileCodeRelProg continuationContext .tick)) =
+            some (targetResult, targetPost) ∧
+      stateRel
+        (panSemCodeStateAfter
+          { sourceState with
+            locals := updatePanValueMap sourceState.locals name (.word value)
+            clock := decPanClock sourceState.clock }
+          (.control (.normal
+            (updatePanValueMap sourceState.locals name (.word value))
+            sourceState.globals sourceState.memory sourceState.ffi),
+            decPanClock (decPanClock sourceState.clock))) targetPost ∧
+      codeRel continuationContext (panSemCodeAsLookup sourceState.code)
+        targetPost.code ∧
+      excpRel continuationContext.eids sourceState.exceptionShapes ∧
+      localsRel continuationContext
+        (updatePanValueMap sourceState.locals name (.word value)) targetPost.locals ∧
+      targetResult = .normal := by
+  let program : Prog (RiscV.Word 64) :=
+    .decCall name .one function [.const value] .tick
+  let sourceResult : PanValueFfiClockResult (RiscV.Word 64) σ :=
+    (.control (.normal sourceState.locals sourceState.globals
+      sourceState.memory sourceState.ffi),
+      decPanClock (decPanClock sourceState.clock))
+  let targetSlot := context.vmax + 1
+  let continuationContext : PanToCrepProofContext (RiscV.Word 64) :=
+    { context with
+      vars := FUPDATE context.vars (name, (.one, [targetSlot]))
+      vmax := context.vmax + 1 }
+  let targetCallStart : CrepRuntimeState (RiscV.Word 64) σ :=
+    { targetState with
+      locals := updateCrepRuntimeLocal targetState.locals targetSlot (.word 0) }
+  let targetCallPost : CrepRuntimeState (RiscV.Word 64) σ :=
+    { decCrepClock targetCallStart with
+      locals := updateCrepRuntimeLocal targetCallStart.locals targetSlot
+        (.word value) }
+  have hprefix := panToCrepDecCallReturnParameterPrefixFromCodeRel
+    context targetHandler targetPrimitive sourceState targetState function name value
+    hstate hcode hexcp hlocals hentry (by omega)
+  rcases hprefix with ⟨hcallPrefix, hcontinuationState, hcontinuationCode,
+    hcontinuationExcp, hcontinuationLocals⟩
+  have hcomposed := panToCrepDecCallTickSourceRunComposeWithTickIH
+    sourceContext sourcePrimitive sourceHandler targetHandler targetPrimitive 2
+    sourceState function name value hentry (by omega) continuationContext
+    targetCallStart targetCallPost [targetSlot]
+    hcontinuationState hcontinuationCode hcontinuationExcp
+    hcontinuationLocals hcallPrefix
+  simpa [program, sourceResult, targetSlot, continuationContext,
+    targetCallStart, targetCallPost] using hcomposed
 
 /-! Actual-state Call exception propagation with a one-word payload. The
 source code entry and compiled target entry are obtained from `code_rel`; the
@@ -3396,10 +3673,35 @@ private theorem compileExpListHOL_heads_eq_compileArgs_of_singleton
     `flapjack-pxn.18.3.5.8.8`. Keep bead `flapjack-4ac.5.22` open until the
     exact HOL premises and conclusion are stated and proved. -/
 
-/-! Adapter from the complete per-expression `compile_exp_val_rel` shape to
+/-! Source-reviewed disposition for HOL `compile_exp_val_rel`
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:130`). HOL quantifies over
+the width-polymorphic `panSem$state`, expression `e`, source value `v`,
+`crepSem$state`, compiler context and compiled pair. It assumes successful
+source evaluation, `state_rel`, `code_rel`, `locals_rel`, `localised_exp`, and
+the exact `compile_exp` result; it concludes target evaluation of the compiled
+expressions equals `MAP SOME (flatten v)`, plus the output length, shape, and
+well-formedness facts.
+
+There is no exact Lean counterpart yet. The nearby compiler-support theorems
+use the fixed `RiscV.Word 64` production `Exp`, `PanValue`, `Shape`,
+`PanSemState`, `CrepRuntimeState`, and `CrepExp` carriers. HOL instead uses
+`ExpHOL width`, `ValueHOL width` (with `word_lab` values), `ShapeHOL`, and
+width-polymorphic HOL source/target states; the context and `code_rel`/
+`locals_rel` keys are `mlstring` and HOL finite maps. In particular, current
+`stateRel` relates optional PanValue memory to total target word memory. The
+per-expression helper below also assumes a stronger four-part `heach` fact and
+proves only the list-evaluation result, while case lemmas elsewhere cover only
+selected constructors (some with an RV64 target invariant). These declarations
+must not carry the HOL tag. The faithful theorem replacement is tracked by
+`flapjack-4ac.5.81`, blocked on exact compiler/context carriers
+(`flapjack-pxn.18.3.5.8.8`, `.8.13`) and exact state relations
+(`flapjack-pxn.18.3.7.1.3.1`). The existing compile-expression probe covers
+`compile_exp` outputs; it does not establish this evaluation theorem. -/
+/-! Adapter from the complete per-expression compiled-evaluation relation to
 the `compile_args` evaluator boundary. The target evaluation premise consumed
-by the list induction is projected from the expression IH itself; callers do
-not assume target evaluation separately. -/
+by the list induction is projected from the relation itself; callers do not
+assume target evaluation separately. This list adapter does not prove
+`compile_exp_val_rel`. -/
 theorem compileArgsHOL_eval_flatten_of_compileExpRel
     (context : PanToCrepProofContext (RiscV.Word 64))
     (source : PanSemState (RiscV.Word 64) (FfiState σ))

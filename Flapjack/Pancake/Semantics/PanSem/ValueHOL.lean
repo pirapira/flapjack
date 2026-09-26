@@ -43,8 +43,9 @@ abbrev MlStringHOL := Flapjack.Basis.Pure.MlString.MlString
     `HolWordLab width`, `List (ValueHOL width)`, `List (MlStringHOL × ValueHOL width)`
     match the HOL datatype (`Val ('a word_lab)`, `RStruct (v list)`,
     `NStruct stcname ((fldname # v) list)`).  Like production `PanValue` it
-    derives only `Repr`.  The `[NeZero width]` binder matches HOL's positive
-    `dimindex`; the payload `HolWordLab` is the (tag-withheld) generic carrier. -/
+    derives only `Repr`. The `[NeZero width]` binder matches HOL's positive
+    `dimindex`, and its payload `HolWordLab` is the exact positive-width port
+    of HOL `word_lab`. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "v"]
 inductive ValueHOL (width : Nat) [NeZero width] where
   | val (value : HolWordLab width)
@@ -150,5 +151,33 @@ def isValWordHOL {width : Nat} [NeZero width] : ValueHOL width → Bool
 @[simp] theorem isValWordHOL_nStruct {width : Nat} [NeZero width] (name : MlStringHOL)
     (fields : List (MlStringHOL × ValueHOL width)) :
     isValWordHOL (.nStruct name fields : ValueHOL width) = false := rfl
+
+/-- Rendering of HOL `theValWord` (`cakeml/pancake/semantics/panSemScript.sml:42`)
+    over the exact `v` carrier `ValueHOL`.
+
+    HOL `theValWord_def` is specified only on `ValWord w` — it states
+    `theValWord (ValWord w) = w` and leaves the `RStruct`/`NStruct` branches
+    unspecified.  This total rendering keeps the exact specified clause and
+    chooses `0` on the unspecified branches; because HOL does not constrain
+    those branches, the *function* is untagged and only the specified equation
+    (`theValWordHOL_val_word`) carries the `@[hol]` tag.
+
+    Production `holValueWord` (`Flapjack/Pancake/Semantics/PanSemStateEval.lean`)
+    is the totalized String-backed analogue and stays untagged (`flapjack-yaq`,
+    `flapjack-0lj.5`). -/
+def theValWordHOL {width : Nat} [NeZero width] : ValueHOL width → BitVec width
+  | .val (.word value) => value
+  | _ => 0
+
+/-- Exact port of the *specified* equation of HOL `theValWord_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:42`): `theValWord (ValWord w) = w`.
+    HOL leaves the remaining `v` constructors unspecified, so the total
+    `theValWordHOL` is not tagged and only this equation does.  The direct HOL
+    row `the_val_word=3w` is in `scripts/hol-probes/pan_word_helpers_probe.out`
+    and is replayed over `ValueHOL` by
+    `Flapjack/Test/PanSemTheValWordHOLParity.lean`. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "theValWord_def"]
+theorem theValWordHOL_val_word {width : Nat} [NeZero width] (value : BitVec width) :
+    theValWordHOL (.val (.word value) : ValueHOL width) = value := rfl
 
 end Flapjack

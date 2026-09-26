@@ -69,42 +69,39 @@ theorem panValueShape_eq_panSemShapeOf_tagged (context : StructContext) (value :
       exact congrArg Shape.comb (List.map_congr_left ih)
   | case3 name fields => simp only [panValueShape, panSemShapeOf]
 
-/-- Counterpart of HOL `panSem$word_lab` (`panSemScript.sml:17`,
-    `word_lab = Word ('a word) End`): a single `word` constructor carrying the
-    word payload, indexed by `width` with a `BitVec width` payload.  The
-    executable code uses the generic `PanWordLab` (`Flapjack/PanValues.lean`),
-    and the two are related by the checked isomorphism below at each width. -/
--- FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL
--- `word_lab = Word ('a word)` has one constructor and one word payload, which
--- matches `.word (BitVec width)` at every positive width. This Lean inductive
--- quantifies over every `width : Nat`, including zero; HOL's finite word
--- carrier has a positive `dimindex` and has no width-zero instance. The extra
--- width-zero carrier in this family has no HOL counterpart. Adding
--- `[NeZero width]` to this inductive (as on `CrepProgHOL`) propagates through
--- `HolValue`, `CrepLocalsExact`, and the frozen `PanSemStateEval.lean`, so the
--- tag stays withheld until the dependency slice in `flapjack-0lj.5` lands.
-inductive HolWordLab (width : Nat) where
+/- Exact port of HOL `panSem$word_lab` (`panSemScript.sml:17`):
+   `word_lab = Word ('a word)`. A HOL word has positive `dimindex`; Lean's
+   `[NeZero width]` gives the same positive-width carrier, with one constructor
+   and one `BitVec width` payload. The BitVec width is the canonical finite-word
+   representation used throughout this port. The direct production-carrier
+   conversions below remain Flapjack-specific infrastructure. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "word_lab"]
+inductive HolWordLab (width : Nat) [NeZero width] where
   | word (value : BitVec width)
   deriving BEq, DecidableEq, Repr
 
 /-- The isomorphism from the exact port to production `PanWordLab`. -/
-def HolWordLab.toPanWordLab {width : Nat} : HolWordLab width → PanWordLab (BitVec width)
+def HolWordLab.toPanWordLab {width : Nat} [NeZero width] :
+    HolWordLab width → PanWordLab (BitVec width)
   | .word value => .word value
 
 /-- The isomorphism from production `PanWordLab` to the exact port. -/
-def PanWordLab.toHolWordLab {width : Nat} : PanWordLab (BitVec width) → HolWordLab width
+def PanWordLab.toHolWordLab {width : Nat} [NeZero width] :
+    PanWordLab (BitVec width) → HolWordLab width
   | .word value => .word value
 
-@[simp] theorem HolWordLab.toPanWordLab_toHolWordLab {width : Nat} (value : HolWordLab width) :
+@[simp] theorem HolWordLab.toPanWordLab_toHolWordLab {width : Nat} [NeZero width]
+    (value : HolWordLab width) :
     value.toPanWordLab.toHolWordLab = value := by
   cases value <;> rfl
 
-@[simp] theorem PanWordLab.toHolWordLab_toPanWordLab {width : Nat}
+@[simp] theorem PanWordLab.toHolWordLab_toPanWordLab {width : Nat} [NeZero width]
     (value : PanWordLab (BitVec width)) :
     value.toHolWordLab.toPanWordLab = value := by
   cases value <;> rfl
 
-@[simp] theorem HolWordLab.toPanWordLab_word {width : Nat} (value : BitVec width) :
+@[simp] theorem HolWordLab.toPanWordLab_word {width : Nat} [NeZero width]
+    (value : BitVec width) :
     (HolWordLab.word value).toPanWordLab = PanWordLab.word value := rfl
 
 /-- Source-shaped port of HOL `panSem$v` (`panSemScript.sml:22`,
@@ -117,12 +114,12 @@ def PanWordLab.toHolWordLab {width : Nat} : PanWordLab (BitVec width) → HolWor
 -- (`panSemScript.sml:22`) is
 -- `Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)`
 -- with `stcname`/`fldname` = `mlstring`, whereas this Lean `nStruct` carries
--- `StructName`/`FieldName = String`. Constructor names/arities match, but the
--- name carriers differ, so no tag is attached until an exact MlString-backed
--- value datatype is introduced (tracked by `flapjack-pxn.18.3.5.8`, parent
--- `flapjack-0lj`).
+-- `StructName`/`FieldName = String`. This compatibility carrier is explicitly
+-- Flapjack-specific and keeps its word payload in production `PanWordLab`;
+-- the exact `ValueHOL` in `PanSem/ValueHOL.lean` uses positive-width
+-- `HolWordLab` instead. No tag is attached to this String-backed carrier.
 inductive HolValue (width : Nat) where
-  | val (value : HolWordLab width)
+  | val (value : PanWordLab (BitVec width))
   | rStruct (fields : List (HolValue width))
   | nStruct (name : StructName) (fields : List (FieldName × HolValue width))
   deriving Repr
@@ -630,6 +627,109 @@ theorem panSemCodeEvaluateFuel_call_decomposition
         info function arguments memoryAccess contracts memoryHandler := by
   rw [panSemCodeEvaluateFuel_call_delegates,
     panSemCodeEvaluateFuel_call_sub_one_eq]
+
+/-- **DecCall dispatch decomposition.** At production canonical fuel, a
+    `DecCall` dispatches to its state-owned helper at canonical fuel minus one.
+    That helper performs the state-owned code-map Call and continuation, with
+    `preserveReturnLocals` enabled for the destination binding. -/
+theorem panSemCodeEvaluateFuel_decCall_delegates
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ))
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state (.decCall name shape function arguments continuation))
+        state.locals state.globals state.memory state.ffi state.clock
+        (.decCall name shape function arguments continuation)
+        memoryAccess contracts memoryHandler =
+      evalPanValueFfiClockCodeDecCall context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state
+          (.decCall name shape function arguments continuation) - 1)
+        state.locals state.globals state.memory state.ffi state.clock
+        name shape function arguments continuation memoryAccess contracts memoryHandler := by
+  obtain ⟨k, hk⟩ : ∃ k,
+      panSemCodeEvaluateFuel state
+        (.decCall name shape function arguments continuation) = k + 1 := by
+    refine ⟨panSemCodeEvaluateFuel state
+      (.decCall name shape function arguments continuation) - 1, ?_⟩
+    have hpos : 0 < panSemCodeEvaluateFuel state
+        (.decCall name shape function arguments continuation) := by
+      simp only [panSemCodeEvaluateFuel]
+      omega
+    omega
+  rw [hk]
+  simp only [evalPanValueFfiClockCodeProg, Nat.add_sub_cancel]
+
+/-- The production canonical fuel of a `DecCall` is at least two, leaving a
+    nonnegative body budget after the program and code-map dispatch steps. -/
+theorem panSemCodeEvaluateFuel_decCall_two_le
+    (state : PanSemState α ffi)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation : Prog α) :
+    2 ≤ panSemCodeEvaluateFuel state
+      (.decCall name shape function arguments continuation) := by
+  have hclock : 1 ≤ state.clock + 1 := Nat.succ_le_succ (Nat.zero_le _)
+  have hbody : 1 ≤ max
+      (panSemProgFuel (.decCall name shape function arguments continuation))
+      (panSemCodeBodyFuel state.code) + 1 :=
+    Nat.succ_le_succ (Nat.zero_le _)
+  have hmul := Nat.mul_le_mul hclock hbody
+  simp only [panSemCodeEvaluateFuel]
+  omega
+
+/-- The DecCall helper's canonical fuel is one more than the body/continuation
+    budget `canonical - 2`. -/
+theorem panSemCodeEvaluateFuel_decCall_sub_one_eq
+    (state : PanSemState α ffi)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation : Prog α) :
+    panSemCodeEvaluateFuel state
+        (.decCall name shape function arguments continuation) - 1 =
+      (panSemCodeEvaluateFuel state
+        (.decCall name shape function arguments continuation) - 2) + 1 := by
+  have htwo := panSemCodeEvaluateFuel_decCall_two_le state name shape function
+    arguments continuation
+  omega
+
+/-- Flapjack-specific `DecCall` branch decomposition: the production
+    evaluator at canonical fuel dispatches to the state-owned DecCall helper at
+    `(canonical - 2) + 1`, and preserves the callee locals needed by the
+    continuation. This is a fuel-interface lemma, not a HOL theorem port. -/
+theorem panSemCodeEvaluateFuel_decCall_decomposition
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α) (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ) (bytesInWord : α)
+    (state : PanSemState α (FfiState σ))
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (continuation : Prog α)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (contracts : Option PanValueCallContracts)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ)) :
+    evalPanValueFfiClockCodeProg context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        (panSemCodeEvaluateFuel state (.decCall name shape function arguments continuation))
+        state.locals state.globals state.memory state.ffi state.clock
+        (.decCall name shape function arguments continuation)
+        memoryAccess contracts memoryHandler =
+      evalPanValueFfiClockCodeDecCall context primitive handler state.structs state.code
+        state.exceptionShapes state.baseAddress state.topAddress bytesInWord
+        ((panSemCodeEvaluateFuel state
+          (.decCall name shape function arguments continuation) - 2) + 1)
+        state.locals state.globals state.memory state.ffi state.clock
+        name shape function arguments continuation memoryAccess contracts memoryHandler := by
+  rw [panSemCodeEvaluateFuel_decCall_delegates,
+    panSemCodeEvaluateFuel_decCall_sub_one_eq]
 
 /-- A body stored under the called function in a `DecCall` has a canonical
     recursive fuel budget derived from the enclosing state and code map. -/
@@ -1922,64 +2022,11 @@ theorem panSemEvaluateExactState_call_error_of_callee_error
     (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
     harguments hlookup hbind hparameters hclock hbody
 
-/-- A callee that returns a value failing the call's return contract is a call
-    failure: Cake's `evaluate (Call ...)` maps a mismatched `Return` to
-    `(SOME Error,st)`, preserving the callee's post-call globals, memory, FFI
-    state and clock (its locals were already emptied by the return). -/
-theorem panSemEvaluateExactState_call_error_of_returned_invalid
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : PanValueFfiContext α)
-    (primitive : PanPrimitiveHandler α)
-    (handler : PanValueStatefulFfiHandler α σ)
-    (state : PanSemExactState α σ)
-    (info : Option (Option (VarKind × VarName) × Option (ExceptionId × VarName × Prog α)))
-    (function : FunName) (arguments : List (Exp α))
-    (values : List (PanValue α)) (parameters : List VarName) (body : Prog α)
-    (calleeLocals bodyLocals returnGlobals : VarName → Option (PanValue α))
-    (returnMemory : α → Option (PanValue α)) (returnFfi : FfiState σ)
-    (finalClock fuel : Nat)
-    (harguments :
-      evalPanValueExps state.legacy.structs state.legacy.locals state.legacy.globals
-        state.legacy.memory state.legacy.baseAddress state.legacy.topAddress
-        state.legacy.bytesInWord arguments (memoryAccess := some state.memoryAccess) =
-        some values)
-    (hlookup : lookupPanFunction function state.legacy.functions = some (parameters, body))
-    (hbind : bindPanValueParameters parameters values = some calleeLocals)
-    (hparameters :
-      panValueParametersValid state.legacy.structs state.legacy.contracts function values =
-        true)
-    (hclock : state.legacy.clock ≠ 0)
-    (hfuel :
-      state.legacy.clock +
-          max (panSemProgFuel (Prog.call info function arguments))
-            (panSemFunctionFuel state.legacy.functions) = fuel + 1)
-    (hbody :
-      evalPanValueFfiClockProg context primitive handler state.legacy.structs
-        state.legacy.functions state.legacy.baseAddress state.legacy.topAddress
-        state.legacy.bytesInWord fuel calleeLocals state.legacy.globals
-        state.legacy.memory state.legacy.ffi (state.legacy.clock - 1) body
-        (memoryAccess := some state.memoryAccess) (contracts := state.legacy.contracts)
-        (memoryHandler := state.legacy.memoryHandler) =
-        some (.control (.returned bodyLocals returnGlobals returnMemory returnFfi values),
-          finalClock))
-    (hret :
-      panValueReturnValid state.legacy.structs state.legacy.contracts function values = false) :
-    panSemEvaluateExactState context primitive handler state (.call info function arguments) =
-      some (.control (.error (fun _ => none) returnGlobals returnMemory returnFfi),
-        finalClock) := by
-  simp only [panSemEvaluateExactState, panSemEvaluate, panSemEvaluateWithFuel,
-    panSemEvaluateFuel, evalPanValueFfiClockProg, PanSemExactState.toEvaluateState]
-  rw [hfuel]
-  exact evalPanValueFfiClockCall_returned_invalid_error context primitive handler
-    state.legacy.structs state.legacy.functions state.legacy.baseAddress
-    state.legacy.topAddress state.legacy.bytesInWord fuel state.legacy.locals
-    state.legacy.globals state.legacy.memory state.legacy.ffi state.legacy.clock
-    info function arguments values parameters calleeLocals bodyLocals returnGlobals
-    returnMemory returnFfi body finalClock (memoryAccess := some state.memoryAccess)
-    (contracts := state.legacy.contracts) (memoryHandler := state.legacy.memoryHandler)
-    harguments hlookup hbind hparameters hclock hbody hret
+/-! The legacy function-list evaluator does not carry HOL `state.code`'s
+    per-entry `returnShape`; an optional `PanValueCallContracts.returnShapes`
+    table is not a sound substitute for that field. The compatibility call
+    path therefore does not reject a return based on that table. The exact
+    state-owned evaluator checks the source code-map return shape. -/
 
 /-- HOL `Dec` (`panSemScript.sml:558-565`) whose initialiser expression fails to
     evaluate returns `(SOME Error, s)` with the unchanged source state.  Stated

@@ -277,4 +277,153 @@ theorem progByteRanged_extCall_name {width : Nat} {function : String}
     NameRanged function :=
   h.1
 
+/-! ### Exact `panLang$exp_ids` (bead flapjack-4ac.1.33)
+
+HOL `exp_ids_def` (`cakeml/pancake/panLangScript.sml:222-231`) collects the
+exception identifiers syntactically reachable from a program over the exact
+`prog` carrier.  `expIdsHOL` mirrors all of its clauses; the raw construction
+(`Call (SOME (_, SOME (e, _, ep)))`) contributes the handler identifier `e` and
+the identifiers of `ep`, everything else contributes nothing.  The production
+`Flapjack.expIds` is polymorphic over `Prog α` with `String` identifiers, so it
+cannot literally call this word-indexed definition; the checked bridge
+`expIdsHOL_map_toStringOfBytes` connects them clause-for-clause. -/
+@[hol "cakeml/pancake/panLangScript.sml" "exp_ids_def"]
+def expIdsHOL {width : Nat} [NeZero width] : ProgHOL width → List MlS
+  | .skip => []
+  | .dec _ _ _ body => expIdsHOL body
+  | .assign _ _ _ => []
+  | .primitive _ _ _ => []
+  | .store _ _ => []
+  | .store32 _ _ => []
+  | .storeByte _ _ => []
+  | .seq first second => expIdsHOL first ++ expIdsHOL second
+  | .ite _ thenBranch elseBranch => expIdsHOL thenBranch ++ expIdsHOL elseBranch
+  | .while _ body => expIdsHOL body
+  | .break => []
+  | .continue => []
+  | .call (some (_, some (exception, _, handler))) _ _ => exception :: expIdsHOL handler
+  | .call _ _ _ => []
+  | .decCall _ _ _ _ body => expIdsHOL body
+  | .extCall _ _ _ _ _ => []
+  | .raise exception _ => [exception]
+  | .return _ => []
+  | .shMemLoad _ _ _ _ => []
+  | .shMemStore _ _ _ => []
+  | .tick => []
+  | .annot _ _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-- When a `Call`'s metadata is not the `SOME (_, SOME (eid, _, handler))` shape,
+    both the exact `expIdsHOL` and the production `Flapjack.expIds` contribute no
+    exception identifiers. -/
+theorem expIds_progOfHOL_call_of_not {width : Nat} [NeZero width]
+    {info : Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width))}
+    {name : MlS} {args : List (ExpHOL width)}
+    (h : ∀ (kindOpt : Option (VarKind × MlS)) (eid binding : MlS) (body : ProgHOL width),
+      info ≠ some (kindOpt, some (eid, binding, body))) :
+    Flapjack.expIds (progOfHOL (.call info name args : ProgHOL width)) = [] := by
+  cases info with
+  | none => simp [progOfHOL, Flapjack.expIds]
+  | some pair =>
+    obtain ⟨kindOpt, rest⟩ := pair
+    cases rest with
+    | none => simp [progOfHOL, Flapjack.expIds]
+    | some triple =>
+      obtain ⟨eid, binding, body⟩ := triple
+      exact absurd rfl (h kindOpt eid binding body)
+
+/-- The exact `expIdsHOL` projects the same exception identifiers as the
+production `Flapjack.expIds` after the `toStringOfBytes` name bridge.  Direct
+executable routing is unavailable because production is polymorphic over
+`Prog α` with `String` identifiers while the tagged definition is over the
+word-indexed `ProgHOL` with `MlS`; this checked relation is the connection
+(bead flapjack-4ac.1.33). -/
+@[simp] theorem expIdsHOL_map_toStringOfBytes {width : Nat} [NeZero width]
+    (program : ProgHOL width) :
+    (expIdsHOL program).map toStringOfBytes = Flapjack.expIds (progOfHOL program) := by
+  fun_induction expIdsHOL program <;>
+    simp_all only [Flapjack.expIds, progOfHOL, List.map_append, List.map_cons,
+      List.map_nil]
+  case case14 =>
+    rename_i infoH nameH argsH hNot
+    exact (expIds_progOfHOL_call_of_not (info := infoH) (name := nameH)
+      (args := argsH) hNot).symm
+
+/-! ### Exact `panLang$fun_ids` (bead flapjack-4ac.1.45)
+
+HOL `fun_ids_def` (`cakeml/pancake/panLangScript.sml:336-343`) collects the
+callee names syntactically reachable from a program over the exact `prog`
+carrier.  `funIdsHOL` mirrors every clause: a handler `Call` contributes its
+name and the names of the handler, a non-handler `Call` contributes just its
+name, `DecCall` contributes its name and the body names, and every other
+constructor contributes nothing.  The production `Flapjack.funIds` is
+polymorphic over `Prog α` with `String` names, so it cannot literally call this
+word-indexed definition; the checked bridge `funIdsHOL_map_toStringOfBytes`
+connects them clause-for-clause. -/
+@[hol "cakeml/pancake/panLangScript.sml" "fun_ids_def"]
+def funIdsHOL {width : Nat} [NeZero width] : ProgHOL width → List MlS
+  | .skip => []
+  | .dec _ _ _ body => funIdsHOL body
+  | .assign _ _ _ => []
+  | .primitive _ _ _ => []
+  | .store _ _ => []
+  | .store32 _ _ => []
+  | .storeByte _ _ => []
+  | .seq first second => funIdsHOL first ++ funIdsHOL second
+  | .ite _ thenBranch elseBranch => funIdsHOL thenBranch ++ funIdsHOL elseBranch
+  | .while _ body => funIdsHOL body
+  | .break => []
+  | .continue => []
+  | .call (some (_, some (_, _, handler))) name _ => name :: funIdsHOL handler
+  | .call _ name _ => [name]
+  | .decCall _ _ function _ body => function :: funIdsHOL body
+  | .extCall _ _ _ _ _ => []
+  | .raise _ _ => []
+  | .return _ => []
+  | .shMemLoad _ _ _ _ => []
+  | .shMemStore _ _ _ => []
+  | .tick => []
+  | .annot _ _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-- When a `Call`'s metadata is not the `SOME (_, SOME (_, _, handler))` shape,
+    both the exact `funIdsHOL` and the production `Flapjack.funIds` contribute
+    only the callee name. -/
+theorem funIds_progOfHOL_call_of_not {width : Nat} [NeZero width]
+    {info : Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width))}
+    {name : MlS} {args : List (ExpHOL width)}
+    (h : ∀ (kindOpt : Option (VarKind × MlS)) (eid binding : MlS) (body : ProgHOL width),
+      info ≠ some (kindOpt, some (eid, binding, body))) :
+    Flapjack.funIds (progOfHOL (.call info name args : ProgHOL width)) =
+      [toStringOfBytes name] := by
+  cases info with
+  | none => simp [progOfHOL, Flapjack.funIds]
+  | some pair =>
+    obtain ⟨kindOpt, rest⟩ := pair
+    cases rest with
+    | none => simp [progOfHOL, Flapjack.funIds]
+    | some triple =>
+      obtain ⟨eid, binding, body⟩ := triple
+      exact absurd rfl (h kindOpt eid binding body)
+
+/-- The exact `funIdsHOL` projects the same callee names as the production
+`Flapjack.funIds` after the `toStringOfBytes` name bridge.  Direct executable
+routing is unavailable because production is polymorphic over `Prog α` with
+`String` names while the tagged definition is over the word-indexed `ProgHOL`
+with `MlS`; this checked relation is the connection (bead flapjack-4ac.1.45). -/
+@[simp] theorem funIdsHOL_map_toStringOfBytes {width : Nat} [NeZero width]
+    (program : ProgHOL width) :
+    (funIdsHOL program).map toStringOfBytes = Flapjack.funIds (progOfHOL program) := by
+  fun_induction funIdsHOL program <;>
+    simp_all only [Flapjack.funIds, progOfHOL, List.map_append, List.map_cons,
+      List.map_nil]
+  case case14 =>
+    rename_i infoH nameH argsH hNot
+    exact (funIds_progOfHOL_call_of_not (info := infoH) (name := nameH)
+      (args := argsH) hNot).symm
+
 end Flapjack.Pancake.PanLang

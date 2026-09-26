@@ -119,6 +119,7 @@ theorem nestedBadShapeResultExact : nestedBadShapeResult = some
     panSemProgFuel, panSemExpFuel, panSemExpListFuel, panSemCodeBodyFuel,
     panSemCodeStateAfter,
     evalPanValueFfiClockCodeProg, evalPanValueFfiClockCodeCall,
+    evalPanValueFfiClockCodeDecCall,
     evalPanValueFfiClockLeaf, evalPanValueFfiClockProg, evalPanValueFfiClockCall,
     evalPanValueFfiProgSteps, evalPanValueFfiCallSteps,
     evalPanValueExpCounted, evalPanValueExpsCounted, panValueReturnResult,

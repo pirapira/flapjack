@@ -355,6 +355,76 @@ decreasing_by
        have hlt := List.sizeOf_lt_of_mem mem
        omega)
 
+/-- The production local-variable extractor is the reviewed HOL definition under
+the checked `String ↦ MlString` name codec: encoding a production expression
+with `expToHOL` and running the tagged `varExpHOL` yields exactly the production
+`expLocalVars` result with every name re-encoded by `ofString`.
+
+`ofString` is the total byte-string injection; the reverse decoding
+`toStringOfBytes` is exact precisely on byte-ranged names (`ExpByteRanged`), so a
+byte-ranged corollary `expLocalVarsHOL e = expLocalVars e` holds, but is not
+needed here.  The executable compiler's only `expLocalVars` call sites
+(`globalCompileExp`/`globalCompileProg`) are generic in the word type `α` with no
+`width`, so the width-indexed `expToHOL` codec cannot be threaded there without a
+refactor; this bridge is the reviewed correspondence and the routing follow-up is
+tracked on the bead. -/
+theorem varExpHOL_expToHOL {width : Nat} [NeZero width] :
+    (e : Flapjack.Exp (BitVec width)) →
+      varExpHOL (expToHOL e) = (Flapjack.expLocalVars e).map ofString :=
+  Exp.rec
+    (motive_1 := fun e => varExpHOL (expToHOL e) = (Flapjack.expLocalVars e).map ofString)
+    (motive_2 := fun es => (es.map (varExpHOL ∘ expToHOL)).flatten
+      = (Flapjack.expLocalVars.expLocalVarsList es).map ofString)
+    (motive_3 := fun fs => (fs.map ((fun pair => varExpHOL pair.snd) ∘
+        (fun p => (ofString p.fst, expToHOL p.snd)))).flatten
+      = (Flapjack.expLocalVars.expLocalVarsFieldList fs).map ofString)
+    (motive_4 := fun p => varExpHOL (expToHOL p.2) = (Flapjack.expLocalVars p.2).map ofString)
+    (fun _value => by simp [expToHOL, varExpHOL, Flapjack.expLocalVars])
+    (fun kind _name => by cases kind <;> simp [expToHOL, varExpHOL, Flapjack.expLocalVars])
+    (fun _fields ih => by
+      simpa only [expToHOL, varExpHOL, Flapjack.expLocalVars, List.map_map] using ih)
+    (fun _index _value ih => by
+      simpa only [expToHOL, varExpHOL, Flapjack.expLocalVars] using ih)
+    (fun _name _fields ih => by
+      simpa only [expToHOL, varExpHOL, Flapjack.expLocalVars, List.map_map] using ih)
+    (fun _name _value ih => by
+      simpa only [expToHOL, varExpHOL, Flapjack.expLocalVars] using ih)
+    (fun _shape _address ih => by
+      simpa only [expToHOL, varExpHOL, Flapjack.expLocalVars] using ih)
+    (fun _address ih => by simp only [expToHOL, varExpHOL, Flapjack.expLocalVars]; exact ih)
+    (fun _address ih => by simp only [expToHOL, varExpHOL, Flapjack.expLocalVars]; exact ih)
+    (fun _operator _args ih => by
+      simpa only [expToHOL, varExpHOL, Flapjack.expLocalVars, List.map_map] using ih)
+    (fun _operator _args ih => by
+      simpa only [expToHOL, varExpHOL, Flapjack.expLocalVars, List.map_map] using ih)
+    (fun _operator _left _right ihl ihr => by
+      simp [expToHOL, varExpHOL, Flapjack.expLocalVars, List.map_append, ihl, ihr])
+    (fun _operator _left _right ihl ihr => by
+      simp [expToHOL, varExpHOL, Flapjack.expLocalVars, List.map_append, ihl, ihr])
+    (by simp [expToHOL, varExpHOL, Flapjack.expLocalVars])
+    (by simp [expToHOL, varExpHOL, Flapjack.expLocalVars])
+    (by simp [expToHOL, varExpHOL, Flapjack.expLocalVars])
+    (by simp only [List.map_nil, List.flatten_nil,
+      Flapjack.expLocalVars.expLocalVarsList.eq_1])
+    (fun _head _tail ih1 ih2 => by
+      rw [Flapjack.expLocalVars.expLocalVarsList.eq_2, List.map_append]
+      simp only [List.map_cons, List.flatten_cons, Function.comp_def, ih1]
+      rw [show (List.map (fun x => varExpHOL (expToHOL x)) _tail).flatten
+          = List.map ofString (Flapjack.expLocalVars.expLocalVarsList _tail)
+        from by simpa only [Function.comp_def] using ih2])
+    (by simp only [List.map_nil, List.flatten_nil,
+      Flapjack.expLocalVars.expLocalVarsFieldList.eq_1])
+    (fun _head _tail ih1 ih2 => by
+      obtain ⟨fst, exp⟩ := _head
+      rw [Flapjack.expLocalVars.expLocalVarsFieldList.eq_2, List.map_append]
+      simp only [List.map_cons, List.flatten_cons, Function.comp_def]
+      rw [show varExpHOL (expToHOL exp) = List.map ofString (Flapjack.expLocalVars exp)
+        from by simpa using ih1]
+      rw [show (List.map (fun x => varExpHOL (expToHOL x.snd)) _tail).flatten
+          = List.map ofString (Flapjack.expLocalVars.expLocalVarsFieldList _tail)
+        from by simpa only [Function.comp_def] using ih2])
+    (fun _fst _snd ih => ih)
+
 /-! ### `panLang$global_var_exp` (specified fragment; no exact tag) -/
 
 /-- Exact-carrier counterpart of HOL `panLang$global_var_exp`
@@ -405,5 +475,44 @@ decreasing_by
     | (rename_i elem mem
        have hlt := List.sizeOf_lt_of_mem mem
        omega)
+
+/-! ### Exact panLang$shape_val -/
+
+mutual
+  /-- Exact port of HOL `panLang$shape_val`
+  (`cakeml/pancake/panLangScript.sml:190`): the canonical zero-valued
+  expression of a shape.  A scalar and a named shape both give the zero word;
+  a combination gives a record of the component expressions.  Mirrors the HOL
+  mutual definition with `shape_vals`. -/
+  @[hol "cakeml/pancake/panLangScript.sml" "shape_val_def"]
+  def shapeValHOL {width : Nat} [NeZero width] : ShapeHOL → ExpHOL width
+    | .one => .const 0
+    | .comb shapes => .rstruct (shapeValsHOL shapes)
+    | .named _ => .const 0
+  termination_by shape => sizeOf shape
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  /-- Exact port of HOL `panLang$shape_vals` (the list clause of
+  `shape_val_def`, `cakeml/pancake/panLangScript.sml:194`). -/
+  @[hol "cakeml/pancake/panLangScript.sml" "shape_val_def"]
+  def shapeValsHOL {width : Nat} [NeZero width] :
+      List ShapeHOL → List (ExpHOL width)
+    | [] => []
+    | shape :: shapes => shapeValHOL shape :: shapeValsHOL shapes
+  termination_by shapes => sizeOf shapes
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+/-- Flapjack-specific equation for the Lean mutual definition: HOL's
+`shape_val_def` defines `shape_vals` by recursion, but declares no separate
+map theorem. This helper has no separate HOL original. -/
+@[simp] theorem shapeValsHOL_eq_map {width : Nat} [NeZero width]
+    (shapes : List ShapeHOL) :
+    shapeValsHOL shapes = shapes.map (shapeValHOL (width := width)) := by
+  induction shapes with
+  | nil => simp [shapeValsHOL]
+  | cons shape shapes ih => simp [shapeValsHOL, ih]
 
 end Flapjack.Pancake.PanLang

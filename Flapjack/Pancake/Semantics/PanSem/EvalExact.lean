@@ -105,15 +105,31 @@ namespace Flapjack
 open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ExpHOL)
 open Flapjack.Pancake.PanLang (isWfShapeExactHOL structContextLookupHOL)
 
-/-- HOL `isWord` over the exact value carrier. -/
+/-- HOL `isValWord` over the exact value carrier `ValueHOL` (the `v`-level
+    predicate, not the `word_lab`-level `isWord`). -/
 def valueIsWord {width : Nat} [NeZero width] : ValueHOL width → Bool
   | .val (.word _) => true
   | _ => false
 
-/-- HOL `theWord` over the exact value carrier (totalized for the guard). -/
+/-- HOL `theValWord` over the exact value carrier `ValueHOL` (totalized for the
+    `EVERY isValWord` guard; the exact specified equation is
+    `theValWordHOL_val_word` in `ValueHOL.lean`). -/
 def valueWord {width : Nat} [NeZero width] : ValueHOL width → BitVec width
   | .val (.word value) => value
   | _ => 0
+
+/-- Kernel-checked bridge: the canonical exact `theValWord` rendering
+    `theValWordHOL` (whose specified equation is tagged `theValWord_def`) agrees
+    with the executed evaluator's totalized `valueWord` helper on every
+    `ValueHOL`.  Only the specified equation of HOL's partial `theValWord` is
+    tagged; both total rendering functions stay untagged. -/
+theorem theValWordHOL_eq_valueWord {width : Nat} [NeZero width] (value : ValueHOL width) :
+    theValWordHOL value = valueWord value := by
+  cases value with
+  | val word => cases word with
+    | word bits => rfl
+  | rStruct fields => rfl
+  | nStruct name fields => rfl
 
 /-- HOL `ALOOKUP` for named-struct field lookup over exact values. -/
 def lookupFieldHOL {width : Nat} [NeZero width] (name : MlS) :

@@ -386,8 +386,10 @@ import Flapjack.Test.PanLangShapeSizeWithContextParity
 import Flapjack.Test.PanLangShapeSizeParity
 import Flapjack.Test.PanLangIsWfShapeParity
 import Flapjack.Test.PanLangExceptionsParity
+import Flapjack.Test.PanLangInlinableParity
 import Flapjack.Test.PanLangVarExpParity
 import Flapjack.Test.PanSemIsValWordHOLParity
+import Flapjack.Test.PanSemTheValWordHOLParity
 import Flapjack.Test.PanSemEmptyLocalsHOLParity
 import Flapjack.Test.PanSemMemStore32HOLParity
 import Flapjack.Test.PanSemMemStoreHOLParity
@@ -1047,6 +1049,7 @@ Flapjack.Test.PanSemFuelDecompositionParity.runChecks,
     Flapjack.Test.PanLangShapeSizeParity.runChecks,
     Flapjack.Test.PanLangIsWfShapeParity.runChecks,
     Flapjack.Test.PanSemIsValWordHOLParity.runChecks,
+    Flapjack.Test.PanSemTheValWordHOLParity.runChecks,
     Flapjack.Test.PanSemEmptyLocalsHOLParity.runChecks,
     Flapjack.Test.PanSemMemStore32HOLParity.runChecks,
     Flapjack.Test.PanSemMemStoreHOLParity.runChecks,

@@ -1,6 +1,7 @@
 import Flapjack.Semantics
 import Flapjack.PanMemoryModel
 import Flapjack.PanStructsAfindi
+import Flapjack.Pancake.PanLang.Exp
 
 /-!
 Structured source values and the corresponding executable expression/state
@@ -542,6 +543,39 @@ mutual
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 end
+
+/-- `shape_vals` is the list map of `shape_val`. -/
+theorem shapeVals_eq_map {α : Type} [OfNat α 0] (shapes : List Shape) :
+    shapeVals (α := α) shapes = shapes.map shapeVal := by
+  induction shapes with
+  | nil => simp [shapeVals]
+  | cons shape shapes ih => simp [shapeVals, ih]
+
+/-- The exact `panLang$shape_val` port agrees with Flapjack's production
+`shapeVal` through the reviewed shape/expression codecs.  This is the checked
+bridge between `Flapjack.Pancake.PanLang.shapeValHOL`
+(`@[hol panLangScript.sml shape_val_def]`) and the executed `shapeVal`
+(bead `flapjack-4ac.1.29`). -/
+theorem expOfHOL_shapeValHOL {width : Nat} [NeZero width] :
+    (shape : Flapjack.Pancake.PanLang.ShapeHOL) →
+      Flapjack.Pancake.PanLang.expOfHOL
+          (Flapjack.Pancake.PanLang.shapeValHOL (width := width) shape) =
+        shapeVal (Flapjack.Pancake.PanLang.shapeOfHOL shape)
+  | .one => by simp [Flapjack.Pancake.PanLang.shapeValHOL,
+      Flapjack.Pancake.PanLang.shapeOfHOL, Flapjack.Pancake.PanLang.expOfHOL,
+      shapeVal]
+  | .named _ => by simp [Flapjack.Pancake.PanLang.shapeValHOL,
+      Flapjack.Pancake.PanLang.shapeOfHOL, Flapjack.Pancake.PanLang.expOfHOL,
+      shapeVal]
+  | .comb shapes => by
+      simp only [Flapjack.Pancake.PanLang.shapeValHOL,
+        Flapjack.Pancake.PanLang.shapeValsHOL_eq_map,
+        Flapjack.Pancake.PanLang.shapeOfHOL,
+        Flapjack.Pancake.PanLang.expOfHOL, shapeVal, shapeVals_eq_map,
+        List.map_map]
+      congr 1
+      exact List.map_congr_left
+        (fun field _ => expOfHOL_shapeValHOL (width := width) field)
 
 mutual
   /-- Counterpart of Cake's `is_wf_shape_v`

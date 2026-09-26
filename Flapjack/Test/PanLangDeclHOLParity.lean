@@ -11,6 +11,7 @@ import Flapjack.Pancake.PanLang.Decl
 import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Parser.ParseTopDecsByteRanged
+import Flapjack.Pancake.PanGlobals
 
 namespace Flapjack.Test.PanLangDeclHOLParity
 
@@ -201,5 +202,60 @@ example : functionsHOL (exactDecls.filter isFunctionHOL) = functionsHOL exactDec
 
 example : (functionsHOL (exactDecls.filter isDeclHOL)).length = 0 := by
   simp [functionsHOL_filter_isDecl]
+
+example :
+    functionsHOL [DeclHOL.function fdH, DeclHOL.decl .one (s "z") expH] =
+      ([DeclHOL.function fdH, DeclHOL.decl .one (s "z") expH].filter
+          isFunctionHOL).map
+        (fun declaration =>
+          match declaration with
+          | .function fi => (fi.name, fi.params, fi.body, fi.returnShape)
+          | _ =>
+              (Flapjack.Basis.Pure.MlString.ofString "",
+                [], ProgHOL.skip, ShapeHOL.one)) :=
+  functionsHOL_eq_FILTER _
+
+example :
+    decsStcnamesHOLExact (width := 64) ([] : StructContextExact)
+      [ .function fdH, .decl .one (s "z") expH, .exnDecl (s "ex") .one ] = some [] := by
+  apply decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls
+  decide
+
+example :
+    decsStcnamesHOLExact (width := 64) ([] : StructContextExact)
+      [ .function fdH ] = some [] := by
+  apply decsStcnamesHOLExact_of_functions
+  decide
+
+/-! ## Checked codec bridge to the production predicates (bead flapjack-ni1.1) -/
+
+example (declaration : DeclHOL 64) :
+    Flapjack.isDecl (declOfHOL declaration) = isDeclHOL declaration :=
+  isDecl_declOfHOL declaration
+
+example (declaration : DeclHOL 64) :
+    Flapjack.isExnDecl (declOfHOL declaration) = isExnDeclHOL declaration :=
+  isExnDecl_declOfHOL declaration
+
+example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) =
+    (exactDecls.filter isExnDeclHOL).length :=
+  sizeOfEids_map_declOfHOL exactDecls
+
+example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) = 1 := by
+  rw [sizeOfEids_map_declOfHOL]
+  decide
+
+/-! ## Exact `size_of_eids` parity (bead flapjack-4ac.1.37)
+
+The HOL-EVAL rows `size_of_eids_empty=0` and `size_of_eids_mixed=1` from
+`scripts/hol-probes/pan_lang_decl_predicates_probe.out` are replayed over the
+exact `DeclHOL` carrier through the tagged `sizeOfEidsHOL`. -/
+
+example : sizeOfEidsHOL ([] : List (DeclHOL 64)) = 0 := rfl
+
+example : sizeOfEidsHOL exactDecls = 1 := rfl
+
+example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) = sizeOfEidsHOL exactDecls :=
+  sizeOfEids_map_declOfHOL exactDecls
 
 end Flapjack.Test.PanLangDeclHOLParity

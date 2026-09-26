@@ -4,6 +4,8 @@ import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.PanValueFlatten
 import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
+import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
+import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.
@@ -15,6 +17,32 @@ starts with the value-well-formedness definition used by PanStructs
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS)
+
+/-! Cake's local `dropWhile_eq_cons_IMP`
+(`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when
+`dropWhile P xs` yields `y :: ys`, there is an in-bounds index `n` at which
+`P` first fails, with `y = EL n xs` and `DROP n xs = y :: ys`. Lean's
+`xs[n]? = some y` states the same selected element under the preserved bound;
+`P y = false` is HOL boolean negation. The ordinary structural translation
+from HOL lists to Lean `List` needs no representation qualifier. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "dropWhile_eq_cons_IMP"]
+theorem dropWhileEqConsImp {α : Type} (P : α → Bool) (xs : List α)
+    (y : α) (ys : List α) (h : xs.dropWhile P = y :: ys) :
+    ∃ n, n < xs.length ∧ xs[n]? = some y ∧ P y = false ∧ xs.drop n = y :: ys := by
+  induction xs generalizing y ys with
+  | nil => simp at h
+  | cons x rest ih =>
+      cases hP : P x with
+      | false =>
+          simp only [List.dropWhile_cons, hP, Bool.false_eq_true, if_false] at h
+          cases h
+          exact ⟨0, by simp, by simp, hP, by simp⟩
+      | true =>
+          simp only [List.dropWhile_cons, hP, if_true] at h
+          obtain ⟨n, hn, hget, hpy, hdrop⟩ := ih y ys h
+          refine ⟨n + 1, by simpa using hn, ?_, hpy, ?_⟩
+          · simpa [List.getElem?_cons_succ] using hget
+          · simpa [List.drop_succ_cons] using hdrop
 
 /-! Equality-based first-match lookup for HOL `ALOOKUP` expressions. Lean's
     production `lookupInfo` intentionally takes `[BEq κ]`; this version keeps
@@ -180,6 +208,25 @@ mutual
   termination_by values => sizeOf values
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
+
+/-! **Unported HOL evaluator invariant** (`evaluate_is_wf_shape_invariant`,
+    `panPropsScript.sml:1250`). The source quantifies `p`, initial state `s`,
+    result `res`, and post-state `s'`; from `evaluate (p,s) = (res,s')` and
+    `FEVERY` well-formedness of both initial `locals` and `globals` under
+    `s.structs`, it concludes both post-state maps are well-formed under
+    `s'.structs`, and any returned/raised payload is well-formed under the
+    initial `s.structs`. No Lean declaration currently states that result.
+    The prerequisite `eval_is_wf_shape_v` (`panPropsScript.sml:126`) is also
+    unported. `evalHOLExact` in `PanSem/EvalExact.lean` has the exact expression
+    and value syntax but takes `PanSemStateExact`, whose four map fields are
+    unrestricted lookup functions. `PanSemStateFiniteExact.evalHOLFinite` has
+    the reviewed finite-map carrier and expression evaluator, but no invariant
+    proof; the recursive program evaluator still has an assembly marker and is
+    not assembled over that finite-map carrier. Consequently neither a theorem
+    over `evalHOLExact` nor one over the partial recursive dispatcher has the
+    required HOL statement/carrier. This prerequisite and the dependent
+    `evaluate_shape_invariant_ret_inst` port remain open in beads
+    `flapjack-4ac.4.67` and `flapjack-4ac.5.83` respectively. -/
 
 /-- Untagged support: the exact value-level well-formedness predicate implies
     that the exact `shape_of` image is well-formed (`is_wf_shape_of_v`
@@ -355,6 +402,390 @@ theorem isWfShapeValueHOLExact_drop {width : Nat} [NeZero width]
       simp only [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true] at h5 ⊢
       exact ⟨ihValue h5.1, ihValues h5.2⟩
 
+/-- `isWfShapeValuesHOLExact` is preserved when the struct context is a `DROP`
+    (list form of `isWfShapeValueHOLExact_drop`). -/
+theorem isWfShapeValuesHOLExact_drop {width : Nat} [NeZero width] (taken : Nat)
+    (context : Flapjack.Pancake.PanLang.StructContextExact) (values : List (ValueHOL width))
+    (h : isWfShapeValuesHOLExact (context.drop taken) values = true) :
+    isWfShapeValuesHOLExact context values = true := by
+  induction values with
+  | nil => simp only [isWfShapeValuesHOLExact.eq_1]
+  | cons value values ih =>
+      simp only [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true] at h ⊢
+      exact ⟨isWfShapeValueHOLExact_drop taken context value h.1, ih h.2⟩
+
+private theorem memLoadHOLExact_isWfShapeValueHOLExact_shape {width : Nat} [NeZero width]
+    (domain : BitVec width → Prop) [DecidablePred domain]
+    (memory : BitVec width → HolWordLab width) :
+    ∀ (shape : Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+      (context : StructContextHOLM) (value : ValueHOL width),
+      memLoadHOLExact shape address domain memory context = some value →
+        isWfShapeValueHOLExact context value = true := by
+    apply memLoadHOLExact.induct (domain := domain) (memory := memory)
+      (motive1 := fun shape address context => ∀ value : ValueHOL width,
+        memLoadHOLExact shape address domain memory context = some value →
+          isWfShapeValueHOLExact context value = true)
+      (motive2 := fun fields address context =>
+        ∀ values : List (MlStringHOLM × ValueHOL width),
+          memLoadFldsHOLExact fields address domain memory context = some values →
+            isWfShapeValuesHOLExact context (values.map Prod.snd) = true)
+      (motive3 := fun shapes address context => ∀ values : List (ValueHOL width),
+        memLoadsHOLExact shapes address domain memory context = some values →
+          isWfShapeValuesHOLExact context values = true)
+    · intro address context hdom value h
+      rw [memLoadHOLExact.eq_1, if_pos hdom] at h
+      simp only [Option.some.injEq] at h
+      subst value
+      simp only [isWfShapeValueHOLExact.eq_1]
+    · intro address context hndom value h
+      rw [memLoadHOLExact.eq_1, if_neg hndom] at h
+      simp at h
+    · intro address context shapes values hloads ih3 value h
+      rw [memLoadHOLExact.eq_2, hloads] at h
+      simp only [Option.some.injEq] at h
+      subst value
+      simpa only [isWfShapeValueHOLExact.eq_2] using ih3 values hloads
+    · intro address context shapes hloads ih3 value h
+      rw [memLoadHOLExact.eq_2, hloads] at h
+      simp at h
+    · intro address name value h
+      rw [memLoadHOLExact.eq_3] at h
+      simp at h
+    · intro address candidate info rest fields hflds ih2 value h
+      rw [memLoadHOLExact.eq_4, if_pos rfl, hflds] at h
+      simp only [Option.some.injEq] at h
+      subst value
+      simp only [isWfShapeValueHOLExact.eq_3, Bool.and_eq_true]
+      exact ⟨by simp [Flapjack.Pancake.PanLang.structContextLookupHOL],
+        isWfShapeValuesHOLExact_drop 1 ((candidate, info) :: rest) (fields.map Prod.snd)
+          (ih2 fields hflds)⟩
+    · intro address candidate info rest hflds ih2 value h
+      rw [memLoadHOLExact.eq_4, if_pos rfl, hflds] at h
+      simp at h
+    · intro address name candidate info rest hne ih1 value h
+      rw [memLoadHOLExact.eq_4, if_neg hne] at h
+      exact isWfShapeValueHOLExact_drop 1 ((candidate, info) :: rest) value (ih1 value h)
+    · intro address context values h
+      rw [memLoadFldsHOLExact.eq_1] at h
+      simp only [Option.some.injEq] at h
+      subst values
+      simp only [List.map_nil, isWfShapeValuesHOLExact.eq_1]
+    · intro address context field shape rest value values hflds hload ih1 ih2 vs h
+      rw [memLoadFldsHOLExact.eq_2, hload, hflds] at h
+      simp only [Option.some.injEq] at h
+      subst vs
+      rw [List.map_cons]
+      simp only [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true]
+      exact ⟨ih1 value hload, ih2 values hflds⟩
+    · intro address context field shape rest hcontr ih1 ih2 vs h
+      rw [memLoadFldsHOLExact.eq_2] at h
+      split at h
+      · rename_i value values hload hflds
+        exact (hcontr value values hload hflds).elim
+      · simp at h
+    · intro address context values h
+      rw [memLoadsHOLExact.eq_1] at h
+      simp only [Option.some.injEq] at h
+      subst values
+      simp only [isWfShapeValuesHOLExact.eq_1]
+    · intro address context shape rest value values hloads hload ih1 ih3 vs h
+      rw [memLoadsHOLExact.eq_2, hload, hloads] at h
+      simp only [Option.some.injEq] at h
+      subst vs
+      simp only [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true]
+      exact ⟨ih1 value hload, ih3 values hloads⟩
+    · intro address context shape rest hcontr ih1 ih3 vs h
+      rw [memLoadsHOLExact.eq_2] at h
+      split at h
+      · rename_i value values hload hloads
+        exact (hcontr value values hload hloads).elim
+      · simp at h
+private theorem memLoadHOLExact_isWfShapeValueHOLExact_loads {width : Nat} [NeZero width]
+    (domain : BitVec width → Prop) [DecidablePred domain]
+    (memory : BitVec width → HolWordLab width) :
+    ∀ (shapes : List Flapjack.Pancake.PanLang.ShapeHOL)
+      (address : BitVec width) (context : StructContextHOLM)
+      (values : List (ValueHOL width)),
+      memLoadsHOLExact shapes address domain memory context = some values →
+        isWfShapeValuesHOLExact context values = true := by
+    intro shapes
+    induction shapes with
+    | nil =>
+        intro address context values h
+        rw [memLoadsHOLExact.eq_1] at h
+        simp only [Option.some.injEq] at h
+        subst values
+        simp only [isWfShapeValuesHOLExact.eq_1]
+    | cons shape rest ih =>
+        intro address context values h
+        rw [memLoadsHOLExact.eq_2] at h
+        split at h
+        · rename_i head tail hload hrest
+          simp only [Option.some.injEq] at h
+          subst values
+          simp only [isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true]
+          exact ⟨memLoadHOLExact_isWfShapeValueHOLExact_shape domain memory shape address
+              context head hload,
+            ih (address + bytesInWordHOL width * BitVec.ofNat width
+                (Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL context shape))
+              context tail hrest⟩
+        · simp at h
+private theorem memLoadHOLExact_isWfShapeValueHOLExact_flds {width : Nat} [NeZero width]
+    (domain : BitVec width → Prop) [DecidablePred domain]
+    (memory : BitVec width → HolWordLab width) :
+    ∀ (fields : List (MlStringHOLM × Flapjack.Pancake.PanLang.ShapeHOL))
+      (address : BitVec width) (context : StructContextHOLM)
+      (values : List (MlStringHOLM × ValueHOL width)),
+      memLoadFldsHOLExact fields address domain memory context = some values →
+        isWfShapeValuesHOLExact context (values.map Prod.snd) = true := by
+    intro fields
+    induction fields with
+    | nil =>
+        intro address context values h
+        rw [memLoadFldsHOLExact.eq_1] at h
+        simp only [Option.some.injEq] at h
+        subst values
+        simp only [List.map_nil, isWfShapeValuesHOLExact.eq_1]
+    | cons pair rest ih =>
+        obtain ⟨field, shape⟩ := pair
+        intro address context values h
+        rw [memLoadFldsHOLExact.eq_2] at h
+        split at h
+        · rename_i head tail hload hrest
+          simp only [Option.some.injEq] at h
+          subst values
+          simp only [List.map_cons, isWfShapeValuesHOLExact.eq_2, Bool.and_eq_true]
+          exact ⟨memLoadHOLExact_isWfShapeValueHOLExact_shape domain memory shape address
+              context head hload,
+            ih (address + bytesInWordHOL width * BitVec.ofNat width
+                (Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL context shape))
+              context tail hrest⟩
+        · simp at h
+/-- Exact port of HOL `panProps$mem_load_is_wf_shape_v` (`panPropsScript.sml:90-108`):
+    `mem_load`, `mem_loads` and `mem_load_flds` return only values that are
+    well-shaped with respect to the struct context.
+
+    Each conjunct quantifies `domain` and `memory` inside the conjunct, matching
+    the literal HOL binder order `!sh adr dm m stcs v.`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "mem_load_is_wf_shape_v"]
+theorem memLoadHOLExact_isWfShapeValueHOLExact {width : Nat} [NeZero width] :
+    (∀ (shape : Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+        (domain : BitVec width → Prop) [DecidablePred domain]
+        (memory : BitVec width → HolWordLab width) (context : StructContextHOLM)
+        (value : ValueHOL width),
+        memLoadHOLExact shape address domain memory context = some value →
+          isWfShapeValueHOLExact context value = true) ∧
+    (∀ (shapes : List Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+        (domain : BitVec width → Prop) [DecidablePred domain]
+        (memory : BitVec width → HolWordLab width) (context : StructContextHOLM)
+        (values : List (ValueHOL width)),
+        memLoadsHOLExact shapes address domain memory context = some values →
+          isWfShapeValuesHOLExact context values = true) ∧
+    (∀ (fields : List (MlStringHOLM × Flapjack.Pancake.PanLang.ShapeHOL))
+        (address : BitVec width) (domain : BitVec width → Prop) [DecidablePred domain]
+        (memory : BitVec width → HolWordLab width) (context : StructContextHOLM)
+        (values : List (MlStringHOLM × ValueHOL width)),
+        memLoadFldsHOLExact fields address domain memory context = some values →
+          isWfShapeValuesHOLExact context (values.map Prod.snd) = true) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro shape address domain _ memory context value h
+    exact memLoadHOLExact_isWfShapeValueHOLExact_shape domain memory shape address context value h
+  · intro shapes address domain _ memory context values h
+    exact memLoadHOLExact_isWfShapeValueHOLExact_loads domain memory shapes address context values h
+  · intro fields address domain _ memory context values h
+    exact memLoadHOLExact_isWfShapeValueHOLExact_flds domain memory fields address context values h
+
+
+/-- Exact port of HOL `panProps$mem_loads_some_shape_eq` (`panPropsScript.sml:194`):
+    `mem_load`, `mem_loads` and `mem_load_flds` return values whose shapes are
+    exactly the requested shapes. -/
+private theorem memLoadHOLExact_shape_eq_shape {width : Nat} [NeZero width]
+    (domain : BitVec width → Prop) [DecidablePred domain]
+    (memory : BitVec width → HolWordLab width) :
+    ∀ (shape : Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+      (context : StructContextHOLM) (value : ValueHOL width),
+      memLoadHOLExact shape address domain memory context = some value →
+        shapeOfHOLExact value = shape := by
+    apply memLoadHOLExact.induct (domain := domain) (memory := memory)
+      (motive1 := fun shape address context => ∀ value : ValueHOL width,
+        memLoadHOLExact shape address domain memory context = some value →
+          shapeOfHOLExact value = shape)
+      (motive2 := fun fields address context =>
+        ∀ values : List (MlStringHOLM × ValueHOL width),
+          memLoadFldsHOLExact fields address domain memory context = some values →
+            values.map (fun pair => shapeOfHOLExact pair.2) = fields.map Prod.snd)
+      (motive3 := fun shapes address context => ∀ values : List (ValueHOL width),
+        memLoadsHOLExact shapes address domain memory context = some values →
+          values.map shapeOfHOLExact = shapes)
+    · intro address context hdom value h
+      rw [memLoadHOLExact.eq_1, if_pos hdom] at h
+      simp only [Option.some.injEq] at h
+      subst value
+      simp [shapeOfHOLExact]
+    · intro address context hndom value h
+      rw [memLoadHOLExact.eq_1, if_neg hndom] at h
+      simp at h
+    · intro address context shapes values hloads ih3 value h
+      rw [memLoadHOLExact.eq_2, hloads] at h
+      simp only [Option.some.injEq] at h
+      subst value
+      simpa [shapeOfHOLExact] using ih3 values hloads
+    · intro address context shapes hloads ih3 value h
+      rw [memLoadHOLExact.eq_2, hloads] at h
+      simp at h
+    · intro address name value h
+      rw [memLoadHOLExact.eq_3] at h
+      simp at h
+    · intro address candidate info rest fields hflds ih2 value h
+      rw [memLoadHOLExact.eq_4, if_pos rfl, hflds] at h
+      simp only [Option.some.injEq] at h
+      subst value
+      simp [shapeOfHOLExact]
+    · intro address candidate info rest hflds ih2 value h
+      rw [memLoadHOLExact.eq_4, if_pos rfl, hflds] at h
+      simp at h
+    · intro address name candidate info rest hne ih1 value h
+      rw [memLoadHOLExact.eq_4, if_neg hne] at h
+      exact ih1 value h
+    · intro address context values h
+      rw [memLoadFldsHOLExact.eq_1] at h
+      simp only [Option.some.injEq] at h
+      subst values
+      simp
+    · intro address context field shape rest value values hflds hload ih1 ih2 vs h
+      rw [memLoadFldsHOLExact.eq_2, hload, hflds] at h
+      simp only [Option.some.injEq] at h
+      subst vs
+      simp only [List.map_cons]
+      rw [ih1 value hload, ih2 values hflds]
+    · intro address context field shape rest hcontr ih1 ih2 vs h
+      rw [memLoadFldsHOLExact.eq_2] at h
+      split at h
+      · rename_i value values hload hflds
+        exact (hcontr value values hload hflds).elim
+      · simp at h
+    · intro address context values h
+      rw [memLoadsHOLExact.eq_1] at h
+      simp only [Option.some.injEq] at h
+      subst values
+      simp
+    · intro address context shape rest value values hloads hload ih1 ih3 vs h
+      rw [memLoadsHOLExact.eq_2, hload, hloads] at h
+      simp only [Option.some.injEq] at h
+      subst vs
+      simp only [List.map_cons]
+      rw [ih1 value hload, ih3 values hloads]
+    · intro address context shape rest hcontr ih1 ih3 vs h
+      rw [memLoadsHOLExact.eq_2] at h
+      split at h
+      · rename_i value values hload hloads
+        exact (hcontr value values hload hloads).elim
+      · simp at h
+private theorem memLoadHOLExact_shape_eq_loads {width : Nat} [NeZero width]
+    (domain : BitVec width → Prop) [DecidablePred domain]
+    (memory : BitVec width → HolWordLab width) :
+    ∀ (shapes : List Flapjack.Pancake.PanLang.ShapeHOL)
+      (address : BitVec width) (context : StructContextHOLM)
+      (values : List (ValueHOL width)),
+      memLoadsHOLExact shapes address domain memory context = some values →
+        values.map shapeOfHOLExact = shapes := by
+    intro shapes
+    induction shapes with
+    | nil =>
+        intro address context values h
+        rw [memLoadsHOLExact.eq_1] at h
+        simp only [Option.some.injEq] at h
+        subst values
+        simp
+    | cons shape rest ih =>
+        intro address context values h
+        rw [memLoadsHOLExact.eq_2] at h
+        split at h
+        · rename_i head tail hload hrest
+          simp only [Option.some.injEq] at h
+          subst values
+          simp only [List.map_cons]
+          rw [memLoadHOLExact_shape_eq_shape domain memory shape address context head hload,
+            ih (address + bytesInWordHOL width * BitVec.ofNat width
+                (Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL context shape))
+              context tail hrest]
+        · simp at h
+private theorem memLoadHOLExact_shape_eq_flds {width : Nat} [NeZero width]
+    (domain : BitVec width → Prop) [DecidablePred domain]
+    (memory : BitVec width → HolWordLab width) :
+    ∀ (fields : List (MlStringHOLM × Flapjack.Pancake.PanLang.ShapeHOL))
+      (address : BitVec width) (context : StructContextHOLM)
+      (values : List (MlStringHOLM × ValueHOL width)),
+      memLoadFldsHOLExact fields address domain memory context = some values →
+        values.map (fun pair => shapeOfHOLExact pair.2) = fields.map Prod.snd := by
+    intro fields
+    induction fields with
+    | nil =>
+        intro address context values h
+        rw [memLoadFldsHOLExact.eq_1] at h
+        simp only [Option.some.injEq] at h
+        subst values
+        simp
+    | cons pair rest ih =>
+        obtain ⟨field, shape⟩ := pair
+        intro address context values h
+        rw [memLoadFldsHOLExact.eq_2] at h
+        split at h
+        · rename_i head tail hload hrest
+          simp only [Option.some.injEq] at h
+          subst values
+          simp only [List.map_cons]
+          rw [memLoadHOLExact_shape_eq_shape domain memory shape address context head hload,
+            ih (address + bytesInWordHOL width * BitVec.ofNat width
+                (Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL context shape))
+              context tail hrest]
+        · simp at h
+/-- Exact port of HOL `panProps$mem_loads_some_shape_eq` (`panPropsScript.sml:194`):
+    `mem_load`, `mem_loads` and `mem_load_flds` return values whose shapes are
+    exactly the requested shapes.
+
+    Each conjunct quantifies `domain` and `memory` inside the conjunct, matching
+    the literal HOL binder order `!sh adr dm m stcs v.`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "mem_loads_some_shape_eq"]
+theorem memLoadHOLExact_shape_eq {width : Nat} [NeZero width] :
+    (∀ (shape : Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+        (domain : BitVec width → Prop) [DecidablePred domain]
+        (memory : BitVec width → HolWordLab width) (context : StructContextHOLM)
+        (value : ValueHOL width),
+        memLoadHOLExact shape address domain memory context = some value →
+          shapeOfHOLExact value = shape) ∧
+    (∀ (shapes : List Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+        (domain : BitVec width → Prop) [DecidablePred domain]
+        (memory : BitVec width → HolWordLab width) (context : StructContextHOLM)
+        (values : List (ValueHOL width)),
+        memLoadsHOLExact shapes address domain memory context = some values →
+          values.map shapeOfHOLExact = shapes) ∧
+    (∀ (fields : List (MlStringHOLM × Flapjack.Pancake.PanLang.ShapeHOL))
+        (address : BitVec width) (domain : BitVec width → Prop) [DecidablePred domain]
+        (memory : BitVec width → HolWordLab width) (context : StructContextHOLM)
+        (values : List (MlStringHOLM × ValueHOL width)),
+        memLoadFldsHOLExact fields address domain memory context = some values →
+          values.map (fun pair => shapeOfHOLExact pair.2) = fields.map Prod.snd) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro shape address domain _ memory context value h
+    exact memLoadHOLExact_shape_eq_shape domain memory shape address context value h
+  · intro shapes address domain _ memory context values h
+    exact memLoadHOLExact_shape_eq_loads domain memory shapes address context values h
+  · intro fields address domain _ memory context values h
+    exact memLoadHOLExact_shape_eq_flds domain memory fields address context values h
+
+/-- Exact port of HOL `panProps$mem_load_some_shape_eq` (`panPropsScript.sml:212`):
+    the first conjunct of `mem_loads_some_shape_eq`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "mem_load_some_shape_eq"]
+theorem memLoadHOLExact_some_shapeOf_eq {width : Nat} [NeZero width]
+    (shape : Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
+    (domain : BitVec width → Prop) [DecidablePred domain]
+    (memory : BitVec width → HolWordLab width)
+    (context : StructContextHOLM) (value : ValueHOL width)
+    (h : memLoadHOLExact shape address domain memory context = some value) :
+    shapeOfHOLExact value = shape :=
+  memLoadHOLExact_shape_eq.1 shape address domain memory context value h
+
 /-! Exact port of HOL `panProps$every_exp` (`panPropsScript.sml:1311-1333`) and
     `panProps$exps_of` (`panPropsScript.sml:1336-1358`) over the exact
     MlString/width-indexed `ExpHOL width`/`ProgHOL width` carriers.
@@ -522,6 +953,22 @@ theorem optMmapEqSomeHelper {α β : Type} (f g : α → Option β) :
               rw [optMmapEqSomeHelper f g xs ys hys
                     (fun z hz' b hb => hfg z (by simp [hz']) b hb)]
               rfl
+
+/-- Exact port of Cake's `not_mem_map_flat` (`panPropsScript.sml:1035-1039`):
+    an element is absent from the flattening of a mapped list exactly when it
+    is absent from every image. Fully polymorphic with no carrier side
+    condition, matching the HOL statement `~ MEM y (FLAT (MAP f xs)) =
+    (!x. MEM x xs ==> ~ MEM y (f x))`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "not_mem_map_flat"]
+theorem not_mem_map_flatten {α β : Type} (f : α → List β) (xs : List α)
+    (y : β) : y ∉ (xs.map f).flatten ↔ ∀ x, x ∈ xs → y ∉ f x := by
+  simp only [List.mem_flatten, List.mem_map]
+  constructor
+  · intro h x hx hy
+    exact h ⟨f x, ⟨x, hx, rfl⟩, hy⟩
+  · rintro h ⟨ys, hysmem, hy⟩
+    obtain ⟨x, hx, hfx⟩ := hysmem
+    exact h x hx (hfx.symm ▸ hy)
 
 /-- The `MAP SND` view of a field list does not increase `sizeOf`, which
     justifies the well-founded recursion of `panIsWfShapeValueHOL` (HOL's
@@ -931,7 +1378,11 @@ theorem shapeOfHOLExact_val {width : Nat} [NeZero width] (value : HolWordLab wid
 
 /-- Function-backed rendering of HOL `panProps$FLOOKUP_pan_res_var_thm`
     (`panPropsScript.sml:236`). Untagged because HOL's `lc` is a finite map,
-    while this Lean statement quantifies over every `MlS → Option _` function. -/
+    while this Lean statement quantifies over every `MlS → Option _` function.
+    The exact finite-map route is `HolFiniteMapExact.resVarEq` with
+    `lookup_resVarEq_none`/`lookup_resVarEq_some`, whose canonical qualification
+    (the bare-map carrier has no owning structure field) is tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.21`. -/
 theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (m n : MlS) (v : Option (ValueHOL width)) :
@@ -940,7 +1391,9 @@ theorem resVarHOLExact_flookup {width : Nat} [NeZero width]
 
 /-- Function-backed rendering of HOL `panProps$flookup_res_var_diff_eq_org`
     (`panPropsScript.sml:228`); untagged because its lookup-function input
-    ranges beyond HOL finite maps. -/
+    ranges beyond HOL finite maps. Exact finite-map route
+    `HolFiniteMapExact.resVarEq`, tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.20`. -/
 theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (n m : MlS) (v : Option (ValueHOL width)) (h : n ≠ m) :
@@ -950,7 +1403,9 @@ theorem resVarHOLExact_flookup_of_ne {width : Nat} [NeZero width]
 
 /-- Function-backed rendering of HOL `panProps$flookup_res_var_some_eq_lookup`
     (`panPropsScript.sml:220`); untagged because the two lookup-function
-    arguments range beyond HOL finite maps. -/
+    arguments range beyond HOL finite maps. Exact finite-map route
+    `HolFiniteMapExact.resVarEq`, tracked by
+    `flapjack-pxn.18.3.7.1.3.1.1.2.4`; tracked here as bead `flapjack-4ac.4.19`. -/
 theorem resVarHOLExact_flookup_some_eq_lookup {width : Nat} [NeZero width]
     (lc lc' : MlS → Option (ValueHOL width))
     (v : MlS) (value : ValueHOL width)
@@ -1102,5 +1557,70 @@ theorem functionsHOL_filter_isDecl {width : Nat} [NeZero width]
   | cons declaration declarations ih =>
       cases declaration <;>
         simp [functionsHOL, isDeclHOL, List.filter_cons, ih]
+
+/-- Exact port of HOL `panProps$decs_stcnames_only_functions`
+    (`panPropsScript.sml:1596`): a declaration list whose entries are all
+    functions, value declarations, or exception declarations leaves the
+    structure context unchanged.  The `EVERY` premise is the `List.all ... =
+    true` side condition; the predicate is the exact `isFunctionHOL ||
+    isDeclHOL || isExnDeclHOL` disjunction of the tagged HOL predicates. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "decs_stcnames_only_functions"]
+theorem decsStcnamesHOLExact_of_functions_or_decls_or_exnDecls
+    {width : Nat} [NeZero width] (context : StructContextExact)
+    (code : List (DeclHOL width))
+    (h : code.all (fun declaration =>
+      isFunctionHOL declaration || isDeclHOL declaration ||
+        isExnDeclHOL declaration) = true) :
+    decsStcnamesHOLExact (width := width) context code = some context := by
+  induction code generalizing context with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration <;>
+        simp_all [decsStcnamesHOLExact, isFunctionHOL, isDeclHOL, isExnDeclHOL]
+
+/-- Exact port of HOL `panProps$decs_stcnames_only_functions2`
+    (`panPropsScript.sml:1604`): the `EVERY is_function` specialisation of
+    `decs_stcnames_only_functions`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "decs_stcnames_only_functions2"]
+theorem decsStcnamesHOLExact_of_functions {width : Nat} [NeZero width]
+    (context : StructContextExact) (code : List (DeclHOL width))
+    (h : code.all isFunctionHOL = true) :
+    decsStcnamesHOLExact (width := width) context code = some context := by
+  induction code generalizing context with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration <;>
+        simp_all [decsStcnamesHOLExact, isFunctionHOL]
+
+/-- Exact port of HOL `panProps$functions_eq_FILTER`
+    (`panPropsScript.sml:1487`): `functions` is the image of the function
+    declarations under the entry map.  HOL writes the entry map as
+    `λx. case x of Function fi => (fi.name,fi.params,fi.body,fi.return) | _ => ARB`
+    over `FILTER is_function prog`.  HOL's `ARB` branch is rendered with the
+    concrete default entry `(implode [], [], ProgHOL.skip, ShapeHOL.one)`: HOL
+    `ARB` is an unspecified element and the branch is provably unreachable
+    because the list is filtered by `is_function`/`isFunctionHOL`, so the entry
+    map agrees with HOL on every element it is actually applied to.  The
+    production `functions_eq_filterMap` instead uses `List.filterMap`, which
+    drops elements rather than mapping them, so it is not the HOL shape. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "functions_eq_FILTER"]
+theorem functionsHOL_eq_FILTER {width : Nat} [NeZero width]
+    (prog : List (DeclHOL width)) :
+    functionsHOL prog =
+      (prog.filter isFunctionHOL).map
+        (fun declaration =>
+          match declaration with
+          | .function fi =>
+              (fi.name, fi.params, fi.body, fi.returnShape)
+          | _ =>
+              (Flapjack.Basis.Pure.MlString.ofString "", [], ProgHOL.skip, ShapeHOL.one)) := by
+  induction prog with
+  | nil => rfl
+  | cons declaration rest ih =>
+      cases declaration with
+      | function fi => simp [functionsHOL, isFunctionHOL, List.filter_cons, ih]
+      | decl sh name body => simp [functionsHOL, isFunctionHOL, ih]
+      | exnDecl eid sh => simp [functionsHOL, isFunctionHOL, ih]
+      | name nm flds => simp [functionsHOL, isFunctionHOL, ih]
 
 end Flapjack

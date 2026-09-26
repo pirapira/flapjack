@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.PanLang.Decl
 
 /-! Parity guard for `panLang$inlinable` from
     `cakeml/pancake/panLangScript.sml:389-391`. -/
@@ -6,6 +7,8 @@ import Flapjack.Pancake.PanLang
 namespace Flapjack.Test.PanLangInlinableParity
 
 open Flapjack
+open Flapjack.Pancake.PanLang
+open Flapjack.Basis.Pure.MlString
 
 def functionDecl (flag : Bool) : Decl Nat :=
   .function
@@ -23,5 +26,31 @@ def parityGuard : Bool :=
 
 #guard parityGuard
 #eval parityGuard
+
+/-! ## Exact-carrier `inlinable` parity (bead flapjack-4ac.1.47) -/
+
+def functionDeclHOL (flag : Bool) : DeclHOL 8 :=
+  .function
+    { name := ofString "f"
+      inline := flag
+      exported := false
+      params := []
+      body := .skip
+      returnShape := ShapeHOL.one }
+
+def parityGuardHOL : Bool :=
+  inlinableHOL (functionDeclHOL true) == true &&
+  inlinableHOL (functionDeclHOL false) == false &&
+  inlinableHOL (.decl ShapeHOL.one (ofString "x") (.const 0) : DeclHOL 8) == false
+
+#guard parityGuardHOL
+
+example : inlinableHOL (functionDeclHOL true) = true := rfl
+example : inlinableHOL (functionDeclHOL false) = false := rfl
+example : inlinableHOL (.decl ShapeHOL.one (ofString "x") (.const 0) : DeclHOL 8) = false :=
+  rfl
+example : Flapjack.inlinable (declOfHOL (functionDeclHOL true)) =
+    inlinableHOL (functionDeclHOL true) :=
+  inlinable_declOfHOL _
 
 end Flapjack.Test.PanLangInlinableParity

@@ -4,12 +4,12 @@
   HOL `panSem$state` stores its `locals`, `globals`, `code` and `eshapes`
   components as finite maps (`|->`).  `PanSemStateExact` instead quantifies
   them as unrestricted lookup functions (`MlS → Option _`), which is a strict
-  superset of the finite-map carriers.  The five exact state helpers
+  superset of the finite-map carriers. Five exact state helpers
   (`dec_clock`, `fix_clock`, `lookup_kvar`, `set_kvar`, `empty_locals`) were
-  therefore withdrawn from `@[hol]` tagging at audit
-  `flapjack-pxn.18.3.7.1.3.1.2`; this module provides a carrier that is
-  finite-support *by type* so those helpers can be restated faithfully and
-  retagged later.
+  temporarily withdrawn from `@[hol]` tagging at audit
+  `flapjack-pxn.18.3.7.1.3.1.2`. This module provides a carrier that is
+  finite-support *by type*; those five and the `set_var`/`set_global` helpers
+  have since been reviewed and tagged over it.
 
   Statement/side-condition review for `flapjack-pxn.18.3.7.1.3.1.1.2`
   (2026-09-25): the five HOL definitions
@@ -27,12 +27,13 @@
   representation statement only and does not authorize changed quantifiers,
   hypotheses, results, `BEq` side conditions, or word-model differences.
 
-  Five helper definitions have passed their case-by-case review and carry
+  Seven helper definitions have passed their case-by-case review and carry
   `@[hol ...]` with that qualifier: `decClockHOLFinite` (`dec_clock_def`),
   `fixClockHOLFinite` (`fix_clock_def`), `lookupKvarHOLFinite` (`lookup_kvar_def`),
   `emptyLocalsHOLFinite` (`empty_locals_def`) and `setKvarHOLFinite`
-  (`set_kvar_def`).  `setKvarHOLFinite` routes through the untagged canonical-
-  update wrappers `setVarHOLFinite`/`setGlobalHOLFinite`, which use
+  (`set_kvar_def`), plus `setVarHOLFinite` (`set_var_def`) and
+  `setGlobalHOLFinite` (`set_global_def`). `setKvarHOLFinite` routes through
+  these canonical-update helpers, which use
   `HolFiniteMapExact.update` (`FUPDATE`) exactly like HOL `set_var`/`set_global`;
   the `MlS` `BEq`/`LawfulBEq` instances required by `update` are declared below.
   The broad-carrier helpers over `PanSemStateExact` (`StateExact.lean`) remain the
@@ -55,6 +56,7 @@
 
 import Flapjack.Pancake.Semantics.PanSem.StateExactFinite
 import Flapjack.Pancake.Semantics.PanSem.EvalExact
+import Flapjack.Pancake.Semantics.PanSem.FiniteSupportStep
 
 namespace Flapjack
 
@@ -256,9 +258,12 @@ def lookupKvarHOLFinite {width : Nat} {σ : Type} [NeZero width]
 /-- HOL `set_var_def` (`cakeml/pancake/semantics/panSemScript.sml:398-401`):
     `set_var v value s = s with locals := s.locals |+ (v,value)`.  The `|+`
     (FUPDATE) is the canonical `HolFiniteMapExact.update` on the finite-support
-    carrier.  Untagged canonical-update wrapper used by the tagged
-    `setKvarHOLFinite`; the carrier's map fields are recorded there by the
-    `fmap_as_finite_support` qualifier. -/
+    carrier.  The `locals`/`globals`/`code`/`eshapes` fields are the canonical
+    finite-map representation, recorded by the `fmap_as_finite_support`
+    qualifier (canonical witness `holFmapAsFiniteSupportWitness` in this
+    module). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_var_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def setVarHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (name : MlS) (value : ValueHOL width) (state : PanSemStateFiniteExact width σ) :
     PanSemStateFiniteExact width σ :=
@@ -266,7 +271,11 @@ def setVarHOLFinite {width : Nat} {σ : Type} [NeZero width]
 
 /-- HOL `set_global_def` (`cakeml/pancake/semantics/panSemScript.sml:403-406`):
     `set_global v value s = s with globals := s.globals |+ (v,value)`, i.e. the
-    canonical `HolFiniteMapExact.update` on the `globals` component. -/
+    canonical `HolFiniteMapExact.update` on the `globals` component.  Its
+    finite-map fields are recorded by the `fmap_as_finite_support` qualifier
+    (canonical witness `holFmapAsFiniteSupportWitness` in this module). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "set_global_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 def setGlobalHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (name : MlS) (value : ValueHOL width) (state : PanSemStateFiniteExact width σ) :
     PanSemStateFiniteExact width σ :=

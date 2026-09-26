@@ -360,6 +360,27 @@ theorem FUPDATE_LIST_HOL_cons [DecidableEq α] (f : FiniteMap α β) (entry : α
       FUPDATE_LIST_HOL (FUPDATE_HOL f entry) entries :=
   rfl
 
+/-- For a lawful `BEq`, the HOL-equality `FUPDATE_HOL` agrees with the Boolean
+    `FUPDATE`; this lets equality-based state helpers reuse the executable
+    bridges proved for the `BEq`-based maps. -/
+theorem FUPDATE_HOL_eq_FUPDATE [DecidableEq α] [BEq α] [LawfulBEq α]
+    (f : FiniteMap α β) (entry : α × β) :
+    FUPDATE_HOL f entry = FUPDATE f entry := by
+  funext k
+  unfold FUPDATE_HOL FUPDATE
+  by_cases h : k = entry.1
+  · rw [if_pos h, if_pos (beq_iff_eq.mpr h.symm)]
+  · rw [if_neg h, if_neg (fun hb => h (beq_iff_eq.mp hb).symm)]
+
+/-- List-level agreement of the equality-based and Boolean `FUPDATE_LIST`. -/
+theorem FUPDATE_LIST_HOL_eq_FUPDATE_LIST [DecidableEq α] [BEq α] [LawfulBEq α]
+    (f : FiniteMap α β) (entries : List (α × β)) :
+    FUPDATE_LIST_HOL f entries = FUPDATE_LIST f entries := by
+  induction entries generalizing f with
+  | nil => rfl
+  | cons entry rest ih =>
+      rw [FUPDATE_LIST_HOL_cons, FUPDATE_LIST_cons, FUPDATE_HOL_eq_FUPDATE, ih]
+
 /-- HOL-equality form of `FUPDATE` commutation at distinct keys. -/
 theorem FUPDATE_HOL_comm [DecidableEq α] (f : FiniteMap α β)
     (k1 : α) (v1 : β) (k2 : α) (v2 : β) (h : k1 ≠ k2) :

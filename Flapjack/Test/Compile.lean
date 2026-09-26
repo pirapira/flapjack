@@ -147,7 +147,7 @@ example :
     compileProg assignmentContext
       (.shMemLoad .op8 .local "x" (.const 10)) =
       .shMem .load8 0 (.const 10) := by
-  simp [compileProg, firstCompiledExpAnyShape, compileExp, loadMemOp,
+  simp [compileProg, firstCompiledExpAnyShape, compileExp, loadMemOpHOL,
     assignmentContext, lookupInfo]
 
 example :
@@ -155,7 +155,7 @@ example :
       (.shMemStore .op8 (.const 10) (.const 7)) =
       .dec 1 (.const 7) (.shMem .store8 1 (.const 10)) := by
   simp [compileProg, firstCompiledExpAnyShape, compileExp, maxCrepExpVar,
-    storeMemOp, nestedDecs,
+    storeMemOpHOL, nestedDecs,
     assignmentContext]
 
 /-! Cake's ExtCall/ShMemStore temporary base is the maximum variable in the

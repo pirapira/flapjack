@@ -56,7 +56,8 @@ def setGlobalHOLExact {width : Nat} {σ : Type} [NeZero width]
 
 /-- Function-backed analogue of HOL `panSem$upd_locals` (`panSemScript.sml:431-434`).
     It models FEMPTY followed by FUPDATE_LIST pointwise, but is untagged because
-    its state type is not restricted to finite maps. -/
+    its state type is not restricted to finite maps. Exact finite-support
+    replacement tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.5` (parent `.2.3`). -/
 def updLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
     (varargs : List (MlS × ValueHOL width))
     (state : PanSemStateExact width σ) : PanSemStateExact width σ :=
@@ -68,7 +69,9 @@ def updLocalsHOLExact {width : Nat} {σ : Type} [NeZero width]
 
 /-- Function-backed analogue of HOL `panSem$res_var` (`panSemScript.sml:505-508`).
     Its delete/update behavior is pointwise, but its function-map input is not
-    the finite-map carrier quantified by HOL, so it is untagged. -/
+    the finite-map carrier quantified by HOL, so it is untagged. Exact
+    finite-support replacement tracked by `flapjack-pxn.18.3.7.1.3.1.1.2.5`
+    (parent `.2.3`). -/
 def resVarHOLExact {width : Nat} [NeZero width]
     (locals : MlS → Option (ValueHOL width))
     (entry : MlS × Option (ValueHOL width)) : MlS → Option (ValueHOL width) :=

@@ -378,6 +378,15 @@ def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
       simp only [HolFiniteMapExact.resVarEq, resVarHOLExact,
         HolFiniteMapExact.lookup_updateEq, FUPDATE_HOL]
 
+/-- A finite-support local `resVarEq` record update is compatible with the broad
+    exact one.  This bridges the `Dec` clause's restored state. -/
+@[simp] theorem toExact_resVarEq_locals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) (entry : MlS × Option (ValueHOL width)) :
+    ({ state with locals := HolFiniteMapExact.resVarEq state.locals entry } :
+        PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := resVarHOLExact state.toExact.locals entry } := by
+  simp only [PanSemStateFiniteExact.toExact, lookup_resVarEq_toExact]
+
 /-- HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`) over the
     finite-support state carrier.  The body delegates to the exact broad
     evaluator through the canonical translation `toExact`; it does NOT
@@ -679,6 +688,52 @@ def withState {width : Nat} {σ : Type} [NeZero width]
     context.withState context.state hmem hshared = context := by
   cases context
   simp [FiniteEvalContext.withState]
+
+/-- `withState` is independent of the particular equality proofs. -/
+theorem withState_congr {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (state : PanSemStateFiniteExact width σ)
+    (h1 h1' : state.memaddrs = context.state.memaddrs)
+    (h2 h2' : state.shMemaddrs = context.state.shMemaddrs) :
+    withState context state h1 h2 = withState context state h1' h2' := by
+  cases context
+  simp only [withState]
+
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): forgetful projection of a finite
+    evaluation context to the exact (unrestricted-map) evaluation context, by
+    translating the state through `toExact` and reusing the two address-domain
+    deciders.  This is the context-level relation used to relate the finite
+    evaluator to `evalPanSemRecursiveCallContextHOLExact`. -/
+def toExact {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) : PanSemExactEvalContext width σ :=
+  { state := context.state.toExact
+    memaddrsDecidable := context.memaddrsDecidable
+    shMemaddrsDecidable := context.shMemaddrsDecidable }
+
+/-- `toExact` commutes with `withState`. -/
+@[simp] theorem toExact_withState {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (state : PanSemStateFiniteExact width σ)
+    (hmem : state.memaddrs = context.state.memaddrs)
+    (hshared : state.shMemaddrs = context.state.shMemaddrs) :
+    (withState context state hmem hshared).toExact =
+      context.toExact.withState state.toExact hmem hshared := by
+  cases context
+  rfl
+
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): a finite evaluation context is
+    determined by its state; the two `DecidablePred` fields are proof-irrelevant
+    for the respective (transported) predicates.  Used to compare contexts built
+    by different `withState` call sites without unfolding their proof terms. -/
+theorem ext {width : Nat} {σ : Type} [NeZero width]
+    {c1 c2 : FiniteEvalContext width σ} (h : c1.state = c2.state) : c1 = c2 := by
+  cases c1 with
+  | mk s1 m1 sh1 =>
+  cases c2 with
+  | mk s2 m2 sh2 =>
+  dsimp only at h
+  subst h
+  congr
+  · exact Subsingleton.elim _ _
+  · exact Subsingleton.elim _ _
 
 end FiniteEvalContext
 

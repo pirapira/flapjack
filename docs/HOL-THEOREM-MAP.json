@@ -10648,8 +10648,8 @@
     "hol_name": "size_of_shape_def",
     "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
     "lean_name": "sizeOfShapeHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.27). HOL panLangScript.sml:174-177 defines size_of_shape One = 1, size_of_shape (Comb shapes) = SUM (MAP size_of_shape shapes), and size_of_shape (Named name) = 1 (HOL comments that the Named case 'should not happen'). Lean sizeOfShapeHOL over the exact ShapeHOL carrier matches clause-for-clause: .one => 1, .comb shapes => sizeOfShapesHOL shapes (the []/shape::shapes = sizeOfShapeHOL shape + sizeOfShapesHOL shapes fold rendering of SUM (MAP size_of_shape shapes), starting from 0), and .named _ => 1. No extra hypotheses or side conditions; it never inspects the structure context."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

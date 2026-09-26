@@ -531,6 +531,36 @@ theorem evaluateHOLFinite_snd_toExact_eq {width : Nat} {σ : Type} [NeZero width
     simp only [hp]
   exact ⟨pair, hp, heq, by rw [heq]⟩
 
+/-- FLAPJACK-SPECIFIC evaluation context threading the decidability of the two
+    address-domain predicates through the recursive finite evaluator.  Mirroring
+    `PanSemExactEvalContext`, this is required because a recursive result state
+    is opaque, so its `DecidablePred` instances cannot be reconstructed by
+    computation.  Not a HOL declaration. -/
+structure FiniteEvalContext (width : Nat) (σ : Type) [NeZero width] where
+  state : PanSemStateFiniteExact width σ
+  memaddrsDecidable : DecidablePred state.memaddrs
+  shMemaddrsDecidable : DecidablePred state.shMemaddrs
+
+namespace FiniteEvalContext
+
+/-- Transport an evaluation context across a state whose two address-domain
+    predicates are definitionally the same as the old state's. -/
+def withState {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (state : PanSemStateFiniteExact width σ)
+    (hmem : state.memaddrs = context.state.memaddrs)
+    (hshared : state.shMemaddrs = context.state.shMemaddrs) : FiniteEvalContext width σ :=
+  { state := state
+    memaddrsDecidable := fun address => by rw [hmem]; exact context.memaddrsDecidable address
+    shMemaddrsDecidable := fun address => by rw [hshared]; exact context.shMemaddrsDecidable address }
+
+@[simp] theorem withState_state {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (state : PanSemStateFiniteExact width σ)
+    (hmem : state.memaddrs = context.state.memaddrs)
+    (hshared : state.shMemaddrs = context.state.shMemaddrs) :
+    (withState context state hmem hshared).state = state := rfl
+
+end FiniteEvalContext
+
 end PanSemStateFiniteExact
 
 end Flapjack

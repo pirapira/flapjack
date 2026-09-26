@@ -54,6 +54,15 @@ def altBigGuard : Bool := store32Alt 0 true value32 0 == BitVec.ofNat 64 0x11223
 example : True := by
   have _ := panMemStore32HOL_eq_alt memory64 domain64 false 0 value32
   have _ := panMemStore32HOL_eq_alt memory64 domain64 true 0 value32
+  have _ := panMemStore32HOL_eq_alt
+    (fun _ : RiscV.Word 1 => HolWordLab.word (BitVec.ofNat 1 0))
+    (fun _ => True) false (BitVec.ofNat 1 0) value32
+  have _ := panMemStore32HOL_eq_alt
+    (fun _ : RiscV.Word 7 => HolWordLab.word (BitVec.ofNat 7 0))
+    (fun _ => True) true (BitVec.ofNat 7 0) value32
+  have _ := panMemStore32HOL_eq_alt
+    (fun _ : RiscV.Word 24 => HolWordLab.word (BitVec.ofNat 24 0))
+    (fun _ => True) false (BitVec.ofNat 24 0) value32
   trivial
 
 #guard alignedGuard

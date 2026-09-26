@@ -101,6 +101,31 @@ private theorem crepExpVarsList_mem_iff
     `flapjack-4ac.5.21` open until that exact statement can be assembled and
     proved. -/
 
+/-! Source review of `eval_map_var_cexp_present_ctxt`
+    (`pan_to_crepProofScript.sml:1077`) finds a second, stronger declaration
+    with no exact Lean counterpart. HOL quantifies over `es`, `vs`, source
+    state `s`, target state `t`, and context `ctxt`; its premises are
+    `MAP (eval s) es = MAP SOME vs`, `state_rel s t`,
+    `code_rel ctxt s.code t.code`, `locals_rel ctxt s.locals t.locals`, and
+    `EVERY localised_exp es`. Its conclusion says every name in
+    `FLAT (MAP var_cexp (FLAT (MAP FST (MAP (compile_exp ctxt) es))))` occurs
+    in the `ns` list of some `ctxt.vars` binding. The nearby
+    `compileExpHOL_outputs_vars_bounded` proves only that emitted names are
+    at most `vmax`; it neither preserves the source premises nor proves the
+    required context lookup and membership conclusion.
+
+    No exact tag is claimed. `PanToCrepHOLContext` uses String-keyed
+    production maps and production `Shape`, while HOL context keys and shape
+    names use `mlstring` and HOL `shape`. The available `stateRel`, `codeRel`,
+    and `localsRel` relate production `PanSemState`/`CrepRuntimeState`,
+    String identifiers, optional `PanValue` source memory, and production
+    shapes; these are not HOL's finite-map state, `word_lab` memory, or
+    `state_rel`/`code_rel`/`locals_rel`. Exact context/compiler carriers and
+    state projections remain tracked by
+    `flapjack-pxn.18.3.5.8.8`, `flapjack-pxn.18.3.5.8.13`, and
+    `flapjack-pxn.18.3.7.1.3.1`. The faithful theorem port is tracked by
+    `flapjack-4ac.5.23.1`. -/
+
 /-- Flapjack-specific induction invariant for the HOL theorem below, split
     into list and expression compiler cases so Lean's compiler recursor can
     discharge its structural branches. It has no separate HOL declaration. -/

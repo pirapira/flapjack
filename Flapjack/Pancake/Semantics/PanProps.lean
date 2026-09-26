@@ -209,6 +209,25 @@ mutual
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+/-! **Unported HOL evaluator invariant** (`evaluate_is_wf_shape_invariant`,
+    `panPropsScript.sml:1250`). The source quantifies `p`, initial state `s`,
+    result `res`, and post-state `s'`; from `evaluate (p,s) = (res,s')` and
+    `FEVERY` well-formedness of both initial `locals` and `globals` under
+    `s.structs`, it concludes both post-state maps are well-formed under
+    `s'.structs`, and any returned/raised payload is well-formed under the
+    initial `s.structs`. No Lean declaration currently states that result.
+    The prerequisite `eval_is_wf_shape_v` (`panPropsScript.sml:126`) is also
+    unported. `evalHOLExact` in `PanSem/EvalExact.lean` has the exact expression
+    and value syntax but takes `PanSemStateExact`, whose four map fields are
+    unrestricted lookup functions. `PanSemStateFiniteExact.evalHOLFinite` has
+    the reviewed finite-map carrier and expression evaluator, but no invariant
+    proof; the recursive program evaluator still has an assembly marker and is
+    not assembled over that finite-map carrier. Consequently neither a theorem
+    over `evalHOLExact` nor one over the partial recursive dispatcher has the
+    required HOL statement/carrier. This prerequisite and the dependent
+    `evaluate_shape_invariant_ret_inst` port remain open in beads
+    `flapjack-4ac.4.67` and `flapjack-4ac.5.83` respectively. -/
+
 /-- Untagged support: the exact value-level well-formedness predicate implies
     that the exact `shape_of` image is well-formed (`is_wf_shape_of_v`
     `panPropsScript.sml:38`). -/
@@ -575,6 +594,7 @@ theorem memLoadHOLExact_isWfShapeValueHOLExact {width : Nat} [NeZero width] :
     exact memLoadHOLExact_isWfShapeValueHOLExact_loads domain memory shapes address context values h
   · intro fields address domain _ memory context values h
     exact memLoadHOLExact_isWfShapeValueHOLExact_flds domain memory fields address context values h
+
 
 /-- Exact port of HOL `panProps$mem_loads_some_shape_eq` (`panPropsScript.sml:194`):
     `mem_load`, `mem_loads` and `mem_load_flds` return values whose shapes are

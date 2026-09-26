@@ -30,6 +30,12 @@ theorem PanSemExactEvalContext.withState_state {width : Nat} {σ : Type} [NeZero
     (hshared : state.shMemaddrs = context.state.shMemaddrs) :
     (context.withState state hmem hshared).state = state := rfl
 
+instance {width : Nat} {σ : Type} [NeZero width] (context : PanSemExactEvalContext width σ) :
+    DecidablePred context.state.memaddrs := context.memaddrsDecidable
+
+instance {width : Nat} {σ : Type} [NeZero width] (context : PanSemExactEvalContext width σ) :
+    DecidablePred context.state.shMemaddrs := context.shMemaddrsDecidable
+
 /-- The state-update primitives used by the clause steps preserve finite support. -/
 macro "finiteSupport_simp" : tactic =>
   `(tactic|
@@ -71,7 +77,7 @@ theorem primitiveStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero wi
   finiteSupport_simp
 
 theorem storeStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (state : PanSemStateExact width σ) [instMem : DecidablePred state.memaddrs]
     (destination source : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (h : state.FiniteSupport) :
@@ -80,7 +86,7 @@ theorem storeStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
   finiteSupport_simp
 
 theorem store32StepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (state : PanSemStateExact width σ) [instMem : DecidablePred state.memaddrs]
     (address value : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (h : state.FiniteSupport) :
@@ -89,7 +95,7 @@ theorem store32StepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero widt
   finiteSupport_simp
 
 theorem storeByteStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (state : PanSemStateExact width σ) [instMem : DecidablePred state.memaddrs]
     (address value : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (h : state.FiniteSupport) :
@@ -98,7 +104,7 @@ theorem storeByteStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero wi
   finiteSupport_simp
 
 theorem extCallStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (state : PanSemStateExact width σ) [instMem : DecidablePred state.memaddrs]
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (function : MlS) (ptr1 len1 ptr2 len2 : ExpHOL width)
     (h : state.FiniteSupport) :
@@ -123,7 +129,7 @@ theorem raiseStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
   finiteSupport_simp
 
 theorem shMemLoadHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
+    (state : PanSemStateExact width σ) [instSh : DecidablePred state.shMemaddrs]
     (kind : VarKind) (name : MlS) (address : RiscV.Word width) (nb : Nat)
     (h : state.FiniteSupport) :
     (shMemLoadHOLExact state kind name address nb).2.FiniteSupport := by
@@ -143,7 +149,7 @@ theorem shMemLoadHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
     · simpa using h
 
 theorem shMemStoreHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
+    (state : PanSemStateExact width σ) [instSh : DecidablePred state.shMemaddrs]
     (word address : RiscV.Word width) (nb : Nat)
     (h : state.FiniteSupport) :
     (shMemStoreHOLExact state word address nb).2.FiniteSupport := by
@@ -169,7 +175,7 @@ theorem tickStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
   · exact PanSemStateExact.finiteSupport_decClock h
 
 theorem shMemLoadClauseHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
+    (state : PanSemStateExact width σ) [instSh : DecidablePred state.shMemaddrs]
     (operator : OpSize) (kind : VarKind) (name : MlS)
     (address : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
@@ -183,7 +189,7 @@ theorem shMemLoadClauseHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero 
   · simpa using h
 
 theorem shMemStoreClauseHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
+    (state : PanSemStateExact width σ) [instSh : DecidablePred state.shMemaddrs]
     (operator : OpSize) (address value : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (h : state.FiniteSupport) :
@@ -201,7 +207,7 @@ theorem shMemStoreClauseHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero
     state and is vacuous. -/
 theorem evalPanSemNonrecursiveHOLExact_finiteSupport {width : Nat} {σ : Type}
     [NeZero width] (program : ProgHOL width) (state : PanSemStateExact width σ)
-    [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs]
+    [instMem : DecidablePred state.memaddrs] [instSh : DecidablePred state.shMemaddrs]
     (h : state.FiniteSupport)
     (result : Option (PanSemResultExact width) × PanSemStateExact width σ)
     (hres : evalPanSemNonrecursiveHOLExact program state = some result) :

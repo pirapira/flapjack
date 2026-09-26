@@ -1545,6 +1545,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "is_wf_shape_nil",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "isWfShapeNilHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "Codex (source comparison): HOL Overload is_wf_shape_nil at panPropsScript.sml:22 is is_wf_shape (TAKE 0 s.structs), which evaluates to the empty StructContextExact. The Lean alias has the exact ShapeHOL -> Bool type and delegates to tagged isWfShapeExactHOL with that empty context; no hypotheses or representation changes."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "fdoms_eq_flookup_some_none",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "fdoms_eq_flookup_some_none",

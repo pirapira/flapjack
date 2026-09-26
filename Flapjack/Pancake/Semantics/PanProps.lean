@@ -1604,6 +1604,13 @@ context-less well-formedness rendered as `isWfShapeExactHOL [] shape = true`
 
 open Flapjack.Pancake.PanLang
 
+/-- HOL `is_wf_shape_nil` (`panPropsScript.sml:22`) is the overload
+    `is_wf_shape []`. This exact-carrier alias uses the empty
+    `StructContextExact` and the tagged `ShapeHOL` predicate. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "is_wf_shape_nil"]
+def isWfShapeNilHOL (shape : ShapeHOL) : Bool :=
+  isWfShapeExactHOL ([] : StructContextExact) shape
+
 /- Untagged support: context-free well-formed shapes have the same
     with-context size as their plain `size_of_shape` size, for every context. -/
 mutual

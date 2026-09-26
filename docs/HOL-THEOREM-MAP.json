@@ -121,11 +121,27 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "MEM_IMP_shape_size",
+    "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
+    "lean_name": "memImpShapeSizeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.1.22): HOL MEM_IMP_shape_size (cakeml/pancake/panLangScript.sml:131-137) is `!shapes a. MEM a shapes ==> shape_size a < 1 + shape1_size shapes` over the generated datatype size functions of `Datatype: shape = One | Comb (shape list) | Named stcname`. Lean memImpShapeSizeHOL : (shapes : List ShapeHOL) -> (a : ShapeHOL) -> a ∈ shapes -> shapeSizeHOL a < 1 + shape1SizeHOL shapes matches the quantifier order, the MEM hypothesis, and the strict-inequality conclusion over the exact ShapeHOL carrier. The HOL size functions are produced by the Datatype package (HOL/src/datatype/DataSize.sml), have no textual source declaration, and therefore cannot carry an @[hol] tag; their equations are transcribed in Shape.lean and pinned by a standard-HOL reconstruction of the identical datatype (constructor arities and field types) in scripts/hol-probes/pan_lang_size_probe.out: shape_size One = 0; shape_size (Comb a) = 1 + shape1_size a; shape_size (Named a) = 1 + mlstring_size a; shape1_size [] = 0; shape1_size (a0::a1) = 1 + (shape_size a0 + shape1_size a1); mlstring_size (implode a) = 1 + list_size char_size a with char_size = 0 (HOL/src/string/stringScript.sml:179)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "exp",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "ExpHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-deepseek-three (constructor-by-constructor source comparison; HOL Datatype exp = Const ('a word) | Var varkind varname | RStruct (exp list) | RField index exp | NStruct stcname ((fldname # exp) list) | NField fldname exp | Load shape exp | Load32 exp | LoadByte exp | Op binop (exp list) | Panop panop (exp list) | Cmp cmp exp exp | Shift shift exp exp | BaseAddr | TopAddr | BytesInWord (panLangScript.sml:53-69) vs ExpHOL {width} [NeZero width] with 16 constructors in the same order: const(BitVec width), var(VarKind)(MlS), rstruct(List ExpHOL), rfield(Nat)(ExpHOL), nstruct(MlS)(List (MlS x ExpHOL)), nfield(MlS)(ExpHOL), load(ShapeHOL)(ExpHOL), load32/loadByte(ExpHOL), op/panop(BinOp/PanOp)(List ExpHOL), cmp/shift(Cmp/Shift)(ExpHOL x ExpHOL), baseAddr/topAddr/bytesInWord; arities and field types match with varname/stcname/fldname = MlS (exact mlstring carrier) and Const over BitVec width. Production Flapjack.Exp is generic and untagged; kernel codec expToHOL/expOfHOL with total expToHOL_expOfHOL and byte-ranged ExpByteRanged side condition for expOfHOL_expToHOL; direct HOL oracle scripts/hol-probes/pan_lang_exp_probe.out reproduced by Flapjack/Test/PanLangExpHOLParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "MEM_IMP_exp_size",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "memImpExpSizeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.1.30): HOL MEM_IMP_exp_size (cakeml/pancake/panLangScript.sml:198-208) is `(!xs a. MEM a xs ==> exp_size l a < exp3_size l xs) /\\ (!xs a. MEM a xs ==> exp_size l (SND a) < exp1_size l xs)` over the generated datatype size functions of `Datatype: exp = ...`. Lean memImpExpSizeHOL {width} [NeZero width] {α : Type} (f : α → Nat) : (∀ xs a, a ∈ xs → expSizeHOL f a < exp3SizeHOL f xs) ∧ (∀ xs a, a ∈ xs → expSizeHOL f a.2 < exp1SizeHOL f xs) matches both conjuncts, the quantifier order, the MEM hypotheses, and the conclusions over the exact ExpHOL carrier; HOL's size-function parameter l is unused (Const ('a word) is sized by w2n) and the Lean f keeps HOL's statement shape. The generated HOL equations have no textual source declaration and so the helper size functions stay untagged; they are transcribed in Exp.lean and pinned by a standard-HOL reconstruction of the identical datatype in scripts/hol-probes/pan_lang_size_probe.out: exp_size f (Const a) = 1 + w2n a; Var = 1 + (varkind_size a0 + mlstring_size a1); RStruct = 1 + exp3_size f a; RField = 1 + (a0 + exp_size f a1) (num size identity); NStruct = 1 + (mlstring_size a0 + exp1_size f a1); NField = 1 + (mlstring_size a0 + exp_size f a1); Load = 1 + (shape_size a0 + exp_size f a1); Load32/LoadByte = 1 + exp_size f a; Op/Panop = 1 + (op_size a0 + exp3_size f a1); Cmp/Shift = 1 + (op_size a0 + (exp_size f a1 + exp_size f a2)); BaseAddr/TopAddr/BytesInWord = 0; exp1_size f (a0::a1) = 1 + (exp2_size f a0 + exp1_size f a1); exp2_size f (a0,a1) = 1 + (mlstring_size a0 + exp_size f a1); exp3_size f (a0::a1) = 1 + (exp_size f a0 + exp3_size f a1)."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -10656,96 +10672,96 @@
     "hol_name": "ffi_outcome",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFfiOutcome",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (bead flapjack-qxj): HOL Datatype ffi_outcome = FFI_failed | FFI_diverged (ffiScript.sml:15-17); Lean inductive HolFfiOutcome failed|diverged, same constructor order and arity, no fields; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "oracle_result",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolOracleResult",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL oracle_result = Oracle_return 'ffi (word8 list) | Oracle_final ffi_outcome (:19-21); Lean HolOracleResult.ret (value:sigma) (bytes:List (BitVec 8)) | .final (outcome); polymorphic 'ffi = sigma, word8 = BitVec 8, field order matches; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "shmem_op",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolShmemOp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL shmem_op = MappedRead | MappedWrite (:23-25); Lean HolShmemOp mappedRead|mappedWrite; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "ffiname",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFfiName",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL ffiname = ExtCall mlstring | SharedMem shmem_op (:27-29); Lean HolFfiName.extCall MlString | .sharedMem HolShmemOp over the tagged exact mlstring carrier; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "oracle_function",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolOracleFunction",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL Type oracle_function = :'ffi -> word8 list -> word8 list -> 'ffi oracle_result (:31); Lean abbrev HolOracleFunction sigma := sigma -> List (BitVec 8) -> List (BitVec 8) -> HolOracleResult sigma; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "oracle",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolOracle",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL Type oracle = :ffiname -> 'ffi oracle_function (:32); Lean abbrev HolOracle sigma := HolFfiName -> HolOracleFunction sigma; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "io_event",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolIoEvent",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL io_event = IO_event ffiname (word8 list) ((word8 # word8) list) (:41-42); Lean structure HolIoEvent name/configuration/bytes : List (BitVec 8 x BitVec 8); word8 = BitVec 8, HOL product = Prod, field order matches; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "final_event",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFinalEvent",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL final_event = Final_event ffiname (word8 list) (word8 list) ffi_outcome (:44-46); Lean structure HolFinalEvent name/configuration/bytes/outcome; order and types match; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "ffi_state",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFfiState",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL Datatype ffi_state = <| oracle : 'ffi oracle; ffi_state : 'ffi; io_events : io_event list |> (:48-52); Lean structure HolFfiState oracle/ffiState:sigma/ioEvents:List HolIoEvent; field order and types match (Lean field ffiState renders HOL ffi_state); exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "initial_ffi_state_def",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "initialHolFfiState",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL initial_ffi_state oc ffi = <| oracle := oc; ffi_state := ffi; io_events := [] |> (:55-57); Lean initialHolFfiState oracle state = {oracle, ffiState := state, ioEvents := []}; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "ffi_result",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFfiResult",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL ffi_result = FFI_return ('ffi ffi_state) (word8 list) | FFI_final final_event (:59-61); Lean HolFfiResult.ret (state:HolFfiState sigma) (bytes) | .final (event); exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "call_FFI_def",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "callFFIHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL call_FFI st s conf bytes = if s <> ExtCall \u00ab\u00bb then (case st.oracle s st.ffi_state conf bytes of Oracle_return ... | Oracle_final ...) else FFI_return st bytes (:65-73); Lean callFFIHOL uses the complementary guard `if name = .extCall (implode [])`; ExtCall \u00ab\u00bb is the empty mlstring (implode []), and the oracle-return/length-check/IO_event ZIP/FFI_failed/FFI_final branches are clause-for-clause identical, so the definition is behaviorally exact (polarity-only difference in the guard); exact."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",

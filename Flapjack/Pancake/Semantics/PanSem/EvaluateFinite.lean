@@ -19,10 +19,13 @@ so the recursive clauses typecheck over literal record updates.
 
 This module exposes the clause surface of `evaluateHOLFinite`, clause by clause,
 as the source evidence for the `evaluate_def` port.  Exposed so far:
-`Skip` / `Break` / `Continue`, and the `Seq` (three outcomes) and `If`
-(then/else on a word condition) clauses.  The remaining clauses are being
-added; the exact `@[hol ... "evaluate_def" ...]` tag stays withheld until every
-clause is exposed and reviewed (`flapjack-qj5` is blocked on `flapjack-6yq`).
+`Skip` / `Break` / `Continue`, the `Seq` (three outcomes) and `If`
+(then/else on a word condition) clauses, the `Dec` and `While` clauses, and the
+`Call` / `DecCall` argument-list and code-lookup short circuits plus the
+clock-exhaustion (`TimeOut`, empty locals) branches.  The `Call` / `DecCall`
+returned and exception outcome branches are still being added; the exact
+`@[hol ... "evaluate_def" ...]` tag stays withheld until every clause is exposed
+and reviewed (`flapjack-qj5` is blocked on `flapjack-6yq`).
 
 The older delegating adapter `evaluateHOLFiniteViaExact` (and its
 `evalPanSemRecursiveCallHOLFinite_of_broad` / `evaluateHOLFiniteViaExact_of_broad`
@@ -434,6 +437,58 @@ theorem evalPanSemRecursiveCallFiniteContext_decCall_lookup_none {width : Nat} {
   · rename_i hsome
     rw [hlookupNone] at hsome
     simp at hsome
+
+/-- HOL `evaluate_def` `Call` clause clock-exhaustion branch: when the caller's
+    clock is exhausted the call returns `TimeOut` with empty locals. -/
+theorem evalPanSemRecursiveCallFiniteContext_call_clock_zero {width : Nat} {σ : Type}
+    [NeZero width]
+    (info : Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width)))
+    (function : MlS) (arguments : List (ExpHOL width)) (context : FiniteEvalContext width σ)
+    (values : List (ValueHOL width)) (body : ProgHOL width)
+    (calleeLocals : MlS → Option (ValueHOL width)) (returnShape : ShapeHOL)
+    (hargs : evalListHOLFinite context.state (h := context.memaddrsDecidable) arguments =
+      some values)
+    (hlookup : lookupCodeHOLExact context.state.code.lookup function values =
+      some (body, calleeLocals, returnShape))
+    (hclock : context.state.clock = 0) :
+    evalPanSemRecursiveCallFiniteContext (.call info function arguments) context =
+      some (some .timeOut, context.withState (emptyLocalsHOLFinite context.state) rfl rfl) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hargs]
+  dsimp only
+  split
+  · rename_i hsome
+    rw [hlookup] at hsome
+    simp at hsome
+  · rw [if_pos hclock]
+
+/-- HOL `evaluate_def` `DecCall` clause clock-exhaustion branch: when the caller's
+    clock is exhausted the call returns `TimeOut` with empty locals. -/
+theorem evalPanSemRecursiveCallFiniteContext_decCall_clock_zero {width : Nat} {σ : Type}
+    [NeZero width]
+    (resultName : MlS) (shape : ShapeHOL) (function : MlS)
+    (arguments : List (ExpHOL width)) (continuation : ProgHOL width)
+    (context : FiniteEvalContext width σ)
+    (values : List (ValueHOL width)) (body : ProgHOL width)
+    (calleeLocals : MlS → Option (ValueHOL width)) (returnShape : ShapeHOL)
+    (hargs : evalListHOLFinite context.state (h := context.memaddrsDecidable) arguments =
+      some values)
+    (hlookup : lookupCodeHOLExact context.state.code.lookup function values =
+      some (body, calleeLocals, returnShape))
+    (hclock : context.state.clock = 0) :
+    evalPanSemRecursiveCallFiniteContext
+        (.decCall resultName shape function arguments continuation) context =
+      some (some .timeOut, context.withState (emptyLocalsHOLFinite context.state) rfl rfl) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hargs]
+  dsimp only
+  split
+  · rename_i hsome
+    rw [hlookup] at hsome
+    simp at hsome
+  · rw [if_pos hclock]
 
 end PanSemStateFiniteExact
 

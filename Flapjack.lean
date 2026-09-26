@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.AstHOL
 import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.PanLang.Shape

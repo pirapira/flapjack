@@ -1,6 +1,7 @@
 import Flapjack.Pipeline
 import Flapjack.Pancake.LoopToWord
 import Flapjack.Parser
+import Flapjack.Parser.ParseTopDecsByteRanged
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
@@ -506,7 +507,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
     (fromNat : Int → RiscV.Word width) (services : List (FunName × Nat))
     (removeConfig : StackRemoveConfig) (start : FunName) (source : String) :
     Except SourceRiscVCompileError (SourceRiscVArtifact width) :=
-  match Parser.parseTopDecs fromNat source with
+  match hparse : Parser.parseTopDecs fromNat source with
   | .error errors => .error (.parse errors)
   | .ok declarations =>
       let checked := staticCheck declarations
@@ -514,9 +515,14 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
       | .error error => .error (.static error)
       | .ok _ =>
           let warnings := checked.2
+          let parsedByteRanged := Parser.parseTopDecs_declByteRanged
+            fromNat source false declarations hparse
+          let targetByteRanged := panTargetDeclarationsWithDefaultMain_byteRanged
+            declarations parsedByteRanged
           match compileFlapjackEntryCake architecture bytesInWord
               (fun value => fromNat value) start
-              (panTargetDeclarationsWithDefaultMain declarations) with
+              (panTargetDeclarationsWithDefaultMain declarations)
+              (some (.isTrue targetByteRanged)) with
           | none => .error .entryNotFound
           | some pipeline =>
               let sourceLoop := pipelineLoopFunctionsSource architecture 1 pipeline.crepe
@@ -572,7 +578,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
     (fromNat : Int → RiscV.Word width) (services : List (FunName × Nat))
     (removeConfig : StackRemoveConfig) (start : FunName) (source : String) :
     Except SourceRiscVImageError (SourceRiscVImage width) :=
-  match Parser.parseTopDecs fromNat source with
+  match hparse : Parser.parseTopDecs fromNat source with
   | .error errors => .error (.parse errors)
   | .ok declarations =>
       let checked := staticCheck declarations
@@ -580,8 +586,13 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
       | .error error => .error (.static error)
       | .ok _ =>
           let warnings := checked.2
+          let parsedByteRanged := Parser.parseTopDecs_declByteRanged
+            fromNat source false declarations hparse
+          let targetByteRanged := panTargetDeclarationsWithDefaultMain_byteRanged
+            declarations parsedByteRanged
           match compileFlapjackEntryCake architecture bytesInWord (fun value => fromNat value)
-              start (panTargetDeclarationsWithDefaultMain declarations) with
+              start (panTargetDeclarationsWithDefaultMain declarations)
+              (some (.isTrue targetByteRanged)) with
           | none => .error .entryNotFound
           | some pipeline =>
               let sourceLoop := pipelineLoopFunctionsSource architecture 1 pipeline.crepe
@@ -619,7 +630,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
     (fromNat : Int → RiscV.Word width) (services : List (FunName × Nat))
     (removeConfig : StackRemoveConfig) (start : FunName) (source : String) :
     Except SourceRiscVImageError (SourceRiscVRuntimeImage width) :=
-  match Parser.parseTopDecs fromNat source with
+  match hparse : Parser.parseTopDecs fromNat source with
   | .error errors => .error (.parse errors)
   | .ok declarations =>
       let checked := staticCheck declarations
@@ -627,8 +638,13 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
       | .error error => .error (.static error)
       | .ok _ =>
           let warnings := checked.2
+          let parsedByteRanged := Parser.parseTopDecs_declByteRanged
+            fromNat source false declarations hparse
+          let targetByteRanged := panTargetDeclarationsWithDefaultMain_byteRanged
+            declarations parsedByteRanged
           match compileFlapjackEntryCake architecture bytesInWord (fun value => fromNat value)
-              start (panTargetDeclarationsWithDefaultMain declarations) with
+              start (panTargetDeclarationsWithDefaultMain declarations)
+              (some (.isTrue targetByteRanged)) with
           | none => .error .entryNotFound
           | some pipeline =>
               let loop := pipelineLoopFunctionsSource architecture stackFunctionFirstLabel

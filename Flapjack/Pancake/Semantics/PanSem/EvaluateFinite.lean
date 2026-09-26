@@ -906,6 +906,78 @@ theorem evalPanSemRecursiveCallFiniteContext_ite_projection {width : Nat} {σ : 
       | rStruct fields => rfl
       | nStruct name fields => rfl
 
+/-- Projection equivalence for the `While` clause, using a body IH and a self IH. -/
+theorem evalPanSemRecursiveCallFiniteContext_while_projection {width : Nat} {σ : Type}
+    [NeZero width] (condition : ExpHOL width) (body : ProgHOL width)
+    (context : FiniteEvalContext width σ)
+    (ihBody : ∀ (fc : FiniteEvalContext width σ)
+        (o : Option (Option (PanSemResultExact width) × FiniteEvalContext width σ)),
+        evalPanSemRecursiveCallFiniteContext body fc = o →
+        evalPanSemRecursiveCallContextHOLExact body fc.toExact =
+          Option.map (fun p => (p.1, p.2.toExact)) o)
+    (ihSelf : ∀ (fc : FiniteEvalContext width σ)
+        (o : Option (Option (PanSemResultExact width) × FiniteEvalContext width σ)),
+        evalPanSemRecursiveCallFiniteContext (.while condition body) fc = o →
+        evalPanSemRecursiveCallContextHOLExact (.while condition body) fc.toExact =
+          Option.map (fun p => (p.1, p.2.toExact)) o) :
+    Option.map (fun p => (p.1, p.2.toExact))
+        (evalPanSemRecursiveCallFiniteContext (.while condition body) context) =
+      evalPanSemRecursiveCallContextHOLExact (.while condition body) context.toExact := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_4, evalPanSemRecursiveCallContextHOLExact.eq_4]
+  rw [evalHOLFinite_eq_toExact context.state (h := context.memaddrsDecidable) condition]
+  rw [evalHOLExact_toExact_eq context condition]
+  generalize hcond : @Flapjack.evalHOLExact width σ _ context.state.toExact
+      context.memaddrsDecidable condition = result
+  cases result with
+  | none => rfl
+  | some v =>
+      cases v with
+      | val wordLab =>
+          cases wordLab with
+          | word word =>
+              simp only []
+              by_cases hw : word ≠ 0
+              · rw [if_pos hw, if_pos hw]
+                by_cases hclock : context.state.clock = 0
+                · have hclock' : context.toExact.state.clock = 0 := hclock
+                  rw [if_pos hclock, if_pos hclock']
+                  simp only [Option.map_some, Option.some.injEq]
+                  have hb : (context.withState (emptyLocalsHOLFinite context.state) rfl rfl).toExact =
+                      context.toExact.withState (emptyLocalsHOLExact context.toExact.state) rfl rfl := by
+                    apply PanSemExactEvalContext.ext
+                    change emptyLocalsHOLExact context.state.toExact =
+                      (emptyLocalsHOLFinite context.state).toExact
+                    rw [toExact_emptyLocalsHOLFinite]
+                  rw [hb]
+                · have hclock' : ¬(context.toExact.state.clock = 0) := hclock
+                  rw [if_neg hclock, if_neg hclock']
+                  generalize hent : context.withState (decClockHOLFinite context.state) rfl rfl = ent
+                  generalize hentb : context.toExact.withState
+                      (decClockHOLExact context.toExact.state) rfl rfl = entb
+                  have hentb_eq : entb = ent.toExact := by
+                    rw [← hentb, ← hent]
+                    apply PanSemExactEvalContext.ext
+                    change decClockHOLExact context.state.toExact =
+                      (decClockHOLFinite context.state).toExact
+                    rw [toExact_decClockHOLFinite]
+                  rw [hentb_eq]
+                  cases hbody : evalPanSemRecursiveCallFiniteContext body ent with
+                  | none => rw [ihBody ent none hbody]; simp only [Option.map_none]
+                  | some pair =>
+                      obtain ⟨bodyResult, bodyContext⟩ := pair
+                      rw [ihBody ent (some (bodyResult, bodyContext)) hbody]
+                      simp only [Option.map_some]
+                      cases bodyResult with
+                      | none => rw [← ihSelf _ _ rfl]; congr 1
+                      | some r =>
+                          cases r with
+                          | «continue» => rw [← ihSelf _ _ rfl]; congr 1
+                          | «break» => congr 1
+                          | _ => congr 1
+              · rw [if_neg hw, if_neg hw]; rfl
+      | rStruct fields => rfl
+      | nStruct name fields => rfl
+
 end PanSemStateFiniteExact
 
 end Flapjack

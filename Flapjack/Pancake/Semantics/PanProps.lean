@@ -251,32 +251,35 @@ theorem memLoadHOLExactSwapMemory {width : Nat} [NeZero width] :
       (domain : BitVec width → Prop) [DecidablePred domain]
       (memory1 : BitVec width → HolWordLab width) (context : StructContextHOLM)
       (value : ValueHOL width) (memory2 : BitVec width → HolWordLab width),
-      memLoadHOLExact shape address domain memory1 context = some value →
-        (∀ address, domain address → memory1 address = memory2 address) →
+      (memLoadHOLExact shape address domain memory1 context = some value ∧
+        (∀ address, domain address → memory1 address = memory2 address)) →
           memLoadHOLExact shape address domain memory2 context = some value) ∧
     (∀ (shapes : List Flapjack.Pancake.PanLang.ShapeHOL) (address : BitVec width)
       (domain : BitVec width → Prop) [DecidablePred domain]
       (memory1 : BitVec width → HolWordLab width) (context : StructContextHOLM)
       (values : List (ValueHOL width)) (memory2 : BitVec width → HolWordLab width),
-      memLoadsHOLExact shapes address domain memory1 context = some values →
-        (∀ address, domain address → memory1 address = memory2 address) →
+      (memLoadsHOLExact shapes address domain memory1 context = some values ∧
+        (∀ address, domain address → memory1 address = memory2 address)) →
           memLoadsHOLExact shapes address domain memory2 context = some values) ∧
     (∀ (fields : List (MlStringHOLM × Flapjack.Pancake.PanLang.ShapeHOL))
       (address : BitVec width) (domain : BitVec width → Prop) [DecidablePred domain]
       (memory1 : BitVec width → HolWordLab width) (context : StructContextHOLM)
       (values : List (MlStringHOLM × ValueHOL width))
       (memory2 : BitVec width → HolWordLab width),
-      memLoadFldsHOLExact fields address domain memory1 context = some values →
-        (∀ address, domain address → memory1 address = memory2 address) →
+      (memLoadFldsHOLExact fields address domain memory1 context = some values ∧
+        (∀ address, domain address → memory1 address = memory2 address)) →
           memLoadFldsHOLExact fields address domain memory2 context = some values) := by
   refine ⟨?_, ?_, ?_⟩
-  · intro shape address domain hdec memory1 context value memory2 hload hagree
+  · intro shape address domain hdec memory1 context value memory2 h
+    rcases h with ⟨hload, hagree⟩
     exact memLoadHOLExactSwapMemoryMutual domain memory1 memory2 hagree
       shape address context value hload
-  · intro shapes address domain hdec memory1 context values memory2 hload hagree
+  · intro shapes address domain hdec memory1 context values memory2 h
+    rcases h with ⟨hload, hagree⟩
     exact memLoadsHOLExactSwapMemory domain memory1 memory2 hagree
       shapes address context values hload
-  · intro fields address domain hdec memory1 context values memory2 hload hagree
+  · intro fields address domain hdec memory1 context values memory2 h
+    rcases h with ⟨hload, hagree⟩
     exact memLoadFldsHOLExactSwapMemory domain memory1 memory2 hagree
       fields address context values hload
 

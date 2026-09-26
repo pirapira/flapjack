@@ -621,13 +621,18 @@ def ffiOrderFlipSource : String :=
 /-- Mirror of the `flapjack-compile --pancake` path: parse, lower to
 `CompiledFunction`s, build the runtime image, render the assembly text. -/
 def compileAssembly (source : String) : Option String :=
-  match Flapjack.Parser.parseTopDecs (α := RiscV.Word 64)
+  match hparse : Flapjack.Parser.parseTopDecs (α := RiscV.Word 64)
       (fun value => BitVec.ofInt 64 value) source with
   | .error _ => none
   | .ok declarations =>
+      let hparsed := Flapjack.Parser.parseTopDecs_declByteRanged
+        (BitVec.ofInt 64) source false declarations hparse
+      let htarget := panTargetDeclarationsWithDefaultMain_byteRanged
+        declarations hparsed
       match compileFlapjackEntryCake .rv64i
           (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
-          "main" (panTargetDeclarationsWithDefaultMain declarations) with
+          "main" (panTargetDeclarationsWithDefaultMain declarations)
+          (some (.isTrue htarget)) with
       | none => none
       | some pipeline =>
           match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64)

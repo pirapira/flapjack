@@ -2415,6 +2415,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "free_var_ids_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "freeVarIdsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, bead flapjack-4ac.1.46): HOL free_var_ids_def (cakeml/pancake/panLangScript.sml:347-392) collects the free local variable identifiers of a prog. Every clause is mirrored over the exact ProgHOL/MlS carrier: Dec contributes var_exp e plus the body ids filtered by (≠ vn); Seq/If/While recurse and add the guard's var_exp; Assign and ShMemLoad contribute v only when the kind is Local; Primitive/DecCall contribute the name plus FLAT(MAP var_exp args); Store/Store32/StoreByte/ExtCall/ShMemStore concatenate the operand var_exp lists; Raise/Return contribute the operand's var_exp. All five Call metadata shapes match HOL's five equations: none and SOME(NONE,NONE) contribute only FLAT(MAP var_exp args); SOME(NONE,SOME(_,vn,ep)) adds vn and the handler's ids; SOME(SOME(vk,vn),NONE) and SOME(SOME(vk,vn),SOME(_,en,ep)) add [vn] iff vk = Local and, in the handler case, en plus the handler's ids. The expression collector is the tagged var_exp_def port varExpHOL and the shadowing filter is FILTER ($≠ vn). HOL's catch-all row (Skip and the remaining no-op forms) is the [] clauses. There is no production Pancake free-variable collector to route to (the only production collector is the unrelated crepLang assigned_free_vars), so no executable bridge is required."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "nested_seq_def",
     "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
     "lean_name": "nestedSeqHOL",
@@ -10650,6 +10658,14 @@
     "lean_name": "sizeOfShapeHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.27). HOL panLangScript.sml:174-177 defines size_of_shape One = 1, size_of_shape (Comb shapes) = SUM (MAP size_of_shape shapes), and size_of_shape (Named name) = 1 (HOL comments that the Named case 'should not happen'). Lean sizeOfShapeHOL over the exact ShapeHOL carrier matches clause-for-clause: .one => 1, .comb shapes => sizeOfShapesHOL shapes (the []/shape::shapes = sizeOfShapeHOL shape + sizeOfShapesHOL shapes fold rendering of SUM (MAP size_of_shape shapes), starting from 0), and .named _ => 1. No extra hypotheses or side conditions; it never inspects the structure context."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape_to_str_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
+    "lean_name": "shapeToStrHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.28). HOL panLangScript.sml:180-188 defines shape_to_str over the mlstring-named shape: shape_to_str One = strlit \"1\"; shape_to_str (Comb []) = strlit \"{}\" (HOL comments it 'should never happen'); shape_to_str (Comb (x::xs)) = concat (strlit \"{\" :: shape_to_str x :: MAP (\\x. strlit \",\" ^ x) (MAP shape_to_str xs) ++ [strlit \"}\"]); shape_to_str (Named nm) = nm. Lean shapeToStrHOL is stated over the exact MlString-backed ShapeHOL carrier and returns MlS (the faithful mlstring): .one => ofString \"1\", .comb [] => ofString \"{}\", .comb (head::tail) => mlstrConcat (ofString \"{\" :: shapeToStrHOL head :: (tail.map (fun field => mlstrAppend (ofString \",\") (shapeToStrHOL field))) ++ [ofString \"}\"]), .named name => name. HOL concat (list concat of mlstrings) is rendered by the untagged mlstrConcat (fold with mlstrAppend), HOL ^ (mlstring concatenation) by the untagged mlstrAppend (append of the underlying character lists), and HOL strlit by ofString (exact on the ASCII literals used). No extra hypotheses or side conditions. The production Shape.shapeToString remains untagged (carrier Lean String, not mlstring)."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

@@ -1486,6 +1486,18 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Shape.lean", "withShapeHOL"),
         ("Flapjack/AstHOL.lean", "Shift"),
         ("Flapjack/Pancake/PanLang.lean", "PanLangShift"),
+        ("Flapjack/FfiHOL.lean", "HolFfiOutcome"),
+        ("Flapjack/FfiHOL.lean", "HolOracleResult"),
+        ("Flapjack/FfiHOL.lean", "HolShmemOp"),
+        ("Flapjack/FfiHOL.lean", "HolFfiName"),
+        ("Flapjack/FfiHOL.lean", "HolOracleFunction"),
+        ("Flapjack/FfiHOL.lean", "HolOracle"),
+        ("Flapjack/FfiHOL.lean", "HolIoEvent"),
+        ("Flapjack/FfiHOL.lean", "HolFinalEvent"),
+        ("Flapjack/FfiHOL.lean", "HolFfiState"),
+        ("Flapjack/FfiHOL.lean", "initialHolFfiState"),
+        ("Flapjack/FfiHOL.lean", "HolFfiResult"),
+        ("Flapjack/FfiHOL.lean", "callFFIHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

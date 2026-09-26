@@ -20,9 +20,10 @@ so the recursive clauses typecheck over literal record updates.
 This module exposes the clause surface of `evaluateHOLFinite`, clause by clause,
 as the source evidence for the `evaluate_def` port.  Exposed so far:
 `Skip` / `Break` / `Continue`, the `Seq` (three outcomes) and `If`
-(then/else on a word condition) clauses, the `Dec` and `While` clauses, and the
+(then/else on a word condition) clauses, the `Dec` and `While` clauses, the
 `Call` / `DecCall` argument-list and code-lookup short circuits plus the
-clock-exhaustion (`TimeOut`, empty locals) branches.  The `Call` / `DecCall`
+clock-exhaustion (`TimeOut`, empty locals) branches, and the
+`Return` / `Raise` / `ShMemLoad` / `ShMemStore` clauses.  The `Call` / `DecCall`
 returned and exception outcome branches are still being added; the exact
 `@[hol ... "evaluate_def" ...]` tag stays withheld until every clause is exposed
 and reviewed (`flapjack-qj5` is blocked on `flapjack-6yq`).
@@ -31,11 +32,14 @@ The older delegating adapter `evaluateHOLFiniteViaExact` (and its
 `evalPanSemRecursiveCallHOLFinite_of_broad` / `evaluateHOLFiniteViaExact_of_broad`
 translation lemmas) remains as untagged Flapjack-specific infrastructure.
 
-The module also begins the per-constructor projection equivalence to the broad
+The module also carries the per-constructor projection equivalence to the broad
 exact evaluator (`flapjack-6yq`): `..._skip_projection` / `_break_projection` /
-`_continue_projection` / `_annot_projection` show that mapping the finite
-evaluator's result through `state.toExact` agrees with `...ContextHOLExact` on
-the constant-state constructors.  The remaining constructors are still to come.
+`_continue_projection` / `_annot_projection` and the `assign` / `primitive` /
+`store` / `store32` / `storeByte` / `extCall` / `tick` / `return` / `raise` /
+`shMemLoad` / `shMemStore` projections show that mapping the finite evaluator's
+result through `state.toExact` agrees with `...ContextHOLExact`.  The remaining
+constructors (`dec` / `seq` / `ite` / `while` / `call` / `decCall`) are still to
+come.
 -/
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 
@@ -736,6 +740,42 @@ theorem evalPanSemRecursiveCallFiniteContext_raise_projection {width : Nat} {σ 
               rfl
           · rw [if_neg heq, if_neg heq]
             rfl
+
+/-- Projection equivalence on `ShMemLoad` (see `..._skip_projection`). -/
+theorem evalPanSemRecursiveCallFiniteContext_shMemLoad_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) (size : OpSize)
+    (kind : VarKind) (name : MlS) (address : ExpHOL width) :
+    (evalPanSemRecursiveCallFiniteContext
+        (.shMemLoad size kind name address : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact
+        (.shMemLoad size kind name address : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  dsimp only
+  rfl
+
+/-- Projection equivalence on `ShMemStore` (see `..._skip_projection`). -/
+theorem evalPanSemRecursiveCallFiniteContext_shMemStore_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) (size : OpSize)
+    (address value : ExpHOL width) :
+    (evalPanSemRecursiveCallFiniteContext
+        (.shMemStore size address value : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact
+        (.shMemStore size address value : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  dsimp only
+  rfl
 
 end PanSemStateFiniteExact
 

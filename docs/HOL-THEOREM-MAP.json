@@ -11647,6 +11647,51 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_fresh_var",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evalFreshVarHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.56; panPropsScript.sml:1078-1083): HOL quantifies state s, expression e, name n, word w and concludes eval (s with locals := s.locals |+ (n,w)) e = eval s e under ~MEM n (var_exp e). Lean preserves HOL's s e n w quantifier list (eval_fresh_var has no dead v), the fresh-local premise, and the unchanged-evaluation conclusion. updateLocalsForVarsSimps renders HOL locals |+ (n,w) through HolFiniteMapExact.updateEq (the equality-based FUPDATE), and evalHOL delegates to evalHOLExact via toExact. PanPropsEvalStateFiniteExact owns locals/globals/code/eshapes as HolFiniteMapExact and this module has the same-module canonical holFmapAsFiniteSupportWitness; the qualifier records only those four HOL |-> fields. Proof: the untagged broad lemma evalHOLExact_updLocals_not_mem over PanSemStateExact, by the mutual evalHOLExact.induct, with the fresh-name premise converted to pointwise list premises through the tagged not_mem_map_flat; [NeZero width] models HOL's positive word dimension and the DecidablePred instance renders HOL word-set membership."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "OPT_MMAP_update_locals_not_vars_eval_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "optMmapUpdateLocalsNotVarsEvalEqHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.57; panPropsScript.sml:1088-1094): HOL quantifies state s, expression list es, value list vs, name n, word w, with the conjunction ~MEM n (FLAT (MAP var_exp es)) AND OPT_MMAP (eval s) es = SOME vs, concluding the same successful list after s.locals |+ (n,w). Lean preserves that quantifier order, the pointwise list-freshness premise rendered as n not in (es.map varExpHOL).flatten, the OPT_MMAP success, and the same-value conclusion; evalListHOL is the repository's exact OPT_MMAP rendering and updateLocalsForVarsSimps renders HOL |+ via HolFiniteMapExact.updateEq. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical witness; the qualifier records only those. Proof: the untagged broad list lemma evalListHOLExact_updLocals_not_mem by List induction, dispatching each element to evalHOLExact_updLocals_not_mem; [NeZero width] and DecidablePred retain the reviewed HOL word/set encodings."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "update_locals_not_vars_eval_eq_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "updateLocalsNotVarsEvalEqEqHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.53; panPropsScript.sml:1042-1048): HOL quantifies state s, expression e, value v, name n, word w and concludes eval (s with locals := s.locals |+ (n,w)) e = eval s e under ~MEM n (var_exp e). HOL's v does not occur in the conclusion (dead binder) and is bound here at the evaluator's value type ValueHOL width, the same type as the live w; no hypothesis or conclusion uses it. Lean preserves the s e v n w order, the fresh-local premise, and the unchanged-evaluation conclusion. updateLocalsForVarsSimps renders HOL locals |+ (n,w) through HolFiniteMapExact.updateEq, the exact equality-based FUPDATE; evalHOL delegates to evalHOLExact through toExact. PanPropsEvalStateFiniteExact owns locals/globals/code/eshapes as HolFiniteMapExact and this module has the same-module canonical holFmapAsFiniteSupportWitness; the qualifier records only those four HOL |-> fields. Proof: the untagged broad lemma evalHOLExact_updLocals_not_mem over PanSemStateExact by the mutual evalHOLExact.induct; the only local-variable case uses name <> n to leave the lookup unchanged; list cases use the tagged not_mem_map_flat and the mutual list motives."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "update_locals_not_vars_eval_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "updateLocalsNotVarsEvalEqHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.54; panPropsScript.sml:1060-1066): HOL quantifies state s, expression e, value v, name n, word w, with the conjunction ~MEM n (var_exp e) AND eval s e = SOME v, concluding eval (s with locals := s.locals |+ (n,w)) e = SOME v. Lean preserves that s e v n w order, the conjunctive freshness/success premise, and the same-successful-value conclusion over the PanProps finite-map carrier. updateLocalsForVarsSimps renders HOL locals |+ (n,w) through HolFiniteMapExact.updateEq and evalHOL delegates to evalHOLExact through toExact; PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical witness, which the qualifier records. Proof: rewrite the equality form updateLocalsNotVarsEvalEqEqHOLFinite and the success hypothesis."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "update_locals_not_vars_eval_eq_NONE",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "updateLocalsNotVarsEvalEqNoneHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.55; panPropsScript.sml:1069-1075): HOL quantifies state s, expression e, value v, name n, word w, with the conjunction ~MEM n (var_exp e) AND eval s e = NONE, concluding eval (s with locals := s.locals |+ (n,w)) e = NONE. HOL's v does not occur in the conclusion (dead binder) and is bound here at the evaluator's value type ValueHOL width; no hypothesis or conclusion uses it. Lean preserves the s e v n w order, the conjunctive freshness/failure premise, and the unchanged-failure conclusion over the PanProps finite-map carrier. updateLocalsForVarsSimps renders HOL locals |+ (n,w) via HolFiniteMapExact.updateEq and evalHOL delegates to evalHOLExact through toExact; PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical witness. Proof: rewrite the equality form updateLocalsNotVarsEvalEqEqHOLFinite and the failure hypothesis."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "write_bytearray_update_byte",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
     "lean_name": "writeBytearrayUpdateByte",

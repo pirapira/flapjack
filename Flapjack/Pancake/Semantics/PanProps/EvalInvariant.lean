@@ -18,7 +18,7 @@ the representation qualifier and is invertibly related to `PanSemStateExact`.
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang
-  (MlS StructContextExact ProgHOL ExpHOL ShapeHOL DeclHOL isWfShapeExactHOL)
+  (MlS StructContextExact ProgHOL ExpHOL ShapeHOL DeclHOL isWfShapeExactHOL varExpHOL)
 
 /-! ## Clearing `locals` under the exact broad evaluator
 
@@ -550,6 +550,246 @@ theorem evalHOLExact_emptyLocalsHOLExact {width : Nat} {σ : Type} [NeZero width
     rcases hx with rfl | hx
     · exact ih1 y hy
     · exact ih2 x hx y hy
+
+/-- Broad untagged analogue of HOL `update_locals_not_vars_eval_eq_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1042`): updating `locals` at a
+    name absent from `var_exp e` leaves evaluation unchanged. This reads the
+    raw-function `PanSemStateExact` carrier, so it is not tagged; the tagged
+    finite-map port is `updateLocalsNotVarsEvalEqEqHOLFinite` below. -/
+theorem evalHOLExact_updLocals_not_mem {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (name : MlS) (word : ValueHOL width) :
+    ∀ (expression : ExpHOL width),
+      name ∉ varExpHOL expression →
+        evalHOLExact { state with locals := FUPDATE_HOL state.locals (name, word) }
+          expression = evalHOLExact state expression := by
+  intro expression
+  induction expression using evalHOLExact.induct (state := state)
+      (motive_2 := fun fields =>
+        (∀ pair ∈ fields, name ∉ varExpHOL pair.2) →
+          evalListFieldsHOLExact
+            { state with locals := FUPDATE_HOL state.locals (name, word) } fields =
+          evalListFieldsHOLExact state fields)
+      (motive_3 := fun expressions =>
+        (∀ e ∈ expressions, name ∉ varExpHOL e) →
+          evalListHOLExact
+            { state with locals := FUPDATE_HOL state.locals (name, word) } expressions =
+          evalListHOLExact state expressions)
+  case case1 value => intro _; rfl
+  case case2 name' =>
+    intro h
+    have hne : name' ≠ name := by
+      intro heq; exact h (by simp [varExpHOL, heq])
+    change FLOOKUP (FUPDATE_HOL state.locals (name, word)) name' =
+      FLOOKUP state.locals name'
+    rw [FLOOKUP_FUPDATE_HOL, if_neg hne]
+  case case3 name' => intro _; rfl
+  case case4 fields ih =>
+    intro h
+    have hpoint : ∀ e ∈ fields, name ∉ varExpHOL e :=
+      (not_mem_map_flatten varExpHOL fields name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih hpoint
+    simp only [evalHOLExact, hlist]
+  case case5 index expression values hChild ih =>
+    intro h
+    have hchild : name ∉ varExpHOL expression := by simpa [varExpHOL] using h
+    have heq := ih hchild
+    simp only [evalHOLExact, heq, hChild]
+  case case6 index expression hNo ih =>
+    intro h
+    have hchild : name ∉ varExpHOL expression := by simpa [varExpHOL] using h
+    have heq := ih hchild
+    simp only [evalHOLExact, heq]
+  case case7 structName fields hlookup =>
+    intro _; simp only [evalHOLExact, hlookup]
+  case case8 structName fields info hlookup hnames heval ih2 =>
+    intro h
+    have hpoint : ∀ pair ∈ fields, name ∉ varExpHOL pair.2 :=
+      (not_mem_map_flatten (fun pair : MlS × ExpHOL width => varExpHOL pair.2)
+        fields name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih2 hpoint
+    simp only [evalHOLExact, hlookup, if_pos hnames, hlist]
+  case case9 structName fields info hlookup hnames fieldValues heval hcheck ih2 =>
+    intro h
+    have hpoint : ∀ pair ∈ fields, name ∉ varExpHOL pair.2 :=
+      (not_mem_map_flatten (fun pair : MlS × ExpHOL width => varExpHOL pair.2)
+        fields name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih2 hpoint
+    simp only [evalHOLExact, hlookup, if_pos hnames, hlist, heval, hcheck]
+  case case10 structName fields info hlookup hnames fieldValues heval hcheckfalse ih2 =>
+    intro h
+    have hpoint : ∀ pair ∈ fields, name ∉ varExpHOL pair.2 :=
+      (not_mem_map_flatten (fun pair : MlS × ExpHOL width => varExpHOL pair.2)
+        fields name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih2 hpoint
+    simp only [evalHOLExact, hlookup, if_pos hnames, hlist, heval, hcheckfalse]
+  case case11 structName fields info hlookup hnotnames =>
+    intro _; simp only [evalHOLExact, hlookup, if_neg hnotnames]
+  case case12 fieldName value structName values hstruct hisSome ih =>
+    intro h
+    have hchild : name ∉ varExpHOL value := by simpa [varExpHOL] using h
+    have heq := ih hchild
+    simp only [evalHOLExact, heq, hstruct, hisSome]
+  case case13 fieldName value structName values hstruct hnotSome ih =>
+    intro h
+    have hchild : name ∉ varExpHOL value := by simpa [varExpHOL] using h
+    have heq := ih hchild
+    simp only [evalHOLExact, heq]
+  case case14 fieldName value hNo ih =>
+    intro h
+    have hchild : name ∉ varExpHOL value := by simpa [varExpHOL] using h
+    have heq := ih hchild
+    simp only [evalHOLExact, heq]
+  case case15 shape address hShape word hWord ih =>
+    intro h
+    have haddr : name ∉ varExpHOL address := by simpa [varExpHOL] using h
+    have heq := ih haddr
+    simp only [evalHOLExact, heq, hShape, hWord]
+  case case16 shape address hShape hNo ih =>
+    intro h
+    have haddr : name ∉ varExpHOL address := by simpa [varExpHOL] using h
+    have heq := ih haddr
+    simp only [evalHOLExact, heq]
+  case case17 shape address hNo =>
+    intro _; simp [evalHOLExact, hNo]
+  case case18 address word hWord ih =>
+    intro h
+    have haddr : name ∉ varExpHOL address := by simpa [varExpHOL] using h
+    have heq := ih haddr
+    simp only [evalHOLExact, heq, hWord]
+  case case19 address hNo ih =>
+    intro h
+    have haddr : name ∉ varExpHOL address := by simpa [varExpHOL] using h
+    have heq := ih haddr
+    simp only [evalHOLExact, heq]
+  case case20 address word hWord ih =>
+    intro h
+    have haddr : name ∉ varExpHOL address := by simpa [varExpHOL] using h
+    have heq := ih haddr
+    simp only [evalHOLExact, heq, hWord]
+  case case21 address hNo ih =>
+    intro h
+    have haddr : name ∉ varExpHOL address := by simpa [varExpHOL] using h
+    have heq := ih haddr
+    simp only [evalHOLExact, heq]
+  case case22 operator arguments values heval hall ih3 =>
+    intro h
+    have hpoint : ∀ e ∈ arguments, name ∉ varExpHOL e :=
+      (not_mem_map_flatten varExpHOL arguments name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih3 hpoint
+    simp only [evalHOLExact, hlist]
+  case case23 operator arguments values heval hnotall ih3 =>
+    intro h
+    have hpoint : ∀ e ∈ arguments, name ∉ varExpHOL e :=
+      (not_mem_map_flatten varExpHOL arguments name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih3 hpoint
+    simp only [evalHOLExact, hlist]
+  case case24 operator arguments hnone ih3 =>
+    intro h
+    have hpoint : ∀ e ∈ arguments, name ∉ varExpHOL e :=
+      (not_mem_map_flatten varExpHOL arguments name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih3 hpoint
+    simp only [evalHOLExact, hlist]
+  case case25 operator arguments values heval hall ih3 =>
+    intro h
+    have hpoint : ∀ e ∈ arguments, name ∉ varExpHOL e :=
+      (not_mem_map_flatten varExpHOL arguments name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih3 hpoint
+    simp only [evalHOLExact, hlist]
+  case case26 operator arguments values heval hnotall ih3 =>
+    intro h
+    have hpoint : ∀ e ∈ arguments, name ∉ varExpHOL e :=
+      (not_mem_map_flatten varExpHOL arguments name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih3 hpoint
+    simp only [evalHOLExact, hlist]
+  case case27 operator arguments hnone ih3 =>
+    intro h
+    have hpoint : ∀ e ∈ arguments, name ∉ varExpHOL e :=
+      (not_mem_map_flatten varExpHOL arguments name).mp (by simpa [varExpHOL] using h)
+    have hlist := ih3 hpoint
+    simp only [evalHOLExact, hlist]
+  case case28 operator left right leftWord rightWord hLeft hRight ihL ihR =>
+    intro h
+    simp only [varExpHOL, List.mem_append, not_or] at h
+    have heqL := ihL h.1
+    have heqR := ihR h.2
+    simp only [evalHOLExact, heqL, heqR, hLeft, hRight]
+  case case29 operator left right hNo ihL ihR =>
+    intro h
+    simp only [varExpHOL, List.mem_append, not_or] at h
+    have heqL := ihL h.1
+    have heqR := ihR h.2
+    simp only [evalHOLExact, heqL, heqR]
+  case case30 operator left right leftWord rightWord hLeft hRight ihL ihR =>
+    intro h
+    simp only [varExpHOL, List.mem_append, not_or] at h
+    have heqL := ihL h.1
+    have heqR := ihR h.2
+    simp only [evalHOLExact, heqL, heqR, hLeft, hRight]
+  case case31 operator left right hNo ihL ihR =>
+    intro h
+    simp only [varExpHOL, List.mem_append, not_or] at h
+    have heqL := ihL h.1
+    have heqR := ihR h.2
+    simp only [evalHOLExact, heqL, heqR]
+  case case32 => intro _; rfl
+  case case33 => intro _; rfl
+  case case34 => intro _; rfl
+  case case35 => rfl
+  case case36 =>
+    rename_i head tail tailResult headResult tailEval headEval ihHead ihTail premise
+    have hhead : name ∉ varExpHOL head := premise head (by simp)
+    have htail : ∀ e ∈ tail, name ∉ varExpHOL e := fun e he => premise e (by simp [he])
+    have hh := ihHead hhead
+    have ht := ihTail htail
+    simp only [evalListHOLExact, hh, ht]
+  case case37 =>
+    rename_i head tail hNoEval ihHead ihTail premise
+    have hhead : name ∉ varExpHOL head := premise head (by simp)
+    have htail : ∀ e ∈ tail, name ∉ varExpHOL e := fun e he => premise e (by simp [he])
+    have hh := ihHead hhead
+    have ht := ihTail htail
+    simp only [evalListHOLExact, hh, ht]
+  case case38 => rfl
+  case case39 =>
+    rename_i pairName pairExpr tail headResult tailResult tailEval headEval ihHead ihTail premise
+    have hhead : name ∉ varExpHOL pairExpr := premise (pairName, pairExpr) (by simp)
+    have htail : ∀ p ∈ tail, name ∉ varExpHOL p.2 := fun p hp => premise p (by simp [hp])
+    have hh := ihHead hhead
+    have ht := ihTail htail
+    simp only [evalListFieldsHOLExact, hh, ht]
+  case case40 =>
+    rename_i pairName pairExpr tail hNoEval ihHead ihTail premise
+    have hhead : name ∉ varExpHOL pairExpr := premise (pairName, pairExpr) (by simp)
+    have htail : ∀ p ∈ tail, name ∉ varExpHOL p.2 := fun p hp => premise p (by simp [hp])
+    have hh := ihHead hhead
+    have ht := ihTail htail
+    simp only [evalListFieldsHOLExact, hh, ht]
+
+/-- Broad untagged list analogue for HOL
+    `OPT_MMAP_update_locals_not_vars_eval_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1088`): a local update at a
+    name absent from every expression's `var_exp` leaves the `OPT_MMAP eval`
+    list step unchanged. Reads the raw-function `PanSemStateExact` carrier. -/
+theorem evalListHOLExact_updLocals_not_mem {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (name : MlS) (word : ValueHOL width) :
+    ∀ (expressions : List (ExpHOL width)),
+      name ∉ (expressions.map varExpHOL).flatten →
+        evalListHOLExact { state with locals := FUPDATE_HOL state.locals (name, word) }
+          expressions = evalListHOLExact state expressions := by
+  intro expressions
+  induction expressions with
+  | nil => intro _; rfl
+  | cons head tail ih =>
+      intro h
+      have hpoint : ∀ e ∈ head :: tail, name ∉ varExpHOL e :=
+        (not_mem_map_flatten varExpHOL (head :: tail) name).mp h
+      have hhead := hpoint head (by simp)
+      have htailPoint : ∀ e ∈ tail, name ∉ varExpHOL e := fun e he => hpoint e (by simp [he])
+      have ihTail := ih ((not_mem_map_flatten varExpHOL tail name).mpr htailPoint)
+      have hheadEq := evalHOLExact_updLocals_not_mem state name word head hhead
+      simp only [evalListHOLExact, hheadEq, ihTail]
 
 /-- Two independent HOL finite-map arguments packaged as fields so the
     canonical `fmap_as_finite_support` qualifier can name each translation. -/
@@ -1502,6 +1742,141 @@ theorem lookupCodeWfShapeInvariantStep {width : Nat} {σ : Type} [NeZero width] 
           intro pair hpair
           exact hLookup'.1.2.2 pair.1.1 pair.1.2 pair.2 hpair
         exact False.elim (hValid hValid')
+
+/-- Flapjack-specific finite-carrier rendering of HOL's local update
+    `s with locals := s.locals |+ (n, w)`. The finite carrier's `locals` field
+    is a `HolFiniteMapExact`, so the HOL `FUPDATE` (`|+`) is the
+    equality-based `HolFiniteMapExact.updateEq`. Untagged adapter, mirroring
+    `emptyLocalsForStructsSimps`. -/
+def updateLocalsForVarsSimps {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) (name : MlS) (word : ValueHOL width) :
+    PanPropsEvalStateFiniteExact width σ :=
+  { state with locals := state.locals.updateEq (name, word) }
+
+/-- Projection of the finite-map local update to the canonical broad
+    `FUPDATE_HOL` state. -/
+@[simp] theorem updateLocalsForVarsSimps_toExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) (name : MlS) (word : ValueHOL width) :
+    (updateLocalsForVarsSimps state name word).toExact =
+      { state.toExact with locals := FUPDATE_HOL state.toExact.locals (name, word) } := rfl
+
+/-- Updating `locals` changes no other state component, so the address-set
+    decision procedure is inherited. -/
+instance updateLocalsForVarsSimpsDecidablePred {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) (name : MlS) (word : ValueHOL width)
+    [DecidablePred state.memaddrs] :
+    DecidablePred (updateLocalsForVarsSimps state name word).memaddrs :=
+  (inferInstance : DecidablePred state.memaddrs)
+
+/-- Finite-carrier evaluation after `updateLocalsForVarsSimps` is the broad
+    exact evaluation over the canonical `FUPDATE_HOL` state. -/
+@[simp] theorem evalHOL_updateLocalsForVarsSimps {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (name : MlS) (word : ValueHOL width) (expression : ExpHOL width) :
+    (updateLocalsForVarsSimps state name word).evalHOL expression =
+      @evalHOLExact width σ _ { state.toExact with
+        locals := FUPDATE_HOL state.toExact.locals (name, word) } h expression := rfl
+
+/-- Finite-carrier `OPT_MMAP eval` after `updateLocalsForVarsSimps` is the broad
+    exact list step over the canonical `FUPDATE_HOL` state. -/
+@[simp] theorem evalListHOL_updateLocalsForVarsSimps {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (name : MlS) (word : ValueHOL width) (expressions : List (ExpHOL width)) :
+    (updateLocalsForVarsSimps state name word).evalListHOL expressions =
+      @evalListHOLExact width σ _ { state.toExact with
+        locals := FUPDATE_HOL state.toExact.locals (name, word) } h expressions := rfl
+
+/-- Exact finite-support port of HOL `panProps$update_locals_not_vars_eval_eq_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1042`): binding a fresh local
+    name `n` to `w` leaves `eval e` unchanged when `n` does not occur in
+    `var_exp e`. The quantifier order is HOL's `s e v n w`; HOL's `v` does not
+    occur in its conclusion, so the Lean statement binds the dead `v` at the
+    evaluator's value type `ValueHOL width` (the same type as the live `w`). The
+    state is the reviewed PanProps finite-map carrier: `updateLocalsForVarsSimps`
+    renders HOL's `locals |+ (n, w)` through `HolFiniteMapExact.updateEq`, and
+    `evalHOL` delegates to the exact broad evaluator through `toExact`. The four
+    `|->` fields (`locals`, `globals`, `code`, `eshapes`) are the reviewed
+    canonical `HolFiniteMapExact` translation recorded by the
+    `fmap_as_finite_support` qualifier (canonical witness
+    `holFmapAsFiniteSupportWitness` in this module). -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "update_locals_not_vars_eval_eq_eq"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem updateLocalsNotVarsEvalEqEqHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (expression : ExpHOL width) (_value : ValueHOL width) (name : MlS)
+      (word : ValueHOL width),
+      name ∉ varExpHOL expression →
+        (updateLocalsForVarsSimps state name word).evalHOL expression = state.evalHOL expression := by
+  intro state hdec expression _value name word h
+  rw [evalHOL_updateLocalsForVarsSimps]
+  exact evalHOLExact_updLocals_not_mem state.toExact name word expression h
+
+/-- Exact finite-support port of HOL `panProps$update_locals_not_vars_eval_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1060`): a fresh local binding
+    preserves a successful evaluation and its value. Quantifier order is HOL's
+    `s e v n w`; the fresh-name premise and the `SOME`-success hypothesis are
+    conjoined as in the source. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "update_locals_not_vars_eval_eq"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem updateLocalsNotVarsEvalEqHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (expression : ExpHOL width) (value : ValueHOL width) (name : MlS)
+      (word : ValueHOL width),
+      (name ∉ varExpHOL expression ∧ state.evalHOL expression = some value) →
+        (updateLocalsForVarsSimps state name word).evalHOL expression = some value := by
+  intro state hdec expression value name word h
+  rw [updateLocalsNotVarsEvalEqEqHOLFinite state expression value name word h.1, h.2]
+
+/-- Exact finite-support port of HOL `panProps$update_locals_not_vars_eval_eq_NONE`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1069`): a fresh local binding
+    preserves a failing evaluation. Quantifier order is HOL's `s e v n w`; as in
+    the source, the dead `v` is bound at the evaluator's value type. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "update_locals_not_vars_eval_eq_NONE"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem updateLocalsNotVarsEvalEqNoneHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (expression : ExpHOL width) (_value : ValueHOL width) (name : MlS)
+      (word : ValueHOL width),
+      (name ∉ varExpHOL expression ∧ state.evalHOL expression = none) →
+        (updateLocalsForVarsSimps state name word).evalHOL expression = none := by
+  intro state hdec expression _value name word h
+  rw [updateLocalsNotVarsEvalEqEqHOLFinite state expression _value name word h.1, h.2]
+
+/-- Exact finite-support port of HOL `panProps$eval_fresh_var`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1078`): binding an absent name
+    to any word leaves evaluation unchanged. Same content as
+    `updateLocalsNotVarsEvalEqEqHOLFinite` with HOL's dead `v` dropped, matching
+    the source's `s e n w` quantifier list. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "eval_fresh_var"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evalFreshVarHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (expression : ExpHOL width) (name : MlS) (word : ValueHOL width),
+      name ∉ varExpHOL expression →
+        (updateLocalsForVarsSimps state name word).evalHOL expression = state.evalHOL expression := by
+  intro state hdec expression name word h
+  rw [evalHOL_updateLocalsForVarsSimps]
+  exact evalHOLExact_updLocals_not_mem state.toExact name word expression h
+
+/-- Exact finite-support port of HOL
+    `panProps$OPT_MMAP_update_locals_not_vars_eval_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1088`): a fresh local binding
+    preserves a successful `OPT_MMAP (eval ·)` over a list of expressions.
+    `evalListHOL` is the repository's exact `OPT_MMAP` rendering over the
+    finite-support carrier. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "OPT_MMAP_update_locals_not_vars_eval_eq"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem optMmapUpdateLocalsNotVarsEvalEqHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (expressions : List (ExpHOL width)) (values : List (ValueHOL width)) (name : MlS)
+      (word : ValueHOL width),
+      (name ∉ (expressions.map varExpHOL).flatten ∧
+        state.evalListHOL expressions = some values) →
+        (updateLocalsForVarsSimps state name word).evalListHOL expressions = some values := by
+  intro state hdec expressions values name word h
+  rw [evalListHOL_updateLocalsForVarsSimps,
+    evalListHOLExact_updLocals_not_mem state.toExact name word expressions h.1]
+  exact h.2
 
 end PanPropsEvalStateFiniteExact
 

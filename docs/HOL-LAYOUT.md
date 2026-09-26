@@ -81,6 +81,7 @@ for the review rule.
 | `semantics/ffi/ffiScript.sml` | `Flapjack/Ffi.lean` (production FFI state/events), `Flapjack/FfiHOL.lean` (exact ffi_outcome/oracle_result/shmem_op/ffiname/oracle/oracle_function/io_event/final_event/ffi_state/ffi_result carriers + call_FFI) |
 | `semantics/proofs/semanticsPropsScript.sml` | `Flapjack/SemanticsProps.lean` (structural behavior and `implements'` analogue; HOL `llist` representation bridge remains open) |
 | `proofs/pan_simpProofScript.sml` | `Flapjack/Pancake/Proofs/PanSimp.lean`, `PanSimp/Evaluate.lean` |
+| `proofs/pan_to_wordProofScript.sml` | `Flapjack/Pancake/Proofs/PanToWord.lean` |
 
 Placement under `Proofs` does not imply that a whole pass correctness theorem
 has been established. For declaration-level provenance, use

@@ -146,4 +146,56 @@ end
       sizeOfShapeHOL shape + sizeOfShapesHOL shapes := by
   simp only [sizeOfShapesHOL]
 
+/-! HOL `panLang$shape_to_str` (`cakeml/pancake/panLangScript.sml:180-188`)
+    turns a shape into its `mlstring` rendering with `strlit` literals and `^`
+    (mlstring concatenation).  The production `Flapjack.Shape.shapeToString`
+    cannot be tagged because its carrier is a Lean `String`; the exact port over
+    `ShapeHOL` returns the faithful `MlS` carrier and uses the two untagged
+    `mlstring` helpers below. -/
+
+/-- HOL `mlstring$^` (concatenation): append the two underlying character
+    lists.  Untagged infrastructure (HOL `mlstringScript.sml` is outside the
+    CakeML submodule). -/
+def mlstrAppend (left right : MlS) : MlS :=
+  .implode (left.explode ++ right.explode)
+
+/-- HOL `concat` on an `mlstring list`: fold the list with `^`, left to right. -/
+def mlstrConcat : List MlS → MlS
+  | [] => .implode []
+  | part :: parts => mlstrAppend part (mlstrConcat parts)
+
+/-- Exact port of HOL `panLang$shape_to_str_def`
+    (`cakeml/pancake/panLangScript.sml:180-188`) over the faithful `ShapeHOL`
+    and `MlS` carriers: `One -> strlit "1"`; `Comb [] -> strlit "{}"` (HOL
+    comments it "should never happen"); `Comb (x::xs)` is the `concat` of
+    `strlit "{"`, `shape_to_str x`, the `"," ^ _` renders of `xs`, and
+    `strlit "}"`; `Named nm -> nm`.  `strlit` is `MlString.ofString` (exact on
+    the ASCII literals used here). -/
+@[hol "cakeml/pancake/panLangScript.sml" "shape_to_str_def"]
+def shapeToStrHOL : ShapeHOL → MlS
+  | .one => Flapjack.Basis.Pure.MlString.ofString "1"
+  | .comb [] => Flapjack.Basis.Pure.MlString.ofString "{}"
+  | .comb (head :: tail) =>
+      mlstrConcat
+        (Flapjack.Basis.Pure.MlString.ofString "{" ::
+          shapeToStrHOL head ::
+          (tail.map (fun field =>
+            mlstrAppend (Flapjack.Basis.Pure.MlString.ofString ",")
+              (shapeToStrHOL field))) ++
+          [Flapjack.Basis.Pure.MlString.ofString "}"])
+  | .named name => name
+
+/-! HOL `panLang$with_shape` (`cakeml/pancake/panLangScript.sml:216-220`) splits
+    a list into consecutive blocks whose lengths are the `size_of_shape` of each
+    shape: `with_shape [] _ = []` and `with_shape (sh::shs) e = TAKE
+    (size_of_shape sh) e :: with_shape shs (DROP (size_of_shape sh) e)`.  The
+    exact port is polymorphic in the list element type and uses the tagged
+    `sizeOfShapeHOL`; `TAKE`/`DROP` are Lean's `List.take`/`List.drop`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "with_shape_def"]
+def withShapeHOL {α : Type} : List ShapeHOL → List α → List (List α)
+  | [], _ => []
+  | shape :: shapes, values =>
+      values.take (sizeOfShapeHOL shape) ::
+        withShapeHOL shapes (values.drop (sizeOfShapeHOL shape))
+
 end Flapjack.Pancake.PanLang

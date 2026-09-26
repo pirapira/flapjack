@@ -170,6 +170,14 @@ instance (priority := 10) panCmpOfLt [LT α]
   lower left right := decide (left < right)
   less left right := decide (left < right)
 
+/-- Exact port of HOL `panLang$shift` (`cakeml/pancake/panLangScript.sml:19`),
+    which is the alias `Type shift = ``:ast$shift`` and whose declaration in
+    `cakeml/semantics/astScript.sml:21` is `shift = Lsl | Lsr | Asr | Ror`.
+
+    The four nullary constructors match one-for-one (Lean naming convention:
+    `lsl`/`lsr`/`asr`/`ror`); there is no payload, side condition, or extra
+    constructor, so this is the exact carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "shift"]
 inductive Shift where
   | lsl
   | lsr

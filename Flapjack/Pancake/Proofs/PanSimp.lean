@@ -2340,6 +2340,14 @@ theorem sizeOfEidsPanSimpDeclsEq (declarations : List (Decl α)) :
     sizeOfEids (panSimpDecls declarations) = sizeOfEids declarations := by
   rw [panSimpDecls_eq_map, sizeOfEids_map_panSimpDecl]
 
+/-- Exact HOL `pan_simpProof$map_snd_f_eq` (`pan_simpProofScript.sml:42-50`):
+    `!p f g. MAP (g ∘ SND ∘ SND ∘ (λ(name,params,body). (name,params,f body))) p
+      = MAP (g ∘ f) (MAP (SND ∘ SND) p)`.
+    This lemma is stated purely over generic nested triples (`List (α × β × γ)`),
+    so no mlstring/word carrier translation is involved: HOL `'a#'b#'c` is the
+    right-nested `α × β × γ`, and HOL `SND ∘ SND` is `entry.2.2`. Unlike its
+    pan_simp siblings it is therefore an exact port and keeps the `@[hol]` tag. -/
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "map_snd_f_eq"]
 theorem mapSndFEq {α β γ δ ε : Type} (entries : List (α × β × γ))
     (f : γ → δ) (g : δ → ε) :
     entries.map (fun entry => g (f entry.2.2)) =

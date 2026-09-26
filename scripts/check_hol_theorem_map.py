@@ -352,12 +352,6 @@ DOCUMENTED_MISMATCHES = {
         "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Decl carriers; HOL uses exact "
         "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
     ),
-    ("Flapjack/Pancake/Proofs/PanSimp.lean", "mapSndFEq"): (
-        "cakeml/pancake/proofs/pan_simpProofScript.sml",
-        "map_snd_f_eq",
-        "flapjack-ds8 (bead flapjack-4ac.8): production carrier rendering; HOL uses exact panLang. "
-        "Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
-    ),
     ("Flapjack/Pancake/Proofs/PanSimp.lean", "functionsCompileProg"): (
         "cakeml/pancake/proofs/pan_simpProofScript.sml",
         "functions_compile_prog",
@@ -1794,6 +1788,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Compiler/Backend/StackNames.lean", "map_fst_compile"),
         ("Flapjack/Pancake/PanStructs.lean", "afindi"),
         ("Flapjack/Misc/Sptree.lean", "NumSet"),
+        ("Flapjack/Pancake/Proofs/PanSimp.lean", "mapSndFEq"),
         ("Flapjack/Pancake/PanSimp.lean", "smartSeqHOL"),
         ("Flapjack/Pancake/PanSimp.lean", "seqCallRetHOL"),
         ("Flapjack/Pancake/PanSimp.lean", "seqAssocHOL"),

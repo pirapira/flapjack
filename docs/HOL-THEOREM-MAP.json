@@ -6712,8 +6712,8 @@
     "hol_name": "map_snd_f_eq",
     "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
     "lean_name": "mapSndFEq",
-    "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): statement reads the production String-keyed `Prog`/`Decl` transformation, whereas HOL pan_simpProofScript.sml states it over the exact mlstring-keyed panLang syntax with the exact panLang definitions. The @[hol] tag was withdrawn and the exact port is tracked by flapjack-4ac.8 (blocked by the exact-transformation prerequisite flapjack-4ac.8.1)."
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): exact. HOL pan_simpProofScript.sml:42-50 states map_snd_f_eq over purely generic triples (HOL 'a#'b#'c = Lean α × β × γ) with HOL SND ∘ SND rendered as entry.2.2; no mlstring or word-width carrier appears, so no representation translation is involved. The Lean proof and statement are unchanged."
   },
   {
     "hol_path": null,

@@ -101,6 +101,16 @@ noncomputable def panSemanticsWithLub (hooks : PanSemanticsHooks α σ)
     else
       .diverge _ divergenceLub
 
+/-! This hook-parameterized definition is not HOL
+`panProps$evaluate_io_events_lprefix_chain`
+(`cakeml/pancake/semantics/panPropsScript.sml:1784`). That theorem proves the
+clock-indexed event family of the exact `evaluate (p, s with clock := k)` is an
+`lprefix_chain`, using `evaluate_add_clock_io_events_mono`; it does not assume
+the chain. This definition instead requires `divergenceChain` as an input and
+its `PanSemanticsHooks.evaluate` may be any clock-to-result function. The
+faithful evaluator-derived chain proof is tracked by
+`flapjack-4ac.3.52.3` (which depends on the finite-support evaluator
+`flapjack-4ac.3.52.1`). Do not tag this definition as the HOL theorem. -/
 noncomputable def panSemantics (hooks : PanSemanticsHooks α σ)
     (divergenceChain : panLprefixChain
       (fun clock => panResultEvents (hooks.evaluate clock))) : PanBehaviour :=

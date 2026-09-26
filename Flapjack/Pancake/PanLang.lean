@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.Basis.Pure.MlString
 import Flapjack.FiniteMap.Basic
 
 /-!
@@ -17,6 +18,47 @@ abbrev VarName := String
 abbrev FunName := String
 abbrev ExceptionId := String
 abbrev DeclarationName := String
+
+/-- Exact port of HOL `panLang$index` (`cakeml/pancake/panLangScript.sml:33`):
+    `Type index = ``:num```.  Lean's exact numeral type is `Nat`, so this alias
+    is the source-alias counterpart with no payload, side condition, or
+    representation difference. -/
+@[hol "cakeml/pancake/panLangScript.sml" "index"]
+abbrev Index := Nat
+
+/-- Exact port of HOL `panLang$stcname` (`cakeml/pancake/panLangScript.sml:21`):
+    `Type stcname = ``:mlstring```.  The exact Cake `mlstring` carrier is the
+    tagged `Flapjack.Basis.Pure.MlString.MlString`; this is the source-alias
+    counterpart with no payload, side condition, or representation difference.
+    (The production `StructName := String` alias above is the untagged
+    String-backed implementation tracked by `flapjack-pxn.18.3.5.8`.) -/
+@[hol "cakeml/pancake/panLangScript.sml" "stcname"]
+abbrev Stcname := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$fldname` (`cakeml/pancake/panLangScript.sml:23`):
+    `Type fldname = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "fldname"]
+abbrev Fldname := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$varname` (`cakeml/pancake/panLangScript.sml:25`):
+    `Type varname = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "varname"]
+abbrev Varname := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$funname` (`cakeml/pancake/panLangScript.sml:27`):
+    `Type funname = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "funname"]
+abbrev Funname := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$eid` (`cakeml/pancake/panLangScript.sml:29`):
+    `Type eid = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "eid"]
+abbrev Eid := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$decname` (`cakeml/pancake/panLangScript.sml:31`):
+    `Type decname = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "decname"]
+abbrev Decname := Flapjack.Basis.Pure.MlString.MlString
 
 /- FLAPJACK-SPECIFIC (not an exact HOL port): the `Named` field carrier differs.
 HOL `panLangScript.sml:21` aliases `stcname = ``:mlstring``` and the datatype is
@@ -173,6 +215,15 @@ instance (priority := 10) panCmpOfLt [LT α]
   lower left right := decide (left < right)
   less left right := decide (left < right)
 
+/- FLAPJACK-SPECIFIC (not an exact HOL port of `panLangScript.sml:19`): the
+cited HOL declaration `Type shift = ``:ast$shift``` is a *type alias*, not a
+datatype definition; its four nullary constructors `Lsl | Lsr | Asr | Ror` come
+from the aliased `ast$shift` datatype (`cakeml/semantics/astScript.sml:21`).
+Lean `Shift` below has the same four constructors, so it matches the underlying
+`ast$shift` carrier, but tagging it against the panLang alias declaration would
+conflate an alias with an inductive definition, so no `@[hol]` tag is attached.
+A genuine exact port of `ast$shift` belongs in that theory's counterpart; the
+panLang alias itself (`Type shift`) stays an open inventory item (`flapjack-4ac.1.1`). -/
 inductive Shift where
   | lsl
   | lsr

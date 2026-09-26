@@ -5595,6 +5595,62 @@
     "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.3.3). HOL `Overload ValWord = \"\\w. Val (Word w)\"` (panSemScript.sml:26) has no quantifier/side condition of its own: it is the total abbreviation sending `w : 'a word` to `Val (Word w)` over `panSem$v = Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)` with `word_lab = Word ('a word)`. Lean `valWordHOL {width} [NeZero width] (word : BitVec width) : ValueHOL width := .val (.word word)` is the exact rendering over the tagged exact `ValueHOL` carrier (`@[hol ... \"v\"]`, ctor arities 1/1/2, `HolWordLab.word` payload); the `[NeZero width]` binder mirrors HOL's positive `dimindex`. Exact partial application, no extra hypotheses or side conditions."
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "index",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Index",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.8). HOL `Type index = ``:num``` (panLangScript.sml:33) aliases the natural-number type. Lean `Flapjack.Index` (PanLang.lean, `abbrev Index := Nat`) is the exact alias over the same carrier: no payload, side condition, or representation difference."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "stcname",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Stcname",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.2). HOL `Type stcname = ``:mlstring``` (panLangScript.sml:21) aliases the tagged exact Cake `mlstring` datatype `Flapjack.Basis.Pure.MlString.MlString` (`@[hol ... \"mlstring\"]`). Lean `Flapjack.Stcname` (PanLang.lean, `abbrev Stcname := Flapjack.Basis.Pure.MlString.MlString`) is the exact alias over that carrier: no payload, side condition, or representation difference. The production String-backed `StructName := String` alias is the separate untagged implementation tracked by `flapjack-pxn.18.3.5.8`."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "fldname",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Fldname",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.3). HOL `Type fldname = ``:mlstring``` (panLangScript.sml:23) aliases the tagged exact Cake `mlstring` datatype `Flapjack.Basis.Pure.MlString.MlString` (`@[hol ... \"mlstring\"]`). Lean `Flapjack.Fldname` (PanLang.lean, `abbrev Fldname := Flapjack.Basis.Pure.MlString.MlString`) is the exact alias over that carrier: no payload, side condition, or representation difference. The production String-backed `FieldName := String` alias is the separate untagged implementation tracked by `flapjack-pxn.18.3.5.8`."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "varname",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Varname",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.4). HOL `Type varname = ``:mlstring``` (panLangScript.sml:25) aliases the tagged exact Cake `mlstring` datatype `Flapjack.Basis.Pure.MlString.MlString` (`@[hol ... \"mlstring\"]`). Lean `Flapjack.Varname` (PanLang.lean, `abbrev Varname := Flapjack.Basis.Pure.MlString.MlString`) is the exact alias over that carrier: no payload, side condition, or representation difference. The production String-backed `VarName := String` alias is the separate untagged implementation tracked by `flapjack-pxn.18.3.5.8`."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "funname",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Funname",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.5). HOL `Type funname = ``:mlstring``` (panLangScript.sml:27) aliases the tagged exact Cake `mlstring` datatype `Flapjack.Basis.Pure.MlString.MlString` (`@[hol ... \"mlstring\"]`). Lean `Flapjack.Funname` (PanLang.lean, `abbrev Funname := Flapjack.Basis.Pure.MlString.MlString`) is the exact alias over that carrier: no payload, side condition, or representation difference. The production String-backed `FunName := String` alias is the separate untagged implementation tracked by `flapjack-pxn.18.3.5.8`."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "eid",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Eid",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.6). HOL `Type eid = ``:mlstring``` (panLangScript.sml:29) aliases the tagged exact Cake `mlstring` datatype `Flapjack.Basis.Pure.MlString.MlString` (`@[hol ... \"mlstring\"]`). Lean `Flapjack.Eid` (PanLang.lean, `abbrev Eid := Flapjack.Basis.Pure.MlString.MlString`) is the exact alias over that carrier: no payload, side condition, or representation difference. The production String-backed `ExceptionId := String` alias is the separate untagged implementation tracked by `flapjack-pxn.18.3.5.8`."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "decname",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "Decname",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.7). HOL `Type decname = ``:mlstring``` (panLangScript.sml:31) aliases the tagged exact Cake `mlstring` datatype `Flapjack.Basis.Pure.MlString.MlString` (`@[hol ... \"mlstring\"]`). Lean `Flapjack.Decname` (PanLang.lean, `abbrev Decname := Flapjack.Basis.Pure.MlString.MlString`) is the exact alias over that carrier: no payload, side condition, or representation difference. The production String-backed `DeclarationName := String` alias is the separate untagged implementation tracked by `flapjack-pxn.18.3.5.8`."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "empty_locals_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",

@@ -610,7 +610,19 @@ theorem evalPanSemNonrecursiveHOLFinite_shMemaddrs {width : Nat} {σ : Type} [Ne
     uniformly, not the six recursive HOL clauses.  The faithful tagged port
     requires threading `memaddrsDecidable`/`shMemaddrsDecidable` through a
     finite eval context; tracked by `flapjack-6yq` (which blocks
-    `flapjack-qj5`). -/
+    `flapjack-qj5`).
+
+    Source-review note for the later same-name HOL declaration at
+    `panSemScript.sml:780`: it is the `[allow_rebind,compute]` theorem
+    `REWRITE_RULE [fix_clock_evaluate] evaluate_def`, derived from the original
+    `evaluate_def` at `:556`, so its recursive equations are the clock-free
+    rebind justified by `fix_clock_evaluate` at `:768`. This Lean wrapper is
+    not that declaration: its elaborated type has additional implicit
+    `DecidablePred state.memaddrs` and `DecidablePred state.shMemaddrs`
+    parameters, and its body delegates through `toExact` instead of presenting
+    the rewritten HOL clauses. Keep it untagged. The faithful total evaluator
+    and exact clock theorem needed to restore the rebind are tracked by
+    `flapjack-pxn.18.4.3.77.2` and `.77.2.8`. -/
 def evaluateHOLFiniteViaExact {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :

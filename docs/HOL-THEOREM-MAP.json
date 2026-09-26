@@ -11623,7 +11623,7 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
     "lean_name": "panToCrepLocalsRelFiniteExact_shapeProjection",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-specific projection support over exact finite-support PanSem/CrepSem map carriers. It extracts the literal final HOL locals_rel_def conjunct is_wf_shape_nil (shape_of v) for a present local; the separate valueShapeProjection derives value-level well-formedness through the exact is_wf_shape_v_nil equivalence. It is not a port of locals_rel_wf_shape. Kept untagged because the current fmap_as_finite_support qualifier cannot represent this two-state carrier relation; the faithful theorem path remains flapjack-4ac.5.83."
+    "reviewer": "Flapjack-specific projection support over exact finite-support PanSem/CrepSem map carriers and the reviewed PanToCrepContextExact context. It extracts the literal final HOL locals_rel_def conjunct is_wf_shape_nil (shape_of v) for a present local; the separate valueShapeProjection derives value-level well-formedness through the exact is_wf_shape_v_nil equivalence. It is not a port of locals_rel_wf_shape. Kept untagged because the current fmap_as_finite_support qualifier cannot represent this multi-carrier relation; the faithful theorem path remains flapjack-4ac.5.83."
   },
   {
     "hol_path": null,
@@ -11639,6 +11639,6 @@
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
     "lean_name": "panToCrepLocalsRelFiniteExact_valueShapeProjection",
     "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-specific bridge from the literal is_wf_shape_nil (shape_of v) conjunct in the exact local relation to value-level is_wf_shape_v. The proof uses the exact is_wf_shape_v_nil equivalence; it is support for, not a port of, locals_rel_wf_shape. Kept untagged pending multi-carrier finite-map qualifier support and the faithful theorem path flapjack-4ac.5.83."
+    "reviewer": "Flapjack-specific bridge from the literal is_wf_shape_nil (shape_of v) conjunct in the exact local relation to value-level is_wf_shape_v. The proof uses the exact is_wf_shape_v_nil equivalence; it is support for, not a port of, locals_rel_wf_shape. It uses PanToCrepContextExact and remains untagged pending multi-carrier finite-map qualifier support and the faithful theorem path flapjack-4ac.5.83."
   }
 ]

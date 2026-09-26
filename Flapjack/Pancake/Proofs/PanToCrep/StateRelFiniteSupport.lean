@@ -1,4 +1,5 @@
 import Flapjack.Pancake.Semantics.CrepSem.HOLState
+import Flapjack.Pancake.PanToCrep.ContextExact
 import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 
@@ -18,16 +19,7 @@ support and the faithful evaluator proof.
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang
-  (MlS ShapeHOL ProgHOL StructContextExact isWfShapeExactHOL)
-
-/-- Exact finite-support shape of the proof context used in HOL `locals_rel`.
-    This replaces the production String/Shape-valued context only for the
-    exact theorem support path. -/
-structure PanToCrepProofContextFiniteExact (width : Nat) [NeZero width] where
-  vars : HolFiniteMapExact MlS (ShapeHOL × List Nat)
-  funcs : HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ShapeHOL)
-  eids : HolFiniteMapExact MlS (BitVec width)
-  vmax : Nat
+  (MlS ShapeHOL StructContextExact isWfShapeExactHOL)
 
 /-- Flapjack-specific exact-map bound predicate for relation support. It
     mirrors the shape of HOL `ctxt_max_def`, but is not a tagged port: it takes
@@ -72,7 +64,7 @@ def panToCrepStateRelFiniteExact {width : Nat} {σ : Type} [NeZero width]
     source shape invariant; this is not a tagged `locals_rel_def` port because
     the relation spans separate map carriers. -/
 def panToCrepLocalsRelFiniteExact {width : Nat} [NeZero width]
-    (context : PanToCrepProofContextFiniteExact width)
+    (context : PanToCrepContextExact width)
     (sourceLocals : HolFiniteMapExact MlS (ValueHOL width))
     (targetLocals : HolFiniteMapExact Nat (HolWordLab width)) : Prop :=
   noOverlapFiniteExact context.vars ∧
@@ -88,7 +80,7 @@ def panToCrepLocalsRelFiniteExact {width : Nat} [NeZero width]
     `is_wf_shape_v_nil` fact for every present source local, matching HOL's
     `locals_rel_wf_shape` proof. -/
 theorem panToCrepLocalsRelFiniteExact_shapeProjection {width : Nat} [NeZero width]
-    (context : PanToCrepProofContextFiniteExact width)
+    (context : PanToCrepContextExact width)
     (sourceLocals : HolFiniteMapExact MlS (ValueHOL width))
     (targetLocals : HolFiniteMapExact Nat (HolWordLab width))
     (name : MlS) (value : ValueHOL width)
@@ -102,7 +94,7 @@ theorem panToCrepLocalsRelFiniteExact_shapeProjection {width : Nat} [NeZero widt
 /-- The value-level well-formedness fact is a separate bridge from the literal
     HOL `locals_rel` conjunct `is_wf_shape_nil (shape_of v)`. -/
 theorem panToCrepLocalsRelFiniteExact_valueShapeProjection {width : Nat} [NeZero width]
-    (context : PanToCrepProofContextFiniteExact width)
+    (context : PanToCrepContextExact width)
     (sourceLocals : HolFiniteMapExact MlS (ValueHOL width))
     (targetLocals : HolFiniteMapExact Nat (HolWordLab width))
     (name : MlS) (value : ValueHOL width)

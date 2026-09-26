@@ -88,6 +88,20 @@ no HOL tag. The faithful theorem port is tracked by
 `flapjack-4ac.4.106.1`, depending on the exact wrapper/LUB carrier work in
 `flapjack-4ac.4.105.1`. -/
 
+/-! Source review for HOL `semantics_decls_has_main`
+(`panPropsScript.sml:1611-1626`): this theorem has the same source premise and
+existential conclusion as `semantics_decls_has_main'` at line 1628: from
+`semantics_decls s start code <> Fail`, it proves that
+`FLOOKUP (s.code |++ functions code) start` is `SOME ([], body, rshape)` for
+some body and return shape. The exact Lean finite `evaluate_decls` port does
+not supply the HOL `semantics_decls` wrapper or its clock-indexed `semantics`
+result, so the nearest hook-based `PanObservationalSemantics.panSemantics`
+cannot prove this theorem without changing its premise's meaning. No `@[hol]`
+tag is appropriate on that API. The faithful replacement is tracked by
+`flapjack-4ac.4.110`, which depends on the exact PanSem evaluator, declaration
+composition, and wrapper/LUB semantics ports (`flapjack-4ac.3.45`, `.3.53`,
+`.4.105.1`). -/
+
 /-! Source review for HOL `pan_sem_is_wrapper`
 (`panPropsScript.sml:1931-1954`): with no premises, HOL equates
 `panSem.semantics s start` to `semantics_wrapper` applied to the clock-indexed

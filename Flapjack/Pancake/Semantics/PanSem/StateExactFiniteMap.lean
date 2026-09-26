@@ -331,6 +331,36 @@ def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (emptyLocalsHOLFinite state).toExact = emptyLocalsHOLExact state.toExact :=
   rfl
 
+/-- The finite-support local write is compatible with the broad exact one. -/
+@[simp] theorem toExact_setVarHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (name : MlS) (value : ValueHOL width) (state : PanSemStateFiniteExact width σ) :
+    (setVarHOLFinite name value state).toExact = setVarHOLExact name value state.toExact := by
+  simp only [setVarHOLFinite, setVarHOLExact, PanSemStateFiniteExact.toExact]
+  rw [HolFiniteMapExact.lookup_update_pointwise]
+
+/-- The finite-support global write is compatible with the broad exact one. -/
+@[simp] theorem toExact_setGlobalHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (name : MlS) (value : ValueHOL width) (state : PanSemStateFiniteExact width σ) :
+    (setGlobalHOLFinite name value state).toExact = setGlobalHOLExact name value state.toExact := by
+  simp only [setGlobalHOLFinite, setGlobalHOLExact, PanSemStateFiniteExact.toExact]
+  rw [HolFiniteMapExact.lookup_update_pointwise]
+
+/-- The finite-support local restore is compatible with the broad exact one. -/
+@[simp] theorem lookup_resVarEq_toExact {width : Nat} [NeZero width]
+    (map : HolFiniteMapExact MlS (ValueHOL width))
+    (entry : MlS × Option (ValueHOL width)) :
+    (HolFiniteMapExact.resVarEq map entry).lookup = resVarHOLExact map.lookup entry := by
+  obtain ⟨key, valueOpt⟩ := entry
+  cases valueOpt with
+  | none =>
+      funext current
+      simp only [HolFiniteMapExact.resVarEq, resVarHOLExact,
+        HolFiniteMapExact.lookup_eraseEq, FDOMSUB_HOL]
+  | some value =>
+      funext current
+      simp only [HolFiniteMapExact.resVarEq, resVarHOLExact,
+        HolFiniteMapExact.lookup_updateEq, FUPDATE_HOL]
+
 /-- HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`) over the
     finite-support state carrier.  The body delegates to the exact broad
     evaluator through the canonical translation `toExact`; it does NOT

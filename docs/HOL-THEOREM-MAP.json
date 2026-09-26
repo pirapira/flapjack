@@ -5797,12 +5797,12 @@
     "reviewer": "flapjack-deepseek-three (bead flapjack-pxn.18.4.3.78.3): width-indexed faithful port of HOL genlist_vmax_distinct_lists_compiled_exps (pan_to_crepProofScript.sml:3094). HOL compile_exp/context are indexed by the word type 'a word (pan_to_crepScript.sml:10-16,39-101); following the loadShapeBytes vs loadShapeBytesW standard (Flapjack/Pancake/CrepLang.lean:210-231) the carrier is BitVec width with [NeZero width], the only side condition is ctxt_max ctxt.vmax ctxt.vars rendered as ctxtMax, and the conclusion is the exact Boolean distinctListsHol. Direct HOL oracle rows genlist_vmax_bound/genlist_vmax_hit/genlist_vmax_disjoint in scripts/hol-probes/pan_common_distinct_lists_probe.out; Lean fixture in Flapjack/Test/PanCommonParity.lean."
   },
   {
-    "hol_path": null,
-    "hol_name": null,
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "eval_map_var_cexp_present_ctxt",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean",
     "lean_name": "compileExpHOL_outputs_vars_bounded",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Codex (source comparison)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "Source-reviewed against pan_to_crepProofScript.sml:1077. HOL quantifies es/vs/s/t/ctxt, requires successful MAP (eval s) es, state_rel, code_rel, locals_rel, and EVERY localised_exp es, then says every var_cexp name emitted by compiling es is in some ctxt.vars slot list. This Lean helper concludes only emitted name <= vmax and has none of those source/target relation premises or the context lookup result. PanToCrepHOLContext, stateRel, codeRel and localsRel use production String/Shape/PanValue/optional-memory carriers, not HOL mlstring/shape/word_lab and HOL's separate state/context relations. No @[hol] tag is claimed. Exact context/compiler/state-relation replacements are tracked by flapjack-pxn.18.3.5.8.8, flapjack-pxn.18.3.5.8.13, flapjack-pxn.18.3.7.1.3.1; faithful theorem port is flapjack-4ac.5.84."
   },
   {
     "hol_path": null,

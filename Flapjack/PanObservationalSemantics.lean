@@ -101,7 +101,18 @@ noncomputable def panSemanticsWithLub (hooks : PanSemanticsHooks α σ)
     else
       .diverge _ divergenceLub
 
-/-! This hook-parameterized definition is not HOL
+/-! This specialized API is not HOL
+`panProps$semantics_wrapper_def` (`cakeml/pancake/semantics/panPropsScript.sml:1824`).
+HOL accepts an arbitrary function `f : Nat → semantics_run_res × events`, with
+the three result cases `RunError`, `CompleteResult`, and `Incomplete`, and
+constructs the divergence LUB from `IMAGE (fromList ∘ SND ∘ f) UNIV`. This Lean
+API instead accepts only `PanSemanticsHooks.evaluate : Nat → Option
+PanValueFfiClockResult` and requires a proof-carrying `PanLprefixLub` as an
+argument. The restricted result carrier and caller-supplied LUB both change
+the definition's quantified type/body. No HOL tag is claimed; the faithful
+generic wrapper and LUB carrier are tracked by `flapjack-4ac.4.105.1`.
+
+This hook-parameterized definition is also not HOL
 `panProps$evaluate_io_events_lprefix_chain`
 (`cakeml/pancake/semantics/panPropsScript.sml:1784`). That theorem proves the
 clock-indexed event family of the exact `evaluate (p, s with clock := k)` is an

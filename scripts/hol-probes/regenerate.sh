@@ -709,7 +709,8 @@ run_probe pan_upd_locals_probeScript.sml pan_upd_locals_probe.out \
   pan_upd_locals_hit pan_upd_locals_empty \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_lookup_code_probeScript.sml pan_sem_lookup_code_probe.out \
-  lookup_code_nonempty_success lookup_code_missing_function \
+  lookup_code_nonempty_success lookup_code_wf_shape_invariant_step_success \
+  lookup_code_missing_function \
   lookup_code_wrong_arity lookup_code_wrong_shape lookup_code_duplicate_formals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
@@ -1075,14 +1076,14 @@ run_probe crep_mem_store_probeScript.sml crep_mem_store_probe.out \
 # little-endian byte extraction from a total word -> word_lab memory, plus the
 # memaddrs guard and the underlying mem_load_byte.
 run_probe crep_eval_load_byte_probeScript.sml crep_eval_load_byte_probe.out \
-  eval_loadbyte_addr8 mem_load_byte_addr9 \
+  eval_loadbyte_addr8 eval_loadbyte_w24_be_addr5 \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 # The eval Load32 probe observes the fixed RV64 aligned four-byte read:
 # little-endian and big-endian byte order, alignment failure, and the memaddrs
 # domain failure over a total word -> word_lab memory.
 run_probe crep_eval_load_32_probeScript.sml crep_eval_load_32_probe.out \
-  eval_load32_le_addr8 eval_load32_be_addr8 \
+  eval_load32_le_addr8 eval_load32_w24_addr4 \
   "$cake_dir/pancake/semantics/crepSemScript.sml" \
   "$cake_dir/pancake/semantics"
 # The eval Load (word cell) probe observes the fixed RV64 total word -> word_lab

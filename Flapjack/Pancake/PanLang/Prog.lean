@@ -445,4 +445,55 @@ with `MlS`; this checked relation is the connection (bead flapjack-4ac.1.45). -/
     exact (funIds_progOfHOL_call_of_not (info := infoH) (name := nameH)
       (args := argsH) hNot).symm
 
+/-! ### Exact `panLang$nested_seq` (bead flapjack-4ac.1.31)
+
+HOL `nested_seq_def` (`cakeml/pancake/panLangScript.sml:211-213`) is
+`nested_seq [] = Skip` and `nested_seq (e::es) = Seq e (nested_seq es)`, over
+`'a prog list`.  `nestedSeqHOL` mirrors both clauses over the exact
+width-indexed `ProgHOL` carrier (constructor `.skip`/`.seq` with matching
+arities and fields).  The production `Flapjack.nestedSeq`
+(`Flapjack/Pancake/PanLang.lean:416`) implements the same construction over the
+generic `Prog α` with `String` identifiers, so it cannot literally call the
+width-indexed definition; the kernel-checked bridge `nestedSeqHOL_progOfHOL`
+connects them.  Direct HOL-EVAL rows empty/one/two/assign_seq are in
+`scripts/hol-probes/pan_lang_nested_seq_probe.out`, replayed in
+`Flapjack/Test/PanNestedSeqParity.lean`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "nested_seq_def"]
+def nestedSeqHOL {width : Nat} [NeZero width] : List (ProgHOL width) → ProgHOL width
+  | [] => .skip
+  | statement :: statements => .seq statement (nestedSeqHOL statements)
+
+@[simp] theorem nestedSeqHOL_nil {width : Nat} [NeZero width] :
+    nestedSeqHOL ([] : List (ProgHOL width)) = .skip := rfl
+
+@[simp] theorem nestedSeqHOL_cons {width : Nat} [NeZero width]
+    (statement : ProgHOL width) (statements : List (ProgHOL width)) :
+    nestedSeqHOL (statement :: statements) =
+      .seq statement (nestedSeqHOL statements) := rfl
+
+/-- The exact `nestedSeqHOL` decodes to the production `Flapjack.nestedSeq` over
+    the decoded program list.  Direct executable routing is unavailable because
+    production is polymorphic over `Prog α` with `String` names while the tagged
+    definition is over the word-indexed `ProgHOL`; this checked relation is the
+    connection (bead flapjack-4ac.1.31). -/
+@[simp] theorem nestedSeqHOL_progOfHOL {width : Nat} [NeZero width]
+    (statements : List (ProgHOL width)) :
+    progOfHOL (nestedSeqHOL statements) =
+      Flapjack.nestedSeq (statements.map progOfHOL) := by
+  induction statements with
+  | nil => simp only [nestedSeqHOL_nil, List.map_nil, progOfHOL, Flapjack.nestedSeq]
+  | cons statement statements ih =>
+      simp only [nestedSeqHOL_cons, List.map_cons, Flapjack.nestedSeq, progOfHOL, ih]
+
+/-- Encoding a production nested sequence with `progToHOL` equals the exact
+    `nestedSeqHOL` over the encoded program list. -/
+@[simp] theorem nestedSeqHOL_progToHOL {width : Nat} [NeZero width]
+    (statements : List (Prog (BitVec width))) :
+    progToHOL (Flapjack.nestedSeq statements) =
+      nestedSeqHOL (statements.map progToHOL) := by
+  induction statements with
+  | nil => simp only [nestedSeqHOL_nil, List.map_nil, progToHOL, Flapjack.nestedSeq]
+  | cons statement statements ih =>
+      simp only [nestedSeqHOL_cons, List.map_cons, Flapjack.nestedSeq, progToHOL, ih]
+
 end Flapjack.Pancake.PanLang

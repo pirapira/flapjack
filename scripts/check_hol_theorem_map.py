@@ -1411,6 +1411,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "isDeclHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "isFunctionHOL"),
+        ("Flapjack/Pancake/PanLang/Decl.lean", "isNameHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_append"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isFunction"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isDecl"),
@@ -1432,6 +1433,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
+        ("Flapjack/Pancake/PanToCrep/Compile.lean", "crepVarsHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "loadMemOpHOL"),
         ("Flapjack/Pancake/Semantics/PanSem/MemByteExact.lean", "goodDimindex"),
         ("Flapjack/Pancake/Semantics/PanSem/MemByteExact.lean", "readWriteBytearrayLemma"),
@@ -1442,6 +1444,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Decl.lean", "sizeOfEidsHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "inlinableHOL"),
         ("Flapjack/Pancake/PanLang/Prog.lean", "funIdsHOL"),
+        ("Flapjack/Pancake/PanLang/Prog.lean", "nestedSeqHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "shapeValHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "shapeValsHOL"),
     }

@@ -918,7 +918,7 @@ claim that `crepGetEidsFromDecls` routes through `sizeOfEidsHOL`. -/
 
 section DeclHOLBridge
 
-open Flapjack.Pancake.PanLang (DeclHOL declOfHOL isDeclHOL isExnDeclHOL)
+open Flapjack.Pancake.PanLang (DeclHOL declOfHOL isDeclHOL isExnDeclHOL isNameHOL)
 
 theorem isDecl_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL width) :
     isDecl (declOfHOL declaration) = isDeclHOL declaration := by
@@ -926,6 +926,10 @@ theorem isDecl_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL wid
 
 theorem isExnDecl_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL width) :
     isExnDecl (declOfHOL declaration) = isExnDeclHOL declaration := by
+  cases declaration <;> rfl
+
+@[simp] theorem isName_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL width) :
+    isName (declOfHOL declaration) = isNameHOL declaration := by
   cases declaration <;> rfl
 
 theorem sizeOfEids_map_declOfHOL {width : Nat} [NeZero width]

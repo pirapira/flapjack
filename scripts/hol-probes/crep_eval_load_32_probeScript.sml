@@ -30,6 +30,15 @@ val sBE = ``(^s with <|
       else Word (0w:64 word));
     memaddrs := {(8w:64 word)};
     be := T |>)``;
+(* At width 24, Cake's source byte alignment rounds address 5 to 4 because
+   LOG2 (dimindex DIV 8) = LOG2 3 = 1. Load32 at aligned address 4 reads
+   four source bytes and then returns a 24-bit word. *)
+val s24 = ``(s:(24,unit) crepSem$state) with <|
+    memory := (\(a : 24 word).
+      if a = (4w:24 word) then Word (0x332211w:24 word)
+      else Word (0w:24 word));
+    memaddrs := {(4w:24 word)};
+    be := F |>``;
 
 fun print_eval label q =
   let
@@ -54,3 +63,6 @@ val _ = print_eval "eval_load32_le_outside_domain"
 
 val _ = print_eval "eval_load32_be_addr8"
   ``crepSem$eval ^sBE (crepLang$Load32 (crepLang$Const (8w:64 word)))``;
+
+val _ = print_eval "eval_load32_w24_addr4"
+  ``crepSem$eval ^s24 (crepLang$Load32 (crepLang$Const (4w:24 word)))``;

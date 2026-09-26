@@ -19,7 +19,7 @@ needs no equivalent statement.
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (MlS ExpHOL ProgHOL)
+open Flapjack.Pancake.PanLang (MlS ExpHOL ProgHOL ShapeHOL)
 
 /-- The state-update primitives used by the clause steps preserve finite support. -/
 macro "finiteSupport_simp" : tactic =>
@@ -275,5 +275,105 @@ theorem evalPanSemNonrecursiveHOLExact_finiteSupport {width : Nat} {σ : Type}
       simp only [evalPanSemNonrecursiveHOLExact, Option.some.injEq] at hres
       rw [← hres]
       simpa using h
+
+/-! ## Finite support helpers for the recursive evaluator
+
+The recursive dispatcher builds locals maps with `List.foldl` (the Zipped
+`lookup_code` locals) and restores a caller binding with `resVarHOLExact`, and
+changes only `clock`/`locals` fields. The lemmas below record finite support for
+those constructions, so the recursive preservation induction can reuse the
+clause-step lemmas above. -/
+
+/-- The Zipped `lookup_code` locals fold keeps an explicit finite support: the
+    keys of the produced map are among the entries' first components. -/
+theorem foldl_set_finiteSupport {α β : Type} [DecidableEq α] (entries : List (α × β))
+    (init : α → Option β)
+    (hinit : ∃ keys : List α, ∀ key, init key ≠ none → key ∈ keys) :
+    ∃ keys : List α,
+      ∀ key, (entries.foldl
+        (fun (map : α → Option β) (entry : α × β) =>
+          fun current => if current = entry.1 then some entry.2 else map current)
+        init) key ≠ none → key ∈ keys := by
+  induction entries generalizing init with
+  | nil => exact hinit
+  | cons entry entries ih =>
+      apply ih
+      obtain ⟨keys, hkeys⟩ := hinit
+      refine ⟨entry.1 :: keys, ?_⟩
+      intro key hk
+      by_cases h : key = entry.1
+      · subst h
+        exact List.mem_cons_self
+      · apply List.mem_cons_of_mem
+        apply hkeys
+        simpa [h] using hk
+
+/-- The function-backed `res_var` keeps finite support (delete or update). -/
+theorem resVarHOLExact_finiteSupport {width : Nat} [NeZero width]
+    (locals : MlS → Option (ValueHOL width)) (entry : MlS × Option (ValueHOL width))
+    (hl : ∃ keys : List MlS, ∀ key, locals key ≠ none → key ∈ keys) :
+    ∃ keys : List MlS, ∀ key, resVarHOLExact locals entry key ≠ none → key ∈ keys := by
+  obtain ⟨keys, hkeys⟩ := hl
+  refine ⟨entry.1 :: keys, ?_⟩
+  intro key hk
+  obtain ⟨name, valueOpt⟩ := entry
+  cases valueOpt with
+  | none =>
+      simp only [resVarHOLExact] at hk
+      by_cases h : key = name
+      · subst h
+        exact List.mem_cons_self
+      · apply List.mem_cons_of_mem
+        apply hkeys
+        simpa [h] using hk
+  | some value =>
+      simp only [resVarHOLExact] at hk
+      by_cases h : key = name
+      · subst h
+        exact List.mem_cons_self
+      · apply List.mem_cons_of_mem
+        apply hkeys
+        simpa [h] using hk
+
+/-- Replacing the locals field with a finite-support function keeps the state
+    finite-support. -/
+theorem PanSemStateExact.finiteSupport_setLocals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) (locals : MlS → Option (ValueHOL width))
+    (hl : ∃ keys : List MlS, ∀ key, locals key ≠ none → key ∈ keys)
+    (h : state.FiniteSupport) :
+    ({ state with locals := locals } : PanSemStateExact width σ).FiniteSupport := by
+  obtain ⟨_, hg, hc, he⟩ := h
+  exact ⟨hl, hg, hc, he⟩
+
+/-- Changing only the clock keeps finite support. -/
+theorem PanSemStateExact.finiteSupport_setClock {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) (clock : Nat) (h : state.FiniteSupport) :
+    ({ state with clock := clock } : PanSemStateExact width σ).FiniteSupport := by
+  simpa [PanSemStateExact.FiniteSupport] using h
+
+/-- The Zipped `lookup_code` locals map has finite support. -/
+theorem lookupCodeHOLExact_calleeLocals_finiteSupport {width : Nat} [NeZero width]
+    (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (fname : MlS) (arguments : List (ValueHOL width))
+    (body : ProgHOL width) (calleeLocals : MlS → Option (ValueHOL width))
+    (returnShape : ShapeHOL)
+    (h : lookupCodeHOLExact code fname arguments = some (body, calleeLocals, returnShape)) :
+    ∃ keys : List MlS, ∀ key, calleeLocals key ≠ none → key ∈ keys := by
+  unfold lookupCodeHOLExact at h
+  split at h
+  · exact absurd h (by simp)
+  · rename_i parameters body' returnShape' heq
+    by_cases hcond : (parameters.map Prod.fst).Nodup ∧
+        parameters.length = arguments.length ∧
+        ((parameters.zip arguments).all
+          (fun pair => shapeEqHOL pair.1.2 (shapeOfHOLExact pair.2))) = true
+    · rw [if_pos hcond] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨_, hlocals, _⟩ := h
+      subst hlocals
+      exact foldl_set_finiteSupport _ _
+        ⟨[], by intro key hk; exact absurd rfl hk⟩
+    · rw [if_neg hcond] at h
+      exact absurd h (by simp)
 
 end Flapjack

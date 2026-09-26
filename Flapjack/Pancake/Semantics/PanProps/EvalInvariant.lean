@@ -186,6 +186,33 @@ theorem holFmapAsFiniteSupportWitness {width : Nat} {σ : Type} [NeZero width] :
         ofExact state.toExact state.toExact_finiteSupport = state) :=
   ⟨fun state h => toExact_ofExact state h, fun state => ofExact_toExact state⟩
 
+/-- Local finite-map `dec_clock` operation for the projection equations below. -/
+def decClockForStructsSimps {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) :
+    PanPropsEvalStateFiniteExact width σ :=
+  { state with clock := state.clock - 1 }
+
+/-- Local finite-map `empty_locals` operation for the projection equations. -/
+def emptyLocalsForStructsSimps {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) :
+    PanPropsEvalStateFiniteExact width σ :=
+  { state with locals := HolFiniteMapExact.empty }
+
+/-- HOL `panProps$structs_simps` (`panPropsScript.sml:1217`): the six
+    projections of `dec_clock` and `empty_locals`. This uses the existing
+    PanProps finite-map state and its canonical same-module roundtrip witness. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "structs_simps"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem structsSimpsHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanPropsEvalStateFiniteExact width σ) :
+    (decClockForStructsSimps state).structs = state.structs ∧
+    (emptyLocalsForStructsSimps state).structs = state.structs ∧
+    (decClockForStructsSimps state).globals = state.globals ∧
+    (emptyLocalsForStructsSimps state).globals = state.globals ∧
+    (decClockForStructsSimps state).locals = state.locals ∧
+    (emptyLocalsForStructsSimps state).locals = HolFiniteMapExact.empty := by
+  simp [decClockForStructsSimps, emptyLocalsForStructsSimps]
+
 /-- Finite-support carrier rendering of HOL `eval_def`. -/
 def evalHOL {width : Nat} {σ : Type} [NeZero width]
     (state : PanPropsEvalStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :

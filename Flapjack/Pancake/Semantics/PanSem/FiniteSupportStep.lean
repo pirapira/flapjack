@@ -508,4 +508,889 @@ theorem evalPanSemRecursiveCallContextHOLExact_seq_finiteSupport
               exact PanSemStateExact.finiteSupport_fixClock context.state (some r, firstContext.state)
                 (ihFirst (some r, firstContext) hfirst)
 
+/-- Recursive `Ite` case of finite-support preservation, parameterized by the
+    induction hypotheses for the two branches (both evaluated in the same
+    context). -/
+theorem evalPanSemRecursiveCallContextHOLExact_ite_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (condition : ExpHOL width) (thenBranch elseBranch : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (ihThen : ∀ result,
+        evalPanSemRecursiveCallContextHOLExact thenBranch context = some result →
+          result.2.state.FiniteSupport)
+    (ihElse : ∀ result,
+        evalPanSemRecursiveCallContextHOLExact elseBranch context = some result →
+          result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.ite condition thenBranch elseBranch) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  cases hcond : evalHOLExact context.state condition with
+  | none =>
+      simp only [hcond] at hres
+      simp only [Option.some.injEq] at hres
+      rw [← hres]
+      exact h
+  | some v =>
+      simp only [hcond] at hres
+      cases v with
+      | val wordLab =>
+          cases wordLab with
+          | word value =>
+              simp only at hres
+              by_cases hz : (value != 0) = true
+              · rw [if_pos hz] at hres
+                exact ihThen result hres
+              · rw [if_neg hz] at hres
+                exact ihElse result hres
+      | rStruct fields =>
+          simp only [Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+      | nStruct name fields =>
+          simp only [Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+
+/-- Recursive `While` case with the condition already evaluated to a nonzero
+    word, parameterized by the body and self induction hypotheses. -/
+theorem evalPanSemRecursiveCallContextHOLExact_whileWord_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (condition : ExpHOL width) (body : ProgHOL width) (word : BitVec width)
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (hcond : evalHOLExact context.state condition = some (.val (.word word)))
+    (hw : word ≠ 0)
+    (ihBody : ∀ (bodyContext : PanSemExactEvalContext width σ),
+        bodyContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact body bodyContext = some result →
+            result.2.state.FiniteSupport)
+    (ihSelf : ∀ (selfContext : PanSemExactEvalContext width σ),
+        selfContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact (.while condition body) selfContext = some result →
+            result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.while condition body) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  simp only [hcond] at hres
+  rw [if_pos hw] at hres
+  by_cases hclock : context.state.clock = 0
+  · rw [if_pos hclock] at hres
+    simp only [Option.some.injEq] at hres
+    rw [← hres]
+    change (emptyLocalsHOLExact context.state).FiniteSupport
+    exact PanSemStateExact.finiteSupport_emptyLocals h
+  · rw [if_neg hclock] at hres
+    cases hbody : evalPanSemRecursiveCallContextHOLExact body
+        (context.withState (decClockHOLExact context.state) rfl rfl) with
+    | none => simp only [hbody] at hres; cases hres
+    | some res =>
+        simp only [hbody] at hres
+        obtain ⟨bodyResult, bodyContext⟩ := res
+        have hbodyfs : bodyContext.state.FiniteSupport :=
+          ihBody _ (by
+            change (decClockHOLExact context.state).FiniteSupport
+            exact PanSemStateExact.finiteSupport_decClock h)
+            (bodyResult, bodyContext) hbody
+        have hfixed : (bodyContext.withState
+            (fixClockHOLExact (decClockHOLExact context.state)
+              (bodyResult, bodyContext.state)).2 rfl rfl).state.FiniteSupport := by
+          change (fixClockHOLExact (decClockHOLExact context.state)
+            (bodyResult, bodyContext.state)).2.FiniteSupport
+          exact PanSemStateExact.finiteSupport_fixClock (decClockHOLExact context.state)
+            (bodyResult, bodyContext.state) hbodyfs
+        cases bodyResult with
+        | none => simp only at hres; exact ihSelf _ hfixed result hres
+        | some r =>
+            cases r with
+            | «continue» => simp only at hres; exact ihSelf _ hfixed result hres
+            | «break» =>
+                simp only at hres
+                simp only [Option.some.injEq] at hres
+                obtain ⟨_, rfl⟩ := hres
+                exact hfixed
+            | error => simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+            | timeOut => simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+            | returned value => simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+            | exception exceptionId value =>
+                simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+            | finalFfi event => simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+
+/-- Recursive `While` case of finite-support preservation, parameterized by the
+    induction hypothesis for the body and the self induction hypothesis for the
+    loop (evaluated with a smaller clock). -/
+theorem evalPanSemRecursiveCallContextHOLExact_while_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (condition : ExpHOL width) (body : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (ihBody : ∀ (bodyContext : PanSemExactEvalContext width σ),
+        bodyContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact body bodyContext = some result →
+            result.2.state.FiniteSupport)
+    (ihSelf : ∀ (selfContext : PanSemExactEvalContext width σ),
+        selfContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact (.while condition body) selfContext = some result →
+            result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.while condition body) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  cases hcond : evalHOLExact context.state condition with
+  | none =>
+      rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+      simp only [hcond] at hres
+      simp only [Option.some.injEq] at hres
+      rw [← hres]
+      exact h
+  | some v =>
+      cases v with
+      | val wordLab =>
+          cases wordLab with
+          | word word =>
+              by_cases hw : word ≠ 0
+              · exact evalPanSemRecursiveCallContextHOLExact_whileWord_finiteSupport
+                  condition body word context h hcond hw ihBody ihSelf result hres
+              · rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+                simp only [hcond] at hres
+                rw [if_neg hw] at hres
+                simp only [Option.some.injEq] at hres
+                obtain ⟨_, rfl⟩ := hres
+                exact h
+      | rStruct fields =>
+          rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+          simp only [hcond] at hres
+          simp only [Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+      | nStruct name fields =>
+          rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+          simp only [hcond] at hres
+          simp only [Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+
+
+theorem evalPanSemRecursiveCallContextHOLExact_call_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (info : Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width)))
+    (function : MlS) (arguments : List (ExpHOL width))
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (ihBody : ∀ (body : ProgHOL width) (entryContext : PanSemExactEvalContext width σ),
+        entryContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact body entryContext = some result →
+            result.2.state.FiniteSupport)
+    (ihHandler : ∀ (handlerProgram : ProgHOL width)
+        (handlerContext : PanSemExactEvalContext width σ),
+        handlerContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact handlerProgram handlerContext = some result →
+            result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.call info function arguments) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  cases hargs : evalListHOLExact context.state arguments with
+  | none =>
+      simp only [hargs, Option.some.injEq] at hres
+      rw [← hres]
+      exact h
+  | some values =>
+      simp only [hargs] at hres
+      cases hlookup : lookupCodeHOLExact context.state.code function values with
+      | none =>
+          simp only [hlookup, Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+      | some triple =>
+          obtain ⟨body, calleeLocals, returnShape⟩ := triple
+          simp only [hlookup] at hres
+          by_cases hclock : context.state.clock = 0
+          · rw [if_pos hclock] at hres
+            simp only [Option.some.injEq] at hres
+            rw [← hres]
+            exact PanSemStateExact.finiteSupport_emptyLocals h
+          · rw [if_neg hclock] at hres
+            have hentry : ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport :=
+              PanSemStateExact.finiteSupport_setLocals_clock context.state calleeLocals
+                (context.state.clock - 1)
+                (lookupCodeHOLExact_calleeLocals_finiteSupport context.state.code function
+                  values body calleeLocals returnShape hlookup) h
+            cases hbody : evalPanSemRecursiveCallContextHOLExact body
+                (context.withState { context.state with clock := context.state.clock - 1, locals := calleeLocals } rfl rfl) with
+            | none => simp only [hbody] at hres; cases hres
+            | some pair =>
+                obtain ⟨bodyResult, bodyContext⟩ := pair
+                simp only [hbody] at hres
+                have hbodyfs : bodyContext.state.FiniteSupport :=
+                  ihBody body
+                    (context.withState { context.state with clock := context.state.clock - 1, locals := calleeLocals } rfl rfl)
+                    (by exact hentry)
+                    (bodyResult, bodyContext) hbody
+                have hfixed : (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (bodyResult, bodyContext.state)).2.FiniteSupport :=
+                  PanSemStateExact.finiteSupport_fixClock _ _ hbodyfs
+                let fixedCtx : PanSemExactEvalContext width σ := bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (bodyResult, bodyContext.state)).snd rfl rfl
+                have hfixedCtx : fixedCtx.state.FiniteSupport := hfixed
+                cases bodyResult with
+                | none =>
+                    simp only [Option.some.injEq] at hres
+                    rw [← hres]
+                    exact hfixedCtx
+                | some r =>
+                    cases r with
+                    | «error» =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                    | «timeOut» =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                    | «break» =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact hfixedCtx
+                    | «continue» =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact hfixedCtx
+                    | «returned» value =>
+                        try (simp only at hres)
+                        by_cases hshape : shapeEqHOL (shapeOfHOLExact value) returnShape = true
+                        · rw [if_pos hshape] at hres
+                          cases hinfo : info with
+                          | none =>
+                              simp only [hinfo, Option.some.injEq] at hres
+                              rw [← hres]
+                              exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                          | some inner =>
+                              simp only [hinfo] at hres
+                              rcases inner with ⟨returns, handler⟩
+                              cases returns with
+                              | none =>
+                                  try (simp only at hres)
+                                  simp only [Option.some.injEq] at hres
+                                  rw [← hres]
+                                  change ({ fixedCtx.state with locals := context.state.locals } : PanSemStateExact width σ).FiniteSupport
+                                  exact PanSemStateExact.finiteSupport_setLocals fixedCtx.state context.state.locals h.1 hfixedCtx
+                              | some kn =>
+                                  rcases kn with ⟨kind, name⟩
+                                  try (simp only at hres)
+                                  by_cases hvalid : isValidValueHOLExact context.state kind name value = true
+                                  · rw [if_pos hvalid] at hres
+                                    simp only [Option.some.injEq] at hres
+                                    rw [← hres]
+                                    change (setKvarHOLExact kind name value ({ fixedCtx.state with locals := context.state.locals } : PanSemStateExact width σ)).FiniteSupport
+                                    exact PanSemStateExact.finiteSupport_setKvar (PanSemStateExact.finiteSupport_setLocals fixedCtx.state context.state.locals h.1 hfixedCtx) kind name value
+                                  · rw [if_neg hvalid] at hres
+                                    simp only [Option.some.injEq] at hres
+                                    rw [← hres]
+                                    exact hfixedCtx
+                        · rw [if_neg hshape] at hres
+                          simp only [Option.some.injEq] at hres
+                          rw [← hres]
+                          exact hfixedCtx
+                    | «exception» exceptionId value =>
+                        try (simp only at hres)
+                        cases hinfo : info with
+                        | none =>
+                            simp only [hinfo, Option.some.injEq] at hres
+                            rw [← hres]
+                            exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                        | some inner =>
+                            simp only [hinfo] at hres
+                            rcases inner with ⟨returns, handler⟩
+                            cases handler with
+                            | none =>
+                                try (simp only at hres)
+                                simp only [Option.some.injEq] at hres
+                                rw [← hres]
+                                exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                            | some htriple =>
+                                rcases htriple with ⟨handlerId, handlerVar, handlerProgram⟩
+                                try (simp only at hres)
+                                by_cases heq : exceptionId = handlerId
+                                · rw [if_pos heq] at hres
+                                  cases heshapes : context.state.eshapes exceptionId with
+                                  | none =>
+                                      simp only [heshapes, Option.some.injEq] at hres
+                                      rw [← hres]
+                                      exact hfixedCtx
+                                  | some shape =>
+                                      simp only [heshapes] at hres
+                                      by_cases hcond : (shapeEqHOL (shapeOfHOLExact value) shape && isValidValueHOLExact context.state .local handlerVar value) = true
+                                      · rw [if_pos hcond] at hres
+                                        have hhandler : (fixedCtx.withState (setVarHOLExact handlerVar value ({ fixedCtx.state with locals := context.state.locals } : PanSemStateExact width σ)) rfl rfl).state.FiniteSupport := by
+                                          change (setVarHOLExact handlerVar value ({ fixedCtx.state with locals := context.state.locals } : PanSemStateExact width σ)).FiniteSupport
+                                          exact PanSemStateExact.finiteSupport_setVar (PanSemStateExact.finiteSupport_setLocals fixedCtx.state context.state.locals h.1 hfixedCtx) handlerVar value
+                                        exact ihHandler handlerProgram (fixedCtx.withState (setVarHOLExact handlerVar value ({ fixedCtx.state with locals := context.state.locals } : PanSemStateExact width σ)) rfl rfl) hhandler result hres
+                                      · rw [if_neg hcond] at hres
+                                        simp only [Option.some.injEq] at hres
+                                        rw [← hres]
+                                        exact hfixedCtx
+                                · rw [if_neg heq] at hres
+                                  simp only [Option.some.injEq] at hres
+                                  rw [← hres]
+                                  exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                    | «finalFfi» event =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+
+
+theorem evalPanSemRecursiveCallContextHOLExact_decCall_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (resultName : MlS) (shape : ShapeHOL) (function : MlS)
+    (arguments : List (ExpHOL width)) (continuation : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (ihBody : ∀ (body : ProgHOL width) (entryContext : PanSemExactEvalContext width σ),
+        entryContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact body entryContext = some result →
+            result.2.state.FiniteSupport)
+    (ihContinuation : ∀ (continuationContext : PanSemExactEvalContext width σ),
+        continuationContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact continuation continuationContext = some result →
+            result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact
+        (.decCall resultName shape function arguments continuation) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  cases hargs : evalListHOLExact context.state arguments with
+  | none =>
+      simp only [hargs, Option.some.injEq] at hres
+      rw [← hres]
+      exact h
+  | some values =>
+      simp only [hargs] at hres
+      cases hlookup : lookupCodeHOLExact context.state.code function values with
+      | none =>
+          simp only [hlookup, Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+      | some triple =>
+          obtain ⟨body, calleeLocals, returnShape⟩ := triple
+          simp only [hlookup] at hres
+          by_cases hclock : context.state.clock = 0
+          · rw [if_pos hclock] at hres
+            simp only [Option.some.injEq] at hres
+            rw [← hres]
+            exact PanSemStateExact.finiteSupport_emptyLocals h
+          · rw [if_neg hclock] at hres
+            have hentry : ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport :=
+              PanSemStateExact.finiteSupport_setLocals_clock context.state calleeLocals
+                (context.state.clock - 1)
+                (lookupCodeHOLExact_calleeLocals_finiteSupport context.state.code function
+                  values body calleeLocals returnShape hlookup) h
+            cases hbody : evalPanSemRecursiveCallContextHOLExact body
+                (context.withState { context.state with clock := context.state.clock - 1, locals := calleeLocals } rfl rfl) with
+            | none => simp only [hbody] at hres; cases hres
+            | some pair =>
+                obtain ⟨bodyResult, bodyContext⟩ := pair
+                simp only [hbody] at hres
+                have hbodyfs : bodyContext.state.FiniteSupport :=
+                  ihBody body
+                    (context.withState { context.state with clock := context.state.clock - 1, locals := calleeLocals } rfl rfl)
+                    (by exact hentry)
+                    (bodyResult, bodyContext) hbody
+                have hfixed : (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (bodyResult, bodyContext.state)).2.FiniteSupport :=
+                  PanSemStateExact.finiteSupport_fixClock _ _ hbodyfs
+                let fixedCtx : PanSemExactEvalContext width σ := bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (bodyResult, bodyContext.state)).snd rfl rfl
+                have hfixedCtx : fixedCtx.state.FiniteSupport := hfixed
+                cases bodyResult with
+                | none =>
+                    simp only [Option.some.injEq] at hres
+                    rw [← hres]
+                    exact hfixedCtx
+                | some r =>
+                    cases r with
+                    | «error» =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                    | «timeOut» =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                    | «break» =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact hfixedCtx
+                    | «continue» =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact hfixedCtx
+                    | «returned» value =>
+                        try (simp only at hres)
+                        by_cases hcond : (shapeEqHOL (shapeOfHOLExact value) shape && shapeEqHOL (shapeOfHOLExact value) returnShape) = true
+                        · rw [if_pos hcond] at hres
+                          cases hcont : evalPanSemRecursiveCallContextHOLExact continuation
+                              ((bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).withState (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)) rfl rfl) with
+                          | none => try (simp only [hcont] at hres); cases hres
+                          | some cpair =>
+                              obtain ⟨continuationResult, continuationPost⟩ := cpair
+                              try (simp only [hcont] at hres)
+                              have hcontEntry : ((bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).withState (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)) rfl rfl).state.FiniteSupport := by
+                                change (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)).FiniteSupport
+                                exact PanSemStateExact.finiteSupport_setVar (PanSemStateExact.finiteSupport_setLocals fixedCtx.state context.state.locals h.1 hfixedCtx) resultName value
+                              have hcontF : continuationPost.state.FiniteSupport :=
+                                ihContinuation _ hcontEntry (continuationResult, continuationPost) hcont
+                              simp only [Option.some.injEq] at hres
+                              rw [← hres]
+                              change ({ continuationPost.state with locals := resVarHOLExact continuationPost.state.locals (resultName, context.state.locals resultName) } : PanSemStateExact width σ).FiniteSupport
+                              exact ⟨resVarHOLExact_finiteSupport continuationPost.state.locals (resultName, context.state.locals resultName) hcontF.1, hcontF.2.1, hcontF.2.2.1, hcontF.2.2.2⟩
+                        · rw [if_neg hcond] at hres
+                          simp only [Option.some.injEq] at hres
+                          rw [← hres]
+                          exact hfixedCtx
+                    | «exception» exceptionId value =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+                    | «finalFfi» event =>
+                        try (simp only at hres)
+                        simp only [Option.some.injEq] at hres
+                        rw [← hres]
+                        exact PanSemStateExact.finiteSupport_emptyLocals hfixedCtx
+
+/-- Finite-support of the exact `Call`/`DecCall` entry state, whose `locals` are
+    replaced by the callee locals and whose `clock` is decremented. -/
+theorem callEntryHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) (calleeLocals : MlS → Option (ValueHOL width))
+    (function : MlS) (values : List (ValueHOL width)) (body : ProgHOL width)
+    (returnShape : ShapeHOL)
+    (hlookup : lookupCodeHOLExact state.code function values = some (body, calleeLocals, returnShape))
+    (h : state.FiniteSupport) :
+    ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport :=
+  PanSemStateExact.finiteSupport_setLocals_clock state calleeLocals (state.clock - 1)
+    (lookupCodeHOLExact_calleeLocals_finiteSupport state.code function values body calleeLocals
+      returnShape hlookup) h
+
+macro "closeCase" : tactic => `(tactic|
+  (intro result hres) <;> (try (simp only [Option.some.injEq] at hres)) <;> (try (cases hres)) <;>
+  (try (dsimp (config := { zetaDelta := true }))) <;>
+  (try (dsimp only [PanSemExactEvalContext.withState])) <;>
+  (first
+    | assumption
+    | (apply_assumption <;> assumption)
+    | (apply assignStepHOLExact_finiteSupport <;> assumption)
+    | (apply primitiveStepHOLExact_finiteSupport <;> assumption)
+    | (apply storeStepHOLExact_finiteSupport <;> assumption)
+    | (apply store32StepHOLExact_finiteSupport <;> assumption)
+    | (apply storeByteStepHOLExact_finiteSupport <;> assumption)
+    | (apply extCallStepHOLExact_finiteSupport <;> assumption)
+    | (apply returnStepHOLExact_finiteSupport <;> assumption)
+    | (apply raiseStepHOLExact_finiteSupport <;> assumption)
+    | (apply shMemLoadClauseHOLExact_finiteSupport <;> assumption)
+    | (apply shMemStoreClauseHOLExact_finiteSupport <;> assumption)
+    | (apply tickStepHOLExact_finiteSupport <;> assumption)
+    | (apply evalPanSemNonrecursiveHOLExact_finiteSupport <;> assumption)
+    | (apply PanSemStateExact.finiteSupport_emptyLocals; apply PanSemStateExact.finiteSupport_fixClock; assumption)
+    | (apply PanSemStateExact.finiteSupport_emptyLocals; apply PanSemStateExact.finiteSupport_decClock; assumption)
+    | (apply PanSemStateExact.finiteSupport_emptyLocals; assumption)
+    | (apply PanSemStateExact.finiteSupport_fixClock; assumption)
+    | (apply PanSemStateExact.finiteSupport_decClock; assumption)
+    | exact PanSemStateExact.finiteSupport_setVar (by assumption) _ _
+    | exact PanSemStateExact.finiteSupport_setGlobal (by assumption) _ _
+    | exact PanSemStateExact.finiteSupport_setKvar (by assumption) _ _ _
+    | exact PanSemStateExact.finiteSupport_setLocals (by assumption) _ _
+    | exact PanSemStateExact.finiteSupport_setClock (by assumption) _ _
+    | exact resVarHOLExact_finiteSupport _ (by assumption) _))
+
+/-- Finite support is preserved by the exact recursive panSem program evaluator. -/
+theorem evalPanSemRecursiveCallContextHOLExact_finiteSupport {width : Nat} {σ : Type}
+    [NeZero width] (program : ProgHOL width) (context : PanSemExactEvalContext width σ)
+    (h : context.state.FiniteSupport) :
+    ∀ result, evalPanSemRecursiveCallContextHOLExact program context = some result →
+      result.2.state.FiniteSupport := by
+  fun_induction evalPanSemRecursiveCallContextHOLExact program context
+  case case3 =>
+      rename_i inst context state name shape initializer body value hval hshape bodyState bodyContext
+        result postContext hrec restored ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hbody : bodyContext.state.FiniteSupport := by
+        change (setVarHOLExact name value state).FiniteSupport
+        exact PanSemStateExact.finiteSupport_setVar h name value
+      have hpost : postContext.state.FiniteSupport := ih1 hbody (result, postContext) hrec
+      have hl' := resVarHOLExact_finiteSupport postContext.state.locals
+        (name, state.locals name) hpost.1
+      exact PanSemStateExact.finiteSupport_setLocals postContext.state
+        (resVarHOLExact postContext.state.locals (name, state.locals name)) hl' hpost
+  case case6 =>
+      rename_i inst context state first second postContext hfirst fixed fixedContext ih2 ih1
+      intro result hres
+      have hfix : fixedContext.state.FiniteSupport := by
+        change (fixClockHOLExact state ((none : Option (PanSemResultExact width)), postContext.state)).snd.FiniteSupport
+        exact PanSemStateExact.finiteSupport_fixClock state
+          ((none : Option (PanSemResultExact width)), postContext.state)
+          (ih2 h (none, postContext) hfirst)
+      exact ih1 hfix result hres
+  case case7 =>
+      rename_i inst context state first second postContext val hfirst fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      change (fixClockHOLExact state (some val, postContext.state)).snd.FiniteSupport
+      exact PanSemStateExact.finiteSupport_fixClock state (some val, postContext.state)
+        (ih1 h (some val, postContext) hfirst)
+  case case13 =>
+      rename_i inst context state condition body value hcond hw hclock entry entryContext
+        postContext hbody fixed fixedContext ih2 ih1
+      intro result hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change (decClockHOLExact state).FiniteSupport
+        exact PanSemStateExact.finiteSupport_decClock h
+      have hfix : fixedContext.state.FiniteSupport := by
+        change (fixClockHOLExact entry (some PanSemResultExact.continue, postContext.state)).snd.FiniteSupport
+        exact PanSemStateExact.finiteSupport_fixClock entry
+          (some PanSemResultExact.continue, postContext.state)
+          (ih2 hentry (some PanSemResultExact.continue, postContext) hbody)
+      exact ih1 hfix result hres
+  case case14 =>
+      rename_i inst context state condition body value hcond hw hclock entry entryContext
+        postContext hbody fixed fixedContext ih2 ih1
+      intro result hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change (decClockHOLExact state).FiniteSupport
+        exact PanSemStateExact.finiteSupport_decClock h
+      have hfix : fixedContext.state.FiniteSupport := by
+        change (fixClockHOLExact entry ((none : Option (PanSemResultExact width)), postContext.state)).snd.FiniteSupport
+        exact PanSemStateExact.finiteSupport_fixClock entry
+          ((none : Option (PanSemResultExact width)), postContext.state)
+          (ih2 hentry (none, postContext) hbody)
+      exact ih1 hfix result hres
+  case case15 =>
+      rename_i inst context state condition body value hcond hw hclock entry entryContext
+        postContext hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change (decClockHOLExact state).FiniteSupport
+        exact PanSemStateExact.finiteSupport_decClock h
+      exact PanSemStateExact.finiteSupport_fixClock entry
+        (some PanSemResultExact.break, postContext.state)
+        (ih1 hentry (some PanSemResultExact.break, postContext) hbody)
+  case case16 =>
+      rename_i inst context state condition body value hcond hw hclock entry entryContext
+        result postContext hbody fixed fixedContext hcont hnone hbreak ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change (decClockHOLExact state).FiniteSupport
+        exact PanSemStateExact.finiteSupport_decClock h
+      exact PanSemStateExact.finiteSupport_fixClock entry (result, postContext.state)
+        (ih1 hentry (result, postContext) hbody)
+  case case23 =>
+      rename_i inst context state info function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry (none, postContext.state)
+        (ih1 hentry (none, postContext) hbody)
+  case case24 =>
+      rename_i inst context state info function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry (some PanSemResultExact.break, postContext.state)
+        (ih1 hentry (some PanSemResultExact.break, postContext) hbody)
+  case case25 =>
+      rename_i inst context state info function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry (some PanSemResultExact.continue, postContext.state)
+        (ih1 hentry (some PanSemResultExact.continue, postContext) hbody)
+  case case26 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext value hshape hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.returned value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.returned value), postContext) hbody)
+      change (emptyLocalsHOLExact fixedContext.state).FiniteSupport
+      exact PanSemStateExact.finiteSupport_emptyLocals hfixed
+  case case27 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext value hshape snd hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.returned value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.returned value), postContext) hbody)
+      change ({ fixedContext.state with locals := state.locals } : PanSemStateExact width σ).FiniteSupport
+      exact PanSemStateExact.finiteSupport_setLocals fixedContext.state state.locals h.1 hfixed
+  case case28 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext value hshape kind name snd hvalid hbody fixed
+        fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.returned value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.returned value), postContext) hbody)
+      change (setKvarHOLExact kind name value
+        ({ fixedContext.state with locals := state.locals } : PanSemStateExact width σ)).FiniteSupport
+      exact PanSemStateExact.finiteSupport_setKvar
+        (PanSemStateExact.finiteSupport_setLocals fixedContext.state state.locals h.1 hfixed) kind name value
+  case case29 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext value hshape kind name snd hvalid hbody fixed
+        fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.returned value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.returned value), postContext) hbody)
+  case case30 =>
+      rename_i inst context state info function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext value hshape hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.returned value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.returned value), postContext) hbody)
+  case case31 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext exceptionId value hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.exception exceptionId value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.exception exceptionId value), postContext) hbody)
+      change (emptyLocalsHOLExact fixedContext.state).FiniteSupport
+      exact PanSemStateExact.finiteSupport_emptyLocals hfixed
+  case case32 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext exceptionId value fst hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.exception exceptionId value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.exception exceptionId value), postContext) hbody)
+      change (emptyLocalsHOLExact fixedContext.state).FiniteSupport
+      exact PanSemStateExact.finiteSupport_emptyLocals hfixed
+  case case33 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext value fst handlerId handlerVar handlerProgram shape
+        hcond heshapes hbody fixed fixedContext handlerState handlerContext ih2 ih1
+      intro result hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.exception handlerId value), postContext.state)
+        (ih2 hentry (some (PanSemResultExact.exception handlerId value), postContext) hbody)
+      have hhandler : handlerContext.state.FiniteSupport := by
+        change (setVarHOLExact handlerVar value
+          ({ fixedContext.state with locals := state.locals } : PanSemStateExact width σ)).FiniteSupport
+        exact PanSemStateExact.finiteSupport_setVar
+          (PanSemStateExact.finiteSupport_setLocals fixedContext.state state.locals h.1 hfixed)
+          handlerVar value
+      exact ih1 hhandler result hres
+  case case34 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext value fst handlerId handlerVar handlerProgram shape
+        hcond heshapes hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.exception handlerId value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.exception handlerId value), postContext) hbody)
+  case case35 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext value fst handlerId handlerVar handlerProgram
+        heshapes hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.exception handlerId value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.exception handlerId value), postContext) hbody)
+  case case36 =>
+      rename_i inst context state function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext exceptionId value fst handlerId handlerVar
+        handlerProgram hne hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.exception exceptionId value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.exception exceptionId value), postContext) hbody)
+      change (emptyLocalsHOLExact fixedContext.state).FiniteSupport
+      exact PanSemStateExact.finiteSupport_emptyLocals hfixed
+  case case37 =>
+      rename_i inst context state info function arguments values hargs body calleeLocals returnShape
+        hlookup hclock entry entryContext postContext other hbreak hcont hret hexc hbody fixed
+        fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry (some other, postContext.state)
+        (ih1 hentry (some other, postContext) hbody)
+      change (emptyLocalsHOLExact fixedContext.state).FiniteSupport
+      exact PanSemStateExact.finiteSupport_emptyLocals hfixed
+  case case42 =>
+      rename_i inst context state resultName shape function arguments continuation values hargs body
+        calleeLocals returnShape hlookup hclock entry entryContext postContext hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry (none, postContext.state)
+        (ih1 hentry (none, postContext) hbody)
+  case case43 =>
+      rename_i inst context state resultName shape function arguments continuation values hargs body
+        calleeLocals returnShape hlookup hclock entry entryContext postContext hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry (some PanSemResultExact.break, postContext.state)
+        (ih1 hentry (some PanSemResultExact.break, postContext) hbody)
+  case case44 =>
+      rename_i inst context state resultName shape function arguments continuation values hargs body
+        calleeLocals returnShape hlookup hclock entry entryContext postContext hbody fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry (some PanSemResultExact.continue, postContext.state)
+        (ih1 hentry (some PanSemResultExact.continue, postContext) hbody)
+  case case46 =>
+      rename_i inst context state resultName shape function arguments continuation values hargs body
+        calleeLocals returnShape hlookup hclock entry entryContext postContext1 value hcond result postContext
+        restored hbody fixed fixedContext continuationState continuationContext hcont ih2 ih1
+      intro r hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.returned value), postContext1.state)
+        (ih2 hentry (some (PanSemResultExact.returned value), postContext1) hbody)
+      have hcontEntry : continuationContext.state.FiniteSupport := by
+        change (setVarHOLExact resultName value
+          ({ fixedContext.state with locals := state.locals } : PanSemStateExact width σ)).FiniteSupport
+        exact PanSemStateExact.finiteSupport_setVar
+          (PanSemStateExact.finiteSupport_setLocals fixedContext.state state.locals h.1 hfixed)
+          resultName value
+      have hcontF : postContext.state.FiniteSupport := ih1 hcontEntry (result, postContext) hcont
+      change ({ postContext.state with locals := resVarHOLExact postContext.state.locals (resultName, state.locals resultName) } : PanSemStateExact width σ).FiniteSupport
+      exact ⟨resVarHOLExact_finiteSupport postContext.state.locals
+        (resultName, state.locals resultName) hcontF.1, hcontF.2.1, hcontF.2.2.1, hcontF.2.2.2⟩
+  case case47 =>
+      rename_i inst context state resultName shape function arguments continuation values hargs body
+        calleeLocals returnShape hlookup hclock entry entryContext postContext value hshape hbody fixed
+        fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      exact PanSemStateExact.finiteSupport_fixClock entry
+        (some (PanSemResultExact.returned value), postContext.state)
+        (ih1 hentry (some (PanSemResultExact.returned value), postContext) hbody)
+  case case48 =>
+      rename_i inst context state resultName shape function arguments continuation values hargs body
+        calleeLocals returnShape hlookup hclock entry entryContext postContext other hbreak hcont hret hbody
+        fixed fixedContext ih1
+      intro result hres
+      simp only [Option.some.injEq] at hres
+      cases hres
+      have hentry : entryContext.state.FiniteSupport := by
+        change ({ state with clock := state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport
+        exact callEntryHOLExact_finiteSupport state calleeLocals function values body returnShape hlookup h
+      have hfixed := PanSemStateExact.finiteSupport_fixClock entry (some other, postContext.state)
+        (ih1 hentry (some other, postContext) hbody)
+      change (emptyLocalsHOLExact fixedContext.state).FiniteSupport
+      exact PanSemStateExact.finiteSupport_emptyLocals hfixed
+  all_goals closeCase
+
 end Flapjack

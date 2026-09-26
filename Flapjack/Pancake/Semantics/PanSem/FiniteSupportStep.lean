@@ -461,4 +461,51 @@ theorem evalPanSemRecursiveCallContextHOLExact_dec_finiteSupport
         rw [← hres]
         exact h
 
+/-- Recursive `Seq` case of finite-support preservation, parameterized by the
+    induction hypotheses for the first and second sub-evaluations. -/
+theorem evalPanSemRecursiveCallContextHOLExact_seq_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (first second : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) (_h : context.state.FiniteSupport)
+    (ihFirst : ∀ result,
+        evalPanSemRecursiveCallContextHOLExact first context = some result →
+          result.2.state.FiniteSupport)
+    (ihSecond : ∀ (fixedContext : PanSemExactEvalContext width σ),
+        fixedContext.state.FiniteSupport →
+        ∀ result, evalPanSemRecursiveCallContextHOLExact second fixedContext = some result →
+          result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.seq first second) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  cases hfirst : evalPanSemRecursiveCallContextHOLExact first context with
+  | none => simp only [hfirst] at hres; cases hres
+  | some pair =>
+      obtain ⟨firstResult, firstContext⟩ := pair
+      simp only [hfirst] at hres
+      cases firstResult with
+      | none =>
+          simp only at hres
+          have hfix : (firstContext.withState
+              (fixClockHOLExact context.state
+                ((none : Option (PanSemResultExact width)), firstContext.state)).2 rfl rfl).state.FiniteSupport := by
+            change (fixClockHOLExact context.state
+              ((none : Option (PanSemResultExact width)), firstContext.state)).2.FiniteSupport
+            exact PanSemStateExact.finiteSupport_fixClock context.state
+              ((none : Option (PanSemResultExact width)), firstContext.state)
+              (ihFirst (none, firstContext) hfirst)
+          exact ihSecond _ hfix result hres
+      | some r =>
+          simp only at hres
+          simp only [Option.some.injEq] at hres
+          cases result with
+          | mk r' ctx' =>
+              simp only [Prod.mk.injEq] at hres
+              obtain ⟨_, h2⟩ := hres
+              rw [← h2]
+              change (fixClockHOLExact context.state (some r, firstContext.state)).2.FiniteSupport
+              exact PanSemStateExact.finiteSupport_fixClock context.state (some r, firstContext.state)
+                (ihFirst (some r, firstContext) hfirst)
+
 end Flapjack

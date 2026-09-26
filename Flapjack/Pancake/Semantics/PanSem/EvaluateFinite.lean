@@ -37,9 +37,10 @@ exact evaluator (`flapjack-6yq`): `..._skip_projection` / `_break_projection` /
 `_continue_projection` / `_annot_projection` and the `assign` / `primitive` /
 `store` / `store32` / `storeByte` / `extCall` / `tick` / `return` / `raise` /
 `shMemLoad` / `shMemStore` projections show that mapping the finite evaluator's
-result through `state.toExact` agrees with `...ContextHOLExact`.  The remaining
-constructors (`dec` / `seq` / `ite` / `while` / `call` / `decCall`) are still to
-come.
+result through `state.toExact` agrees with `...ContextHOLExact`. Recursive
+`Dec`, `Seq`, `If`, and `While` have conditional projection lemmas using their
+recursive hypotheses. `Call` and `DecCall` projection lemmas and an assembling
+induction are still needed.
 -/
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 

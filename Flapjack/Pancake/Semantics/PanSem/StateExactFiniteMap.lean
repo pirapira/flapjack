@@ -865,6 +865,11 @@ def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width
       | .break => some (some .break, context)
       | .continue => some (some .continue, context)
       | .annot _ _ => some (none, context)
+      | .tick =>
+          if state.clock = 0 then
+            some (some .timeOut, context.withState (emptyLocalsHOLFinite state) rfl rfl)
+          else
+            some (none, context.withState (decClockHOLFinite state) rfl rfl)
       | other =>
           match hres : evalPanSemNonrecursiveHOLFinite state other with
           | none => none
@@ -934,11 +939,11 @@ theorem evalPanSemRecursiveCallFiniteContext_total {width : Nat} {σ : Type} [Ne
     (program : ProgHOL width) (context : FiniteEvalContext width σ) :
     ∃ output, evalPanSemRecursiveCallFiniteContext program context = some output := by
   fun_induction evalPanSemRecursiveCallFiniteContext program context <;> simp_all
-  case case53 =>
+  case case55 =>
     rename_i inst context state other h9 h8 h7 h6 h5 h4 h3 h2 h1 h0 hres
-    cases other <;> simp_all [evalPanSemNonrecursiveHOLFinite, evalPanSemNonrecursiveHOLExact]
-    · exact h9 _ _ _ _ rfl rfl rfl rfl
-    · exact h4 _ _ _ _ _ rfl rfl rfl rfl rfl
+    cases state <;> simp_all [evalPanSemNonrecursiveHOLFinite, evalPanSemNonrecursiveHOLExact]
+    · exact other _ _ _ _ rfl rfl rfl rfl
+    · exact h5 _ _ _ _ _ rfl rfl rfl rfl rfl
 
 /-- FLAPJACK-SPECIFIC provisional projection (not a HOL declaration; carries no
     `@[hol]` tag): the state-level view of the clause-for-clause finite context

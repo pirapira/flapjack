@@ -11233,6 +11233,14 @@
   "reviewer": "flapjack-ds3 (source review, bead flapjack-2s5): HOL exp_hdl_def (pan_to_crepScript.sml:106-112) quantifies over a finite map varname |-> (shape # num list), but expHdlHOL takes a raw MlString -> Option (ShapeHOL × List Nat) function admitting infinite support. The tag is withdrawn; the field-based fmap_as_finite_support qualifier cannot cover a bare parameter. The raw-map helper and its production bridge remain untagged. Faithful finite-map replacement is tracked by flapjack-pxn.18.3.5.8.13.2; direct HOL rows remain in scripts/hol-probes/exp_hdl_probe.out and Flapjack/Test/ExpHdlHOLParity.lean."
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "mk_ctxt_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep.lean",
+    "lean_name": "panToCrepMkCtxtHOL",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.2.11): FLAPJACK-SPECIFIC / not an exact HOL port, @[hol] tag withdrawn. HOL mk_ctxt_def (pan_to_crepScript.sml:310-316) is `mk_ctxt vmap fs m (es:eid |-> 'a word) = <|vars := vmap; funcs := fs; eids := es; vmax := m|>` over context fields vars : varname |-> shape # num list, funcs : funname |-> ((varname # shape) list # shape), eids : eid |-> 'a word, vmax : num, where varname/funname/eid are mlstring (panLangScript.sml:24-28) and shape.named is mlstring (panLangScript.sml:36-38). Lean panToCrepMkCtxtHOL instead takes production VarName/FunName/ExceptionId = String keys, the production Shape (named : String) in the vars/funcs values, a generic α for the eids value instead of HOL's word-length-indexed 'a word, and the extensional FiniteMap α β := α → Option β encoding of fmap rather than the literal HOL carrier. The names_as_string qualifier cannot authorize the Shape value carrier or the changed α/'a word eids type, and no NameRanged byte witness applies because this constructor produces a context, not a name. The exact MlString/ShapeHOL/BitVec context carrier replacement is tracked by flapjack-pxn.18.3.5.8.13 (under flapjack-pxn.18.3.5.8, parent flapjack-pxn.18.3.5.7.2). The executable routing of the production context construction remains that Flapjack-specific definition; the reviewed constructor is the exact-carrier replacement."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "dec_clock_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",

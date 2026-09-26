@@ -51,6 +51,30 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "tracked by flapjack-pxn.18.3.5.8.13.2. Direct HOL rows remain in "
         "Flapjack/Test/ExpHdlHOLParity.lean."
     ),
+    ("Flapjack/Pancake/PanToCrep.lean", "panToCrepMkCtxtHOL"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "mk_ctxt_def",
+        "flapjack-ds9 (source comparison, bead flapjack-4ac.2.11): "
+        "FLAPJACK-SPECIFIC / not an exact HOL port, @[hol] tag withdrawn. HOL "
+        "mk_ctxt_def (pan_to_crepScript.sml:310-316) is "
+        "`mk_ctxt vmap fs m (es:eid |-> 'a word) = <|vars := vmap; funcs := fs; "
+        "eids := es; vmax := m|>` over context fields "
+        "vars : varname |-> shape # num list, "
+        "funcs : funname |-> ((varname # shape) list # shape), "
+        "eids : eid |-> 'a word, vmax : num, where varname/funname/eid are "
+        "mlstring (panLangScript.sml:24-28) and shape.named is mlstring "
+        "(panLangScript.sml:36-38). Lean panToCrepMkCtxtHOL instead takes "
+        "production VarName/FunName/ExceptionId = String keys, the production "
+        "Shape (named : String) in the vars/funcs values, a generic α for the "
+        "eids value instead of HOL's word-length-indexed 'a word, and the "
+        "extensional FiniteMap α β := α → Option β encoding of fmap rather than "
+        "the literal HOL carrier. The names_as_string qualifier cannot "
+        "authorize the Shape value carrier or the changed α/'a word eids type, "
+        "and no NameRanged byte witness applies because this constructor "
+        "produces a context, not a name. The exact MlString/ShapeHOL/BitVec "
+        "context carrier replacement is tracked by flapjack-pxn.18.3.5.8.13 "
+        "(under flapjack-pxn.18.3.5.8, parent flapjack-pxn.18.3.5.7.2)."
+    ),
     ("Flapjack/Pancake/Proofs/PanToCrep.lean", "tlc"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
         "tlc_def",

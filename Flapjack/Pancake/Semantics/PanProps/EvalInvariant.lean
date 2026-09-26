@@ -1245,6 +1245,30 @@ theorem evaluateDeclsMemaddrsMonoHOLFinite {width : Nat} {σ : Type}
   intro state hstate program result memaddrs hmemaddrs h
   exact evaluateDeclsPanPropsMemaddrsMono state memaddrs program result h.1 h.2
 
+/-- Exact finite-support port of HOL `evaluate_decls_swap_memaddrs`
+    (`panPropsScript.sml:1718`). It preserves the source quantifier order and
+    premise: successful declaration evaluation together with inclusion of the
+    original address domain in the replacement domain. The conclusion changes
+    only `memaddrs` in the initial and successful result states. The four
+    finite-map fields are the reviewed canonical representation recorded by
+    the qualifier; `[DecidablePred memaddrs]` supplies Lean computation
+    evidence for the replacement HOL set. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_swap_memaddrs"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsSwapMemaddrsHOLFinite {width : Nat} {σ : Type}
+    [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ)
+      [DecidablePred state.memaddrs] (program : List (DeclHOL width))
+      (result : PanPropsEvalStateFiniteExact width σ)
+      (memaddrs : RiscV.Word width → Prop) [DecidablePred memaddrs],
+      (evaluateDeclsPanPropsHOLFinite state program = some result ∧
+        (∀ address, state.memaddrs address → memaddrs address)) →
+        evaluateDeclsPanPropsHOLFinite { state with memaddrs := memaddrs } program =
+          some { result with memaddrs := memaddrs } := by
+  intro state hstate program result memaddrs hmemaddrs h
+  exact evaluateDeclsPanPropsMemaddrsMono state memaddrs program result h.1
+    (fun address hsource => h.2 address hsource)
+
 private theorem evaluateDeclsPanPropsMemorySwap {width : Nat} {σ : Type}
     [NeZero width] (state : PanPropsEvalStateFiniteExact width σ)
     [DecidablePred state.memaddrs] (memory : RiscV.Word width → HolWordLab width)

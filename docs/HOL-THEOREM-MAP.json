@@ -11637,6 +11637,15 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_swap_memaddrs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsSwapMemaddrsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "Codex (direct source comparison, 2026-09-26, bead flapjack-4ac.4.99; panPropsScript.sml:1718): quantifier order is state, declaration program, successful result state, replacement memaddrs. The premise is successful evaluate_decls and HOL set inclusion of the original state's address domain in the replacement domain, rendered pointwise for Lean's predicate-valued domain. The conclusion changes only memaddrs in the initial and successful result states. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and same-module canonical roundtrip witness. The local evaluator adapter's complete Option result is kernel-checked against evaluateDeclsHOLExact through evaluateDeclsPanPropsHOLFinite_toExact. The proof uses the source-reviewed evaluateDeclsPanPropsMemaddrsMono induction and evalSwapMemaddrs on initializer expressions; the evaluator's Name, Decl, Function, and ExnDecl clauses agree with panSemScript.sml:814-837. [NeZero width] and DecidablePred memaddrs are Lean evidence for HOL's nonempty word index and executable word-set membership. The qualifier records only the four finite-map carriers."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "evaluate_decls_swap_memory",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
     "lean_name": "evaluateDeclsSwapMemoryHOLFinite",

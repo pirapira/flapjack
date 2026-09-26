@@ -30,9 +30,11 @@ def oneExpected : Exp Nat := .const 0
 def combExpected : Exp Nat := .rStruct [.const 0, .const 0, .const 0]
 def namedExpected : Exp Nat := .const 0
 
-#guard sameExp (shapeVal zero .one) oneExpected
-#guard sameExp (shapeVal zero (.comb [.one, .named "n", .one])) combExpected
-#guard sameExp (shapeVal zero (.named "n")) namedExpected
+#guard sameExp (Flapjack.Pancake.PanLang.shapeValViaHOL zero .one) oneExpected
+#guard sameExp (Flapjack.Pancake.PanLang.shapeValViaHOL zero
+  (.comb [.one, .named "n", .one])) combExpected
+#guard sameExp (Flapjack.Pancake.PanLang.shapeValViaHOL zero
+  (.named "n")) namedExpected
 
 def check (name : String) (actual expected : Exp Nat) : IO Bool := do
   if sameExp actual expected then
@@ -44,10 +46,11 @@ def check (name : String) (actual expected : Exp Nat) : IO Bool := do
 
 def runChecks : IO Bool := do
   let results ← [
-    check "pan shape_val One" (shapeVal zero .one) oneExpected,
-    check "pan shape_val Comb" 
-      (shapeVal zero (.comb [.one, .named "n", .one])) combExpected,
-    check "pan shape_val Named" (shapeVal zero (.named "n")) namedExpected ].mapM id
+    check "pan shape_val One" (Flapjack.Pancake.PanLang.shapeValViaHOL zero .one) oneExpected,
+    check "pan shape_val Comb"
+      (Flapjack.Pancake.PanLang.shapeValViaHOL zero (.comb [.one, .named "n", .one])) combExpected,
+    check "pan shape_val Named"
+      (Flapjack.Pancake.PanLang.shapeValViaHOL zero (.named "n")) namedExpected ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.PanShapeValParity

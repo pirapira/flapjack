@@ -5497,8 +5497,8 @@
     "hol_name": "word_lab",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "HolWordLab",
-    "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.1): HOL Datatype word_lab (panSemScript.sml:16) is Word ('a word), one constructor wrapping a word payload; HolWordLab (PanSem.lean:86) has the same single constructor .word with payload BitVec width. The mismatch is the width binder: HOL 'a word requires positive dimindex, while HolWordLab (width : Nat) admits width = 0, so Lean carries an extra width-zero instance with no HOL counterpart. Adding [NeZero width] to the inductive propagates through HolValue, CrepLocalsExact/CrepCodeMapExact, and the frozen PanSemStateEval.lean, so the @[hol] tag stays withheld until the dependency slice flapjack-0lj.5 lands. Exact-isomorphism helpers HolWordLab.toPanWordLab / PanWordLab.toHolWordLab and their roundtrips are Flapjack-specific infrastructure (production PanWordLab is generic over any alpha), not HOL ports. The exact v port ValueHOL records the same withheld-payload caveat."
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-b (source comparison, 2026-09-26; beads flapjack-0lj.5.1/.5.2): HOL Datatype word_lab at panSemScript.sml:17 is the single constructor Word ('a word). Lean HolWordLab has the same one-constructor/one-field shape, with payload BitVec width. HOL word types have positive dimindex; [NeZero width] excludes the extra zero-width Lean instance, and BitVec width is the canonical finite-word representation used by this port. Every HolWordLab consumer now carries positive width; the exact ValueHOL payload and PanSem/Crep state and lookup carriers use this type. Constructor arity and payload correspondence were compared directly with the HOL source; no String/name, evaluator, or state-map translation is part of this datatype declaration. HolWordLab.toPanWordLab / PanWordLab.toHolWordLab and their roundtrips remain untagged Flapjack-specific infrastructure."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -11247,6 +11247,22 @@
     "reviewer": "Codex (direct source comparison with panPropsScript.sml:74-86: the dropWhile P xs = y::ys premise and all four conclusion clauses are preserved. Under n < LENGTH xs, HOL EL n xs = y is equivalent to Lean xs[n]? = some y; DROP maps to List.drop, and HOL boolean negation maps to P y = false. HOL list and Lean List have the same structural constructors, so this ordinary carrier translation needs no qualifier. Concrete regression xs=[0,1,3], P=(<2), y=3, ys=[] witnesses n=2."
   },
   {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "evaluate_nested_decs_load_globals",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/TotalEval.lean",
+    "lean_name": "evalCrepClockProg",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-luna-b (source comparison, 2026-09-26; bead flapjack-4ac.5.60; HOL theorem variables s, rv, rvs, vs, p are implicitly universally quantified. Premises are globals_lookup s rv = SOME rvs; size_of_shape (shape_of rv) <= 32; ALL_DISTINCT vs; LENGTH vs = size_of_shape (shape_of rv). Conclusion is evaluate (nested_decs vs (load_globals 0w (size_of_shape (shape_of rv))) p,s) equal to the let-bound evaluation of p after globals are installed, with exact FOLDL res_var restoration from the original locals. evalCrepClockProg is a restricted evaluator over production CrepClockProg/CrepExp/CrepHolState; the production globalsLookup uses String-backed PanValue and CrepRuntimeState. Exact loadGlobalsHOL/nestedDecsHOL and positive-width ValueHOL/CrepSemHOLState exist, but no full evaluate over CrepProgHOL/CrepSemHOLState or exact globals_lookup bridge exists. No @[hol] tag is claimed. Faithful replacement flapjack-4ac.5.60.1 depends on flapjack-4ac.5.82 and flapjack-pxn.18.3.5.8.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "eval_nested_decs_seq_res_var_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Eval.lean",
+    "lean_name": "evalCrepHolExp",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-luna-b (source comparison, 2026-09-26; bead flapjack-4ac.5.19; HOL variables es, ns, t, ev, p are implicitly universally quantified. Premises are MAP (eval t) es = MAP SOME ev; LENGTH ns = LENGTH es; distinct_lists ns (FLAT (MAP var_cexp es)); ALL_DISTINCT ns. Conclusion is evaluate (nested_decs ns es p,t) equal to the let-bound evaluate (p,t with locals := t.locals |++ ZIP (ns,ev)), with result locals restored by FOLDL res_var over ZIP (ns, MAP (FLOOKUP t.locals) ns). nestedDecsHOL is syntax only. evalCrepHolExp has production CrepExp/CrepHolState carriers and evalCrepClockProg covers only restricted CrepClockProg/CrepHolState; no complete evaluator over CrepProgHOL/CrepExpHOL/CrepSemHOLState is available. These evaluators cannot express the full theorem, so no @[hol] tag is claimed. Faithful replacement flapjack-4ac.5.19.1 depends on flapjack-4ac.5.82 and flapjack-pxn.18.3.5.8.8."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "eval_is_wf_shape_v",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
@@ -11263,5 +11279,13 @@
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "Codex (direct source comparison, 2026-09-26, panPropsScript.sml:1233): preserves the successful OPT_MMAP(eval s) argexps premise, successful lookup_code result triple, FEVERY locals, FEVERY globals, and FEVERY conclusion for newlocals, in source order. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and same-module holFmapAsFiniteSupportWitness; `lookupCodeHOLFinite` returns the exact FEMPTY |++ ZIP locals map. A successful update-list lookup comes from a zipped `(parameterName,arg)` entry; the second component is in the evaluated argument list, and eval_is_wf_shape_v establishes its wf property. The update uses the lawful MlS equality instance, implementing HOL equality; shapeEqHOL is the reviewed equality test used by lookup_code. The qualifier records only the finite-map carrier. [NeZero width] and DecidablePred memaddrs retain the already reviewed HOL word/set encodings."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "write_bytearray_update_byte",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
+    "lean_name": "writeBytearrayUpdateByte",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (direct source review, 2026-09-26; bead flapjack-4ac.4.58.1): HOL panPropsScript.sml:1098-1104 quantifies bytes, ad, ad', m, adrs, be. The single antecedent is byte_aligned ad AND an existential Word cell at m ad; the conclusion existentially witnesses a Word cell at ad after write_bytearray ad' bytes m adrs be. Lean retains the same order and conjunction, with polymorphic word width, UInt8 for HOL word8, HolWordLab for HOL word_lab, and panByteAlignHOL ad = ad for byte_aligned ad (alignmentScript.sml:27). DecidablePred domain is computational evidence for HOL set membership, not a logical side condition."
   }
 ]

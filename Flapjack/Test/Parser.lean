@@ -1219,7 +1219,9 @@ def isAddWithCarryCakeParity : Bool :=
   (.ok (.primitive "r" .addCarry [.var .global "a", .var .global "b", .var .global "c"]))
 
 -- As a declaration it becomes a declaration of the shape's zero value followed
--- by the primitive.
+-- by the primitive. `convProg` obtains this initializer through the exact
+-- `shapeValHOL` bridge; the matching One/Comb/Named source-oracle rows are
+-- checked in `PanShapeValParity` against `pan_lang_shape_val_probe.out`.
 #guard sameAst (prog "var {1,1} r = __add_with_carry__(a, b, c); return r;")
   (.ok (.dec "r" (.comb [.one, .one]) (.rStruct [.const 0, .const 0])
     (.seq (.primitive "r" .addCarry [.var .global "a", .var .global "b", .var .global "c"])

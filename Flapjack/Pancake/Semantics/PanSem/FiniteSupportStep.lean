@@ -30,6 +30,12 @@ theorem PanSemExactEvalContext.withState_state {width : Nat} {σ : Type} [NeZero
     (hshared : state.shMemaddrs = context.state.shMemaddrs) :
     (context.withState state hmem hshared).state = state := rfl
 
+instance {width : Nat} {σ : Type} [NeZero width] (context : PanSemExactEvalContext width σ) :
+    DecidablePred context.state.memaddrs := context.memaddrsDecidable
+
+instance {width : Nat} {σ : Type} [NeZero width] (context : PanSemExactEvalContext width σ) :
+    DecidablePred context.state.shMemaddrs := context.shMemaddrsDecidable
+
 /-- The state-update primitives used by the clause steps preserve finite support. -/
 macro "finiteSupport_simp" : tactic =>
   `(tactic|
@@ -71,7 +77,7 @@ theorem primitiveStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero wi
   finiteSupport_simp
 
 theorem storeStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (state : PanSemStateExact width σ) [instMem : DecidablePred state.memaddrs]
     (destination source : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (h : state.FiniteSupport) :
@@ -80,7 +86,7 @@ theorem storeStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
   finiteSupport_simp
 
 theorem store32StepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (state : PanSemStateExact width σ) [instMem : DecidablePred state.memaddrs]
     (address value : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (h : state.FiniteSupport) :
@@ -89,7 +95,7 @@ theorem store32StepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero widt
   finiteSupport_simp
 
 theorem storeByteStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (state : PanSemStateExact width σ) [instMem : DecidablePred state.memaddrs]
     (address value : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (h : state.FiniteSupport) :
@@ -98,7 +104,7 @@ theorem storeByteStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero wi
   finiteSupport_simp
 
 theorem extCallStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (state : PanSemStateExact width σ) [instMem : DecidablePred state.memaddrs]
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (function : MlS) (ptr1 len1 ptr2 len2 : ExpHOL width)
     (h : state.FiniteSupport) :
@@ -123,7 +129,7 @@ theorem raiseStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
   finiteSupport_simp
 
 theorem shMemLoadHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
+    (state : PanSemStateExact width σ) [instSh : DecidablePred state.shMemaddrs]
     (kind : VarKind) (name : MlS) (address : RiscV.Word width) (nb : Nat)
     (h : state.FiniteSupport) :
     (shMemLoadHOLExact state kind name address nb).2.FiniteSupport := by
@@ -143,7 +149,7 @@ theorem shMemLoadHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
     · simpa using h
 
 theorem shMemStoreHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
+    (state : PanSemStateExact width σ) [instSh : DecidablePred state.shMemaddrs]
     (word address : RiscV.Word width) (nb : Nat)
     (h : state.FiniteSupport) :
     (shMemStoreHOLExact state word address nb).2.FiniteSupport := by
@@ -169,7 +175,7 @@ theorem tickStepHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
   · exact PanSemStateExact.finiteSupport_decClock h
 
 theorem shMemLoadClauseHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
+    (state : PanSemStateExact width σ) [instSh : DecidablePred state.shMemaddrs]
     (operator : OpSize) (kind : VarKind) (name : MlS)
     (address : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
@@ -183,7 +189,7 @@ theorem shMemLoadClauseHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero 
   · simpa using h
 
 theorem shMemStoreClauseHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero width]
-    (state : PanSemStateExact width σ) [DecidablePred state.shMemaddrs]
+    (state : PanSemStateExact width σ) [instSh : DecidablePred state.shMemaddrs]
     (operator : OpSize) (address value : ExpHOL width)
     (evalExpression : PanSemStateExact width σ → ExpHOL width → Option (ValueHOL width))
     (h : state.FiniteSupport) :
@@ -201,7 +207,7 @@ theorem shMemStoreClauseHOLExact_finiteSupport {width : Nat} {σ : Type} [NeZero
     state and is vacuous. -/
 theorem evalPanSemNonrecursiveHOLExact_finiteSupport {width : Nat} {σ : Type}
     [NeZero width] (program : ProgHOL width) (state : PanSemStateExact width σ)
-    [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs]
+    [instMem : DecidablePred state.memaddrs] [instSh : DecidablePred state.shMemaddrs]
     (h : state.FiniteSupport)
     (result : Option (PanSemResultExact width) × PanSemStateExact width σ)
     (hres : evalPanSemNonrecursiveHOLExact program state = some result) :
@@ -360,6 +366,20 @@ theorem PanSemStateExact.finiteSupport_setClock {width : Nat} {σ : Type} [NeZer
     ({ state with clock := clock } : PanSemStateExact width σ).FiniteSupport := by
   simpa [PanSemStateExact.FiniteSupport] using h
 
+/-- The recursive `Call` branch builds its entry state by replacing `locals`
+    with the `Zipped` callee locals and decrementing `clock`. Only the map
+    fields `locals`/`globals`/`code`/`eshapes` matter for finite support, so the
+    entry state is finite-support whenever the caller state is and the callee
+    locals have finite support. -/
+theorem PanSemStateExact.finiteSupport_setLocals_clock {width : Nat} {σ : Type}
+    [NeZero width] (state : PanSemStateExact width σ)
+    (locals : MlS → Option (ValueHOL width)) (clock : Nat)
+    (hl : ∃ keys : List MlS, ∀ key, locals key ≠ none → key ∈ keys)
+    (h : state.FiniteSupport) :
+    ({ state with locals := locals, clock := clock } : PanSemStateExact width σ).FiniteSupport := by
+  obtain ⟨_, hg, hc, he⟩ := h
+  exact ⟨hl, hg, hc, he⟩
+
 /-- The Zipped `lookup_code` locals map has finite support. -/
 theorem lookupCodeHOLExact_calleeLocals_finiteSupport {width : Nat} [NeZero width]
     (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
@@ -384,5 +404,108 @@ theorem lookupCodeHOLExact_calleeLocals_finiteSupport {width : Nat} [NeZero widt
         ⟨[], by intro key hk; exact absurd rfl hk⟩
     · rw [if_neg hcond] at h
       exact absurd h (by simp)
+
+/-! ### Per-constructor recursive cases of finite-support preservation
+
+The correctness target `evalPanSemRecursiveCallContextHOLExact_finiteSupport` is
+proved by the well-founded induction generated by the evaluator's own
+termination measure `(context.state.clock, sizeOf program)`. The following
+lemmas expose one recursive constructor at a time and take the induction
+hypothesis for each recursive sub-call as an explicit hypothesis, so the final
+induction only has to discharge those hypotheses. This is Flapjack-specific
+infrastructure: the evaluator is not a tagged HOL port. -/
+
+/-- Recursive `Dec` case of finite-support preservation, parameterized by the
+    induction hypothesis for the body. -/
+theorem evalPanSemRecursiveCallContextHOLExact_dec_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (name : MlS) (shape : ShapeHOL) (initializer : ExpHOL width) (body : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (ih : ∀ (bodyContext : PanSemExactEvalContext width σ),
+        bodyContext.state.FiniteSupport →
+        ∀ result, evalPanSemRecursiveCallContextHOLExact body bodyContext = some result →
+          result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.dec name shape initializer body) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  cases hval : evalHOLExact context.state initializer with
+  | none =>
+      simp only [hval, Option.some.injEq] at hres
+      rw [← hres]
+      exact h
+  | some value =>
+      simp only [hval] at hres
+      by_cases hshape : shapeEqHOL shape (shapeOfHOLExact value) = true
+      · rw [if_pos hshape] at hres
+        cases hrec : evalPanSemRecursiveCallContextHOLExact body
+            (context.withState (setVarHOLExact name value context.state) rfl rfl) with
+        | none => simp only [hrec] at hres; cases hres
+        | some res =>
+            simp only [hrec] at hres
+            obtain ⟨r, postContext⟩ := res
+            simp only [Option.some.injEq] at hres
+            obtain ⟨hr, rfl⟩ := hres
+            have hbody : (context.withState (setVarHOLExact name value context.state) rfl rfl).state.FiniteSupport := by
+              change (setVarHOLExact name value context.state).FiniteSupport
+              exact PanSemStateExact.finiteSupport_setVar h name value
+            have hpost : postContext.state.FiniteSupport := ih _ hbody (r, postContext) hrec
+            have hl' := resVarHOLExact_finiteSupport postContext.state.locals
+              (name, context.state.locals name) hpost.1
+            exact PanSemStateExact.finiteSupport_setLocals postContext.state
+              (resVarHOLExact postContext.state.locals (name, context.state.locals name))
+              hl' hpost
+      · rw [if_neg hshape] at hres
+        simp only [Option.some.injEq] at hres
+        rw [← hres]
+        exact h
+
+/-- Recursive `Seq` case of finite-support preservation, parameterized by the
+    induction hypotheses for the first and second sub-evaluations. -/
+theorem evalPanSemRecursiveCallContextHOLExact_seq_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (first second : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) (_h : context.state.FiniteSupport)
+    (ihFirst : ∀ result,
+        evalPanSemRecursiveCallContextHOLExact first context = some result →
+          result.2.state.FiniteSupport)
+    (ihSecond : ∀ (fixedContext : PanSemExactEvalContext width σ),
+        fixedContext.state.FiniteSupport →
+        ∀ result, evalPanSemRecursiveCallContextHOLExact second fixedContext = some result →
+          result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.seq first second) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  cases hfirst : evalPanSemRecursiveCallContextHOLExact first context with
+  | none => simp only [hfirst] at hres; cases hres
+  | some pair =>
+      obtain ⟨firstResult, firstContext⟩ := pair
+      simp only [hfirst] at hres
+      cases firstResult with
+      | none =>
+          simp only at hres
+          have hfix : (firstContext.withState
+              (fixClockHOLExact context.state
+                ((none : Option (PanSemResultExact width)), firstContext.state)).2 rfl rfl).state.FiniteSupport := by
+            change (fixClockHOLExact context.state
+              ((none : Option (PanSemResultExact width)), firstContext.state)).2.FiniteSupport
+            exact PanSemStateExact.finiteSupport_fixClock context.state
+              ((none : Option (PanSemResultExact width)), firstContext.state)
+              (ihFirst (none, firstContext) hfirst)
+          exact ihSecond _ hfix result hres
+      | some r =>
+          simp only at hres
+          simp only [Option.some.injEq] at hres
+          cases result with
+          | mk r' ctx' =>
+              simp only [Prod.mk.injEq] at hres
+              obtain ⟨_, h2⟩ := hres
+              rw [← h2]
+              change (fixClockHOLExact context.state (some r, firstContext.state)).2.FiniteSupport
+              exact PanSemStateExact.finiteSupport_fixClock context.state (some r, firstContext.state)
+                (ihFirst (some r, firstContext) hfirst)
 
 end Flapjack

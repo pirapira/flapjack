@@ -2730,7 +2730,26 @@ theorem crepHolWordBits_shift_toBitVec [NeZero width]
 /-- Source-shaped Lean translation of HOL `crepSem$eval_def` for every
     positive BitVec word width. It is untagged because the arbitrary HOL word
     carrier remains unrepresented; `evalCrepRuntimeExp_toRuntime_eq` proves
-    this translation agrees constructor by constructor with production. -/
+    this translation agrees constructor by constructor with production.
+
+    Source-reviewed disposition for HOL
+    `eval_nested_decs_seq_res_var_eq`
+    (`pan_to_crepProofScript.sml:596-620`): HOL implicitly universally
+    quantifies `es`, `ns`, `t`, `ev`, and `p`. The four premises are successful
+    evaluation of every expression in `es`, equal lengths of `ns` and `es`,
+    `distinct_lists ns (FLAT (MAP var_cexp es))`, and distinct `ns`. The
+    conclusion is the exact equation for evaluating `nested_decs ns es p`:
+    evaluate `p` after installing `ZIP (ns, ev)`, then restore each original
+    local with `FOLDL res_var` over `ZIP (ns, MAP (FLOOKUP t.locals) ns)`.
+    `nestedDecsHOL` ports only the syntax. This expression evaluator is over
+    production `CrepExp` and `CrepHolState`, while the theorem quantifies over
+    the full Crep program and finite-map state; `evalCrepClockProg` likewise
+    covers only restricted production `CrepClockProg`/`CrepHolState`. There is
+    no full evaluator over `CrepProgHOL`/`CrepExpHOL` and
+    `CrepSemHOLState`, so the equation cannot be stated with these evaluators
+    and no tag is claimed. The faithful replacement is
+    `flapjack-4ac.5.19.1`, dependent on `flapjack-4ac.5.82` and exact Crep
+    carriers `flapjack-pxn.18.3.5.8.8`. -/
 def evalCrepHolExp [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) :
     CrepExp (RiscV.Word width) → Option (RiscV.Word width)

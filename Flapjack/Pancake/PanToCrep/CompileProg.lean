@@ -7,8 +7,10 @@ import Flapjack.Pancake.PanLang.Decl
 HOL-shaped top-level Pancake-to-Crep compiler boundary. The compilation
 produces HOL's function-triple shape and passes it through Flapjack's
 source-shaped inline traversal; the exact `compile_inl_top` carrier port is
-tracked by `flapjack-e7w.1`. Metadata is attached only in a downstream
-adapter for Flapjack's existing pipeline representation.
+tracked by `flapjack-e7w.1`. Its executed selection filter calls the reviewed
+`inlinableHOL` through the total `inlinableThroughHOL` declaration adapter.
+Metadata is attached only in a downstream adapter for Flapjack's existing
+pipeline representation.
 -/
 
 namespace Flapjack
@@ -19,7 +21,8 @@ open Flapjack.Pancake.PanLang
     `pan_to_crep$compile_prog`
     (`cakeml/pancake/pan_to_crepScript.sml:393-397`). It compiles declarations
     to a triple list, selects inline names using `functions (FILTER inlinable
-    declarations)`, and applies the source-shaped triple-list `compileInlTopHOL`
+    declarations)` with the filter evaluated by exact `inlinableHOL` on the
+    exact one-bit projection adapter, and applies the source-shaped triple-list `compileInlTopHOL`
     pass; the `let` structure and operand order match HOL clause-for-clause.
     The tag is WITHDRAWN as a documented carrier mismatch; see the note below. -/
 -- FLAPJACK-SPECIFIC (not an exact HOL port), source-reviewed mismatch. HOL
@@ -52,7 +55,7 @@ def compileProgTopHOL [BEq FunName] [LawfulBEq FunName]
     (declarations : List (Decl (BitVec width))) :
     List (FunName × List Nat × CrepProg (BitVec width)) :=
   let inlineNames :=
-    (functionEntries (declarations.filter inlinable)).map
+    (functionEntries (declarations.filter inlinableThroughHOL)).map
       fun (name, _, _, _) => name
   compileInlTopHOL inlineNames (compileToCrepHOL declarations)
 

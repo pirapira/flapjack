@@ -4,12 +4,12 @@
   HOL `panSem$state` stores its `locals`, `globals`, `code` and `eshapes`
   components as finite maps (`|->`).  `PanSemStateExact` instead quantifies
   them as unrestricted lookup functions (`MlS → Option _`), which is a strict
-  superset of the finite-map carriers.  The five exact state helpers
+  superset of the finite-map carriers. Five exact state helpers
   (`dec_clock`, `fix_clock`, `lookup_kvar`, `set_kvar`, `empty_locals`) were
-  therefore withdrawn from `@[hol]` tagging at audit
-  `flapjack-pxn.18.3.7.1.3.1.2`; this module provides a carrier that is
-  finite-support *by type* so those helpers can be restated faithfully and
-  retagged later.
+  temporarily withdrawn from `@[hol]` tagging at audit
+  `flapjack-pxn.18.3.7.1.3.1.2`. This module provides a carrier that is
+  finite-support *by type*; those five and the `set_var`/`set_global` helpers
+  have since been reviewed and tagged over it.
 
   Statement/side-condition review for `flapjack-pxn.18.3.7.1.3.1.1.2`
   (2026-09-25): the five HOL definitions
@@ -27,12 +27,13 @@
   representation statement only and does not authorize changed quantifiers,
   hypotheses, results, `BEq` side conditions, or word-model differences.
 
-  Five helper definitions have passed their case-by-case review and carry
+  Seven helper definitions have passed their case-by-case review and carry
   `@[hol ...]` with that qualifier: `decClockHOLFinite` (`dec_clock_def`),
   `fixClockHOLFinite` (`fix_clock_def`), `lookupKvarHOLFinite` (`lookup_kvar_def`),
   `emptyLocalsHOLFinite` (`empty_locals_def`) and `setKvarHOLFinite`
-  (`set_kvar_def`).  `setKvarHOLFinite` routes through the untagged canonical-
-  update wrappers `setVarHOLFinite`/`setGlobalHOLFinite`, which use
+  (`set_kvar_def`), plus `setVarHOLFinite` (`set_var_def`) and
+  `setGlobalHOLFinite` (`set_global_def`). `setKvarHOLFinite` routes through
+  these canonical-update helpers, which use
   `HolFiniteMapExact.update` (`FUPDATE`) exactly like HOL `set_var`/`set_global`;
   the `MlS` `BEq`/`LawfulBEq` instances required by `update` are declared below.
   The broad-carrier helpers over `PanSemStateExact` (`StateExact.lean`) remain the

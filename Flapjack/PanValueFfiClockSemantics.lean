@@ -86,6 +86,12 @@ def evalPanValueFfiClockLeaf
     (memoryHandler := memoryHandler)).map
     (fun (result, _) => (.control result, clock))
 
+/-! The functions-list evaluator below is compatibility infrastructure, not a
+HOL-faithful `panSem$evaluate` port. Its `functions` entries have parameter
+names and a body but no `returnShape`; consequently its Call return branch
+cannot perform HOL's state-code return-shape check and may accept a returned
+value that HOL rejects. The separate state-owned code-map evaluator is the
+HOL-shaped path used for correctness work. -/
 mutual
   def evalPanValueFfiClockCall
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

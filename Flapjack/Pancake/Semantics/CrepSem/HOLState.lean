@@ -14,14 +14,14 @@ support witness, code names use `MlString`, code entries use `CrepProgHOL`,
 and memory domains are Lean sets. The word dimension is represented by the
 canonical `BitVec width` model for each positive HOL dimension.
 
-These declarations are Flapjack representation infrastructure and carry no
-`@[hol]` tags: the word index is represented by its positive cardinality and
-`BitVec width`, rather than by an arbitrary HOL `finite_index` type together
-with an explicit carrier equivalence. The expression-evaluator projection
-below also deliberately forgets `code` and `ffi`, which expression `eval`
-does not read. It maps only the expression-observable fields into the
-all-width source evaluator state. This is a state-carrier prerequisite, not a
-port of the evaluator itself.
+The state carrier and projections are Flapjack representation infrastructure,
+not independently tagged HOL declarations. Reviewed helpers in this module do
+carry `@[hol]` tags over this positive-width `BitVec width` representation of
+HOL words, with the finite-map fields qualified as `fmap_as_finite_support`.
+The expression-evaluator projection below deliberately forgets `code` and
+`ffi`, which expression `eval` does not read. It maps only the
+expression-observable fields into the all-width source evaluator state; it is
+not a port of the evaluator itself.
 -/
 
 namespace Flapjack
@@ -208,9 +208,9 @@ end HolFiniteMapExact
 /-- Flapjack's HOL-shaped encoding of `crepSem$state`
 (`crepSemScript.sml:19-32`): finite maps for locals/globals/code, a total
 word-to-word_lab memory function, set-valued memory domains, clock/endian
-fields, an exact `HolFfiState σ`, and base/top words. It is untagged because its
-word index is represented by positive `width`/`BitVec width`; the explicit
-equivalence to each arbitrary HOL `finite_index` instance is not carried here. -/
+fields, an exact `HolFfiState σ`, and base/top words. This carrier is untagged
+because it is Flapjack's representation structure, while the reviewed helper
+definitions over it are tagged with their HOL originals. -/
 structure CrepSemHOLState (width : Nat) [NeZero width] (ffiState : Type) where
   locals : HolFiniteMapExact Nat (HolWordLab width)
   globals : HolFiniteMapExact (BitVec 5) (HolWordLab width)

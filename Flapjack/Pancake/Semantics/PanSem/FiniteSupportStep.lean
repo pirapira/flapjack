@@ -508,4 +508,171 @@ theorem evalPanSemRecursiveCallContextHOLExact_seq_finiteSupport
               exact PanSemStateExact.finiteSupport_fixClock context.state (some r, firstContext.state)
                 (ihFirst (some r, firstContext) hfirst)
 
+/-- Recursive `Ite` case of finite-support preservation, parameterized by the
+    induction hypotheses for the two branches (both evaluated in the same
+    context). -/
+theorem evalPanSemRecursiveCallContextHOLExact_ite_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (condition : ExpHOL width) (thenBranch elseBranch : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (ihThen : ∀ result,
+        evalPanSemRecursiveCallContextHOLExact thenBranch context = some result →
+          result.2.state.FiniteSupport)
+    (ihElse : ∀ result,
+        evalPanSemRecursiveCallContextHOLExact elseBranch context = some result →
+          result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.ite condition thenBranch elseBranch) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  cases hcond : evalHOLExact context.state condition with
+  | none =>
+      simp only [hcond] at hres
+      simp only [Option.some.injEq] at hres
+      rw [← hres]
+      exact h
+  | some v =>
+      simp only [hcond] at hres
+      cases v with
+      | val wordLab =>
+          cases wordLab with
+          | word value =>
+              simp only at hres
+              by_cases hz : (value != 0) = true
+              · rw [if_pos hz] at hres
+                exact ihThen result hres
+              · rw [if_neg hz] at hres
+                exact ihElse result hres
+      | rStruct fields =>
+          simp only [Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+      | nStruct name fields =>
+          simp only [Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+
+/-- Recursive `While` case with the condition already evaluated to a nonzero
+    word, parameterized by the body and self induction hypotheses. -/
+theorem evalPanSemRecursiveCallContextHOLExact_whileWord_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (condition : ExpHOL width) (body : ProgHOL width) (word : BitVec width)
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (hcond : evalHOLExact context.state condition = some (.val (.word word)))
+    (hw : word ≠ 0)
+    (ihBody : ∀ (bodyContext : PanSemExactEvalContext width σ),
+        bodyContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact body bodyContext = some result →
+            result.2.state.FiniteSupport)
+    (ihSelf : ∀ (selfContext : PanSemExactEvalContext width σ),
+        selfContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact (.while condition body) selfContext = some result →
+            result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.while condition body) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+  simp only [hcond] at hres
+  rw [if_pos hw] at hres
+  by_cases hclock : context.state.clock = 0
+  · rw [if_pos hclock] at hres
+    simp only [Option.some.injEq] at hres
+    rw [← hres]
+    change (emptyLocalsHOLExact context.state).FiniteSupport
+    exact PanSemStateExact.finiteSupport_emptyLocals h
+  · rw [if_neg hclock] at hres
+    cases hbody : evalPanSemRecursiveCallContextHOLExact body
+        (context.withState (decClockHOLExact context.state) rfl rfl) with
+    | none => simp only [hbody] at hres; cases hres
+    | some res =>
+        simp only [hbody] at hres
+        obtain ⟨bodyResult, bodyContext⟩ := res
+        have hbodyfs : bodyContext.state.FiniteSupport :=
+          ihBody _ (by
+            change (decClockHOLExact context.state).FiniteSupport
+            exact PanSemStateExact.finiteSupport_decClock h)
+            (bodyResult, bodyContext) hbody
+        have hfixed : (bodyContext.withState
+            (fixClockHOLExact (decClockHOLExact context.state)
+              (bodyResult, bodyContext.state)).2 rfl rfl).state.FiniteSupport := by
+          change (fixClockHOLExact (decClockHOLExact context.state)
+            (bodyResult, bodyContext.state)).2.FiniteSupport
+          exact PanSemStateExact.finiteSupport_fixClock (decClockHOLExact context.state)
+            (bodyResult, bodyContext.state) hbodyfs
+        cases bodyResult with
+        | none => simp only at hres; exact ihSelf _ hfixed result hres
+        | some r =>
+            cases r with
+            | «continue» => simp only at hres; exact ihSelf _ hfixed result hres
+            | «break» =>
+                simp only at hres
+                simp only [Option.some.injEq] at hres
+                obtain ⟨_, rfl⟩ := hres
+                exact hfixed
+            | error => simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+            | timeOut => simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+            | returned value => simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+            | exception exceptionId value =>
+                simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+            | finalFfi event => simp only at hres; obtain ⟨_, rfl⟩ := hres; exact hfixed
+
+/-- Recursive `While` case of finite-support preservation, parameterized by the
+    induction hypothesis for the body and the self induction hypothesis for the
+    loop (evaluated with a smaller clock). -/
+theorem evalPanSemRecursiveCallContextHOLExact_while_finiteSupport
+    {width : Nat} {σ : Type} [NeZero width]
+    (condition : ExpHOL width) (body : ProgHOL width)
+    (context : PanSemExactEvalContext width σ) (h : context.state.FiniteSupport)
+    (ihBody : ∀ (bodyContext : PanSemExactEvalContext width σ),
+        bodyContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact body bodyContext = some result →
+            result.2.state.FiniteSupport)
+    (ihSelf : ∀ (selfContext : PanSemExactEvalContext width σ),
+        selfContext.state.FiniteSupport →
+        ∀ result,
+          evalPanSemRecursiveCallContextHOLExact (.while condition body) selfContext = some result →
+            result.2.state.FiniteSupport) :
+    ∀ result,
+      evalPanSemRecursiveCallContextHOLExact (.while condition body) context = some result →
+        result.2.state.FiniteSupport := by
+  intro result hres
+  cases hcond : evalHOLExact context.state condition with
+  | none =>
+      rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+      simp only [hcond] at hres
+      simp only [Option.some.injEq] at hres
+      rw [← hres]
+      exact h
+  | some v =>
+      cases v with
+      | val wordLab =>
+          cases wordLab with
+          | word word =>
+              by_cases hw : word ≠ 0
+              · exact evalPanSemRecursiveCallContextHOLExact_whileWord_finiteSupport
+                  condition body word context h hcond hw ihBody ihSelf result hres
+              · rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+                simp only [hcond] at hres
+                rw [if_neg hw] at hres
+                simp only [Option.some.injEq] at hres
+                obtain ⟨_, rfl⟩ := hres
+                exact h
+      | rStruct fields =>
+          rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+          simp only [hcond] at hres
+          simp only [Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+      | nStruct name fields =>
+          rw [evalPanSemRecursiveCallContextHOLExact.eq_def] at hres
+          simp only [hcond] at hres
+          simp only [Option.some.injEq] at hres
+          rw [← hres]
+          exact h
+
 end Flapjack

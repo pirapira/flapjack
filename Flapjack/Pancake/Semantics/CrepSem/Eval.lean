@@ -1849,6 +1849,68 @@ theorem holFiniteWordSourceMemoryModel_shift_eq_evalPanShiftFull {ι : Type u}
     (wordShiftHOL_eq_evalPanShiftFull operator
       (holWordToBitVec dimension left) (holWordToBitVec dimension right))
 
+/-! The source-shaped operation fields used by the recursive finite-word
+    evaluator agree with the fields of the all-width RISC-V Crep runtime
+    target after the explicit finite-index/BitVec conversion. This pins the
+    production target binding for `Op`, `Cmp`, and `Shift`; it does not identify
+    the explicit `HolFiniteDimension` with HOL's implicit `finite_index`
+    dictionary or establish the surrounding whole-state correspondence. -/
+theorem holFiniteWordSourceModel_ops_eq_riscvWordTarget {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool)
+    (operator : BinOp) (values : List (ι → Bool))
+    (crepOperator : CrepOp) (crepValues : List (ι → Bool))
+    (cmp : Cmp) (shift : Shift) (left right : ι → Bool) :
+    ((holFiniteWordSourceMemoryModel dimension bigEndian).wordOp operator values).map
+        (holWordToBitVec dimension) =
+      (RiscV.panRiscVMemoryModelForEndian bigEndian).wordOp operator
+        (values.map (holWordToBitVec dimension)) ∧
+    holWordToBitVec dimension
+        ((holFiniteWordSourceMemoryModel dimension bigEndian).compare cmp left right) =
+      (RiscV.panRiscVMemoryModelForEndian bigEndian).compare cmp
+        (holWordToBitVec dimension left) (holWordToBitVec dimension right) ∧
+    ((holFiniteWordSourceMemoryModel dimension bigEndian).shift shift left right).map
+        (holWordToBitVec dimension) =
+      (RiscV.panRiscVMemoryModelForEndian bigEndian).shift shift
+        (holWordToBitVec dimension left) (holWordToBitVec dimension right) ∧
+    (holFiniteWordSourceCrepOp dimension crepOperator crepValues).map
+        (holWordToBitVec dimension) =
+      crepOpCrepWord (width := dimension.width) crepOperator
+        (crepValues.map (holWordToBitVec dimension)) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  constructor
+  · change ((wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+        (bitVecToHolWord dimension)).map (holWordToBitVec dimension) = _
+    simp only [Option.map_map, Function.comp_def,
+      holWordToBitVec_bitVecToHolWord]
+    change Option.map id (wordOpHOL operator
+      (values.map (holWordToBitVec dimension))) = _
+    rw [← panRiscVWordOp_eq_wordOpHOL (width := dimension.width) operator _]
+    simp only [RiscV.panRiscVMemoryModelForEndian]
+    cases h : RiscV.panRiscVWordOp operator
+        (values.map (holWordToBitVec dimension)) <;> simp
+  constructor
+  · change holWordToBitVec dimension
+        (bitVecToHolWord dimension
+          (wordCmpResultHOL cmp (holWordToBitVec dimension left)
+            (holWordToBitVec dimension right))) = _
+    simp only [holWordToBitVec_bitVecToHolWord]
+    exact (panRiscVCmp_eq_wordCmpResultHOL (width := dimension.width) cmp _ _).symm
+  constructor
+  · change ((wordShiftHOL shift (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right).toNat).map
+          (bitVecToHolWord dimension)).map (holWordToBitVec dimension) = _
+    simp only [Option.map_map, Function.comp_def,
+      holWordToBitVec_bitVecToHolWord]
+    change Option.map id (wordShiftHOL shift (holWordToBitVec dimension left)
+      (holWordToBitVec dimension right).toNat) = _
+    rw [← panRiscVShift_eq_wordShiftHOL (width := dimension.width) shift
+      (holWordToBitVec dimension left) (holWordToBitVec dimension right)]
+    simp only [RiscV.panRiscVMemoryModelForEndian]
+    cases h : RiscV.panRiscVShift shift (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right) <;> simp
+  · exact holFiniteWordSourceCrepOp_to_crepOpCrepWord dimension
+      crepOperator crepValues
+
 /-- BitVec-carrier view of the HOL source memory model. Every field is
     transported from the arbitrary finite-word source operations; this does
     not replace them with RISC-V's target memory model. -/
@@ -2955,6 +3017,38 @@ theorem evalCrepHolFiniteWordSourceExpWordLab_op_eq_wordOpHOL
     Option.bind_some]
   simp [holFiniteWordSourceMemoryModel, mapCrepHolWordLab,
     holWordToBitVec_bitVecToHolWord, Option.map_map, Function.comp_def]
+
+/-- The finite-index source evaluator's successful `Op` clause agrees with
+    the executed RISC-V runtime evaluator on the word-converted expression
+    and operand values.  The hypotheses expose recursive child evaluation on
+    both sides; this pins the constructor dispatch without claiming that the
+    source and production memory/state carriers agree. -/
+theorem evalCrepHolFiniteWordSourceExp_op_eq_riscvRuntime
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : BinOp)
+    (expressions : List (CrepExp (ι → Bool))) (values : List (ι → Bool))
+    (hSource : expressions.mapM
+      (evalCrepHolFiniteWordSourceExp dimension state) = some values)
+    (hRuntime : (expressions.map (mapCrepExpWord (holWordToBitVec dimension))).mapM
+      (evalCrepRuntimeExp (riscvCrepWordTarget
+        (state.toHolFiniteBitVecState dimension).toRuntime)) =
+        some (values.map (holWordToBitVec dimension))) :
+    (evalCrepHolFiniteWordSourceExp dimension state
+      (.op operator expressions)).map (holWordToBitVec dimension) =
+    evalCrepRuntimeExp (riscvCrepWordTarget
+      (state.toHolFiniteBitVecState dimension).toRuntime)
+      (.op operator (expressions.map
+        (mapCrepExpWord (holWordToBitVec dimension)))) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp only [evalCrepHolFiniteWordSourceExp, Option.bind_eq_bind, hSource,
+    Option.bind_some]
+  simp only [evalCrepRuntimeExp, hRuntime]
+  simpa [riscvCrepWordTarget, CrepHolState.toHolFiniteBitVecState,
+    CrepHolState.toRuntime,
+    holFiniteWordSourceMemoryModel, Option.map_map, Function.comp_def]
+    using (holFiniteWordSourceModel_ops_eq_riscvWordTarget dimension
+      state.bigEndian operator values .mul [] .equal .lsl (values.headD 0)
+      (values.headD 0)).1
 
 /-- The recursive source `Load` clause transports to the tagged width-indexed
     HOL `mem_load_def`: it checks the same address domain and returns the same

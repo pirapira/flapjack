@@ -5655,8 +5655,8 @@
     "hol_name": "mem_load_32_alt",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean",
     "lean_name": "panMemLoad32HOL_eq_alt",
-    "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.13; FLAPJACK-SPECIFIC, documented_mismatch). HOL mem_load_32_alt (panSemScript.sml:108-135) restates mem_load_32 for an arbitrary 'a word memory. panMemLoad32HOL_eq_alt (MemLoad32Alt.lean:163) proves the same OR/shift form but is width-64-specialized (RiscV.Word 64) and the byte codec get_byte lives in HOL stdlib outside the cakeml submodule. Exact arbitrary-width port tracked by flapjack-pxn.18.3.6.9.27."
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-c (source comparison, 2026-09-26; bead flapjack-pxn.18.3.6.9.27). Compared panSemScript.sml:108-135 clause by clause: the aligned-2 guard is address.toNat MOD 4 = 0, byte_align selects the same total HolWordLab cell, the domain miss returns NONE, and success widens the four get_byte results to word32 and assembles LE shifts 0/8/16/24 or BE shifts 24/16/8/0. The theorem is polymorphic over every positive BitVec width. `panGetByteHOL_toNat_lt_width` proves the intermediate memory-width embedding preserves each source UInt8, including sub-byte dimensions, so it implements the HOL w2w input exactly. Direct HOL mem_load_32_def observations in pan_sem_state_eval_probe.out are paired with this equality theorem; the fixture instantiates widths 1, 4, 24, and 64. The executable RISC-V codec adapter remains a separate relation and is not claimed as routed by this theorem."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -10770,6 +10770,22 @@
     "lean_name": "memLoadHOLExact_isWfShapeValueHOLExact",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.4.11; exact HOL panProps$mem_load_is_wf_shape_v (panPropsScript.sml:90-108): the triple conjunction (!sh adr dm m stcs v. mem_load sh adr dm m stcs = SOME v ==> is_wf_shape_v stcs v) /\\ (!shs ... mem_loads ... = SOME vs ==> EVERY (is_wf_shape_v stcs) vs) /\\ (!flds ... mem_load_flds ... = SOME nm_vs ==> EVERY (is_wf_shape_v stcs) (MAP SND nm_vs)). Lean `{width : Nat} [NeZero width]` returns the same triple conjunction, with each conjunct quantifying `(shape) (address) (domain) [DecidablePred domain] (memory) (context) (value)` inside the conjunct to match HOL's literal binder order `!sh adr dm m stcs v.`, over the already-reviewed exact ports memLoadHOLExact/memLoadsHOLExact/memLoadFldsHOLExact (panSemScript.sml mem_load_def/mem_loads_def/mem_load_flds_def) and isWfShapeValueHOLExact/isWfShapeValuesHOLExact (panPropsScript.sml is_wf_shape_v_def); the HOL EVERY folds are the Bool list predicates, and the named-hit case lifts the field-list predicate through the tagged isWfShapeValueHOLExact_drop (is_wf_shape_v_drop). No extra hypotheses beyond [DecidablePred domain], which renders HOL's memory domain predicate; [NeZero width] models HOL's positive word dimension. Direct HOL mem_load rows one_hit/one_miss/comb_hit/named_hit/named_suffix_blocked in pan_mem_load_probe.out and ml_one_hit/ml_one_miss/ml_comb/ml_named_hit/ml_named_miss/ml_comb_offset in pan_sem_mem_load_exact_probe.out; the wf conjunct is source-only (no dedicated probe). Parity examples in Flapjack/Test/PanStructsValueValidityParity.lean)"
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_swap_memory",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExactSwapMemory",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-b (source comparison, bead flapjack-4ac.4.96; exact HOL panProps$mem_load_swap_memory (panPropsScript.sml:1656-1675). The Lean statement is the same three-part conjunction in HOL order. Each branch has the literal HOL premise shape (successful mem_load/mem_loads/mem_load_flds result AND pointwise memory equality on addrs) implying the same successful result from memory2. Each conjunct quantifies its shape/shape-list/field-list, address, domain, memory1, context, result, memory2 in literal HOL order. Carriers are the exact tagged memLoadHOLExact/memLoadsHOLExact/memLoadFldsHOLExact definitions: ShapeHOL, MlString-keyed StructContextHOLM with StructInfoHOLExact, ValueHOL and HolWordLab; address advance is bytesInWordHOL times sizeOfShapeWithContextHOL. [DecidablePred domain] is computational evidence for HOL's set predicate, and [NeZero width] models the nonempty arbitrary finite HOL word index; neither changes the logical side conditions. The mutual-induction proof handles all three recursive clauses."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_swap_memaddrs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExactSwapMemaddrs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-b (source comparison, bead flapjack-4ac.4.97; exact HOL panProps$mem_load_swap_memaddrs (panPropsScript.sml:1679-1697). The Lean statement matches HOL's triple conjunction, in mem_load/mem_loads/mem_load_flds order. Each branch quantifies shape/shape-list/fields, address, domain, memory, context, result, and enlarged domain in literal HOL order, with the exact premise shape (successful result AND domain inclusion) implying the same result under the enlarged domain. Carriers are the exact tagged load definitions over ShapeHOL, MlString/StructInfoHOLExact contexts, ValueHOL and HolWordLab; recursive byte-offset arithmetic is unchanged because sizeOfShapeWithContextHOL does not depend on the domain. [DecidablePred] instances are computational evidence for each HOL set predicate; [NeZero width] represents arbitrary nonempty finite HOL word indices. The mutual induction proves One, Comb, Named, field-list, and shape-list clauses."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",

@@ -45,6 +45,13 @@ def width24Guard : Bool := projected (panMemLoad32HOL memory24 domain24 false 4)
 example : True := by
   have _ := panMemLoad32HOL_eq_alt memory64 domain64 false 0
   have _ := panMemLoad32HOL_eq_alt memory64 domain64 true 0
+  have _ := panMemLoad32HOL_eq_alt
+    (fun _ : RiscV.Word 1 => HolWordLab.word (BitVec.ofNat 1 0))
+    (fun _ => True) false (BitVec.ofNat 1 0)
+  have _ := panMemLoad32HOL_eq_alt
+    (fun _ : RiscV.Word 4 => HolWordLab.word (BitVec.ofNat 4 11))
+    (fun _ => True) true (BitVec.ofNat 4 0)
+  have _ := panMemLoad32HOL_eq_alt memory24 domain24 false 4
   trivial
 
 #guard littleGuard

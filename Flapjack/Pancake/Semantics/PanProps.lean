@@ -19,6 +19,16 @@ namespace Flapjack
 
 open Flapjack.Pancake.PanLang (MlS)
 
+/-- HOL `semantics_run_res` (`panPropsScript.sml:1818`), preserving its three
+    constructors and arbitrary result payload. The constructor names are
+    Lean-qualified by this type, but their payload arities and order match HOL. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "semantics_run_res"]
+inductive SemanticsRunResHOL (α : Type u) where
+  | RunError
+  | CompleteResult (result : α)
+  | Incomplete
+  deriving DecidableEq, Repr
+
 /-! Cake's local `dropWhile_eq_cons_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when
 `dropWhile P xs` yields `y :: ys`, there is an in-bounds index `n` at which

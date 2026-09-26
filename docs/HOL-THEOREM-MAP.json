@@ -9712,32 +9712,32 @@
     "hol_name": "is_stack_var_def",
     "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
     "lean_name": "isStackVar",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (bead flapjack-4h60): exact match of HOL reg_alloc$is_stack_var (n MOD 4 = 3); Nat carrier, MOD rendered as Nat %; Bool-valued predicate."
   },
   {
     "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
     "hol_name": "is_phy_var_def",
     "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
     "lean_name": "isPhyVar",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (bead flapjack-4h60): exact match of HOL reg_alloc$is_phy_var (n MOD 2 = 0); Nat carrier, MOD rendered as Nat %; Bool-valued predicate."
   },
   {
     "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
     "hol_name": "is_alloc_var_def",
     "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
     "lean_name": "isAllocVar",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (bead flapjack-4h60): exact match of HOL reg_alloc$is_alloc_var (n MOD 4 = 1); Nat carrier, MOD rendered as Nat %; Bool-valued predicate."
   },
   {
     "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
     "hol_name": "convention_partitions",
     "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
     "lean_name": "conventionPartitions",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (bead flapjack-4h60): exact match of HOL reg_alloc$convention_partitions; the same three iff conjuncts over the exact isStackVar/isPhyVar/isAllocVar predicates, universally quantified over n : num/Nat; no extra hypotheses."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",

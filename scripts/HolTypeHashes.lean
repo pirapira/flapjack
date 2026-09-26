@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.BackendCommon
+import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.AstHOL
 import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Compiler.Backend.StackLang.Prog

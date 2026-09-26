@@ -505,6 +505,31 @@ mutual
     all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+/-- Transport the canonical output language of `shapeValHOL` to Flapjack's
+generic word carrier. `shapeValHOL` can only return `const` and `rstruct`;
+the fallback cases make this a total Lean function but are unreachable for
+that definition. The constant's exact HOL word is zero, so the parser's
+caller-supplied `ofInt` maps it to the requested carrier. This is a
+Flapjack-specific adapter, not a second HOL declaration. -/
+def decodeShapeValHOL {α : Type} (ofInt : Int → α) :
+    ExpHOL 1 → Flapjack.Exp α
+  | .const _ => .const (ofInt 0)
+  | .rstruct fields => .rStruct (fields.map (decodeShapeValHOL ofInt))
+  | _ => .const (ofInt 0)
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-- Flapjack's generic parser bridge: compute the shape initializer with the
+reviewed HOL-shaped `shapeValHOL` at a valid one-bit word width, then transport
+its canonical zero/record output to the parser's generic word carrier. Shape
+names are discarded by HOL `shape_val` itself; `shapeToHOL`'s byte encoding
+therefore cannot affect this result. -/
+def shapeValViaHOL {α : Type} (ofInt : Int → α) (shape : Flapjack.Shape) :
+    Flapjack.Exp α :=
+  decodeShapeValHOL ofInt
+    (shapeValHOL (width := 1) (shapeToHOL shape))
+
 /-- Flapjack-specific equation for the Lean mutual definition: HOL's
 `shape_val_def` defines `shape_vals` by recursion, but declares no separate
 map theorem. This helper has no separate HOL original. -/

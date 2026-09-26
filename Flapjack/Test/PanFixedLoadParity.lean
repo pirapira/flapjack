@@ -9,6 +9,17 @@ The expected values below come directly from
 CakeML's `mem_load_byte_def` and `mem_load_32_def` in
 `pancake/semantics/panSemScript.sml:86-109`.
 
+The recursive evaluator cases at width 24 are also checked against direct
+`crepSem$eval` observations in `crep_eval_load_byte_probe.out` and
+`crep_eval_load_32_probe.out` (`crepSemScript.sml:90-137`). The source-shaped
+runtime agrees with those rows. The production RISC-V runtime adapter returns
+`none` for the same addresses because its byte alignment differs at width 24.
+The shipped `flapjack-compile` entry paths instantiate width 64 and target
+`rv64i` in `Flapjack/CompileMain.lean:96,108,120`; therefore the width-24
+counterexample is for the generic production evaluator adapter, not a CLI-
+reachable compiler configuration. The RV64 load cases below remain checked
+against the direct Crep HOL observations.
+
 The probe uses a little-endian 64-bit word cell at byte address 8. Pancake
 rejects the unaligned 32-bit load at address 9 and reads the four bytes at
 address 8 as `0x04030201`. At width 24 the original `mem_load_32` returns the
@@ -194,6 +205,20 @@ def finiteWord24CrepRiscVLoad32 : Option (BitVec 24) :=
       ((finiteWord24CrepState.toHolFiniteBitVecState dimension24).toRuntime))
     (.load32 (.const (BitVec.ofNat 24 4)))
 
+def finiteWord24CrepStateBE : CrepHolState (Fin 24 → Bool) Unit :=
+  { finiteWord24CrepState with bigEndian := true }
+
+def finiteWord24CrepSourceLoadByteBE : Option (Fin 24 → Bool) :=
+  evalCrepRuntimeExp
+    (finiteWord24CrepStateBE.toHolFiniteWordSourceRuntime dimension24)
+    (.loadByte (.const (finiteWord24 5)))
+
+def finiteWord24CrepRiscVLoadByteBE : Option (BitVec 24) :=
+  evalCrepRuntimeExp
+    (riscvCrepWordTarget
+      ((finiteWord24CrepStateBE.toHolFiniteBitVecState dimension24).toRuntime))
+    (.loadByte (.const (BitVec.ofNat 24 5)))
+
 /-! HOL `mem_load_32` assembles the four extracted bytes at width 32, then
     `crepSem.eval` widens or truncates that result into the source word width. -/
 def finiteWord24Fixed32Bytes : List (Fin 24 → Bool) :=
@@ -275,6 +300,9 @@ example :
 #guard (finiteWord24CrepSourceLoadByte.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x33)
 #guard finiteWord24CrepRiscVLoadByte == none
+#guard (finiteWord24CrepSourceLoadByteBE.map (holWordToBitVec dimension24)) ==
+  some (BitVec.ofNat 24 0x11)
+#guard finiteWord24CrepRiscVLoadByteBE == none
 #guard (finiteWord24CrepSourceLoad32.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x113322)
 #guard finiteWord24CrepRiscVLoad32 == none

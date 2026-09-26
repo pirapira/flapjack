@@ -3,3 +3,4 @@ eval_load32_le_addr12=SOME (Word 0x11223344w)
 eval_load32_le_unaligned=NONE
 eval_load32_le_outside_domain=NONE
 eval_load32_be_addr8=SOME (Word 0x11223344w)
+eval_load32_w24_addr4=SOME (Word 0x113322w)

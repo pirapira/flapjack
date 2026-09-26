@@ -858,7 +858,7 @@ theorem panToCrepMakeVmapHOL_eq_ctxtFcVars
     panToCrepMakeVmapHOL params =
       (ctxtFc functions exceptionCodes (params.map Prod.fst) (params.map Prod.snd)
         (panToCrepVars params)).vars := by
-  simp only [panToCrepMakeVmapHOL, ctxtFc, panToCrepVars]
+  simp only [panToCrepMakeVmapHOL, ctxtFc, panToCrepVars_eq]
   rw [compileParamVars_range_withShape params 0]
   simp
 
@@ -2876,7 +2876,7 @@ theorem alookupCompileToCrepCode [NeZero width]
             (panToCrepGetEidsFromDeclsHOL declarations))
           entry.2.1 entry.2.2.1))), ?_, ?_⟩
   · rw [hdecomp, List.map_append, List.map_cons]
-    simp [panToCrepVars, Shape.shapeSize]
+    simp [panToCrepVars, crepVarsHOL]
   · intro p hp
     obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
     simpa using hnotin q hq
@@ -2997,7 +2997,7 @@ theorem panToCrepCompFuncRiscV_eq_compileCodeRelProg
     panToCrepMkCtxtHOL, ctxtFc]
   rw [panToCrepMakeVmapHOL_eq_ctxtFcVars vshs (functionInfosHOL declarations)
     (panToCrepGetEidsFromDeclsHOL declarations)]
-  simp only [panToCrepVars, maxList_range, ctxtFc]
+  simp only [panToCrepVars_eq, maxList_range, ctxtFc]
 
 /-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `mk_ctxt_code_imp_code_rel`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4604`): with distinct
@@ -3051,8 +3051,7 @@ theorem mkCtxtCodeImpCodeRel [NeZero width]
     rw [FLOOKUP_FUPDATE_LIST_reverse_eq_lookup]
     rw [alookupCompileToCrepCodeGeneral declarations function vshs prog rshape
       hsource]
-    rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg]
-    rfl
+    rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg, panToCrepVars_eq]
 
 /-- Consumption adapter: a width-indexed `codeRelW` hypothesis is the generic
     `codeRel` at `BitVec width` (`codeRelW_iff_codeRel`), so the existing

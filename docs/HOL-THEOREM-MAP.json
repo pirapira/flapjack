@@ -2110,6 +2110,14 @@
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.1.42): HOL is_function (panLangScript.sml:314-317) is is_function (Function _) = T /\\ is_function _ = F, polymorphic in the word type. isFunctionHOL matches clause-for-clause over the reviewed word-indexed DeclHOL width carrier, with [NeZero width] matching HOL's positive word type and no extra hypotheses. Direct HOL-EVAL rows function=T / global=F are in scripts/hol-probes/pan_lang_is_function_probe.out, replayed in Flapjack/Test/PanLangIsFunctionParity.lean. The production globalDeclIsFunction (String-backed generic Decl) stays untagged."
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_name_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isNameHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.1.36): HOL is_name (cakeml/pancake/panLangScript.sml:244-247) is is_name (Name _ _) = T /\\ is_name _ = F, polymorphic in the word type. isNameHOL matches clause-for-clause over the reviewed word-indexed DeclHOL width carrier (the accepted rendering of HOL's polymorphic decl; see the tagged decl), with [NeZero width] matching HOL's positive word type and no extra hypotheses. Direct HOL-EVAL rows is_name_name=T and is_name_decl=F are in scripts/hol-probes/pan_lang_decl_predicates_probe.out, replayed in Flapjack/Test/PanLangDeclHOLParity.lean. The production isName (String-backed generic Decl) stays untagged; the kernel-checked isName_declOfHOL (Flapjack/Pancake/PanGlobals.lean) bridges it."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "functions_append",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
@@ -2350,6 +2358,14 @@
     "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.29): this is the shape_vals list clause within the same HOL mutual definition shape_val_def (cakeml/pancake/panLangScript.sml:190-196), not a separate HOL declaration. shapeValsHOL matches [] = [] and shape :: shapes = shapeValHOL shape :: shapeValsHOL shapes over exact List ShapeHOL and List (ExpHOL width) carriers. Direct HOL-EVAL comb row in scripts/hol-probes/pan_lang_shape_val_probe.out exercises this clause. shapeValsHOL_eq_map is a Lean-only helper with no separate HOL theorem."
   },
   {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "crep_vars_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
+    "lean_name": "crepVarsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.2.18): HOL crep_vars_def (cakeml/pancake/pan_to_crepScript.sml:376-381) is `crep_vars params = let shapes = MAP SND params; len = size_of_shape (Comb shapes) in GENLIST I len`, polymorphic in the first component of each parameter pair. crepVarsHOL {α} params = List.range (sizeOfShapeHOL (.comb (params.map Prod.snd))) matches clause-for-clause: MAP SND -> List.map Prod.snd, Comb -> .comb, size_of_shape -> the tagged exact sizeOfShapeHOL, GENLIST I len -> List.range len (List.range n = [0,1,...,n-1]). The parameter name component is never inspected, so no names_as_string qualifier applies. Production panToCrepVars is routed through crepVarsHOL (compileFunDeclSource/compileToCrepHOL), so the executed compiler uses the reviewed definition. Direct HOL-EVAL rows crep_vars_empty/crep_vars_nested in scripts/hol-probes/compile_to_crep_probe.out are replayed by crepVarsOracle in Flapjack/Test/CompileToCrepeParity.lean."
+  },
+  {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "load_op_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
@@ -2380,6 +2396,14 @@
     "lean_name": "funIdsHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.45): HOL fun_ids_def (cakeml/pancake/panLangScript.sml:336-343) is the recursive callee-name collector over the word-indexed prog; Dec/Seq/If/While recurse, a Call with metadata SOME(_, SOME(_,_,ep)) contributes its name and the handler names, any other Call contributes just its name, DecCall contributes its name and the body names, and every other form contributes nothing. funIdsHOL matches clause-for-clause over the exact ProgHOL/MlS carrier; the checked bridge funIdsHOL_map_toStringOfBytes relates it to the production Flapjack.funIds (direct routing unavailable because production is polymorphic over Prog α with String names). Direct HOL-EVAL rows empty/call/handler/dec_call in scripts/hol-probes/pan_lang_fun_ids_probe.out are replayed in Flapjack/Test/PanLangFunIdsParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "nested_seq_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "nestedSeqHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.1.31): HOL nested_seq_def (cakeml/pancake/panLangScript.sml:211-213) is nested_seq [] = Skip and nested_seq (e::es) = Seq e (nested_seq es), over the polymorphic 'a prog list. nestedSeqHOL matches clause-for-clause over the exact width-indexed ProgHOL carrier (constructor .skip/.seq with matching arities and fields), with [NeZero width] matching HOL's positive word type and no extra hypotheses. The checked bridges nestedSeqHOL_progOfHOL and nestedSeqHOL_progToHOL relate it to the production Flapjack.nestedSeq over the progOfHOL/progToHOL codecs (direct routing unavailable because production is polymorphic over Prog α with String identifiers while the tagged definition is width-indexed). Direct HOL-EVAL rows empty/one/two/assign_seq are in scripts/hol-probes/pan_lang_nested_seq_probe.out, replayed in Flapjack/Test/PanNestedSeqParity.lean."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
@@ -10765,6 +10789,22 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_swap_memory",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExactSwapMemory",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-b (source comparison, bead flapjack-4ac.4.96; exact HOL panProps$mem_load_swap_memory (panPropsScript.sml:1656-1675). The Lean statement is the same three-part conjunction in HOL order. Each branch has the literal HOL premise shape (successful mem_load/mem_loads/mem_load_flds result AND pointwise memory equality on addrs) implying the same successful result from memory2. Each conjunct quantifies its shape/shape-list/field-list, address, domain, memory1, context, result, memory2 in literal HOL order. Carriers are the exact tagged memLoadHOLExact/memLoadsHOLExact/memLoadFldsHOLExact definitions: ShapeHOL, MlString-keyed StructContextHOLM with StructInfoHOLExact, ValueHOL and HolWordLab; address advance is bytesInWordHOL times sizeOfShapeWithContextHOL. [DecidablePred domain] is computational evidence for HOL's set predicate, and [NeZero width] models the nonempty arbitrary finite HOL word index; neither changes the logical side conditions. The mutual-induction proof handles all three recursive clauses."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "mem_load_swap_memaddrs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
+    "lean_name": "memLoadHOLExactSwapMemaddrs",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-b (source comparison, bead flapjack-4ac.4.97; exact HOL panProps$mem_load_swap_memaddrs (panPropsScript.sml:1679-1697). The Lean statement matches HOL's triple conjunction, in mem_load/mem_loads/mem_load_flds order. Each branch quantifies shape/shape-list/fields, address, domain, memory, context, result, and enlarged domain in literal HOL order, with the exact premise shape (successful result AND domain inclusion) implying the same result under the enlarged domain. Carriers are the exact tagged load definitions over ShapeHOL, MlString/StructInfoHOLExact contexts, ValueHOL and HolWordLab; recursive byte-offset arithmetic is unchanged because sizeOfShapeWithContextHOL does not depend on the domain. [DecidablePred] instances are computational evidence for each HOL set predicate; [NeZero width] represents arbitrary nonempty finite HOL word indices. The mutual induction proves One, Comb, Named, field-list, and shape-list clauses."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "mem_loads_some_shape_eq",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "memLoadHOLExact_shape_eq",
@@ -11309,6 +11349,15 @@
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "Codex (direct source comparison, 2026-09-26, panPropsScript.sml:126): HOL quantifies state/expression/value and states successful eval followed by FEVERY well-formed locals and globals in that order, concluding is_wf_shape_v under the state's struct context. Lean preserves the conjunction, order, and conclusion using exact ExpHOL/ValueHOL/StructContextExact carriers; pointwise lookup premises express FEVERY for the finite-map fields. PanPropsEvalStateFiniteExact owns all four fields as HolFiniteMapExact, the reviewed canonical translation of HOL |->, and its same-module holFmapAsFiniteSupportWitness proves toExact/ofExact roundtrips with PanSemStateExact restricted to finite support. `evalHOL` delegates to the already source-reviewed evalHOLExact through that translation. The qualifier records only the finite-map representation; [NeZero width] is the reviewed positive word dimension carrier, and the explicit DecidablePred state.memaddrs instance renders HOL set membership for memory loads."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_swap_memaddrs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evalSwapMemaddrsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-luna-b (direct source comparison, bead flapjack-4ac.4.98.1; HOL panPropsScript.sml:1703-1715): quantifier order is state, expression, result value, replacement memaddrs. The premise is exactly successful eval AND pointwise subset of the original state domain; the result is successful eval of the same expression/value after only the state memaddrs field is replaced. PanPropsEvalStateFiniteExact has exact ExpHOL/ValueHOL, StructContextExact, HolWordLab memory, and positive width; its locals/globals/code/eshapes fields use HolFiniteMapExact with this module's canonical toExact/ofExact witness. [DecidablePred] instances are computation evidence for the source word sets. The proof handles Load via mem_load_swap_memaddrs and Load32/LoadByte via their domain membership tests on the aligned address. The qualifier records only the four HOL finite-map fields."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",

@@ -192,6 +192,21 @@ example : isDeclHOL (DeclHOL.function fdH) = false := rfl
 example : isFunctionHOL (DeclHOL.function fdH) = true := rfl
 example : isFunctionHOL (DeclHOL.decl .one (s "z") expH) = false := rfl
 
+/-! Exact `is_name` parity (bead flapjack-4ac.1.36): the HOL-EVAL rows
+`is_name_name=T` and `is_name_decl=F` from
+`scripts/hol-probes/pan_lang_decl_predicates_probe.out` are replayed over the
+exact `DeclHOL` carrier through the tagged `isNameHOL`. -/
+
+private def exactIsNameRow : Bool :=
+  isNameHOL (DeclHOL.name (s "S") [] : DeclHOL 64) &&
+  !isNameHOL (DeclHOL.decl .one (s "z") expH)
+
+#eval exactIsNameRow
+#guard exactIsNameRow
+
+example : isNameHOL (DeclHOL.name (s "S") [] : DeclHOL 64) = true := rfl
+example : isNameHOL (DeclHOL.decl .one (s "z") expH) = false := rfl
+
 example :
     functionsHOL (exactDecls ++ exactDecls) =
       functionsHOL exactDecls ++ functionsHOL exactDecls :=
@@ -236,6 +251,10 @@ example (declaration : DeclHOL 64) :
 example (declaration : DeclHOL 64) :
     Flapjack.isExnDecl (declOfHOL declaration) = isExnDeclHOL declaration :=
   isExnDecl_declOfHOL declaration
+
+example (declaration : DeclHOL 64) :
+    Flapjack.isName (declOfHOL declaration) = isNameHOL declaration :=
+  isName_declOfHOL declaration
 
 example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) =
     (exactDecls.filter isExnDeclHOL).length :=

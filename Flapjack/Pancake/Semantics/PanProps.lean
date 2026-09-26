@@ -33,14 +33,11 @@ inductive SemanticsRunResHOL (α : Type u) where
 (`panPropsScript.sml:1734-1742`): the exact theorem quantifies `s`, `exp`, `v`,
 and an arbitrary replacement memory `mry`; it assumes successful `eval s exp`
 and equality of the two memories at every address in `s.memaddrs`, then proves
-the same successful result after replacing memory. No tag is claimed here:
-`PanSemStateExact` admits unrestricted function-backed maps, while the exact
-finite-support state and its canonical map witness are declared in
-`PanSem/StateExactFiniteMap.lean`. The finite-map qualifier requires the owner
-and witness in the theorem's module, so importing that carrier here is not
-enough and duplicating the full state is not acceptable. The faithful port is
-tracked by `flapjack-4ac.4.100.1`, dependent on the finite-map carrier work
-`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+the same successful result after replacing memory. The broad
+`PanSemStateExact` analogue remains untagged because its four map fields are
+unrestricted functions. The faithful finite-support port and its same-module
+owner/witness are in `PanProps/EvalInvariant.lean` as
+`evalSwapMemoryHOLFinite`, tracked by `flapjack-4ac.4.100.1`. -/
 
 /-! Source review for HOL `evaluate_decls_swap_memory`
 (`panPropsScript.sml:1750-1763`): HOL quantifies an initial state `s`,
@@ -50,31 +47,35 @@ the memories at every address in the original `s.memaddrs`, implies that
 evaluation from `s` with only its memory replaced succeeds with `s'`'s memory
 also replaced by `mry`. This is a distinct result from expression-level
 `eval_swap_memory`; the HOL proof explicitly relies on that theorem for
-declarations. The nearby Lean `evaluateDeclsHOLExact` and `evalHOLExact` use
+declarations. The broad `evaluateDeclsHOLExact` and `evalHOLExact` use
 `PanSemStateExact`, whose locals/globals/code/eshapes are unrestricted lookup
-functions rather than HOL finite maps. There is no finite-support declaration
-evaluator or exact expression swap-memory theorem in the PanProps counterpart;
-the finite-map tag also requires the owner and witness in that module. Do not
-tag the broad analogues. The faithful port is tracked by
-`flapjack-4ac.4.101.1`, depending on exact `eval_swap_memory` port
-`flapjack-4ac.4.100.1` and the finite-support declaration evaluator
-`flapjack-4ac.4.102.1`. -/
+functions rather than HOL finite maps. The PanProps-local finite-support
+evaluator, its kernel-checked bridge to `evaluateDeclsHOLExact`, and the exact
+expression/declaration memory-swap theorems live in
+`PanProps/EvalInvariant.lean` with its local owner and canonical witness. The
+declaration theorem `evaluateDeclsSwapMemoryHOLFinite` preserves HOL's
+conjunctive success/memory-agreement premise and updates only memory in the
+initial/result states. -/
 
 /-! Source review for HOL `evaluate_decls_memaddrs_mono`
 (`panPropsScript.sml:1766-1778`): HOL quantifies an initial state `s`, program
 `prog`, successful result `s'`, and replacement address set `memaddrs`. From
 `evaluate_decls s prog = SOME s'` and `s.memaddrs ⊆ memaddrs`, it concludes
 successful evaluation from `s` with only `memaddrs` replaced, yielding `s'`
-with the same replacement set. The closest Lean evaluator,
-`evaluateDeclsHOLExact`, has that recursive declaration behavior over
-`PanSemStateExact`, but its locals/globals/code/eshapes are unrestricted lookup
-functions rather than HOL finite maps. The finite-support state currently has
-no corresponding exact declaration evaluator in the PanProps counterpart, and
-the `fmap_as_finite_support` tag requires the owner and witness in the tagged
-module. Thus the broad evaluator is not an exact HOL carrier and cannot receive
-the tag; the faithful port is tracked by
-`flapjack-4ac.4.102.1`, dependent on
-`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+with the same replacement set. The broad Lean `evaluateDeclsHOLExact` remains
+untagged because `PanSemStateExact` uses unrestricted lookup functions for
+locals/globals/code/eshapes. The PanProps-local finite-support evaluator is an
+untagged Flapjack adapter; the faithful PanSem counterpart for
+`evaluate_decls_def` remains open as `flapjack-4ac.3.53`. The theorem
+`evaluateDeclsMemaddrsMonoHOLFinite` is tagged in `PanProps/EvalInvariant.lean`, using the existing
+`PanPropsEvalStateFiniteExact` owner and same-module canonical roundtrip
+witness. The adapter's kernel-checked `_toExact` bridge proves the full
+`Option` result matches `evaluateDeclsHOLExact` on the projected state. Its clauses match the
+source: names skip; expressions evaluate with empty locals before a shape
+check and global update; functions check parameter/return shapes before code
+update; exceptions check absence and shape before exception-shape update. The
+local `evalHOL` adapter has no independent HOL declaration; it delegates to
+the existing exact PanSem evaluator. -/
 
 /-! Source review for HOL `eval_swap_memaddrs`
 (`panPropsScript.sml:1703-1715`): HOL states that successful `eval s exp`

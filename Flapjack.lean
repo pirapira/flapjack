@@ -76,11 +76,14 @@ import Flapjack.Pancake.Semantics.PanSem.MemByteAssembly
 import Flapjack.Pancake.Semantics.PanSem.MemLoad32Alt
 import Flapjack.Pancake.Semantics.PanSem.MemStore32Alt
 import Flapjack.Pancake.Semantics.PanSem.ByteRoundtrip
+import Flapjack.Misc.GoodDimindex
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 import Flapjack.Pancake.Semantics.PanProps.MemByteArray
 import Flapjack.Pancake.Semantics.PanSem.ShMemExact
 import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
 import Flapjack.Pancake.Semantics.PanProps.EvalInvariant
+import Flapjack.Pancake.Semantics.PanProps.LocalisedExpSimps
+import Flapjack.Pancake.Semantics.PanProps.NamelessExpSimps
 import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.PanObservationalSemantics
@@ -99,6 +102,7 @@ import Flapjack.PanSimpLocalised
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.Proofs.PanStructs.CompileCorrect
 import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.PanGlobalsByteRanged
 import Flapjack.Pancake.Proofs.PanGlobals
 import Flapjack.Pancake.Proofs.PanToCrep.EvaluateCases
 import Flapjack.Pancake.Proofs.PanToCrep.TotalEvaluateCases

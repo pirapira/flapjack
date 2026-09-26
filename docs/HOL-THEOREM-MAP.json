@@ -1553,6 +1553,22 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "localised_exp_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/LocalisedExpSimps.lean",
+    "lean_name": "localisedExpSimpsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.4.71). HOL panPropsScript.sml:1366 defines localised_exp_simps as the LIST_CONJ over exp_cons_patterns of localised_exp applied to each exp constructor pattern, eval-reduced and rewritten with GSYM localised_exp_real_def. The Lean theorem is the same 16-conjunct collection over the exact ExpHOL width carrier in constructor order (Const, Var, RStruct, RField, NStruct, NField, Load, Load32, LoadByte, Op, Panop, Cmp, Shift, BaseAddr, TopAddr, BytesInWord); each right-hand side is HOL's every_exp unfolding with P = (\\e. case e of Var tp _ => tp = Local | _ => T) (localisedExpPredHOL) and the EVERY/MAP SND folds rendered as everyExpListHOL/everyExpFieldListHOL, matching the tagged every_exp_def and localised_exp_real_def ports. HOL (tp = Local) is decide (vk = VarKind.local). No extra hypotheses or side conditions."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "nameless_exp_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/NamelessExpSimps.lean",
+    "lean_name": "namelessExpSimpsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.4.73). HOL panPropsScript.sml:1375 defines nameless_exp_simps as the LIST_CONJ over exp_cons_patterns of nameless_exp applied to each exp constructor pattern, eval-reduced and rewritten with GSYM nameless_exp_real_def. The Lean theorem is the same 16-conjunct collection over the exact ExpHOL width carrier in constructor order (Const, Var, RStruct, RField, NStruct, NField, Load, Load32, LoadByte, Op, Panop, Cmp, Shift, BaseAddr, TopAddr, BytesInWord); each right-hand side is HOL's every_exp unfolding with P = (\\e. case e of NStruct _ _ => F | NField _ _ => F | _ => T) (namelessExpPredHOL) and the EVERY/MAP SND folds rendered as everyExpListHOL/everyExpFieldListHOL, matching the tagged every_exp_def and nameless_exp_real_def ports. The NStruct and NField conjuncts have the constant false right-hand side that EVAL produces; all others recurse. No extra hypotheses or side conditions."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "fdoms_eq_flookup_some_none",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "fdoms_eq_flookup_some_none",
@@ -5665,6 +5681,22 @@
     "lean_name": "lookupCodeHOLExact",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.36; FLAPJACK-SPECIFIC, documented_mismatch). HOL lookup_code (panSemScript.sml:458-467) FLOOKUPs the code finite map and builds FEMPTY |++ ZIP arguments. lookupCodeHOLExact (DecCallExact.lean:39) retains the lookup and argument checks and the same return triple, but its code is an unrestricted function rather than a HOL finite map. Exact finite-support replacement tracked by flapjack-pxn.18.3.7.1.3.1.1.2.5 (parent .2.3)."
+  },
+  {
+    "hol_path": "cakeml/misc/miscScript.sml",
+    "hol_name": "good_dimindex_def",
+    "lean_path": "Flapjack/Misc/GoodDimindex.lean",
+    "lean_name": "goodDimindex",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.4.59.1). HOL miscScript.sml:4315 defines good_dimindex (:'a) as dimindex (:'a) = 32 \\/ dimindex (:'a) = 64. Lean goodDimindex takes the word width (the HOL dimindex) and is exactly width = 32 \\/ width = 64. No extra cases or side conditions."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "read_write_bytearray_lemma",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
+    "lean_name": "readWriteBytearrayLemma",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.4.59.1). HOL panPropsScript.sml:1119 quantifies n : num, addr : 'a word, bytes : word8 list and proves good_dimindex(:a) /\\ read_bytearray addr n (mem_load_byte m addrs be) = SOME bytes ==> write_bytearray addr bytes m addrs be = m. The Lean statement has the same single conjunction antecedent and the same conclusion: memory is the total HolWordLab map (HOL 'a word -> 'a word_lab), domain is the Prop predicate with DecidablePred evidence (HOL word set), bytes is List UInt8 (HOL word8 list), the reader is panMemLoadByteHOL (mem_load_byte_def) fed to readBytearrayHOL (read_bytearray_def), and the write is panWriteBytearrayHOL (write_bytearray_def). goodDimindex width is the HOL good_dimindex. The proof inducts on length like HOL and uses the width-generic byte roundtrip panSetByteHOL_panGetByteHOL (ByteRoundtrip.lean, the untagged analogue of byteScript.sml:847) after splitting good_dimindex to width = 32 \\/ width = 64, exactly as HOL uses set_byte_get_byte and good_dimindex_def."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -10600,8 +10632,8 @@
     "hol_name": "size_of_sh_with_ctxt_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "sizeOfShapeWithContextHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.26). HOL panLangScript.sml:164-171 defines size_of_sh_with_ctxt ctxt One = 1, size_of_sh_with_ctxt ctxt (Comb shapes) = SUM (MAP (size_of_sh_with_ctxt ctxt) shapes), and size_of_sh_with_ctxt ctxt (Named name) = case ALOOKUP ctxt name of SOME info => info.size | NONE => 1. Lean sizeOfShapeWithContextHOL has the same three clauses over the exact carriers: ShapeHOL (one/comb/named), StructContextExact = List (MlS x StructInfoHOLExact), and StructInfoHOLExact (the tagged exact struct_info with fields and Nat size). The HOL SUM (MAP ...) fold is rendered by the mutually recursive sizeOfShapesWithContextHOL with the []/0 and +/cons clauses, and HOL ALOOKUP is rendered by structContextLookupHOL (structContextLookupHOL_nil, structContextLookupHOL_cons). No extra hypotheses or side conditions."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -10616,8 +10648,8 @@
     "hol_name": "size_of_shape_def",
     "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
     "lean_name": "sizeOfShapeHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.27). HOL panLangScript.sml:174-177 defines size_of_shape One = 1, size_of_shape (Comb shapes) = SUM (MAP size_of_shape shapes), and size_of_shape (Named name) = 1 (HOL comments that the Named case 'should not happen'). Lean sizeOfShapeHOL over the exact ShapeHOL carrier matches clause-for-clause: .one => 1, .comb shapes => sizeOfShapesHOL shapes (the []/shape::shapes = sizeOfShapeHOL shape + sizeOfShapesHOL shapes fold rendering of SUM (MAP size_of_shape shapes), starting from 0), and .named _ => 1. No extra hypotheses or side conditions; it never inspects the structure context."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
@@ -10664,16 +10696,16 @@
     "hol_name": "is_wf_flds_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "isWfFldsExactHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.24). HOL panLangScript.sml:148-152 defines is_wf_flds ctxt [] = T and is_wf_flds ctxt ((fld,sh)::flds) = is_wf_shape ctxt sh and is_wf_flds ctxt flds. Lean isWfFldsExactHOL has exactly the same two clauses over the exact carriers: the field list is List (MlS x ShapeHOL) with MlS the mlstring name and ShapeHOL the exact shape carrier; the field name fld is ignored exactly as HOL ignores it, and is_wf_shape is the tagged exact isWfShapeExactHOL. No extra hypotheses or side conditions."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "is_wf_ctxt_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "isWfCtxtExactHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.25). HOL panLangScript.sml:154-161 defines is_wf_ctxt [] = T and is_wf_ctxt ((nm,info)::ctxt') = (ALOOKUP ctxt' nm = NONE) and is_wf_flds ctxt' info.fields and is_wf_ctxt ctxt'. Lean isWfCtxtExactHOL has exactly the same clauses over the exact carriers: StructContextExact = List (MlS x StructInfoHOLExact) with MlS the mlstring name and StructInfoHOLExact the tagged exact struct_info; ALOOKUP ctxt' nm = NONE is rendered by (structContextLookupHOL name rest).isNone (structContextLookupHOL is the reviewed first-match ALOOKUP used by the tagged exact isWfShapeExactHOL); is_wf_flds is the exact isWfFldsExactHOL, and the Bool and-chain preserves HOL conjunction order. No extra hypotheses or side conditions."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

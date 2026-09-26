@@ -926,19 +926,29 @@ decreasing_by
       (fixClockHOLFinite_clock_le entry (bodyResult, bodyContext.state))
       (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
 
-/-- FLAPJACK-SPECIFIC (not a HOL declaration): the state-level projection of the
-    clause-for-clause finite context evaluator
-    `evalPanSemRecursiveCallFiniteContext`, returning HOL `evaluate_def`'s
-    genuine `result option × state` pair.  Exposed clause-by-clause in
+/-- FLAPJACK-SPECIFIC provisional projection (not a HOL declaration; carries no
+    `@[hol]` tag): the state-level view of the clause-for-clause finite context
+    evaluator `evalPanSemRecursiveCallFiniteContext`.
+
+    As with the broad exact evaluator `evalPanSemRecursiveCallContextHOLExact`,
+    the outer `Option` is the *assembly marker* for the recursive cases (it is
+    `none` only on the not-yet-assembled internal branches), not part of HOL
+    `evaluate_def`'s `result option × state` result.  The totality/equivalence
+    proof that the outer `Option` is always `some` is still pending (bead
+    `flapjack-6yq`), so this wrapper deliberately keeps the marker rather than
+    totalizing an unreachable `none` branch to `(none, state)` (which would be
+    observationally wrong).
+
+    Exposed clause-by-clause in
     `Flapjack.Pancake.Semantics.PanSem.EvaluateFinite`. -/
 def evaluateHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
-    ProgHOL width → Option (PanSemResultExact width) × PanSemStateFiniteExact width σ
-  | program =>
-      match evalPanSemRecursiveCallFiniteContext program ⟨state, h, hshared⟩ with
-      | some (result, context) => (result, context.state)
-      | none => (none, state)
+    ProgHOL width →
+      Option (Option (PanSemResultExact width) × PanSemStateFiniteExact width σ) :=
+  fun program =>
+    (evalPanSemRecursiveCallFiniteContext program ⟨state, h, hshared⟩).map
+      (fun pair => (pair.1, pair.2.state))
 
 end PanSemStateFiniteExact
 

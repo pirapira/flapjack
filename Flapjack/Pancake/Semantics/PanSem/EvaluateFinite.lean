@@ -8,9 +8,12 @@ HOL `panSem$state` instead keeps those fields as finite maps (`varname |-> 'a v`
 `|->`), so the evaluator is faithful only on the finite-support subcarrier.
 
 `PanSemStateFiniteExact.evaluateHOLFinite` (in the carrier module
-`StateExactFiniteMap.lean`) is the state-level projection of the direct,
-clause-for-clause finite context evaluator `evalPanSemRecursiveCallFiniteContext`,
-returning HOL `evaluate_def`'s genuine `result option × state` pair.  The finite
+`StateExactFiniteMap.lean`) is the provisional state-level projection of the
+direct, clause-for-clause finite context evaluator
+`evalPanSemRecursiveCallFiniteContext`.  It currently keeps the outer `Option`
+assembly marker (the marker is always `some` once totality is proved; bead
+`flapjack-6yq`), so a clause returns `some (result, state)` rather than HOL
+`evaluate_def`'s bare `result option × state` pair.  The finite
 context threads `memaddrsDecidable`/`shMemaddrsDecidable` (bead `flapjack-6yq`)
 so the recursive clauses typecheck over literal record updates.
 
@@ -122,7 +125,7 @@ theorem evaluateHOLFiniteViaExact_of_broad {width : Nat} {σ : Type} [NeZero wid
 @[simp] theorem evaluateHOLFinite_skip {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
-    evaluateHOLFinite state (.skip : ProgHOL width) = (none, state) := by
+    evaluateHOLFinite state (.skip : ProgHOL width) = some (none, state) := by
   unfold evaluateHOLFinite
   simp [evalPanSemRecursiveCallFiniteContext]
 
@@ -130,7 +133,7 @@ theorem evaluateHOLFiniteViaExact_of_broad {width : Nat} {σ : Type} [NeZero wid
 @[simp] theorem evaluateHOLFinite_break {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
-    evaluateHOLFinite state (.break : ProgHOL width) = (some .break, state) := by
+    evaluateHOLFinite state (.break : ProgHOL width) = some (some .break, state) := by
   unfold evaluateHOLFinite
   simp [evalPanSemRecursiveCallFiniteContext]
 
@@ -138,7 +141,7 @@ theorem evaluateHOLFiniteViaExact_of_broad {width : Nat} {σ : Type} [NeZero wid
 @[simp] theorem evaluateHOLFinite_continue {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
-    evaluateHOLFinite state (.continue : ProgHOL width) = (some .continue, state) := by
+    evaluateHOLFinite state (.continue : ProgHOL width) = some (some .continue, state) := by
   unfold evaluateHOLFinite
   simp [evalPanSemRecursiveCallFiniteContext]
 

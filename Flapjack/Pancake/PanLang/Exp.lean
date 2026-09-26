@@ -524,7 +524,10 @@ decreasing_by
 reviewed HOL-shaped `shapeValHOL` at a valid one-bit word width, then transport
 its canonical zero/record output to the parser's generic word carrier. Shape
 names are discarded by HOL `shape_val` itself; `shapeToHOL`'s byte encoding
-therefore cannot affect this result. -/
+therefore cannot affect this result. Width one is safe here because
+`shapeValHOL` constructs only zero constants and records of those constants;
+the adapter discards the one-bit word and calls `ofInt 0` for the caller's
+carrier. No arithmetic or width-sensitive observation crosses this boundary. -/
 def shapeValViaHOL {α : Type} (ofInt : Int → α) (shape : Flapjack.Shape) :
     Flapjack.Exp α :=
   decodeShapeValHOL ofInt

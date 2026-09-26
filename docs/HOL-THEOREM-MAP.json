@@ -9576,64 +9576,64 @@
     "hol_name": "reg_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmRegOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmRegOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "fp_reg_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmFpRegOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmFpRegOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "reg_imm_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmRegImmOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmRegImmOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "offset_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmOffsetOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmOffsetOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "arith_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmArithOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmArithOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "fp_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmFpOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmFpOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "cmp_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmCmpOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmCmpOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "inst_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmInstOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmInstOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/stackPropsScript.sml",
@@ -9648,8 +9648,8 @@
     "hol_name": "asm_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmOk",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",

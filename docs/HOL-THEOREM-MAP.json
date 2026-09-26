@@ -5633,8 +5633,8 @@
     "hol_name": "mem_store_32_alt",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemStore32Alt.lean",
     "lean_name": "panMemStore32HOL_eq_alt",
-    "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.22; FLAPJACK-SPECIFIC, documented_mismatch). HOL mem_store_32_alt (panSemScript.sml:344-378) restates mem_store_32 with shifted-byte writes for an arbitrary 'a word memory. panMemStore32HOL_eq_alt (MemStore32Alt.lean:124) proves the same agreement but only for RiscV.Word 64, and the underlying get_byte/set_byte live in HOL stdlib outside the cakeml submodule. Exact arbitrary-width port tracked by flapjack-pxn.18.3.6.9.29."
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-c (source comparison, 2026-09-26; bead flapjack-pxn.18.3.6.9.29). HOL panSemScript.sml:344-378 states the arbitrary-word-width update with aligned/domain guards and endian-specific w2w shifts at w through w+3. panMemStore32HOL_eq_alt is polymorphic over positive BitVec width and HolWordLab memory, and its RHS follows those same four updates. Source-level review compared the big/little-endian shift order, narrowed w2w low-byte behavior, alignment, domain check, total-map update, and failure branches. The HOL get_byte/set_byte standard-library definitions are encoded by panGetByteHOL/panSetByteHOL, with the byte equations proved in this module. Representative widths 1, 7, 24, and 64 instantiate the theorem."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

@@ -11710,6 +11710,15 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_exns_wf",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsExnsWfHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.76; panPropsScript.sml:1419-1430): HOL quantifies s, ds, s' and states evaluate_decls s ds = SOME s' ==> ALL_DISTINCT (MAP FST (exceptions ds)) AND EVERY (lambda (eid,sh). FLOOKUP s.eshapes eid = NONE) (exceptions ds) AND EVERY (is_wf_shape s.structs o SND) (exceptions ds). Lean keeps the s ds s' order (s' is used by the success hypothesis) and the three-part conjunction, rendering ALL_DISTINCT (MAP FST x) as Nodup of the Prod.fst projection of exceptionsHOL, FLOOKUP s.eshapes eid = NONE as the Bool (state.eshapes.lookup eid).isNone = true that the evaluator's own guard performs, and is_wf_shape s.structs as the tagged isWfShapeExactHOL. exceptionsHOL and isWfShapeExactHOL are the tagged panLang ports. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical holFmapAsFiniteSupportWitness, which the qualifier records. Proof: induction on the program; the ExnDecl head derives head freshness and well-formedness from the success guard, applies the induction hypothesis to the updated table, then combines tail distinctness, freshness (forward and backward through the single update via the untagged lookup_update_ne) and well-formedness. [NeZero width] models HOL's positive word dimension and DecidablePred state.memaddrs is computation evidence for the HOL word-set guard."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "evaluate_decls_functions",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
     "lean_name": "evaluateDeclsFunctionsHOLFinite",
@@ -11719,12 +11728,39 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_only_exn_decls",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsOnlyExnDeclsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.77; panPropsScript.sml:1436-1445): HOL quantifies s, ds, s' with the conjunction EVERY is_exn_decl ds AND evaluate_decls s ds = SOME s', concluding s' = s with eshapes := s.eshapes |++ exceptions ds. Lean preserves the quantifier order, renders EVERY is_exn_decl as program.all isExnDeclHOL = true over the reviewed DeclHOL carrier, keeps the successful-evaluation premise, and states HOL's record update with exceptionsHOL and HolFiniteMapExact.updateList rendering HOL |++ (FUPDATE_LIST). PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical witness, which the qualifier records. Proof: induction on the program; the all-isExnDecl premise forces every head to ExnDecl, so only eshapes changes and the conclusion follows by updateList_cons and the induction hypothesis. [NeZero width] and DecidablePred state.memaddrs retain the reviewed HOL word/set encodings."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "evaluate_decls_only_functions",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
     "lean_name": "evaluateDeclsOnlyFunctionsHOLFinite",
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.85; panPropsScript.sml:1528-1536): HOL quantifies s, pan_code, s' with the conjunction EVERY is_function pan_code AND evaluate_decls s pan_code = SOME s', concluding s' = s with code := s.code |++ functions pan_code. Lean preserves the quantifier order, renders EVERY is_function as program.all isFunctionHOL = true over the reviewed DeclHOL carrier, keeps the successful-evaluation premise, and states HOL's record update with functionsHOL and HolFiniteMapExact.updateList. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical witness, which the qualifier records. Proof: induction on the program; the all-isFunction premise forces every head to be Function, so only code changes and the conclusion follows by updateList_cons and the induction hypothesis. [NeZero width] and DecidablePred state.memaddrs retain the reviewed HOL word/set encodings."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_only_funs_and_exn_decls",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsOnlyFunsAndExnDeclsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.88; panPropsScript.sml:1561-1571): HOL quantifies s, ds, s' with the conjunction EVERY (lambda d. is_function d OR is_exn_decl d) ds AND evaluate_decls s ds = SOME s', concluding s' = s with code := s.code |++ functions ds and eshapes := s.eshapes |++ exceptions ds. Lean preserves the quantifier order, renders the EVERY disjunction as program.all (fun d => isFunctionHOL d || isExnDeclHOL d) = true over the reviewed DeclHOL carrier, keeps the successful-evaluation premise, and states HOL's two-field record update with functionsHOL/exceptionsHOL and HolFiniteMapExact.updateList rendering HOL |++. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical witness, which the qualifier records. Proof: induction on the program; Function heads update code and ExnDecl heads update eshapes, other constructors contradict the premise, and each branch follows by updateList_cons and the induction hypothesis. [NeZero width] and DecidablePred state.memaddrs retain the reviewed HOL word/set encodings."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "exns_wf_evaluate_decls",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "exnsWfEvaluateDeclsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "flapjack-ds9 (direct source comparison, bead flapjack-4ac.4.78; panPropsScript.sml:1448-1462): HOL quantifies s, ds, s' with the conjunction EVERY is_exn_decl ds AND ALL_DISTINCT (MAP FST (exceptions ds)) AND EVERY (lambda (eid,sh). FLOOKUP s.eshapes eid = NONE) (exceptions ds) AND EVERY (is_wf_shape s.structs o SND) (exceptions ds), concluding evaluate_decls s ds = SOME (s with eshapes := s.eshapes |++ exceptions ds). HOL's s' is dead: it occurs in no hypothesis and not in the conclusion, so HOL type inference gives it a fresh independent type variable; Lean binds it fully polymorphically as {gamma : Type} (_result : gamma) after the program, preserving the s ds s' order without narrowing it to the state type. The premises use the same Bool all/isNone/isWfShapeExactHOL vocabulary as evaluateDeclsExnsWfHOLFinite, and the conclusion states HOL's record update with exceptionsHOL (tagged panLang port) and HolFiniteMapExact.updateList rendering |++ (FUPDATE_LIST). PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields with the same-module canonical witness, which the qualifier records. Proof: induction on the program; the ExnDecl head satisfies the evaluator's freshness/well-formedness guard, the induction hypothesis is applied to the updated table with tail premises transported through the single update, and the conclusion follows by updateList_cons. [NeZero width] and DecidablePred state.memaddrs retain the reviewed HOL word/set encodings."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",

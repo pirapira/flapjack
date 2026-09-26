@@ -38,6 +38,104 @@ DATA_DECLARATION_RE = re.compile(
 # inventory small and source-reviewed; a mismatch row is not generated merely
 # because an arbitrary Lean def happens to mention a HOL name.
 WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmRegOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "reg_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL reg_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmFpRegOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "fp_reg_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL fp_reg_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmRegImmOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "reg_imm_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL reg_imm_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmOffsetOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "offset_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL offset_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmArithOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "arith_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL arith_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmFpOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "fp_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL fp_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmCmpOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "cmp_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL cmp_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmInstOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "inst_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL inst_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "asm_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL asm_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Backend/StackProps.lean", "asmAddrOk"): (
+        "cakeml/compiler/backend/semantics/stackPropsScript.sml",
+        "addr_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL addr_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Pancake/WordConvs.lean", "distinctTarReg"): (
+        "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+        "distinct_tar_reg_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL distinct_tar_reg_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Pancake/WordConvs.lean", "twoRegInst"): (
+        "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+        "two_reg_inst_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL two_reg_inst_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Pancake/WordConvs.lean", "instOkLess"): (
+        "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+        "inst_ok_less_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL inst_ok_less_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Pancake/WordConvs.lean", "instArgConvention"): (
+        "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+        "inst_arg_convention_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL inst_arg_convention_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
     ("Flapjack/Pancake/WordLang.lean", "everyVarImm"): (
         "cakeml/compiler/backend/wordLangScript.sml",
         "every_var_imm_def",
@@ -1566,15 +1664,6 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Shape.lean", "withShapeHOL"),
         ("Flapjack/AstHOL.lean", "Shift"),
         ("Flapjack/Pancake/PanLang.lean", "PanLangShift"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmRegOk"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmFpRegOk"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmRegImmOk"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmOffsetOk"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmArithOk"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmFpOk"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmCmpOk"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmInstOk"),
-        ("Flapjack/Compiler/Encoders/Asm.lean", "asmOk"),
         ("Flapjack/FfiHOL.lean", "HolFfiOutcome"),
         ("Flapjack/FfiHOL.lean", "HolOracleResult"),
         ("Flapjack/FfiHOL.lean", "HolShmemOp"),
@@ -1601,13 +1690,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Compiler/Backend/StackNames.lean", "progCompEntry"),
         ("Flapjack/Compiler/Backend/StackNames.lean", "compile"),
         ("Flapjack/Compiler/Backend/StackNames.lean", "map_fst_compile"),
-        ("Flapjack/Compiler/Backend/StackProps.lean", "asmAddrOk"),
         ("Flapjack/Pancake/PanStructs.lean", "afindi"),
         ("Flapjack/Misc/Sptree.lean", "NumSet"),
-        ("Flapjack/Pancake/WordConvs.lean", "distinctTarReg"),
-        ("Flapjack/Pancake/WordConvs.lean", "twoRegInst"),
-        ("Flapjack/Pancake/WordConvs.lean", "instOkLess"),
-        ("Flapjack/Pancake/WordConvs.lean", "instArgConvention"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

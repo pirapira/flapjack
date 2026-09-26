@@ -9505,16 +9505,16 @@
     "hol_name": "distinct_tar_reg_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "distinctTarReg",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-onwg): exact clause-for-clause port to Flapjack/Pancake/WordConvs.lean distinctTarReg over WordLangInst (BitVec width); HOL ri <> Reg r1 rendered as match ri with Reg r => r != r1 | Imm _ => true; AddCarry r1<>r3/r1<>r4, AddOverflow/SubOverflow r1<>r3, catch-all T; no extra hypotheses."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL distinct_tar_reg_def (cakeml/compiler/backend/semantics/wordConvsScript.sml). HOL distinct_tar_reg_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "two_reg_inst_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "twoRegInst",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-onwg): exact port to twoRegInst; Binop/Shift/AddCarry/AddOverflow/SubOverflow all require r1 = r2 (Lean r1 == r2), catch-all T; same five clauses, no extra hypotheses."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL two_reg_inst_def (cakeml/compiler/backend/semantics/wordConvsScript.sml). HOL two_reg_inst_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
@@ -9633,88 +9633,88 @@
     "hol_name": "reg_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmRegOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmRegOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL reg_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL reg_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "fp_reg_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmFpRegOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmFpRegOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL fp_reg_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL fp_reg_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "reg_imm_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmRegImmOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmRegImmOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL reg_imm_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL reg_imm_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "offset_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmOffsetOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmOffsetOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL offset_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL offset_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "arith_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmArithOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmArithOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL arith_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL arith_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "fp_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmFpOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmFpOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL fp_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL fp_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "cmp_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmCmpOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmCmpOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL cmp_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL cmp_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "inst_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmInstOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmInstOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL inst_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL inst_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/stackPropsScript.sml",
     "hol_name": "addr_ok_def",
     "lean_path": "Flapjack/Compiler/Backend/StackProps.lean",
     "lean_name": "asmAddrOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-5ldn): clause-for-clause exact vs stackPropsScript.sml:801-808 over the faithful asm address carrier: reg_ok -> asmRegOk; op in {Load;Store;Load32;Store32} -> addr_offset_ok; op in {Load16;Store16} -> hw_offset_ok && ISA <> Ag32; else byte_offset_ok; HOL conjunction rendered as Lean &&. No extra hypotheses."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL addr_ok_def (cakeml/compiler/backend/semantics/stackPropsScript.sml). HOL addr_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/encoders/asm/asmScript.sml",
     "hol_name": "asm_ok_def",
     "lean_path": "Flapjack/Compiler/Encoders/Asm.lean",
     "lean_name": "asmOk",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-2m03): clause-for-clause exact against asmScript.sml; carrier asmOk uses the tagged exact asmScript datatypes, avoid_regs MEM=List.contains, INL/INR=Sum.inl/inr, -1w=BitVec (-1), implication=||, ISA IN set=equality disjunction, w2n=toNat, w<=max signed=toInt comparisons, aligned=toNat%2^alignment=0"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL asm_ok_def (cakeml/compiler/encoders/asm/asmScript.sml). HOL asm_ok_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",
     "hol_name": "inst_ok_less_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "instOkLess",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-onwg): exact port to instOkLess over AsmConfig width/WordLangInst (BitVec width). Each clause matches (valid_imm INL/inl; Shift (i=0w==>l=Lsl) and w2n i<dimindex as (!(value==0)||operator==.lsl)&&value.toNat<width; Div ISA set; LongMul/AddCarry/AddOverflow/SubOverflow guard implications; Mem membership sets and addr/hw/byte offset fallback; all FP reg/offset checks; FPMovToReg/FromReg dimindex=32 guard as !(width==32); catch-all T)."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL inst_ok_less_def (cakeml/compiler/backend/semantics/wordConvsScript.sml). HOL inst_ok_less_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
@@ -9737,8 +9737,8 @@
     "hol_name": "inst_arg_convention_def",
     "lean_path": "Flapjack/Pancake/WordConvs.lean",
     "lean_name": "instArgConvention",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-onwg): exact port to instArgConvention; AddCarry/AddOverflow/SubOverflow r4=0, Shift (Reg r) r=8 (Imm falls through to T as in HOL), LongMul r1=6/r2=0/r3=0/r4=4, LongDiv r1=0/r2=6/r3=6/r4=0, catch-all T; no extra hypotheses."
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds8 (bead flapjack-4ac.6): non-exact source review of the held reviewed_exact promotion for HOL inst_arg_convention_def (cakeml/compiler/backend/semantics/wordConvsScript.sml). HOL inst_arg_convention_def uses a positive-dimensional word type; the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 is admitted. The HOL tag was withdrawn; faithful width-restricted restatement tracked separately."
   },
   {
     "hol_path": "cakeml/compiler/backend/semantics/wordConvsScript.sml",

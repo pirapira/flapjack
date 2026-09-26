@@ -61,7 +61,7 @@ import Flapjack.Pancake.Semantics.PanSem.FiniteSupportStep
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang
-  (MlS ShapeHOL StructContextExact ProgHOL ExpHOL DeclHOL isWfShapeExactHOL isNameHOL
+  (MlS ShapeHOL StructContextExact ProgHOL ExpHOL DeclHOL FunDeclHOL isWfShapeExactHOL isNameHOL
     functionsHOL)
 
 /-- `HolFiniteMapExact` is extensional: two values with the same `lookup` are
@@ -1273,6 +1273,62 @@ theorem evaluateDeclsHOLFinite_functions {width : Nat} {σ : Type} [NeZero width
               | false => rfl
               | true => exact absurd hcond hcondition
             simp [condition, hfalse] at hresult
+
+/-- Infrastructure for `evaluate_decl_commute`: the canonical finite evaluator
+    is unchanged when only the `code` field of a state whose locals have been
+    cleared is updated (`eval_upd_code_eq` applied under `emptyLocalsHOLFinite`).
+    Not a separate HOL declaration. -/
+private theorem evalHOLFinite_emptyLocals_code {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (c : HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (e : ExpHOL width) :
+    @evalHOLFinite width σ _ (emptyLocalsHOLFinite { state with code := c }) h e
+      = @evalHOLFinite width σ _ (emptyLocalsHOLFinite state) h e :=
+  @evalHOLFinite_upd_code_eq width σ _ (emptyLocalsHOLFinite state) h c e
+
+section
+
+set_option maxHeartbeats 4000000
+
+/-- HOL `panProps$evaluate_decl_commute` (`panPropsScript.sml:1472-1480`):
+    swapping an adjacent `Function` and `Decl` declaration leaves the result of
+    `evaluate_decls` unchanged, because `Decl` clears the locals and updates only
+    `globals`/`eshapes`, while `Function` updates only `code` and the evaluator
+    does not read `code`. Stated over the canonical tagged finite-map evaluator
+    `evaluateDeclsHOLFinite`, the exact Lean counterpart of HOL
+    `panSem$evaluate_decls`. The `fmap_as_finite_support` qualifier records only
+    the four `|->` fields, so the quantifiers and conclusion match HOL. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decl_commute"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsHOLFinite_declCommute {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (fi : FunDeclHOL width) (sh : ShapeHOL) (v' : MlS) (e : ExpHOL width)
+    (ds : List (DeclHOL width)) :
+    evaluateDeclsHOLFinite state (.function fi :: .decl sh v' e :: ds)
+      = evaluateDeclsHOLFinite state (.decl sh v' e :: .function fi :: ds) := by
+  simp only [evaluateDeclsHOLFinite]
+  rw [evalHOLFinite_emptyLocals_code]
+  simp only [setGlobalHOLFinite]
+  by_cases hwf : (fi.params.all (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+      isWfShapeExactHOL state.structs fi.returnShape) = true
+  · rw [if_pos hwf]
+    letI : DecidablePred state.emptyLocalsHOLFinite.memaddrs := h
+    cases hev : evalHOLFinite (emptyLocalsHOLFinite state) e with
+    | none => rfl
+    | some value =>
+        by_cases hshape : shapeEqHOL sh (shapeOfHOLExact value) = true
+        · simp [hshape, hwf]
+        · simp [hshape]
+  · rw [if_neg hwf]
+    letI : DecidablePred state.emptyLocalsHOLFinite.memaddrs := h
+    cases hev : evalHOLFinite (emptyLocalsHOLFinite state) e with
+    | none => rfl
+    | some value =>
+        by_cases hshape : shapeEqHOL sh (shapeOfHOLExact value) = true
+        · simp [hshape, hwf]
+        · simp [hshape]
+
+end
 
 /-- FLAPJACK-SPECIFIC (no `@[hol]` tag): the clause-for-clause finite context
     evaluator is total.  Its outer `Option` is only the recursive-case assembly

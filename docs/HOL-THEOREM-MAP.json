@@ -11803,5 +11803,19 @@
       "eshapes"
     ],
     "reviewer": "flapjack-ds10 (source comparison, bead flapjack-wci6): HOL panPropsScript.sml:664-672 states forall t e esh, eval (t with eshapes := esh) e = eval t e, where `esh` is HOL's finite function map. Lean quantifies the same state and expression over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evalHOLFinite, with the HOL `eshapes` finite map represented by the canonical translation HolFiniteMapExact and the update rendered as the record update `{state with eshapes := es}`. The exact evaluator never inspects `eshapes`, so the untagged broad-carrier support evalHOLExact_upd_eshapes_eq holds over PanSemStateExact and the finite theorem is its toExact instance. StateExactFiniteMap.lean hosts the owning carrier and its same-module holFmapAsFiniteSupportWitness. Added hypothesis `[DecidablePred state.memaddrs]` only; qualifier representation-only."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decl_commute",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evaluateDeclsHOLFinite_declCommute",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-4ac.4.79): HOL panPropsScript.sml:1472-1480 states forall s fi sh v' e ds, evaluate_decls s (Function fi::Decl sh v' e::ds) = evaluate_decls s (Decl sh v' e::Function fi::ds). Lean quantifies the same state, function declaration, shape, name, expression and declaration list, and states the identical equality over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evaluateDeclsHOLFinite (the reviewed counterpart of panSem evaluate_decls_def), with FunDeclHOL/DeclHOL the exact panLang carriers. The HOL proof uses eval_upd_code_eq plus state_fupdcanon; Lean uses the tagged evalHOLFinite_upd_code_eq (panProps eval_upd_code_eq) under emptyLocalsHOLFinite and record-update commutation. StateExactFiniteMap.lean hosts the owning carrier PanSemStateFiniteExact and its same-module canonical witness holFmapAsFiniteSupportWitness for the four HolFiniteMapExact fields. The only added hypothesis is `[DecidablePred state.memaddrs]`, the executable-decision artifact; the qualifier is representation-only and the quantifiers and conclusion are unchanged."
   }
 ]

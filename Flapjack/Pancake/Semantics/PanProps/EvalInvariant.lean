@@ -1791,8 +1791,10 @@ instance updateLocalsForVarsSimpsDecidablePred {width : Nat} {σ : Type} [NeZero
     (`cakeml/pancake/semantics/panPropsScript.sml:1042`): binding a fresh local
     name `n` to `w` leaves `eval e` unchanged when `n` does not occur in
     `var_exp e`. The quantifier order is HOL's `s e v n w`; HOL's `v` does not
-    occur in its conclusion, so the Lean statement binds the dead `v` at the
-    evaluator's value type `ValueHOL width` (the same type as the live `w`). The
+    occur in the hypothesis or conclusion, so HOL type inference gives it a
+    fresh independent type variable (distinct from the locals value type of the
+    live `w`), and the Lean statement binds it fully polymorphically as
+    `{β : Type} (_value : β)`. The
     state is the reviewed PanProps finite-map carrier: `updateLocalsForVarsSimps`
     renders HOL's `locals |+ (n, w)` through `HolFiniteMapExact.updateEq`, and
     `evalHOL` delegates to the exact broad evaluator through `toExact`. The four
@@ -1804,11 +1806,11 @@ instance updateLocalsForVarsSimpsDecidablePred {width : Nat} {σ : Type} [NeZero
   (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem updateLocalsNotVarsEvalEqEqHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
-      (expression : ExpHOL width) (_value : ValueHOL width) (name : MlS)
+      (expression : ExpHOL width) {β : Type} (_value : β) (name : MlS)
       (word : ValueHOL width),
       name ∉ varExpHOL expression →
         (updateLocalsForVarsSimps state name word).evalHOL expression = state.evalHOL expression := by
-  intro state hdec expression _value name word h
+  intro state hdec expression β _value name word h
   rw [evalHOL_updateLocalsForVarsSimps]
   exact evalHOLExact_updLocals_not_mem state.toExact name word expression h
 
@@ -1831,16 +1833,17 @@ theorem updateLocalsNotVarsEvalEqHOLFinite {width : Nat} {σ : Type} [NeZero wid
 /-- Exact finite-support port of HOL `panProps$update_locals_not_vars_eval_eq_NONE`
     (`cakeml/pancake/semantics/panPropsScript.sml:1069`): a fresh local binding
     preserves a failing evaluation. Quantifier order is HOL's `s e v n w`; as in
-    the source, the dead `v` is bound at the evaluator's value type. -/
+    the source, the dead `v` gets a fresh independent HOL type variable and is
+    bound fully polymorphically as `{β : Type} (_value : β)`. -/
 @[hol "cakeml/pancake/semantics/panPropsScript.sml" "update_locals_not_vars_eval_eq_NONE"
   (fmap_as_finite_support := [locals, globals, code, eshapes])]
 theorem updateLocalsNotVarsEvalEqNoneHOLFinite {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
-      (expression : ExpHOL width) (_value : ValueHOL width) (name : MlS)
+      (expression : ExpHOL width) {β : Type} (_value : β) (name : MlS)
       (word : ValueHOL width),
       (name ∉ varExpHOL expression ∧ state.evalHOL expression = none) →
         (updateLocalsForVarsSimps state name word).evalHOL expression = none := by
-  intro state hdec expression _value name word h
+  intro state hdec expression β _value name word h
   rw [updateLocalsNotVarsEvalEqEqHOLFinite state expression _value name word h.1, h.2]
 
 /-- Exact finite-support port of HOL `panProps$eval_fresh_var`

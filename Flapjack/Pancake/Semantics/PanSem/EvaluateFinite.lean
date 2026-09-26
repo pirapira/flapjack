@@ -674,6 +674,69 @@ theorem evalPanSemRecursiveCallFiniteContext_tick_projection {width : Nat} {σ :
   · rw [if_neg hclock, if_neg hclock]
     rfl
 
+/-- Projection equivalence on `Return` (see `..._skip_projection`). -/
+theorem evalPanSemRecursiveCallFiniteContext_return_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) (value : ExpHOL width) :
+    (evalPanSemRecursiveCallFiniteContext (.return value : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact (.return value : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  dsimp only
+  letI : DecidablePred context.state.memaddrs := context.memaddrsDecidable
+  rw [← evalHOLFinite_eq_toExact context.state value]
+  generalize hval : context.state.evalHOLFinite value = result
+  cases result with
+  | none => simp only [Option.map_some]
+  | some returned =>
+      simp only []
+      by_cases hsize : Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL context.state.structs
+          (shapeOfHOLExact returned) ≤ 32
+      · rw [if_pos hsize, if_pos hsize]
+        rfl
+      · rw [if_neg hsize, if_neg hsize]
+        rfl
+
+/-- Projection equivalence on `Raise` (see `..._skip_projection`). -/
+theorem evalPanSemRecursiveCallFiniteContext_raise_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) (exception : MlS)
+    (value : ExpHOL width) :
+    (evalPanSemRecursiveCallFiniteContext (.raise exception value : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact (.raise exception value : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  dsimp only
+  letI : DecidablePred context.state.memaddrs := context.memaddrsDecidable
+  rw [← evalHOLFinite_eq_toExact context.state value]
+  generalize hval : context.state.evalHOLFinite value = result
+  cases result with
+  | none => simp only [Option.map_some]
+  | some raised =>
+      simp only []
+      cases hshape : context.state.eshapes.lookup exception with
+      | none => simp only [Option.map_some]
+      | some shape =>
+          simp only []
+          by_cases heq : shapeEqHOL (shapeOfHOLExact raised) shape
+          · rw [if_pos heq, if_pos heq]
+            by_cases hsize : Flapjack.Pancake.PanLang.sizeOfShapeWithContextHOL context.state.structs
+                (shapeOfHOLExact raised) ≤ 32
+            · rw [if_pos hsize, if_pos hsize]
+              rfl
+            · rw [if_neg hsize, if_neg hsize]
+              rfl
+          · rw [if_neg heq, if_neg heq]
+            rfl
+
 end PanSemStateFiniteExact
 
 end Flapjack

@@ -11261,5 +11261,13 @@
     "lean_name": "evalCrepClockProg",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-luna-b (source comparison, 2026-09-26; bead flapjack-4ac.5.60; HOL theorem variables s, rv, rvs, vs, p are implicitly universally quantified. Premises are globals_lookup s rv = SOME rvs; size_of_shape (shape_of rv) <= 32; ALL_DISTINCT vs; LENGTH vs = size_of_shape (shape_of rv). Conclusion is evaluate (nested_decs vs (load_globals 0w (size_of_shape (shape_of rv))) p,s) equal to the let-bound evaluation of p after globals are installed, with exact FOLDL res_var restoration from the original locals. evalCrepClockProg is a restricted evaluator over production CrepClockProg/CrepExp/CrepHolState; the production globalsLookup uses String-backed PanValue and CrepRuntimeState. Exact loadGlobalsHOL/nestedDecsHOL and positive-width ValueHOL/CrepSemHOLState exist, but no full evaluate over CrepProgHOL/CrepSemHOLState or exact globals_lookup bridge exists. No @[hol] tag is claimed. Faithful replacement flapjack-4ac.5.60.1 depends on flapjack-4ac.5.82 and flapjack-pxn.18.3.5.8.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+    "hol_name": "eval_nested_decs_seq_res_var_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/CrepSem/Eval.lean",
+    "lean_name": "evalCrepHolExp",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-luna-b (source comparison, 2026-09-26; bead flapjack-4ac.5.19; HOL variables es, ns, t, ev, p are implicitly universally quantified. Premises are MAP (eval t) es = MAP SOME ev; LENGTH ns = LENGTH es; distinct_lists ns (FLAT (MAP var_cexp es)); ALL_DISTINCT ns. Conclusion is evaluate (nested_decs ns es p,t) equal to the let-bound evaluate (p,t with locals := t.locals |++ ZIP (ns,ev)), with result locals restored by FOLDL res_var over ZIP (ns, MAP (FLOOKUP t.locals) ns). nestedDecsHOL is syntax only. evalCrepHolExp has production CrepExp/CrepHolState carriers and evalCrepClockProg covers only restricted CrepClockProg/CrepHolState; no complete evaluator over CrepProgHOL/CrepExpHOL/CrepSemHOLState is available. These evaluators cannot express the full theorem, so no @[hol] tag is claimed. Faithful replacement flapjack-4ac.5.19.1 depends on flapjack-4ac.5.82 and flapjack-pxn.18.3.5.8.8."
   }
 ]

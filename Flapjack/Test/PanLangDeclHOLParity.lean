@@ -145,11 +145,13 @@ proves every declaration it returns is `DeclByteRanged`. Composing that with
 `parseTopDecs_routes_exactBoundary`: the exact MLString-keyed compiler boundary
 applied to the parser output equals the production `compileProgTopHOL`. This is
 kernel-proved propositional equality (via the `DeclByteRanged` premise), NOT
-definitional equality. Direct original-Pancake parity for the executed boundary
+definitional equality. The parser-backed production entrypoints now compose
+this invariant through the preceding Pancake passes and route the resulting
+declaration list through `compileProgTopHOLWithMetadataOfExact`. This is a
+carrier-boundary route with source-shaped Crep output, not an exact HOL
+`compile_prog` port. Direct original-Pancake parity for the executed boundary
 is `python3 scripts/check-parity-goldens.py` (wide_constants.pnk, parity
-goldens=1, failures=0). The executed pipeline still calls
-`compileProgTopHOLWithMetadata`; textual routing/tagging is tracked separately
-under parent beads `flapjack-6nn`/`flapjack-0up`. -/
+goldens=1, failures=0). -/
 example :
     Flapjack.Basis.Pure.MlString.toStringOfBytes
       (Flapjack.Basis.Pure.MlString.ofString (String.singleton (Char.ofNat 0x1d518))) ≠

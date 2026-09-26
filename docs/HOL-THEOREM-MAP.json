@@ -11282,6 +11282,15 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "lookup_code_wf_shape_invariant_step",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "lookupCodeWfShapeInvariantStep",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "Codex (direct source comparison, 2026-09-26, panPropsScript.sml:1233): preserves the successful OPT_MMAP(eval s) argexps premise, successful lookup_code result triple, FEVERY locals, FEVERY globals, and FEVERY conclusion for newlocals, in source order. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and same-module holFmapAsFiniteSupportWitness; `lookupCodeHOLFinite` returns the exact FEMPTY |++ ZIP locals map. A successful update-list lookup comes from a zipped `(parameterName,arg)` entry; the second component is in the evaluated argument list, and eval_is_wf_shape_v establishes its wf property. The update uses the lawful MlS equality instance, implementing HOL equality; shapeEqHOL is the reviewed equality test used by lookup_code. The qualifier records only the finite-map carrier. [NeZero width] and DecidablePred memaddrs retain the already reviewed HOL word/set encodings."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "write_bytearray_update_byte",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
     "lean_name": "writeBytearrayUpdateByte",

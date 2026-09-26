@@ -711,10 +711,11 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             (record["lean_path"], record["lean_name"]): record
             for record in MAP["build_inventory"]()
         }
-        self.assertNotIn(
-            ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"),
-            inventory,
-        )
+        compile_prog = inventory[
+            ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL")
+        ]
+        self.assertEqual(compile_prog["hol_name"], "compile_prog_def")
+        self.assertEqual(compile_prog["statement_status"], "documented_mismatch")
         documented_mismatches = (
             "firstCompileProgAllDistinct",
             "firstCompileToCrepAllDistinct",

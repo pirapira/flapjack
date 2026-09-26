@@ -495,6 +495,7 @@ mutual
 
   /-- Exact port of HOL `panLang$shape_vals` (the list clause of
   `shape_val_def`, `cakeml/pancake/panLangScript.sml:194`). -/
+  @[hol "cakeml/pancake/panLangScript.sml" "shape_val_def"]
   def shapeValsHOL {width : Nat} [NeZero width] :
       List ShapeHOL → List (ExpHOL width)
     | [] => []
@@ -504,8 +505,9 @@ mutual
     all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
-/-- HOL `shape_vals` is the list map of `shape_val`; this records that the
-Lean mutual pair realizes the two HOL clauses. -/
+/-- Flapjack-specific equation for the Lean mutual definition: HOL's
+`shape_val_def` defines `shape_vals` by recursion, but declares no separate
+map theorem. This helper has no separate HOL original. -/
 @[simp] theorem shapeValsHOL_eq_map {width : Nat} [NeZero width]
     (shapes : List ShapeHOL) :
     shapeValsHOL shapes = shapes.map (shapeValHOL (width := width)) := by

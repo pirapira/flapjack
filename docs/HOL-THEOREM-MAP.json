@@ -2321,6 +2321,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape_val_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "shapeValsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.29): this is the shape_vals list clause within the same HOL mutual definition shape_val_def (cakeml/pancake/panLangScript.sml:190-196), not a separate HOL declaration. shapeValsHOL matches [] = [] and shape :: shapes = shapeValHOL shape :: shapeValsHOL shapes over exact List ShapeHOL and List (ExpHOL width) carriers. Direct HOL-EVAL comb row in scripts/hol-probes/pan_lang_shape_val_probe.out exercises this clause. shapeValsHOL_eq_map is a Lean-only helper with no separate HOL theorem."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "load_op_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
     "lean_name": "loadMemOpHOL",

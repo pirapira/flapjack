@@ -381,6 +381,51 @@ def evalListFieldsHOLFinite {width : Nat} {σ : Type} [NeZero width]
     state.evalListFieldsHOLFinite fields =
       @evalListFieldsHOLExact width σ _ state.toExact h fields := rfl
 
+/-- Finite-support carrier wrapper for the exact recursive program evaluator:
+    it runs the broad exact evaluator on the forgetful projection `toExact`,
+    then rebuilds the resulting state as a finite-support value via `ofExact`,
+    using the result-state preservation theorem
+    `evalPanSemRecursiveCallContextHOLExact_finiteSupport`.  This is the
+    finite-map rendering of HOL `panSem$evaluate`; the clause bodies are the
+    reviewed exact clauses. -/
+def evalPanSemRecursiveCallHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
+    ProgHOL width →
+      Option (Option (PanSemResultExact width) × PanSemStateFiniteExact width σ)
+  | program =>
+      match hres : evalPanSemRecursiveCallContextHOLExact program
+          { state := state.toExact
+            memaddrsDecidable := h
+            shMemaddrsDecidable := hshared } with
+      | none => none
+      | some pair =>
+          some (pair.1,
+            ofExact pair.2.state
+              (evalPanSemRecursiveCallContextHOLExact_finiteSupport program
+                { state := state.toExact
+                  memaddrsDecidable := h
+                  shMemaddrsDecidable := hshared }
+                state.toExact_finiteSupport pair hres))
+
+/-- Projecting the finite recursive evaluator back through `toExact` recovers the
+    broad exact evaluator, so the wrapper uses the canonical finite-map
+    translation of the state carrier. -/
+theorem evalPanSemRecursiveCallHOLFinite_toExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
+    (program : ProgHOL width) :
+    (evalPanSemRecursiveCallHOLFinite state program).map
+        (fun pair => (pair.1, pair.2.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact program
+        { state := state.toExact
+          memaddrsDecidable := h
+          shMemaddrsDecidable := hshared }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  unfold evalPanSemRecursiveCallHOLFinite
+  dsimp only
+  split <;> simp_all only [Option.map_some, toExact_ofExact] <;> rfl
+
 end PanSemStateFiniteExact
 
 end Flapjack

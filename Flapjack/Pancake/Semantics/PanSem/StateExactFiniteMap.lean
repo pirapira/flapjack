@@ -1284,6 +1284,84 @@ theorem evaluateHOLFinite_ne_none {width : Nat} {σ : Type} [NeZero width]
   rw [houtput]
   simp
 
+/-- HOL `panProps$evaluate_decls_only_funs_and_exn_decls`
+    (`panPropsScript.sml:1561-1573`): when every declaration is a `Function` or
+    an `ExnDecl`, a successful evaluation records exactly the function entries
+    in `code` and the exception entries in `eshapes`.  Stated over the canonical
+    tagged finite-map evaluator `evaluateDeclsHOLFinite`; `updateList` is the
+    canonical finite-map `|++`, `functionsHOL`/`Flapjack.Pancake.PanLang.exceptionsHOL` are the tagged
+    HOL `functions`/`exceptions` ports, and the `EVERY` premise is rendered as
+    `program.all (fun d => Flapjack.Pancake.PanLang.isFunctionHOL d || Flapjack.Pancake.PanLang.isExnDeclHOL d) = true`.  The four
+    map-shaped state fields (`locals`, `globals`, `code`, `eshapes`) are
+    recorded by the `fmap_as_finite_support` qualifier (canonical witness
+    `holFmapAsFiniteSupportWitness` in this module). -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_only_funs_and_exn_decls"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsHOLFinite_onlyFunsAndExnDecls {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanSemStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (program : List (DeclHOL width)) (result : PanSemStateFiniteExact width σ),
+      program.all (fun declaration => Flapjack.Pancake.PanLang.isFunctionHOL declaration ||
+        Flapjack.Pancake.PanLang.isExnDeclHOL declaration) = true →
+      evaluateDeclsHOLFinite state program = some result →
+      result = { state with
+        code := state.code.updateList (functionsHOL program)
+        eshapes := state.eshapes.updateList (Flapjack.Pancake.PanLang.exceptionsHOL program) } := by
+  intro state hstate program
+  induction program generalizing state with
+  | nil =>
+      intro result _ hresult
+      simp only [evaluateDeclsHOLFinite, Option.some.injEq] at hresult
+      subst hresult
+      simp only [functionsHOL, Flapjack.Pancake.PanLang.exceptionsHOL, updateList_nil]
+  | cons declaration rest ih =>
+      intro result hall hresult
+      simp only [List.all_cons, Bool.and_eq_true] at hall
+      obtain ⟨hhead, hrest⟩ := hall
+      cases declaration with
+      | name name fields =>
+          simp only [evaluateDeclsHOLFinite, functionsHOL, Flapjack.Pancake.PanLang.exceptionsHOL] at hresult ⊢
+          exact ih state result hrest hresult
+      | decl shape name expression =>
+          simp only [Flapjack.Pancake.PanLang.isFunctionHOL,
+            Flapjack.Pancake.PanLang.isExnDeclHOL, Bool.or_false] at hhead
+          exact (Bool.false_ne_true hhead).elim
+      | function declaration =>
+          let condition := declaration.params.all
+            (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+            isWfShapeExactHOL state.structs declaration.returnShape
+          simp only [evaluateDeclsHOLFinite, functionsHOL, Flapjack.Pancake.PanLang.exceptionsHOL] at hresult ⊢
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_true] at hresult
+            have htail := ih
+              { state with code := state.code.update (declaration.name,
+                (declaration.params, declaration.body, declaration.returnShape)) }
+              result hrest hresult
+            rw [htail]
+            rw [← updateList_cons]
+          · have hfalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact absurd hcond hcondition
+            simp only [condition, hfalse, Bool.false_eq_true, if_false] at hresult
+            exact absurd hresult.symm (Option.some_ne_none result)
+      | exnDecl exceptionName shape =>
+          let condition := (state.eshapes.lookup exceptionName).isNone &&
+            isWfShapeExactHOL state.structs shape
+          simp only [evaluateDeclsHOLFinite, functionsHOL, Flapjack.Pancake.PanLang.exceptionsHOL] at hresult ⊢
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_true] at hresult
+            have htail := ih
+              { state with eshapes := state.eshapes.update (exceptionName, shape) }
+              result hrest hresult
+            rw [htail]
+            rw [← updateList_cons]
+          · have hfalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact absurd hcond hcondition
+            simp only [condition, hfalse, Bool.false_eq_true, if_false] at hresult
+            exact absurd hresult.symm (Option.some_ne_none result)
+
 end PanSemStateFiniteExact
 
 end Flapjack

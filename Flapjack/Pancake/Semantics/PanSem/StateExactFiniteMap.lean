@@ -613,6 +613,19 @@ theorem evalPanSemNonrecursiveHOLFinite_shMemaddrs {width : Nat} {σ : Type} [Ne
     finite eval context; tracked by `flapjack-6yq` (which blocks
     `flapjack-qj5`).
 
+    Source-review note for the original HOL definition at `panSemScript.sml:556`:
+    it is the recursive function from `Prog × state` to `result option × state`,
+    with no decision-procedure parameters. `evalPanSemRecursiveCallFiniteContext`
+    instead accepts a `FiniteEvalContext` carrying decisions for both address
+    predicates and returns an outer `Option` assembly marker; that is a useful
+    internal evaluator interface, not HOL's function type. The public
+    `evaluateHOLFiniteViaExact` removes the outer marker but still has both
+    implicit decision instances in its type and delegates through the broader
+    `toExact` evaluator instead of presenting the HOL constructor clauses. Thus
+    neither current finite-state evaluator has the statement/body shape to carry
+    the `:556` tag. The faithful total clause-shaped evaluator is tracked by
+    `flapjack-pxn.18.4.3.77.2`.
+
     Source-review note for the later same-name HOL declaration at
     `panSemScript.sml:780`: it is the `[allow_rebind,compute]` theorem
     `REWRITE_RULE [fix_clock_evaluate] evaluate_def`, derived from the original

@@ -479,8 +479,9 @@ theorem evalPanSemNonrecursiveHOLFinite_toExact {width : Nat} {σ : Type} [NeZer
   unfold evalPanSemNonrecursiveHOLFinite
   split <;> simp_all only [Option.map_some, toExact_ofExact] <;> rfl
 
-/-- The finite nonrecursive dispatcher preserves the `memaddrs` domain; the
-    post-state is rebuilt through `ofExact`, which copies the address domain. -/
+/-- Flapjack-specific finite-carrier invariant: the nonrecursive dispatcher
+    preserves `memaddrs`, with the post-state rebuilt through `ofExact`.
+    HOL has no standalone declaration for this adapter theorem. -/
 theorem evalPanSemNonrecursiveHOLFinite_memaddrs {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
@@ -498,7 +499,8 @@ theorem evalPanSemNonrecursiveHOLFinite_memaddrs {width : Nat} {σ : Type} [NeZe
     change pair.2.memaddrs = state.toExact.memaddrs
     exact hpair
 
-/-- The finite nonrecursive dispatcher preserves the `shMemaddrs` domain. -/
+/-- Flapjack-specific finite-carrier `shMemaddrs` preservation theorem for the
+    nonrecursive dispatcher; no standalone HOL declaration has this shape. -/
 theorem evalPanSemNonrecursiveHOLFinite_shMemaddrs {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]

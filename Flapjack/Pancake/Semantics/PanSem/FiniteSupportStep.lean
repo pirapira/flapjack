@@ -1393,6 +1393,10 @@ theorem evalPanSemRecursiveCallContextHOLExact_finiteSupport {width : Nat} {σ :
       exact PanSemStateExact.finiteSupport_emptyLocals hfixed
   all_goals closeCase
 
+/-- Flapjack-specific invariant of the nonrecursive clause dispatcher: its
+    post-state retains the source memory-address domain. HOL has no separate
+    declaration for this dispatcher or this lemma; it supports the direct
+    finite-carrier port of `evaluate_def`. -/
 theorem evalPanSemNonrecursiveHOLExact_memaddrs {width : Nat} {σ : Type}
     [NeZero width] (program : ProgHOL width) (state : PanSemStateExact width σ)
     [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs]
@@ -1515,6 +1519,9 @@ theorem evalPanSemNonrecursiveHOLExact_memaddrs {width : Nat} {σ : Type}
       simp only [evalPanSemNonrecursiveHOLExact] at h
       obtain rfl := Option.some.inj h; rfl
 
+/-- Flapjack-specific shared-memory domain invariant of the nonrecursive
+    clause dispatcher. There is no standalone HOL declaration to tag; this
+    lemma is infrastructure for the finite-carrier `evaluate_def` port. -/
 theorem evalPanSemNonrecursiveHOLExact_shMemaddrs {width : Nat} {σ : Type}
     [NeZero width] (program : ProgHOL width) (state : PanSemStateExact width σ)
     [DecidablePred state.memaddrs] [DecidablePred state.shMemaddrs]

@@ -403,6 +403,46 @@ def evalHOLFinite {width : Nat} {σ : Type} [NeZero width]
     ExpHOL width → Option (ValueHOL width) :=
   @evalHOLExact width σ _ state.toExact h
 
+/-- HOL `eval_upd_clock_eq` (`cakeml/pancake/semantics/panPropsScript.sml:645`):
+    `eval (t with clock := ck) e = eval t e` over the finite-support state
+    carrier.  The evaluator never inspects `clock`; the untagged broad-carrier
+    support is `evalHOLExact_upd_clock_eq`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "eval_upd_clock_eq"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evalHOLFinite_upd_clock_eq {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (ck : Nat) (e : ExpHOL width) :
+    evalHOLFinite { state with clock := ck } e = evalHOLFinite state e := by
+  simp only [evalHOLFinite]
+  exact evalHOLExact_upd_clock_eq state.toExact e ck
+
+/-- HOL `eval_upd_code_eq` (`cakeml/pancake/semantics/panPropsScript.sml:654`):
+    `eval (t with code := code) e = eval t e` over the finite-support state
+    carrier.  The evaluator never inspects `code`; the untagged broad-carrier
+    support is `evalHOLExact_upd_code_eq`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "eval_upd_code_eq"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evalHOLFinite_upd_code_eq {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (code : HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (e : ExpHOL width) :
+    evalHOLFinite { state with code := code } e = evalHOLFinite state e := by
+  simp only [evalHOLFinite]
+  exact evalHOLExact_upd_code_eq state.toExact e code.lookup
+
+/-- HOL `eval_upd_eshapes_eq` (`cakeml/pancake/semantics/panPropsScript.sml:663`):
+    `eval (t with eshapes := esh) e = eval t e` over the finite-support state
+    carrier.  The evaluator never inspects `eshapes`; the untagged broad-carrier
+    support is `evalHOLExact_upd_eshapes_eq`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "eval_upd_eshapes_eq"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evalHOLFinite_upd_eshapes_eq {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (es : HolFiniteMapExact MlS ShapeHOL) (e : ExpHOL width) :
+    evalHOLFinite { state with eshapes := es } e = evalHOLFinite state e := by
+  simp only [evalHOLFinite]
+  exact evalHOLExact_upd_eshapes_eq state.toExact e es.lookup
+
 /-- Finite-support carrier rendering of the `OPT_MMAP eval` list step; delegates
     through `toExact` (untagged helper, not a HOL declaration). -/
 def evalListHOLFinite {width : Nat} {σ : Type} [NeZero width]

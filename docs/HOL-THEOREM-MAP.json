@@ -11761,5 +11761,47 @@
       "eshapes"
     ],
     "reviewer": "flapjack-ds10 (source comparison; bead flapjack-4ac.4.86/4ac.4.84): HOL panPropsScript.sml:1518-1526 states forall s pan_code s', evaluate_decls s pan_code = SOME s' => s'.code = s.code |++ functions pan_code. Lean quantifies the same state, program, and result state, with the premise rendered as `evaluateDeclsHOLFinite state program = some result` and the HOL `|++` as the canonical finite-map `HolFiniteMapExact.updateList`; `functionsHOL` is the exact functions port tagged functions_def (panLangScript.sml:319-326). The subject is the canonical tagged PanSem finite-map evaluator evaluateDeclsHOLFinite (the port of evaluate_decls_def in this same module); the former PanProps-local duplicate was withdrawn per the coordinator HOLD so exactly one tagged theorem exists for this HOL declaration. PanSemStateFiniteExact owns locals/globals/code/eshapes as HolFiniteMapExact (the canonical translation) and its same-module holFmapAsFiniteSupportWitness states the toExact/ofExact roundtrips with PanSemStateExact. The only added hypothesis is `[DecidablePred state.memaddrs]`, the executable-decision artifact for HOL word-set membership; the qualifier is representation-only and quantifiers, hypotheses, and conclusion are otherwise unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_upd_clock_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evalHOLFinite_upd_clock_eq",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-wci6): HOL panPropsScript.sml:644-652 states forall t e ck, eval (t with clock := ck) e = eval t e. Lean quantifies the same state, expression and clock value over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evalHOLFinite (the port of panSem eval_def in this same module), with the HOL state update rendered as the Lean record update `{state with clock := ck}`; conclusion equality is unchanged. The exact evaluator never inspects `clock`, so the untagged broad-carrier support evalHOLExact_upd_clock_eq holds over PanSemStateExact and the finite theorem is its toExact instance. StateExactFiniteMap.lean hosts the owning carrier PanSemStateFiniteExact and its same-module holFmapAsFiniteSupportWitness for the canonical HolFiniteMapExact fields locals/globals/code/eshapes. The only added hypothesis is `[DecidablePred state.memaddrs]`, the executable-decision artifact; the qualifier is representation-only and quantifiers, hypotheses and conclusion are otherwise unchanged."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_upd_code_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evalHOLFinite_upd_code_eq",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-wci6): HOL panPropsScript.sml:654-662 states forall t e code, eval (t with code := code) e = eval t e, where `code` is HOL's finite function map. Lean quantifies the same state and expression over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evalHOLFinite, with the HOL `code` finite map represented by the canonical translation HolFiniteMapExact and the update rendered as the record update `{state with code := code}`. The exact evaluator never inspects `code`, so the untagged broad-carrier support evalHOLExact_upd_code_eq holds over PanSemStateExact and the finite theorem is its toExact instance. StateExactFiniteMap.lean hosts the owning carrier and its same-module holFmapAsFiniteSupportWitness. Added hypothesis `[DecidablePred state.memaddrs]` only; qualifier representation-only."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_upd_eshapes_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evalHOLFinite_upd_eshapes_eq",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "locals",
+      "globals",
+      "code",
+      "eshapes"
+    ],
+    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-wci6): HOL panPropsScript.sml:664-672 states forall t e esh, eval (t with eshapes := esh) e = eval t e, where `esh` is HOL's finite function map. Lean quantifies the same state and expression over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evalHOLFinite, with the HOL `eshapes` finite map represented by the canonical translation HolFiniteMapExact and the update rendered as the record update `{state with eshapes := es}`. The exact evaluator never inspects `eshapes`, so the untagged broad-carrier support evalHOLExact_upd_eshapes_eq holds over PanSemStateExact and the finite theorem is its toExact instance. StateExactFiniteMap.lean hosts the owning carrier and its same-module holFmapAsFiniteSupportWitness. Added hypothesis `[DecidablePred state.memaddrs]` only; qualifier representation-only."
   }
 ]

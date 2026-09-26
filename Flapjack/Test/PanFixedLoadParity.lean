@@ -153,6 +153,47 @@ def finiteWord24BigEndianByteLoad : Option (Fin 24 → Bool) :=
 def finiteWord24Load32 : Option (Fin 24 → Bool) :=
   panModelRead32 (holFiniteWordSourceMemoryModel dimension24 false)
     finiteWord24Domain finiteWord24Memory (finiteWord24 3) (finiteWord24 4) false
+
+/-! Run the same width-24 alignment example through the actual recursive Crep
+    evaluator. The source-shaped adapter uses HOL `byte_align`; the RISC-V
+    runtime target uses its `bytesInWord` divisor. This pins the known
+    all-width behavior boundary at the evaluator call site, rather than only
+    at the memory-model helper. -/
+def finiteWord24CrepState : CrepHolState (Fin 24 → Bool) Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    code := fun _ => none
+    memory := fun _ => .word (finiteWord24 0x332211)
+    memaddrs := finiteWord24Domain
+    shMemaddrs := fun _ => false
+    clock := 0
+    bigEndian := false
+    ffi := natCrepRuntimeFfiState
+    baseAddress := finiteWord24 0
+    topAddress := finiteWord24 0xFFFFFF }
+
+def finiteWord24CrepSourceLoadByte : Option (Fin 24 → Bool) :=
+  evalCrepRuntimeExp
+    (finiteWord24CrepState.toHolFiniteWordSourceRuntime dimension24)
+    (.loadByte (.const (finiteWord24 5)))
+
+def finiteWord24CrepRiscVLoadByte : Option (BitVec 24) :=
+  evalCrepRuntimeExp
+    (riscvCrepWordTarget
+      ((finiteWord24CrepState.toHolFiniteBitVecState dimension24).toRuntime))
+    (.loadByte (.const (BitVec.ofNat 24 5)))
+
+def finiteWord24CrepSourceLoad32 : Option (Fin 24 → Bool) :=
+  evalCrepRuntimeExp
+    (finiteWord24CrepState.toHolFiniteWordSourceRuntime dimension24)
+    (.load32 (.const (finiteWord24 4)))
+
+def finiteWord24CrepRiscVLoad32 : Option (BitVec 24) :=
+  evalCrepRuntimeExp
+    (riscvCrepWordTarget
+      ((finiteWord24CrepState.toHolFiniteBitVecState dimension24).toRuntime))
+    (.load32 (.const (BitVec.ofNat 24 4)))
+
 /-! HOL `mem_load_32` assembles the four extracted bytes at width 32, then
     `crepSem.eval` widens or truncates that result into the source word width. -/
 def finiteWord24Fixed32Bytes : List (Fin 24 → Bool) :=
@@ -231,6 +272,12 @@ example :
   some (BitVec.ofNat 24 0x11)
 #guard (finiteWord24Load32.map (holWordToBitVec dimension24)) ==
   some (BitVec.ofNat 24 0x113322)
+#guard (finiteWord24CrepSourceLoadByte.map (holWordToBitVec dimension24)) ==
+  some (BitVec.ofNat 24 0x33)
+#guard finiteWord24CrepRiscVLoadByte == none
+#guard (finiteWord24CrepSourceLoad32.map (holWordToBitVec dimension24)) ==
+  some (BitVec.ofNat 24 0x113322)
+#guard finiteWord24CrepRiscVLoad32 == none
 #guard finiteWord24HolLoad32Width24 == originalLoad32Width24
 #guard BitVec.ofNat 24 originalLoad32Width24.toNat == BitVec.ofNat 24 0x113322
 #guard holWordToBitVec dimension24 finiteWord24Fixed32Load ==

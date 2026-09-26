@@ -227,13 +227,15 @@ structure CrepSemHOLState (width : Nat) [NeZero width] (ffiState : Type) where
 /-- Exact executable port of CakeML Pancake `crepSem$eval_def`
 (`cakeml/pancake/semantics/crepSemScript.sml:90-137`).  It evaluates the
 exact `CrepExpHOL` syntax over the faithful `HolWordLab` result and the
-`CrepSemHOLState` carrier.  The finite-map qualifier names only `locals` and
-`globals`, the fields read with HOL `FLOOKUP`; the `code` map is not read by
-expression evaluation.  The positive-width `BitVec` model represents HOL's
+`CrepSemHOLState` carrier.  The finite-map qualifier records all three
+finite-support map fields in that carrier (`locals`, `globals`, and `code`);
+expression evaluation reads `locals` and `globals`, while `code` remains
+present in the quantified HOL state even though this definition does not read
+it.  The positive-width `BitVec` model represents HOL's
 nonempty finite word dimension.  `HolWordLab` has only `Word`, so HOL's
 `EVERY isWord` guard is always true for values produced here. -/
 @[hol "cakeml/pancake/semantics/crepSemScript.sml" "eval_def"
-  (fmap_as_finite_support := [locals, globals])]
+  (fmap_as_finite_support := [locals, globals, code])]
 def evalCrepSemHOLExp {width : Nat} [NeZero width] {ffiState : Type}
     (state : CrepSemHOLState width ffiState) [DecidablePred state.memaddrs] :
     CrepExpHOL width → Option (HolWordLab width)

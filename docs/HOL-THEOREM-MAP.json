@@ -137,6 +137,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "MEM_IMP_exp_size",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "memImpExpSizeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.1.30): HOL MEM_IMP_exp_size (cakeml/pancake/panLangScript.sml:198-208) is `(!xs a. MEM a xs ==> exp_size l a < exp3_size l xs) /\\ (!xs a. MEM a xs ==> exp_size l (SND a) < exp1_size l xs)` over the generated datatype size functions of `Datatype: exp = ...`. Lean memImpExpSizeHOL {width} [NeZero width] {α : Type} (f : α → Nat) : (∀ xs a, a ∈ xs → expSizeHOL f a < exp3SizeHOL f xs) ∧ (∀ xs a, a ∈ xs → expSizeHOL f a.2 < exp1SizeHOL f xs) matches both conjuncts, the quantifier order, the MEM hypotheses, and the conclusions over the exact ExpHOL carrier; HOL's size-function parameter l is unused (Const ('a word) is sized by w2n) and the Lean f keeps HOL's statement shape. The generated HOL equations have no textual source declaration and so the helper size functions stay untagged; they are transcribed in Exp.lean and pinned by a standard-HOL reconstruction of the identical datatype in scripts/hol-probes/pan_lang_size_probe.out: exp_size f (Const a) = 1 + w2n a; Var = 1 + (varkind_size a0 + mlstring_size a1); RStruct = 1 + exp3_size f a; RField = 1 + (a0 + exp_size f a1) (num size identity); NStruct = 1 + (mlstring_size a0 + exp1_size f a1); NField = 1 + (mlstring_size a0 + exp_size f a1); Load = 1 + (shape_size a0 + exp_size f a1); Load32/LoadByte = 1 + exp_size f a; Op/Panop = 1 + (op_size a0 + exp3_size f a1); Cmp/Shift = 1 + (op_size a0 + (exp_size f a1 + exp_size f a2)); BaseAddr/TopAddr/BytesInWord = 0; exp1_size f (a0::a1) = 1 + (exp2_size f a0 + exp1_size f a1); exp2_size f (a0,a1) = 1 + (mlstring_size a0 + exp_size f a1); exp3_size f (a0::a1) = 1 + (exp_size f a0 + exp3_size f a1)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "prog",
     "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
     "lean_name": "ProgHOL",

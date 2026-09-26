@@ -2031,7 +2031,25 @@ theorem bindPanValueParametersLocalsRelOfPanSem
     `evaluate_shape_invariant_ret_inst`. Its faithful replacement is tracked
     by bead `flapjack-4ac.5.83`, blocked on `flapjack-4ac.4.67`,
     `flapjack-pxn.18.3.5.8`, `flapjack-pxn.18.3.7.1.3.1.1.2`, and
-    `flapjack-0lj.5`. -/
+    `flapjack-0lj.5`.
+
+    Separate source-reviewed disposition for HOL
+    `evaluate_shape_invariant_ret_inst2` (`pan_to_crepProofScript.sml:3031-3044`):
+    its five premises are `OPT_MMAP (eval s) argexps = SOME args`, successful
+    `lookup_code s.code fname args = SOME (p2,newlocals,rsh)`, successful
+    evaluation of `p` from `dec_clock s` with `newlocals`, `state_rel s t`,
+    and `locals_rel ctxt s.locals t_locs`. It concludes the same Return or
+    Exception payload `is_wf_shape_v_nil` disjunction, with true for other
+    results. The proof uses `lookup_code_wf_shape_invariant_step` to establish
+    the newly bound locals invariant before `evaluate_is_wf_shape_invariant`;
+    these are proved facts, not additional theorem premises. Existing
+    `localsRelWfShape` and `evalPanSemStateExpsWfShapeOfStateRel` cover only
+    production String-backed relations and a 64-bit expression evaluator.
+    The full source evaluator, exact finite-map state, and exact
+    MlString-keyed relations needed to state this theorem are not available as
+    one exact carrier, so this theorem stays untagged. Its faithful replacement
+    is `flapjack-4ac.5.47.1`, dependent on `flapjack-4ac.3.52.1`,
+    `flapjack-4ac.5.83`, and exact PanSem state/name carriers. -/
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/

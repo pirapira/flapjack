@@ -140,6 +140,163 @@ theorem lookupCodeHOLExact_calleeLocalsWf {width : Nat} {σ : Type}
       apply hcallee name value
       simpa [hlocalsEq] using hvalue
 
+private def valuesHOLWf {width : Nat} [NeZero width]
+    (structs : Flapjack.Pancake.PanLang.StructContextExact)
+    (lookup : MlS → Option (ValueHOL width)) : Prop :=
+  ∀ name value, lookup name = some value →
+    isWfShapeValueHOLExact structs value = true
+
+private theorem valuesHOLWf_update {width : Nat} [NeZero width]
+    (structs : Flapjack.Pancake.PanLang.StructContextExact)
+    (lookup : HolFiniteMapExact MlS (ValueHOL width)) (name : MlS)
+    (newValue : ValueHOL width)
+    (hold : valuesHOLWf structs lookup.lookup)
+    (hnew : isWfShapeValueHOLExact structs newValue = true) :
+    valuesHOLWf structs (lookup.update (name, newValue)).lookup := by
+  intro current value hlookup
+  rw [HolFiniteMapExact.lookup_update_pointwise] at hlookup
+  by_cases hname : current = name
+  · subst current
+    have hvalue : newValue = value := by simpa using hlookup
+    subst value
+    exact hnew
+  · have hsource : lookup.lookup current = some value := by
+      simpa [hname] using hlookup
+    exact hold current value hsource
+
+private theorem valuesHOLWf_empty {width : Nat} [NeZero width]
+    (structs : Flapjack.Pancake.PanLang.StructContextExact) :
+    valuesHOLWf structs (HolFiniteMapExact.empty : HolFiniteMapExact MlS (ValueHOL width)).lookup := by
+  intro name value hlookup
+  simp at hlookup
+
+private theorem valuesHOLWf_resVarEq {width : Nat} [NeZero width]
+    (structs : Flapjack.Pancake.PanLang.StructContextExact)
+    (map1 map2 : HolFiniteMapExact MlS (ValueHOL width)) (name : MlS)
+    (h1 : valuesHOLWf structs map1.lookup) (h2 : valuesHOLWf structs map2.lookup) :
+    valuesHOLWf structs (HolFiniteMapExact.resVarEq map1 (name, map2.lookup name)).lookup := by
+  let predicate : MlS × ValueHOL width → Bool := fun pair =>
+    isWfShapeValueHOLExact structs pair.2
+  have hmaps : feveryHOL predicate map1 ∧ feveryHOL predicate map2 := by
+    constructor
+    · intro key value hvalue
+      simpa [predicate] using h1 key value hvalue
+    · intro key value hvalue
+      simpa [predicate] using h2 key value hvalue
+  have hresult := feveryResVarFlookupHOL predicate
+    ⟨map1, map2⟩ name hmaps
+  intro key value hvalue
+  exact hresult key value hvalue
+
+private theorem evalHOLFinite_isWf {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [DecidablePred state.memaddrs]
+    (hlocals : valuesHOLWf state.structs state.locals.lookup)
+    (hglobals : valuesHOLWf state.structs state.globals.lookup)
+    (expression : ExpHOL width) (value : ValueHOL width)
+    (heval : state.evalHOLFinite expression = some value) :
+    isWfShapeValueHOLExact state.structs value = true := by
+  have hExact := evalHOLExact_isWfShapeValueHOLExact state.toExact
+    (by simpa [valuesHOLWf, PanSemStateFiniteExact.toExact] using hlocals)
+    (by simpa [valuesHOLWf, PanSemStateFiniteExact.toExact] using hglobals)
+    expression value
+  apply hExact
+  simpa using heval
+
+private theorem evalListHOLFinite_mem_isWf {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [DecidablePred state.memaddrs]
+    (hlocals : valuesHOLWf state.structs state.locals.lookup)
+    (hglobals : valuesHOLWf state.structs state.globals.lookup) :
+    ∀ expressions values, state.evalListHOLFinite expressions = some values →
+      ∀ value, value ∈ values → isWfShapeValueHOLExact state.structs value = true := by
+  intro expressions
+  induction expressions with
+  | nil =>
+      intro values heval value hmem
+      simp [PanSemStateFiniteExact.evalListHOLFinite, evalListHOLExact] at heval
+      subst values
+      simp at hmem
+  | cons expression rest ih =>
+      intro values heval value hmem
+      letI : DecidablePred state.toExact.memaddrs := by
+        simpa [PanSemStateFiniteExact.toExact] using
+          (inferInstance : DecidablePred state.memaddrs)
+      change evalListHOLExact state.toExact (expression :: rest) = some values at heval
+      cases hhead : evalHOLExact state.toExact expression with
+      | none => simp [evalListHOLExact, hhead] at heval
+      | some head =>
+          cases htail : evalListHOLExact state.toExact rest with
+          | none => simp [evalListHOLExact, hhead, htail] at heval
+          | some tail =>
+              have hValues : values = head :: tail := by
+                simpa [evalListHOLExact, hhead, htail] using heval.symm
+              subst values
+              simp only [List.mem_cons] at hmem
+              rcases hmem with hheadMem | htailMem
+              · subst value
+                have hheadFinite : state.evalHOLFinite expression = some head := by
+                  simpa using hhead
+                exact evalHOLFinite_isWf state hlocals hglobals expression head hheadFinite
+              · apply ih tail
+                · simpa [PanSemStateFiniteExact.evalListHOLFinite] using htail
+                · exact htailMem
+
+private def panSemResultHOLWf {width : Nat} [NeZero width]
+    (structs : Flapjack.Pancake.PanLang.StructContextExact) :
+    Option (PanSemResultExact width) → Prop
+  | some (.returned value) => isWfShapeValueHOLExact structs value = true
+  | some (.exception _ value) => isWfShapeValueHOLExact structs value = true
+  | _ => True
+
+private def panSemStateVarsHOLWf {width : Nat} {σ : Type} [NeZero width]
+    (structs : Flapjack.Pancake.PanLang.StructContextExact)
+    (state : PanSemStateFiniteExact width σ) : Prop :=
+  valuesHOLWf structs state.locals.lookup ∧ valuesHOLWf structs state.globals.lookup
+
+private theorem panSemStateVarsHOLWf_emptyLocals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    (h : panSemStateVarsHOLWf state.structs state) :
+    panSemStateVarsHOLWf state.structs (PanSemStateFiniteExact.emptyLocalsHOLFinite state) := by
+  exact ⟨valuesHOLWf_empty state.structs, h.2⟩
+
+private theorem panSemStateVarsHOLWf_setVar {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) (name : MlS) (value : ValueHOL width)
+    (h : panSemStateVarsHOLWf state.structs state)
+    (hvalue : isWfShapeValueHOLExact state.structs value = true) :
+    panSemStateVarsHOLWf state.structs
+      (PanSemStateFiniteExact.setVarHOLFinite name value state) := by
+  exact ⟨valuesHOLWf_update state.structs state.locals name value h.1 hvalue, h.2⟩
+
+private theorem panSemStateVarsHOLWf_setGlobal {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) (name : MlS) (value : ValueHOL width)
+    (h : panSemStateVarsHOLWf state.structs state)
+    (hvalue : isWfShapeValueHOLExact state.structs value = true) :
+    panSemStateVarsHOLWf state.structs
+      (PanSemStateFiniteExact.setGlobalHOLFinite name value state) := by
+  exact ⟨h.1, valuesHOLWf_update state.structs state.globals name value h.2 hvalue⟩
+
+private theorem panSemStateVarsHOLWf_setKvar {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) (kind : VarKind) (name : MlS)
+    (value : ValueHOL width) (h : panSemStateVarsHOLWf state.structs state)
+    (hvalue : isWfShapeValueHOLExact state.structs value = true) :
+    panSemStateVarsHOLWf state.structs
+      (PanSemStateFiniteExact.setKvarHOLFinite kind name value state) := by
+  cases kind
+  · simpa [panSemStateVarsHOLWf, PanSemStateFiniteExact.setKvarHOLFinite] using
+      panSemStateVarsHOLWf_setVar state name value h hvalue
+  · simpa [panSemStateVarsHOLWf, PanSemStateFiniteExact.setKvarHOLFinite] using
+      panSemStateVarsHOLWf_setGlobal state name value h hvalue
+
+private theorem panSemStateVarsHOLWf_restoreLocal {width : Nat} {σ : Type} [NeZero width]
+    (after caller : PanSemStateFiniteExact width σ) (name : MlS)
+    (hafter : panSemStateVarsHOLWf after.structs after)
+    (hcaller : valuesHOLWf after.structs caller.locals.lookup) :
+    valuesHOLWf after.structs
+        (HolFiniteMapExact.resVarEq after.locals
+          (name, caller.locals.lookup name)).lookup ∧
+      valuesHOLWf after.structs after.globals.lookup := by
+  exact ⟨valuesHOLWf_resVarEq after.structs after.locals caller.locals name
+      hafter.1 hcaller, hafter.2⟩
+
 namespace PanSemStateFiniteExact
 
 /-- Assign clauses change only variable maps, never the structural context. -/

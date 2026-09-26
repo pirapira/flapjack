@@ -926,6 +926,20 @@ decreasing_by
       (fixClockHOLFinite_clock_le entry (bodyResult, bodyContext.state))
       (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
 
+/-- FLAPJACK-SPECIFIC (no `@[hol]` tag): the clause-for-clause finite context
+    evaluator is total.  Its outer `Option` is only the recursive-case assembly
+    marker, so it is always `some`; this is the finite-context analogue of
+    `evalPanSemRecursiveCallContextHOLExact_total`. -/
+theorem evalPanSemRecursiveCallFiniteContext_total {width : Nat} {σ : Type} [NeZero width]
+    (program : ProgHOL width) (context : FiniteEvalContext width σ) :
+    ∃ output, evalPanSemRecursiveCallFiniteContext program context = some output := by
+  fun_induction evalPanSemRecursiveCallFiniteContext program context <;> simp_all
+  case case53 =>
+    rename_i inst context state other h9 h8 h7 h6 h5 h4 h3 h2 h1 h0 hres
+    cases other <;> simp_all [evalPanSemNonrecursiveHOLFinite, evalPanSemNonrecursiveHOLExact]
+    · exact h9 _ _ _ _ rfl rfl rfl rfl
+    · exact h4 _ _ _ _ _ rfl rfl rfl rfl rfl
+
 /-- FLAPJACK-SPECIFIC provisional projection (not a HOL declaration; carries no
     `@[hol]` tag): the state-level view of the clause-for-clause finite context
     evaluator `evalPanSemRecursiveCallFiniteContext`.
@@ -933,11 +947,11 @@ decreasing_by
     As with the broad exact evaluator `evalPanSemRecursiveCallContextHOLExact`,
     the outer `Option` is the *assembly marker* for the recursive cases (it is
     `none` only on the not-yet-assembled internal branches), not part of HOL
-    `evaluate_def`'s `result option × state` result.  The totality/equivalence
-    proof that the outer `Option` is always `some` is still pending (bead
-    `flapjack-6yq`), so this wrapper deliberately keeps the marker rather than
-    totalizing an unreachable `none` branch to `(none, state)` (which would be
-    observationally wrong).
+    `evaluate_def`'s `result option × state` result.  The marker is provably
+    inert (`evaluateHOLFinite_ne_none`), but the equivalence with the broad exact
+    evaluator is still pending (bead `flapjack-6yq`), so this wrapper deliberately
+    keeps the marker rather than totalizing an unreachable `none` branch to
+    `(none, state)` (which would be observationally wrong).
 
     Exposed clause-by-clause in
     `Flapjack.Pancake.Semantics.PanSem.EvaluateFinite`. -/
@@ -949,6 +963,18 @@ def evaluateHOLFinite {width : Nat} {σ : Type} [NeZero width]
   fun program =>
     (evalPanSemRecursiveCallFiniteContext program ⟨state, h, hshared⟩).map
       (fun pair => (pair.1, pair.2.state))
+
+/-- FLAPJACK-SPECIFIC (no `@[hol]` tag): the state-level projection never hits the
+    assembly marker's `none`, by `evalPanSemRecursiveCallFiniteContext_total`. -/
+theorem evaluateHOLFinite_ne_none {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
+    (program : ProgHOL width) : evaluateHOLFinite state program ≠ none := by
+  obtain ⟨output, houtput⟩ :=
+    evalPanSemRecursiveCallFiniteContext_total program (⟨state, h, hshared⟩ : FiniteEvalContext width σ)
+  unfold evaluateHOLFinite
+  rw [houtput]
+  simp
 
 end PanSemStateFiniteExact
 

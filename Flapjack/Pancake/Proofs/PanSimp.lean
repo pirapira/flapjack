@@ -2595,4 +2595,42 @@ theorem expIdsHOL_panSimpCompileHOL_eq {width : Nat} [NeZero width]
   rw [expIdsHOL_retToTailHOL_eq, expIdsHOL_seqAssocHOL_eq]
   simp [Flapjack.Pancake.PanLang.expIdsHOL]
 
+/-- Exact HOL `pan_simpProof$functions_compile_prog`
+(`pan_simpProofScript.sml:1017`):
+`functions (compile_prog prog) = MAP (λ(x,y,z,t). (x,y,compile z,t)) (functions prog)`. -/
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "functions_compile_prog"]
+theorem functionsHOL_panSimpDeclsHOL_eq {width : Nat} [NeZero width]
+    (declarations : List (DeclHOL width)) :
+    Flapjack.Pancake.PanLang.functionsHOL (panSimpDeclsHOL declarations) =
+      (Flapjack.Pancake.PanLang.functionsHOL declarations).map
+        (fun entry =>
+          (entry.1, entry.2.1, panSimpCompileHOL entry.2.2.1, entry.2.2.2)) := by
+  induction declarations with
+  | nil => simp [panSimpDeclsHOL, Flapjack.Pancake.PanLang.functionsHOL]
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function declaration =>
+          simp [panSimpDeclsHOL, Flapjack.Pancake.PanLang.functionsHOL, ih]
+      | decl shape name value =>
+          simp [panSimpDeclsHOL, Flapjack.Pancake.PanLang.functionsHOL, ih]
+      | exnDecl exceptionName shape =>
+          simp [panSimpDeclsHOL, Flapjack.Pancake.PanLang.functionsHOL, ih]
+      | name name fields =>
+          simp [panSimpDeclsHOL, Flapjack.Pancake.PanLang.functionsHOL, ih]
+
+/-- Exact HOL `pan_simpProof$first_compile_prog_all_distinct`
+(`pan_simpProofScript.sml:1025`):
+`ALL_DISTINCT (MAP FST (functions prog)) ==>
+ ALL_DISTINCT (MAP FST (functions (compile_prog prog)))`. -/
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "first_compile_prog_all_distinct"]
+theorem firstCompileProgAllDistinctHOL {width : Nat} [NeZero width]
+    (declarations : List (DeclHOL width))
+    (hnames :
+      ((Flapjack.Pancake.PanLang.functionsHOL declarations).map Prod.fst).Nodup) :
+    ((Flapjack.Pancake.PanLang.functionsHOL
+        (panSimpDeclsHOL declarations)).map Prod.fst).Nodup := by
+  rw [functionsHOL_panSimpDeclsHOL_eq]
+  simp only [List.map_map]
+  exact hnames
+
 end Flapjack

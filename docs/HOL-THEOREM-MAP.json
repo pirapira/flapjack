@@ -12053,5 +12053,21 @@
   "lean_name": "expIdsHOL_seqCallRetHOL",
   "statement_status": "no_hol_reference_pending_classification",
   "reviewer": "Lean-only support lemma for the exact pan_simp ports: the exact seqCallRetHOL rewrite preserves expIdsHOL. No direct HOL declaration; used to prove the exact exp_ids_ret_to_tail_eq port (bead flapjack-4ac.8)."
+  },
+{
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+  "hol_name": "functions_compile_prog",
+  "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+  "lean_name": "functionsHOL_panSimpDeclsHOL_eq",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): exact port of pan_simpProofScript.sml:1017 `functions (compile_prog prog) = MAP (\u03bb(x,y,z,t). (x,y,compile z,t)) (functions prog)` over exact DeclHOL/functionsHOL and the tagged panSimpDeclsHOL/panSimpCompileHOL. The production String/Prog analogue remains untagged."
+  },
+{
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+  "hol_name": "first_compile_prog_all_distinct",
+  "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+  "lean_name": "firstCompileProgAllDistinctHOL",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): exact port of pan_simpProofScript.sml:1025 `ALL_DISTINCT (MAP FST (functions prog)) ==> ALL_DISTINCT (MAP FST (functions (compile_prog prog)))` over exact DeclHOL/functionsHOL, derived from the exact functions_compile_prog port. The production analogue remains untagged."
   }
 ]

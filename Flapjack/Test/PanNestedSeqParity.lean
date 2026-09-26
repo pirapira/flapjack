@@ -1,4 +1,5 @@
 import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.PanLang.Prog
 
 /-!
 # Original-domain parity for `panLang$nested_seq`
@@ -107,5 +108,76 @@ def runChecks : IO Bool := do
   let expIdsOk ← checkBool "pan nested_seq exp_ids" expIdsGuard
   let expsOk ← checkBool "pan nested_seq exps_of" expsOfGuard
   pure (results.all id && expIdsOk && expsOk)
+
+/-! ## Exact-carrier parity for `nested_seq` (bead flapjack-4ac.1.31)
+
+`nestedSeqHOL` is the tagged port of `cakeml/pancake/panLangScript.sml:211-213`
+over the exact `ProgHOL` carrier.  The guards below replay the four
+`pan_lang_nested_seq_probe.out` rows (`empty`, `one`, `two`, `assign_seq`) at
+width 8 through the exact definition. -/
+
+private def s (str : String) : Flapjack.Basis.Pure.MlString.MlString :=
+  Flapjack.Basis.Pure.MlString.ofString str
+
+private def exactProbeAssignSeq : List (Flapjack.Pancake.PanLang.ProgHOL 8) :=
+  [.assign .local (s "x") (.const 7), .assign .local (s "y") (.const 9)]
+
+example :
+    Flapjack.Pancake.PanLang.nestedSeqHOL
+      ([] : List (Flapjack.Pancake.PanLang.ProgHOL 8)) =
+        (.skip : Flapjack.Pancake.PanLang.ProgHOL 8) := rfl
+example :
+    Flapjack.Pancake.PanLang.nestedSeqHOL [.skip] =
+      (.seq .skip .skip : Flapjack.Pancake.PanLang.ProgHOL 8) := rfl
+example :
+    Flapjack.Pancake.PanLang.nestedSeqHOL [.tick, .skip] =
+      (.seq .tick (.seq .skip .skip) : Flapjack.Pancake.PanLang.ProgHOL 8) := rfl
+example :
+    Flapjack.Pancake.PanLang.nestedSeqHOL exactProbeAssignSeq =
+      (.seq (.assign .local (s "x") (.const 7))
+        (.seq (.assign .local (s "y") (.const 9)) .skip) :
+          Flapjack.Pancake.PanLang.ProgHOL 8) := rfl
+
+example (statements : List (Flapjack.Pancake.PanLang.ProgHOL 8)) :
+    Flapjack.Pancake.PanLang.progOfHOL
+        (Flapjack.Pancake.PanLang.nestedSeqHOL statements) =
+      nestedSeq (statements.map Flapjack.Pancake.PanLang.progOfHOL) :=
+  Flapjack.Pancake.PanLang.nestedSeqHOL_progOfHOL statements
+
+example (statements : List (Prog (BitVec 8))) :
+    Flapjack.Pancake.PanLang.progToHOL (nestedSeq statements) =
+      Flapjack.Pancake.PanLang.nestedSeqHOL
+        (statements.map Flapjack.Pancake.PanLang.progToHOL) :=
+  Flapjack.Pancake.PanLang.nestedSeqHOL_progToHOL statements
+
+/-! ## Executable routing helper (bead flapjack-4ac.1.31.1)
+
+`nestedSeqCake` is the executable width-indexed helper that builds the nested
+sequence through the tagged `nestedSeqHOL` (encode, apply, decode).  On
+byte-ranged statements it computes the production `nestedSeq`, so the executed
+compiler can route its initializer sequence through the reviewed definition
+without changing output. -/
+
+private def prodProbe : List (Prog (BitVec 8)) :=
+  [.assign .local "x" (.const 7), .assign .local "y" (.const 9)]
+
+example :
+    Flapjack.Pancake.PanLang.nestedSeqCake prodProbe = nestedSeq prodProbe :=
+  Flapjack.Pancake.PanLang.nestedSeqCake_eq prodProbe (by
+    intro statement hmem
+    simp only [prodProbe, List.mem_cons, List.not_mem_nil, or_false] at hmem
+    rcases hmem with rfl | rfl
+    · refine ⟨?_, ?_⟩
+      · decide
+      · trivial
+    · refine ⟨?_, ?_⟩
+      · decide
+      · trivial)
+
+example (statements : List (Prog (BitVec 8)))
+    (hranged : ∀ statement ∈ statements,
+      Flapjack.Pancake.PanLang.ProgByteRanged statement) :
+    Flapjack.Pancake.PanLang.nestedSeqCake statements = nestedSeq statements :=
+  Flapjack.Pancake.PanLang.nestedSeqCake_eq statements hranged
 
 end Flapjack.Test.PanNestedSeqParity

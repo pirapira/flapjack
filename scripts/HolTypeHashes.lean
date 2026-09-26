@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.BackendCommon
+import Flapjack.AstHOL
 import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Compiler.Backend.StackLang.Prog
 import Flapjack.Basis.Pure.MlString
@@ -28,6 +29,7 @@ import Flapjack.Pancake.PanToCrep
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.Pancake.PanToCrep.ExpHdlExact
+import Flapjack.Pancake.PanToCrep.ContextExact
 import Flapjack.Pancake.Proofs.CrepArith
 import Flapjack.Pancake.Proofs.CrepInline
 import Flapjack.Pancake.Proofs.PanGlobals
@@ -36,6 +38,7 @@ import Flapjack.Pancake.Proofs.PanStructs.CompileCorrect
 import Flapjack.Pancake.Proofs.PanToCrep
 import Flapjack.Pancake.Proofs.PanToCrep.CompileExpVmax
 import Flapjack.Pancake.Proofs.PanToCrep.CompileProgParams
+import Flapjack.Pancake.Proofs.PanToWord
 import Flapjack.Pancake.Proofs.PanToCrep.Primop
 import Flapjack.Pancake.Semantics.CrepProps
 import Flapjack.Pancake.Semantics.CrepSem
@@ -49,12 +52,16 @@ import Flapjack.Pancake.Semantics.PanCommonProps
 import Flapjack.Pancake.Semantics.PanProps
 import Flapjack.Pancake.Semantics.PanProps.EvalInvariant
 import Flapjack.Pancake.Semantics.PanProps.MemByteArray
+import Flapjack.Pancake.Semantics.PanProps.LocalisedExpSimps
+import Flapjack.Pancake.Semantics.PanProps.NamelessExpSimps
 import Flapjack.Pancake.Semantics.PanSem
 import Flapjack.Pancake.Semantics.PanSem.LookupCode
 import Flapjack.Pancake.Semantics.PanSem.Primop
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanSem.MemLoad32Alt
 import Flapjack.Pancake.Semantics.PanSem.MemStore32Alt
+import Flapjack.Pancake.Semantics.PanSem.ByteRoundtrip
+import Flapjack.Misc.GoodDimindex
 import Flapjack.Pancake.Semantics.PanSem.TotalSteps
 import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.Semantics.PanSem.StateExact

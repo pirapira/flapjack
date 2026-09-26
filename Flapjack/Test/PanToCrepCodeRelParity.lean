@@ -199,7 +199,7 @@ example : (functionEntries alookupDecls)[0]? =
       (panToCrepMkCtxtHOL FEMPTY (functionInfosHOL alookupDecls) 0
         (panToCrepGetEidsFromDeclsHOL alookupDecls)) [] Prog.skip)
     Prog.skip Shape.one
-  · simp [compileToCrepHOL, alookupDecls, functionEntries, panToCrepVars,
+  · simp [compileToCrepHOL, alookupDecls, functionEntries, panToCrepVars_eq,
       Shape.shapeSize, functionInfosHOL_eq_makeFuncsHOL,
       panToCrepCompFuncRiscV_eq_compFuncHOL, panToCrepMkCtxtHOL]
   · decide

@@ -193,4 +193,53 @@ example : True := by
         [mainFunction, otherFunction] "main" compiled hcompile hnodup
       trivial
 
+/-! ## `nestedSeqHOL`-routed executed global compiler (bead flapjack-4ac.1.31.1)
+
+`globalCompileTopCakeOfExact` builds the synthesized `main` initializer
+sequence through `nestedSeqCake` (i.e. the tagged `nestedSeqHOL`).  On the
+parser's byte-range invariant it agrees with the production `globalCompileTopCake`;
+the guarded fixture below checks the rerouted output on the same declarations
+used by `sourceEntryUsesCakeGlobalOutput`. -/
+
+private theorem word64CompileInputRanged :
+    ∀ declaration ∈ [word64Global, word64MainFunction],
+      Flapjack.Pancake.PanLang.DeclByteRanged declaration := by
+  intro declaration hmem
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+  rcases hmem with rfl | rfl
+  · simp [word64Global, Flapjack.Pancake.PanLang.DeclByteRanged,
+      Flapjack.Pancake.PanLang.NameRanged, Flapjack.Pancake.PanLang.ShapeByteRanged,
+      Flapjack.Pancake.PanLang.ExpByteRanged]
+  · simp [word64MainFunction, Flapjack.Pancake.PanLang.DeclByteRanged,
+      Flapjack.Pancake.PanLang.FunDeclByteRanged, Flapjack.Pancake.PanLang.NameRanged,
+      Flapjack.Pancake.PanLang.ListParamByteRanged, Flapjack.Pancake.PanLang.ParamByteRanged,
+      Flapjack.Pancake.PanLang.ShapeByteRanged, Flapjack.Pancake.PanLang.ProgByteRanged]
+
+theorem word64CompileTopOfExact_eq :
+    globalCompileTopCakeOfExact [word64Global, word64MainFunction] "main"
+        word64CompileInputRanged =
+      globalCompileTopCake [word64Global, word64MainFunction] "main" :=
+  globalCompileTopCakeOfExact_eq _ _ _
+
+def routedEntryUsesCakeGlobalOutput : Bool :=
+  match globalCompileTopCakeOfExact [word64Global, word64MainFunction] "main"
+      word64CompileInputRanged with
+  | [.function main, .function renamed] =>
+      main.name == "main" && main.params.isEmpty &&
+      (match main.body with
+      | .seq
+          (.seq
+            (.store (.op .sub [.topAddr, .const address]) (.const value))
+            .skip)
+          (.call none "main'" []) =>
+            address == BitVec.ofNat 64 8 && value == BitVec.ofNat 64 7
+      | _ => false) &&
+      renamed.name == "main'" && (match renamed.body with
+        | .skip => true
+        | _ => false)
+  | _ => false
+
+#eval routedEntryUsesCakeGlobalOutput
+#guard routedEntryUsesCakeGlobalOutput
+
 end Flapjack.Test.PanGlobalsCompileTopForStartParity

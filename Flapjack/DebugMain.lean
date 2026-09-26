@@ -309,7 +309,7 @@ def dumpPipelineNamed (pipeline : FlapjackPipelineResult (RiscV.Word 64))
 
 def dumpSource (source : String) (target : Option Nat := none)
     (targetName : Option String := none) : IO UInt32 := do
-  match Parser.parseTopDecs (BitVec.ofInt 64) source with
+  match hparse : Parser.parseTopDecs (BitVec.ofInt 64) source with
   | .error errors =>
       emit "stage=parse_error" errors
       return 1
@@ -317,6 +317,10 @@ def dumpSource (source : String) (target : Option Nat := none)
       emit "stage=parsed" declarations
       let checked := staticCheck declarations
       emit "stage=static_check" checked
+      let parsedByteRanged := Parser.parseTopDecs_declByteRanged
+        (BitVec.ofInt 64) source false declarations hparse
+      let targetByteRanged := panTargetDeclarationsWithDefaultMain_byteRanged
+        declarations parsedByteRanged
       /- Minimized differential witnesses often have no `main`: the reducer is
          allowed to remove declarations that are irrelevant to the selected
          runtime section.  Use the target-facing entry point here, just as the
@@ -325,6 +329,7 @@ def dumpSource (source : String) (target : Option Nat := none)
       let some pipeline := compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
         (fun value => BitVec.ofNat 64 value) "main"
         (panTargetDeclarationsWithDefaultMain declarations)
+        (some (.isTrue targetByteRanged))
         | emit "stage=entry_error" ("main not found" : String)
           return 1
       match target, targetName with
@@ -334,14 +339,19 @@ def dumpSource (source : String) (target : Option Nat := none)
       return 0
 
 def dumpLabSource (source : String) (target : Nat) : IO UInt32 := do
-  match Parser.parseTopDecs (BitVec.ofInt 64) source with
+  match hparse : Parser.parseTopDecs (BitVec.ofInt 64) source with
   | .error errors =>
       emit "stage=parse_error" errors
       return 1
   | .ok declarations =>
+      let parsedByteRanged := Parser.parseTopDecs_declByteRanged
+        (BitVec.ofInt 64) source false declarations hparse
+      let targetByteRanged := panTargetDeclarationsWithDefaultMain_byteRanged
+        declarations parsedByteRanged
       let some pipeline := compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
         (fun value => BitVec.ofNat 64 value) "main"
         (panTargetDeclarationsWithDefaultMain declarations)
+        (some (.isTrue targetByteRanged))
         | emit "stage=entry_error" ("main not found" : String)
           return 1
       dumpLinkedLab pipeline target 0 (Nat.succ 1000000000)

@@ -146,4 +146,307 @@ end
       sizeOfShapeHOL shape + sizeOfShapesHOL shapes := by
   simp only [sizeOfShapesHOL]
 
+/-! HOL `panLang$shape_to_str` (`cakeml/pancake/panLangScript.sml:180-188`)
+    turns a shape into its `mlstring` rendering with `strlit` literals and `^`
+    (mlstring concatenation).  The production `Flapjack.Shape.shapeToString`
+    cannot be tagged because its carrier is a Lean `String`; the exact port over
+    `ShapeHOL` returns the faithful `MlS` carrier and uses the two untagged
+    `mlstring` helpers below. -/
+
+/-- HOL `mlstring$^` (concatenation): append the two underlying character
+    lists.  Untagged infrastructure (HOL `mlstringScript.sml` is outside the
+    CakeML submodule). -/
+def mlstrAppend (left right : MlS) : MlS :=
+  .implode (left.explode ++ right.explode)
+
+/-- HOL `concat` on an `mlstring list`: fold the list with `^`, left to right. -/
+def mlstrConcat : List MlS → MlS
+  | [] => .implode []
+  | part :: parts => mlstrAppend part (mlstrConcat parts)
+
+/-- Exact port of HOL `panLang$shape_to_str_def`
+    (`cakeml/pancake/panLangScript.sml:180-188`) over the faithful `ShapeHOL`
+    and `MlS` carriers: `One -> strlit "1"`; `Comb [] -> strlit "{}"` (HOL
+    comments it "should never happen"); `Comb (x::xs)` is the `concat` of
+    `strlit "{"`, `shape_to_str x`, the `"," ^ _` renders of `xs`, and
+    `strlit "}"`; `Named nm -> nm`.  `strlit` is `MlString.ofString` (exact on
+    the ASCII literals used here). -/
+@[hol "cakeml/pancake/panLangScript.sml" "shape_to_str_def"]
+def shapeToStrHOL : ShapeHOL → MlS
+  | .one => Flapjack.Basis.Pure.MlString.ofString "1"
+  | .comb [] => Flapjack.Basis.Pure.MlString.ofString "{}"
+  | .comb (head :: tail) =>
+      mlstrConcat
+        (Flapjack.Basis.Pure.MlString.ofString "{" ::
+          shapeToStrHOL head ::
+          (tail.map (fun field =>
+            mlstrAppend (Flapjack.Basis.Pure.MlString.ofString ",")
+              (shapeToStrHOL field))) ++
+          [Flapjack.Basis.Pure.MlString.ofString "}"])
+  | .named name => name
+
+/-! HOL `panLang$with_shape` (`cakeml/pancake/panLangScript.sml:216-220`) splits
+    a list into consecutive blocks whose lengths are the `size_of_shape` of each
+    shape: `with_shape [] _ = []` and `with_shape (sh::shs) e = TAKE
+    (size_of_shape sh) e :: with_shape shs (DROP (size_of_shape sh) e)`.  The
+    exact port is polymorphic in the list element type and uses the tagged
+    `sizeOfShapeHOL`; `TAKE`/`DROP` are Lean's `List.take`/`List.drop`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "with_shape_def"]
+def withShapeHOL {α : Type} : List ShapeHOL → List α → List (List α)
+  | [], _ => []
+  | shape :: shapes, values =>
+      values.take (sizeOfShapeHOL shape) ::
+        withShapeHOL shapes (values.drop (sizeOfShapeHOL shape))
+
+/-! ## Production bridge for the exact `shape_to_str` port
+
+FLAPJACK-SPECIFIC (no `@[hol]` tag). HOL `panLang$shape_to_str`
+(`cakeml/pancake/panLangScript.sml:180-188`) is ported exactly as the tagged
+`shapeToStrHOL` over `ShapeHOL`/`MlS`.  The executed diagnostics
+(`Flapjack.Pancake.PanStatic` and friends) instead use the production
+`Flapjack.Shape.shapeToString`, whose name carrier is `String`.  The theorem
+`ofString_shapeToString` connects the two at the `mlstring` level through the
+`shapeToHOL` codec; under `ShapeByteRanged` the `String` identity follows by
+`toStringOfBytes_ofString_of_bytes`. -/
+
+private theorem ofString_empty :
+    Flapjack.Basis.Pure.MlString.ofString ("" : String) = (Flapjack.Basis.Pure.MlString.MlString.implode []) := by
+  simp only [Flapjack.Basis.Pure.MlString.ofString]
+  rfl
+
+private theorem mlstrAppend_implode_nil_left (x : MlS) :
+    mlstrAppend (Flapjack.Basis.Pure.MlString.MlString.implode []) x = x := by
+  simp only [mlstrAppend, Flapjack.Basis.Pure.MlString.MlString.explode_implode,
+    Flapjack.Basis.Pure.MlString.MlString.implode_explode, List.nil_append]
+
+private theorem mlstrAppend_ofString_empty (x : MlS) :
+    mlstrAppend (Flapjack.Basis.Pure.MlString.ofString "") x = x := by
+  rw [ofString_empty]
+  exact mlstrAppend_implode_nil_left x
+
+private theorem mlstrAppend_implode_nil (x : MlS) :
+    mlstrAppend x (.implode []) = x := by
+  simp only [mlstrAppend, Flapjack.Basis.Pure.MlString.MlString.explode_implode,
+    Flapjack.Basis.Pure.MlString.MlString.implode_explode, List.append_nil]
+
+theorem ofString_append (left right : String) :
+    Flapjack.Basis.Pure.MlString.ofString (left ++ right) =
+      mlstrAppend (Flapjack.Basis.Pure.MlString.ofString left)
+        (Flapjack.Basis.Pure.MlString.ofString right) := by
+  simp only [Flapjack.Basis.Pure.MlString.ofString, mlstrAppend,
+    Flapjack.Basis.Pure.MlString.MlString.explode_implode, String.toList_append,
+    List.map_append]
+
+theorem mlstrAppend_assoc (a b c : MlS) :
+    mlstrAppend (mlstrAppend a b) c = mlstrAppend a (mlstrAppend b c) := by
+  simp only [mlstrAppend, Flapjack.Basis.Pure.MlString.MlString.explode_implode,
+    List.append_assoc]
+
+theorem mlstrConcat_append (left right : List MlS) :
+    mlstrConcat (left ++ right) =
+      mlstrAppend (mlstrConcat left) (mlstrConcat right) := by
+  induction left with
+  | nil => simp only [List.nil_append, mlstrConcat, mlstrAppend_implode_nil_left]
+  | cons part rest ih =>
+      simp only [List.cons_append, mlstrConcat, ih, mlstrAppend_assoc]
+
+theorem shapeToStrHOL_shapeToHOL_comb_cons (head : Flapjack.Shape)
+    (tail : List Flapjack.Shape) :
+    shapeToStrHOL (shapeToHOL (Shape.comb (head :: tail))) =
+      mlstrConcat
+        (Flapjack.Basis.Pure.MlString.ofString "{" ::
+          shapeToStrHOL (shapeToHOL head) ::
+          (tail.map (fun field =>
+            mlstrAppend (Flapjack.Basis.Pure.MlString.ofString ",")
+              (shapeToStrHOL (shapeToHOL field)))) ++
+          [Flapjack.Basis.Pure.MlString.ofString "}"]) := by
+  simp only [shapeToHOL, List.map_cons, shapeToStrHOL, List.map_map]
+  rfl
+
+private theorem ofString_fold (fields : List Flapjack.Shape) :
+    ∀ (init : String)
+      (_ih : ∀ field ∈ fields,
+        Flapjack.Basis.Pure.MlString.ofString (Shape.shapeToString field) =
+          shapeToStrHOL (shapeToHOL field)),
+    Flapjack.Basis.Pure.MlString.ofString
+        (fields.foldl (fun result field => result ++ "," ++ Shape.shapeToString field) init) =
+      mlstrAppend (Flapjack.Basis.Pure.MlString.ofString init)
+        (mlstrConcat (fields.map (fun field =>
+          mlstrAppend (Flapjack.Basis.Pure.MlString.ofString ",")
+            (shapeToStrHOL (shapeToHOL field))))) := by
+  induction fields with
+  | nil => intro init _; simp [mlstrConcat, mlstrAppend_implode_nil]
+  | cons field rest ihRest =>
+      intro init ih
+      rw [List.foldl_cons,
+        ihRest (init ++ "," ++ Shape.shapeToString field)
+          (fun member hmember => ih member (by simp [hmember]))]
+      rw [ofString_append, ofString_append, ih field (by simp)]
+      simp only [List.map_cons, mlstrConcat, mlstrAppend_assoc]
+
+/-- Production bridge: `ofString (Shape.shapeToString s)` is the exact
+    `shapeToStrHOL (shapeToHOL s)`.  FLAPJACK-SPECIFIC, untagged (production
+    diagnostics versus the tagged HOL counterpart). -/
+theorem ofString_shapeToString (s : Flapjack.Shape) :
+    Flapjack.Basis.Pure.MlString.ofString (Shape.shapeToString s) =
+      shapeToStrHOL (shapeToHOL s) := by
+  induction s using Flapjack.Shape.shapeToString.induct with
+  | case1 => simp only [Shape.shapeToString, shapeToHOL, shapeToStrHOL]
+  | case2 => simp only [Shape.shapeToString, shapeToHOL, List.map_nil, shapeToStrHOL]
+  | case3 head tail ihHead ihTail =>
+      rw [shapeToStrHOL_shapeToHOL_comb_cons, Shape.shapeToString]
+      rw [ofString_append, ofString_append, ofString_append]
+      rw [ihHead, ofString_fold tail "" (fun field hf => ihTail field hf)]
+      simp only [mlstrAppend_ofString_empty]
+      simp only [List.cons_append, mlstrConcat, mlstrConcat_append,
+        mlstrAppend_implode_nil, mlstrAppend_assoc]
+  | case4 name => simp only [Shape.shapeToString, shapeToHOL, shapeToStrHOL]
+
+private theorem string_append_bytes {a b : String}
+    (ha : ∀ c ∈ a.toList, c.toNat < 256) (hb : ∀ c ∈ b.toList, c.toNat < 256) :
+    ∀ c ∈ (a ++ b).toList, c.toNat < 256 := by
+  intro c hc
+  simp only [String.toList_append, List.mem_append] at hc
+  rcases hc with h | h
+  · exact ha c h
+  · exact hb c h
+
+private theorem foldl_bytes (fields : List Flapjack.Shape) :
+    ∀ (init : String), (∀ c ∈ init.toList, c.toNat < 256) →
+      (∀ field ∈ fields, ∀ c ∈ (Shape.shapeToString field).toList, c.toNat < 256) →
+      ∀ c ∈ (fields.foldl (fun result field => result ++ "," ++ Shape.shapeToString field) init).toList,
+        c.toNat < 256 := by
+  induction fields with
+  | nil => intro init hinit _; simpa using hinit
+  | cons field rest ih =>
+      intro init hinit hfields
+      simp only [List.foldl_cons]
+      apply ih
+      · apply string_append_bytes
+        · apply string_append_bytes hinit
+          exact (by decide : ∀ c ∈ ("," : String).toList, c.toNat < 256)
+        · exact hfields field (by simp)
+      · intro f hf; exact hfields f (by simp [hf])
+
+/-- Every character of a byte-ranged shape's production rendering is a byte.
+    `Shape.shapeToString` concatenates literal separators and the recursive
+    renderings, so the only source of characters is the `named` case, where
+    `ShapeByteRanged` supplies the bound.  FLAPJACK-SPECIFIC, untagged. -/
+theorem shapeByteRanged_shapeToString_bytes (s : Flapjack.Shape) :
+    ShapeByteRanged s → ∀ c ∈ (Shape.shapeToString s).toList, c.toNat < 256 := by
+  induction s using Flapjack.Shape.shapeToString.induct with
+  | case1 => intro _; simp only [Shape.shapeToString]; decide
+  | case2 => intro _; simp only [Shape.shapeToString]; decide
+  | case3 head tail ihHead ihTail =>
+      intro h
+      simp only [ShapeByteRanged] at h
+      have hhead : ∀ c ∈ (Shape.shapeToString head).toList, c.toNat < 256 :=
+        ihHead (h head (by simp))
+      have htail : ∀ f ∈ tail, ∀ c ∈ (Shape.shapeToString f).toList, c.toNat < 256 :=
+        fun f hf => ihTail f hf (h f (by simp [hf]))
+      intro c hc
+      rw [Shape.shapeToString] at hc
+      have hfold := foldl_bytes tail "" (by decide) htail
+      repeat rw [String.toList_append, List.mem_append] at hc
+      rcases hc with hc | hD
+      · rcases hc with hc | hC
+        · rcases hc with hA | hB
+          · exact (by decide : ∀ c ∈ ("{" : String).toList, c.toNat < 256) c hA
+          · exact hhead c hB
+        · exact hfold c hC
+      · exact (by decide : ∀ c ∈ ("}" : String).toList, c.toNat < 256) c hD
+  | case4 name => intro h; simpa only [ShapeByteRanged, Shape.shapeToString] using h
+
+/-- String-level corollary of `ofString_shapeToString`: when every character of
+    the production rendering is a byte, `toStringOfBytes` inverts `ofString` and
+    recovers `Shape.shapeToString`.  FLAPJACK-SPECIFIC, untagged. -/
+theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes (s : Flapjack.Shape)
+    (h : ∀ c ∈ (Shape.shapeToString s).toList, c.toNat < 256) :
+    Shape.shapeToString s =
+      Flapjack.Basis.Pure.MlString.toStringOfBytes (shapeToStrHOL (shapeToHOL s)) := by
+  rw [← ofString_shapeToString s,
+    Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes]
+  exact h
+
+/-- Premise-free form of the production bridge: `ShapeByteRanged` already
+    guarantees the byte premise, so this closes the `.1.28` diagnostic-string
+    bridge without an extra hypothesis.  FLAPJACK-SPECIFIC, untagged. -/
+theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes_of_byteRanged (s : Flapjack.Shape)
+    (h : ShapeByteRanged s) :
+    Shape.shapeToString s =
+      Flapjack.Basis.Pure.MlString.toStringOfBytes (shapeToStrHOL (shapeToHOL s)) :=
+  shapeToString_eq_shapeToStrHOL_toStringOfBytes s (shapeByteRanged_shapeToString_bytes s h)
+/-! ### HOL's generated `shape_size` / `shape1_size`
+
+The HOL `Datatype: shape = One | Comb (shape list) | Named stcname`
+(`cakeml/pancake/panLangScript.sml:35-39`) command also generates the datatype
+size functions `shape_size`/`shape1_size` used by `Theorem MEM_IMP_shape_size`
+(lines 131-137).  Those functions are produced by HOL's `Datatype` package
+(`HOL/src/datatype/DataSize.sml`), not written as source declarations, so they
+have no textual HOL name for `scripts/check-hol-refs.py` to resolve and cannot
+carry an `@[hol]` tag.  The equations, printed from a standard-HOL reconstruction
+of the same datatype (identical constructor arities and field types, `char_size`
+from `HOL/src/string/stringScript.sml:179`), are
+
+```
+mlstring_size (implode a) = 1 + list_size char_size a
+shape_size One = 0
+shape_size (Comb a) = 1 + shape1_size a
+shape_size (Named a) = 1 + mlstring_size a
+shape1_size [] = 0
+shape1_size (a0::a1) = 1 + (shape_size a0 + shape1_size a1)
+```
+
+They are transcribed below so that `memImpShapeSizeHOL` has HOL's exact
+statement. -/
+
+/-- HOL `char_size` (`HOL/src/string/stringScript.sml:179`): `char_size c = 0`
+    for every `char`.  Needed only to spell HOL's generated `mlstring_size`. -/
+def holCharSize (_ : Flapjack.Basis.Pure.MlString.HolChar) : Nat := 0
+
+/-- HOL's generated list size: `list_size f [] = 0` and
+    `list_size f (x :: xs) = 1 + f x + list_size f xs`
+    (`HOL/src/list/src/listScript.sml:529-532`). -/
+def listSizeHOL {α : Type} (f : α → Nat) : List α → Nat
+  | [] => 0
+  | x :: xs => 1 + f x + listSizeHOL f xs
+
+/-- HOL's generated `mlstring_size` (for `Datatype: mlstring = implode string`,
+    `cakeml/basis/pure/mlstringScript.sml:19-21`):
+    `mlstring_size (implode a) = 1 + list_size char_size a`. -/
+def mlstringSizeHOL : MlS → Nat
+  | .implode data => 1 + listSizeHOL holCharSize data
+
+mutual
+  /-- HOL's generated `shape_size`. -/
+  def shapeSizeHOL : ShapeHOL → Nat
+    | .one => 0
+    | .comb shapes => 1 + shape1SizeHOL shapes
+    | .named name => 1 + mlstringSizeHOL name
+
+  /-- HOL's generated `shape1_size`, the list size of `shape`. -/
+  def shape1SizeHOL : List ShapeHOL → Nat
+    | [] => 0
+    | shape :: shapes => 1 + shapeSizeHOL shape + shape1SizeHOL shapes
+end
+
+/-- Exact port of HOL `panLang$MEM_IMP_shape_size`
+    (`cakeml/pancake/panLangScript.sml:131-137`):
+    `!shapes a. MEM a shapes ==> shape_size a < 1 + shape1_size shapes`,
+    over the exact `ShapeHOL` carrier and the transcribed generated size
+    functions above. -/
+@[hol "cakeml/pancake/panLangScript.sml" "MEM_IMP_shape_size"]
+theorem memImpShapeSizeHOL (shapes : List ShapeHOL) (a : ShapeHOL)
+    (h : a ∈ shapes) : shapeSizeHOL a < 1 + shape1SizeHOL shapes := by
+  induction shapes with
+  | nil => simp at h
+  | cons s ss ih =>
+    rw [List.mem_cons] at h
+    rcases h with h_eq | h_mem
+    · subst h_eq
+      simp only [shape1SizeHOL]
+      omega
+    · have ih' := ih h_mem
+      simp only [shape1SizeHOL]
+      omega
 end Flapjack.Pancake.PanLang

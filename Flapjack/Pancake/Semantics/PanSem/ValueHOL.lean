@@ -180,4 +180,18 @@ def theValWordHOL {width : Nat} [NeZero width] : ValueHOL width → BitVec width
 theorem theValWordHOL_val_word {width : Nat} [NeZero width] (value : BitVec width) :
     theValWordHOL (.val (.word value) : ValueHOL width) = value := rfl
 
+/-- Exact port of the HOL `ValWord` overload
+    (`cakeml/pancake/semantics/panSemScript.sml:26`):
+
+    `Overload ValWord = "\w. Val (Word w)"`.
+
+    This is a total abbreviation on the positive-width `ValueHOL` carrier,
+    sending a machine word to the `Val` constructor wrapping the exact
+    `HolWordLab.word` payload.  It is an exact partial application: the only
+    HOL clause is `ValWord w = Val (Word w)`, ground over the same `v`/`word_lab`
+    carriers, with no side conditions. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "ValWord"]
+def valWordHOL {width : Nat} [NeZero width] (word : BitVec width) : ValueHOL width :=
+  .val (.word word)
+
 end Flapjack

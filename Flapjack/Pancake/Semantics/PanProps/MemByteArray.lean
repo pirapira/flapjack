@@ -1,5 +1,8 @@
 import Flapjack.HolRef
+import Flapjack.Misc.GoodDimindex
 import Flapjack.Pancake.Semantics.PanSemStateEval
+import Flapjack.Pancake.Semantics.PanSem.ByteRoundtrip
+import Flapjack.Pancake.Semantics.LoopSem
 
 /-!
 # PanProps byte-array memory invariants
@@ -107,5 +110,94 @@ theorem writeBytearrayUpdateByte {width : Nat} [NeZero width]
   rintro ⟨haligned, word, hmemory⟩
   exact panWriteBytearrayPreservesWordAt bytes address address' memory domain
     bigEndian haligned word hmemory
+
+/-- Exact statement of HOL `panProps$read_write_bytearray_lemma`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1119`). Reading `length`
+    bytes with the aligned, in-domain byte loader `panMemLoadByteHOL` and then
+    writing the same bytes back with `panWriteBytearrayHOL` leaves the memory
+    unchanged, provided the word width is `good_dimindex` (32 or 64).
+
+    The carriers are the exact panSem ones: the total `word_lab` memory is
+    `RiscV.Word width → HolWordLab width`, the HOL address set is a `Prop`
+    predicate with `DecidablePred` evidence, `word8` is `UInt8`, the reader is
+    the tagged `panMemLoadByteHOL` (`mem_load_byte_def`) fed to the tagged
+    `readBytearrayHOL` (`read_bytearray_def`), and the write is the tagged
+    `panWriteBytearrayHOL` (`write_bytearray_def`). HOL's `good_dimindex` is
+    `goodDimindex` (`Flapjack/Misc/GoodDimindex.lean`). The proof inducts on the
+    length like HOL, splitting `goodDimindex` to `width = 32 ∨ width = 64` and
+    using the width-generic byte roundtrip `panSetByteHOL_panGetByteHOL`
+    (`PanSem/ByteRoundtrip.lean`, the untagged analogue of standard-library
+    `byte$set_byte_get_byte`) where HOL uses `set_byte_get_byte`. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "read_write_bytearray_lemma"]
+theorem readWriteBytearrayLemma {width : Nat} [NeZero width]
+    (length : Nat) (address : RiscV.Word width) (bytes : List UInt8)
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) :
+    (goodDimindex width ∧
+      readBytearrayHOL address length
+        (panMemLoadByteHOL memory domain bigEndian) = some bytes) →
+      panWriteBytearrayHOL address bytes memory domain bigEndian = memory := by
+  rintro ⟨hgood, hread⟩
+  have hwidth : 8 ≤ width := by
+    rcases (by simpa only [goodDimindex] using hgood) with h | h <;> omega
+  induction length generalizing address bytes with
+  | zero =>
+      simp only [readBytearrayHOL] at hread
+      have hbytes : bytes = [] := by simpa using hread.symm
+      subst bytes
+      rfl
+  | succ n ih =>
+      rw [readBytearrayHOL] at hread
+      cases hload : panMemLoadByteHOL memory domain bigEndian address with
+      | none =>
+          simp only [hload] at hread
+          exact absurd hread (Option.some_ne_none bytes).symm
+      | some b =>
+          simp only [hload] at hread
+          cases hrest : readBytearrayHOL (address + 1) n
+              (panMemLoadByteHOL memory domain bigEndian) with
+          | none =>
+              simp only [hrest] at hread
+              exact absurd hread (Option.some_ne_none bytes).symm
+          | some bs =>
+              simp only [hrest] at hread
+              have hbytes : bytes = b :: bs := by
+                injection hread with h
+                exact h.symm
+              subst bytes
+              have htail : panWriteBytearrayHOL (address + 1) bs memory domain
+                  bigEndian = memory := ih (address + 1) bs hrest
+              rw [panWriteBytearrayHOL, htail]
+              cases hcell : memory (panByteAlignHOL (width := width) address) with
+              | word v =>
+                  by_cases hdom :
+                      domain (panByteAlignHOL (width := width) address)
+                  · have hb : b = panGetByteHOL address v bigEndian := by
+                      have hEq : some (panGetByteHOL address v bigEndian) = some b := by
+                        simpa only [panMemLoadByteHOL, hcell, hdom, if_true] using hload
+                      injection hEq with h
+                      exact h.symm
+                    have hstore : panMemStoreByteHOL memory domain bigEndian address b
+                        = some (fun current =>
+                            if current = panByteAlignHOL (width := width) address then
+                              .word (panSetByteHOL address
+                                (BitVec.ofNat width b.toNat) v bigEndian)
+                            else memory current) := by
+                      simp only [panMemStoreByteHOL, hcell, hdom, if_true]
+                    rw [hstore]
+                    dsimp only
+                    funext current
+                    by_cases hcur :
+                        current = panByteAlignHOL (width := width) address
+                    · subst hcur
+                      rw [if_pos rfl, hcell]
+                      congr 1
+                      rw [hb]
+                      exact panSetByteHOL_panGetByteHOL address v bigEndian hwidth
+                    · rw [if_neg hcur]
+                  · exfalso
+                    simp only [panMemLoadByteHOL, hcell, hdom, if_false] at hload
+                    exact absurd hload (Option.some_ne_none b).symm
 
 end Flapjack

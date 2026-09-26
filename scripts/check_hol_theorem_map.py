@@ -1242,6 +1242,23 @@ DOCUMENTED_MISMATCHES = {
         "does not directly apply; exact tagging route tracked by bead "
         "flapjack-pxn.18.3.7.1.3.1.1.2.4. Helper and executable bridge remain valid."
     ),
+    ("Flapjack/Pancake/PanToCrep.lean", "compileExp"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "compile_exp_def",
+        "flapjack-luna-b (source comparison, bead flapjack-4ac.2.5; "
+        "pan_to_crepScript.sml:39-108): clauses are structurally aligned, but "
+        "compileExp ranges over production Exp α with generic Const α, String-backed "
+        "names, production Shape/CrepExp α, and InfoMap-backed CompileContext. HOL "
+        "uses word-indexed ExpHOL/CrepExpHOL, ShapeHOL/MlString names, and finite-map "
+        "context; the generic [BEq α]/[OfNat α 0]/[Add α] carrier is not a positive-width "
+        "HOL word. Lean also reads arbitrary context.bytesInWord for Load/BytesInWord "
+        "while HOL uses fixed word-width-derived bytes_in_word. Nearby "
+        "PanToCrepHOLContext still has String keys and production Shape/generic α too. "
+        "No @[hol] tag is claimed. Exact carrier/compiler replacement is "
+        "flapjack-4ac.2.5.1, dependent on flapjack-pxn.18.3.5.8; because compileExp "
+        "feeds the executed compiler, replacement must connect the production path "
+        "or record a measured exception."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",
@@ -1495,18 +1512,54 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Exp.lean", "memImpExpSizeHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "crepVarsHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "loadMemOpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps/LocalisedExpSimps.lean", "localisedExpSimpsHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps/NamelessExpSimps.lean", "namelessExpSimpsHOL"),
+        ("Flapjack/Misc/GoodDimindex.lean", "goodDimindex"),
+        ("Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean", "readWriteBytearrayLemma"),
         ("Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean", "panMemLoad32HOL_eq_alt"),
         ("Flapjack/Pancake/Semantics/PanSem/MemStore32Alt.lean", "panMemStore32HOL_eq_alt"),
+        ("Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean", "valWordHOL"),
+        ("Flapjack/Pancake/PanLang.lean", "Index"),
+        ("Flapjack/Pancake/PanLang.lean", "Stcname"),
+        ("Flapjack/Pancake/PanLang.lean", "Fldname"),
+        ("Flapjack/Pancake/PanLang.lean", "Varname"),
+        ("Flapjack/Pancake/PanLang.lean", "Funname"),
+        ("Flapjack/Pancake/PanLang.lean", "Eid"),
+        ("Flapjack/Pancake/PanLang.lean", "Decname"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "storeMemOpHOL"),
         ("Flapjack/Pancake/PanLang/Prog.lean", "expIdsHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "sizeOfEidsHOL"),
+        ("Flapjack/Pancake/PanLang/Decl.lean", "isWfFldsExactHOL"),
+        ("Flapjack/Pancake/PanLang/Decl.lean", "isWfCtxtExactHOL"),
+        ("Flapjack/Pancake/PanLang/Decl.lean", "sizeOfShapeWithContextHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "inlinableHOL"),
         ("Flapjack/Pancake/PanLang/Prog.lean", "funIdsHOL"),
+        ("Flapjack/Pancake/PanLang/Prog.lean", "tailCallHOL"),
+        ("Flapjack/Pancake/PanLang/Prog.lean", "assignCallHOL"),
+        ("Flapjack/Pancake/PanLang/Prog.lean", "standAloneCallHOL"),
+        ("Flapjack/Pancake/PanLang/Prog.lean", "freeVarIdsHOL"),
         ("Flapjack/Pancake/PanLang/Prog.lean", "nestedSeqHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "shapeValHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "shapeValsHOL"),
         ("Flapjack/Pancake/WordLang.lean", "everyVarImm"),
         ("Flapjack/Pancake/WordLang.lean", "everyVarInst"),
+        ("Flapjack/Pancake/PanLang/Shape.lean", "sizeOfShapeHOL"),
+        ("Flapjack/Pancake/PanLang/Shape.lean", "shapeToStrHOL"),
+        ("Flapjack/Pancake/PanLang/Shape.lean", "withShapeHOL"),
+        ("Flapjack/AstHOL.lean", "Shift"),
+        ("Flapjack/Pancake/PanLang.lean", "PanLangShift"),
+        ("Flapjack/FfiHOL.lean", "HolFfiOutcome"),
+        ("Flapjack/FfiHOL.lean", "HolOracleResult"),
+        ("Flapjack/FfiHOL.lean", "HolShmemOp"),
+        ("Flapjack/FfiHOL.lean", "HolFfiName"),
+        ("Flapjack/FfiHOL.lean", "HolOracleFunction"),
+        ("Flapjack/FfiHOL.lean", "HolOracle"),
+        ("Flapjack/FfiHOL.lean", "HolIoEvent"),
+        ("Flapjack/FfiHOL.lean", "HolFinalEvent"),
+        ("Flapjack/FfiHOL.lean", "HolFfiState"),
+        ("Flapjack/FfiHOL.lean", "initialHolFfiState"),
+        ("Flapjack/FfiHOL.lean", "HolFfiResult"),
+        ("Flapjack/FfiHOL.lean", "callFFIHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

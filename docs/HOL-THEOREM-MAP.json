@@ -7352,14 +7352,6 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panValueFlatShapeFuel_pos",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only arithmetic support lemma showing every production shape consumes positive fuel; no standalone HOL declaration is claimed."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panValueFlatFieldsFuel_eq_shapeListFuel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only representation bridge equating named-field loader fuel to the corresponding shape-list fuel; support for the untagged mem_load_conversion loader correspondence, not a standalone HOL declaration."
@@ -11269,5 +11261,22 @@
     "lean_name": "evalCrepHolExp",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-luna-b (source comparison, 2026-09-26; bead flapjack-4ac.5.19; HOL variables es, ns, t, ev, p are implicitly universally quantified. Premises are MAP (eval t) es = MAP SOME ev; LENGTH ns = LENGTH es; distinct_lists ns (FLAT (MAP var_cexp es)); ALL_DISTINCT ns. Conclusion is evaluate (nested_decs ns es p,t) equal to the let-bound evaluate (p,t with locals := t.locals |++ ZIP (ns,ev)), with result locals restored by FOLDL res_var over ZIP (ns, MAP (FLOOKUP t.locals) ns). nestedDecsHOL is syntax only. evalCrepHolExp has production CrepExp/CrepHolState carriers and evalCrepClockProg covers only restricted CrepClockProg/CrepHolState; no complete evaluator over CrepProgHOL/CrepExpHOL/CrepSemHOLState is available. These evaluators cannot express the full theorem, so no @[hol] tag is claimed. Faithful replacement flapjack-4ac.5.19.1 depends on flapjack-4ac.5.82 and flapjack-pxn.18.3.5.8.8."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_is_wf_shape_v",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evalIsWfShapeValueHOL",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "Codex (direct source comparison, 2026-09-26, panPropsScript.sml:126): HOL quantifies state/expression/value and states successful eval followed by FEVERY well-formed locals and globals in that order, concluding is_wf_shape_v under the state's struct context. Lean preserves the conjunction, order, and conclusion using exact ExpHOL/ValueHOL/StructContextExact carriers; pointwise lookup premises express FEVERY for the finite-map fields. PanPropsEvalStateFiniteExact owns all four fields as HolFiniteMapExact, the reviewed canonical translation of HOL |->, and its same-module holFmapAsFiniteSupportWitness proves toExact/ofExact roundtrips with PanSemStateExact restricted to finite support. `evalHOL` delegates to the already source-reviewed evalHOLExact through that translation. The qualifier records only the finite-map representation; [NeZero width] is the reviewed positive word dimension carrier, and the explicit DecidablePred state.memaddrs instance renders HOL set membership for memory loads."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "write_bytearray_update_byte",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
+    "lean_name": "writeBytearrayUpdateByte",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (direct source review, 2026-09-26; bead flapjack-4ac.4.58.1): HOL panPropsScript.sml:1098-1104 quantifies bytes, ad, ad', m, adrs, be. The single antecedent is byte_aligned ad AND an existential Word cell at m ad; the conclusion existentially witnesses a Word cell at ad after write_bytearray ad' bytes m adrs be. Lean retains the same order and conjunction, with polymorphic word width, UInt8 for HOL word8, HolWordLab for HOL word_lab, and panByteAlignHOL ad = ad for byte_aligned ad (alignmentScript.sml:27). DecidablePred domain is computational evidence for HOL set membership, not a logical side condition."
   }
 ]

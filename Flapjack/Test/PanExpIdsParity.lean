@@ -28,6 +28,22 @@ def callHandler : Prog Nat :=
     .seq (.raise "EH" (.const 6)) .skip))) "f" []
 def fallback : Prog Nat := .assign .local "x" (.const 9)
 
+private def byteRangedRaise : Prog (BitVec 64) := .raise "E" (.const 7)
+
+example :
+    (Flapjack.Pancake.PanLang.expIdsHOL
+      (Flapjack.Pancake.PanLang.progToHOL byteRangedRaise)).map
+        Flapjack.Basis.Pure.MlString.toStringOfBytes =
+      expIds byteRangedRaise := by
+  exact Flapjack.Pancake.PanLang.expIdsHOL_progToHOL_byteRanged byteRangedRaise
+    (by
+      change Flapjack.Pancake.PanLang.NameRanged "E" ∧
+        Flapjack.Pancake.PanLang.ExpByteRanged (.const 7)
+      constructor
+      · simp [Flapjack.Pancake.PanLang.NameRanged]
+      · change True
+        trivial)
+
 def same (actual expected : List ExceptionId) : Bool := actual == expected
 
 #guard same (expIds empty) []

@@ -820,14 +820,25 @@ def isName : Decl α → Bool
   | .name _ _ => true
   | _ => false
 
-def sizeOfEids : List (Decl α) → Nat
-  | [] => 0
-  | declaration :: declarations =>
-      if isExnDecl declaration then
-        1 + sizeOfEids declarations
-      else
-        sizeOfEids declarations
-termination_by declarations => sizeOf declarations
+/-- Flapjack-only constructor projection used to reuse the exact HOL
+`size_of_eids_def`.  The source definition observes only whether a declaration
+is `ExnDecl`; the generic production payload, names, and shapes are discarded
+here and are not being claimed as HOL carriers. -/
+private def declClassViewHOL (declaration : Decl α) :
+    Flapjack.Pancake.PanLang.DeclHOL 1 :=
+  match declaration with
+  | .exnDecl _ _ =>
+      .exnDecl (Flapjack.Basis.Pure.MlString.ofString "") .one
+  | _ =>
+      .name (Flapjack.Basis.Pure.MlString.ofString "") []
+
+/-- Count exception declarations by applying the reviewed HOL definition to a
+constructor-only view of production declarations.  This does not make the
+generic `Decl α` carrier an exact HOL port.  Also, compiler exception-table
+generation uses `crepGetEidsFromDecls` directly; this helper is currently used
+for proof-side size facts, not by that executed path. -/
+def sizeOfEids (declarations : List (Decl α)) : Nat :=
+  Flapjack.Pancake.PanLang.sizeOfEidsHOL (declarations.map declClassViewHOL)
 
 /-! `pan_simp` maps every function declaration to a function declaration and
     leaves every other declaration unchanged, so it preserves the exception
@@ -837,25 +848,30 @@ theorem isExnDecl_panSimpDecl (declaration : Decl α) :
     isExnDecl (panSimpDecl declaration) = isExnDecl declaration := by
   cases declaration <;> rfl
 
-theorem sizeOfEids_map_panSimpDecl (declarations : List (Decl α)) :
-    sizeOfEids (declarations.map panSimpDecl) = sizeOfEids declarations := by
-  induction declarations with
-  | nil => rw [List.map_nil, sizeOfEids.eq_def]
-  | cons declaration declarations ih =>
-      rw [List.map_cons, sizeOfEids.eq_def, sizeOfEids.eq_def]
-      simp [isExnDecl_panSimpDecl, ih]
-
-theorem sizeOfEids_panSimpDecls (declarations : List (Decl α)) :
-    sizeOfEids (panSimpDecls declarations) = sizeOfEids declarations := by
-  rw [panSimpDecls_eq_map]
-  exact sizeOfEids_map_panSimpDecl declarations
-
 /-- The cons equation for `sizeOfEids`, stated as an `if` on `isExnDecl`. -/
 theorem sizeOfEids_cons (declaration : Decl α) (declarations : List (Decl α)) :
     sizeOfEids (declaration :: declarations) =
       if isExnDecl declaration then 1 + sizeOfEids declarations
       else sizeOfEids declarations := by
-  cases declaration <;> rw [sizeOfEids.eq_def] <;> simp [isExnDecl]
+  unfold sizeOfEids
+  rw [Flapjack.Pancake.PanLang.sizeOfEidsHOL_eq_filter, List.map_cons,
+    List.filter_cons]
+  cases declaration <;>
+    simp [declClassViewHOL, isExnDecl, Flapjack.Pancake.PanLang.isExnDeclHOL] <;>
+      omega
+
+theorem sizeOfEids_map_panSimpDecl (declarations : List (Decl α)) :
+    sizeOfEids (declarations.map panSimpDecl) = sizeOfEids declarations := by
+  induction declarations with
+  | nil => simp [sizeOfEids]
+  | cons declaration declarations ih =>
+      rw [List.map_cons, sizeOfEids_cons, sizeOfEids_cons,
+        isExnDecl_panSimpDecl, ih]
+
+theorem sizeOfEids_panSimpDecls (declarations : List (Decl α)) :
+    sizeOfEids (panSimpDecls declarations) = sizeOfEids declarations := by
+  rw [panSimpDecls_eq_map]
+  exact sizeOfEids_map_panSimpDecl declarations
 
 /-- Cake's `size_of_eids_structs_compile_eq`
     (`cakeml/pancake/proofs/pan_to_wordProofScript.sml:305`): the `pan_structs`
@@ -893,11 +909,12 @@ theorem sizeOfEids_structCompileTop (declarations : List (Decl α)) :
 
 /-! ### Checked codec bridge to the exact `DeclHOL` predicates (bead `flapjack-ni1.1`)
 
-`isDecl`/`isExnDecl`/`sizeOfEids` are polymorphic over the production `Decl α`
-(`String` names), while the tagged `isDeclHOL`/`isExnDeclHOL` are over the exact
-`DeclHOL width` (`MlS`/`ShapeHOL`).  The carriers differ, so the executed
-predicates cannot call the tagged ones directly; these lemmas are the reviewed
-bridge through the `declOfHOL` codec. -/
+`isDecl`/`isExnDecl`/`sizeOfEids` are polymorphic over the production `Decl α`,
+while the tagged predicates are over exact `DeclHOL width` (`MlS`/`ShapeHOL`).
+The `declOfHOL` lemmas below check their behavior on the exact codec image. For
+arbitrary production declarations, `sizeOfEids` instead uses the documented
+constructor-only projection above. These are source-helper bridges, not a
+claim that `crepGetEidsFromDecls` routes through `sizeOfEidsHOL`. -/
 
 section DeclHOLBridge
 
@@ -3428,7 +3445,7 @@ theorem globalCompileTopForStart_sizeOfEids [BEq String] [Add α] [Mul α]
       simp only [hfind, Option.some.injEq] at hcompile
       subst hcompile
       have hnil : sizeOfEids ([] : List (Decl α)) = 0 := by
-        rw [sizeOfEids.eq_def]
+        simp [sizeOfEids]
       rw [sizeOfEids_append, sizeOfEids_append,
         sizeOfEids_globalCompileDecs_exceptions,
         sizeOfEids_globalCompileDecs_functions,

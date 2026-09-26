@@ -9616,16 +9616,16 @@
     "hol_name": "every_var_imm_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarImm",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.5.15.1.4): HOL every_var_imm_def (wordLangScript.sml:93-96) is `every_var_imm P (Reg r) = P r` and `every_var_imm P _ = T`. Lean everyVarImm (P : Nat -> Bool) : WordRegImm (BitVec width) -> Bool has exactly `.reg num => P num` and `_ => true`, with WordRegImm.reg/imm (Flapjack.Word:43-46) matching asm$reg_imm = Reg reg | Imm ('a word). Same erasing-recursor width convention already accepted for everyVarExpHOL (no [NeZero width] because no displayed word field is inspected; the HOL word width is the phantom type parameter of the ignored Imm payload)."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
     "hol_name": "every_var_inst_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarInst",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.5.15.1.4): HOL every_var_inst_def (wordLangScript.sml:98-133) clause-for-clause. Const -> P reg; Arith Binop/Shift -> P r1 && P r2 && every_var_imm P ri; Div -> P r1 && P r2 && P r3; AddCarry/AddOverflow/SubOverflow/LongMul -> P r1..r4; LongDiv -> P r1..r5; Mem Load/Store/Load32/Store32/Load8/Store8 (Addr a w) -> P r && P a (HOL has no Load16/Store16 clause, both fall to the catch-all T, matching Lean's `_ => true`); FP FPLess/FPLessEqual/FPEqual -> P r; FPMovToReg/FPMovFromReg -> `if dimindex(:'a) = 64 then P r1 else (P r1 && P r2)`, rendered as `if width = 64`; final catch-all -> T. WordLangArith carries exactly HOL asm$arith's Binop/Shift/Div/LongMul/LongDiv/AddCarry/AddOverflow/SubOverflow (Flapjack/Pancake/WordLang.lean:120-129), WordRegImm matches asm$reg_imm, and WordMemOp matches asm$memop; every_var_imm uses the reviewed everyVarImm. Same erasing-recursor width convention as everyVarExpHOL: no [NeZero width] because the only width use is the literal 64 test, which agrees with dimindex(:'a)=64 on every inhabited HOL word type while the ignored word payloads carry no displayed field."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

@@ -1411,6 +1411,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Proofs/PanToCrep/CompileExpVmax.lean", "genlistVmaxDistinctListsCompiledExpsW"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "isDeclHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "isFunctionHOL"),
+        ("Flapjack/Pancake/PanLang/Decl.lean", "isNameHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_append"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isFunction"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isDecl"),

@@ -11707,8 +11707,8 @@
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "evaluate_decls_names",
-    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
-    "lean_name": "evaluateDeclsPanPropsHOLFinite_names",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evaluateDeclsHOLFinite_names",
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": [
       "locals",
@@ -11716,7 +11716,7 @@
       "code",
       "eshapes"
     ],
-    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-4ac.4.87): HOL panPropsScript.sml:1552-1559 states forall s decs, EVERY is_name decs => evaluate_decls s decs = SOME s. Lean quantifies the same state and declaration list, with the exact is_name counterpart isNameHOL (tagged is_name_def) and `decs.all isNameHOL = true` rendering HOL EVERY. The subject is the PanProps finite-support rendering evaluateDeclsPanPropsHOLFinite, whose clauses match evaluate_decls_def one-for-one and are kernel-checked to project to the exact evaluateDeclsHOLExact via evaluateDeclsPanPropsHOLFinite_toExact; the tagged PanSem definition evaluate_decls_def is evaluateDeclsHOLFinite. PanPropsEvalStateFiniteExact owns locals/globals/code/eshapes as HolFiniteMapExact (the canonical translation) and its same-module holFmapAsFiniteSupportWitness states the toExact/ofExact roundtrips with PanSemStateExact. The qualifier is representation-only;  quantifiers, hypothesis and conclusion are unchanged."
+    "reviewer": "flapjack-ds10 (source comparison, bead flapjack-4ac.4.87): HOL panPropsScript.sml:1552-1559 states forall s decs, EVERY is_name decs => evaluate_decls s decs = SOME s. Lean quantifies the same state and declaration list over the canonical tagged finite-map evaluator PanSemStateFiniteExact.evaluateDeclsHOLFinite (the reviewed counterpart of panSem evaluate_decls_def), with the exact is_name counterpart isNameHOL (tagged is_name_def) and `decs.all isNameHOL = true` rendering HOL EVERY; conclusion `evaluateDeclsHOLFinite state decs = some state`. This restatement over the canonical finite evaluator resolves the review HOLD that the earlier PanProps-wrapper subject was a duplicate finite evaluator: StateExactFiniteMap.lean hosts the owning carrier PanSemStateFiniteExact and its same-module canonical witness holFmapAsFiniteSupportWitness. The qualifier is representation-only; quantifiers, premise and conclusion are unchanged."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",

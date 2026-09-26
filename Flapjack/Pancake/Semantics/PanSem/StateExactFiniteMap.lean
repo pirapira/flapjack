@@ -61,7 +61,7 @@ import Flapjack.Pancake.Semantics.PanSem.FiniteSupportStep
 namespace Flapjack
 
 open Flapjack.Pancake.PanLang
-  (MlS ShapeHOL StructContextExact ProgHOL ExpHOL DeclHOL isWfShapeExactHOL)
+  (MlS ShapeHOL StructContextExact ProgHOL ExpHOL DeclHOL isWfShapeExactHOL isNameHOL)
 
 /-- `HolFiniteMapExact` is extensional: two values with the same `lookup` are
     equal, because the `finiteSupport` field is a proof of a proposition.  This
@@ -1050,6 +1050,34 @@ def evaluateDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width]
         letI : DecidablePred updated.memaddrs := h
         evaluateDeclsHOLFinite updated declarations
       else none
+
+/-- HOL `panProps$evaluate_decls_names` (`panPropsScript.sml:1552-1559`): when
+    every declaration is a `Name`, `evaluate_decls` succeeds and leaves the state
+    unchanged.  This is stated over the canonical tagged finite-map evaluator
+    `evaluateDeclsHOLFinite`, the exact Lean counterpart of HOL
+    `panSem$evaluate_decls`; the `EVERY is_name decs` premise is rendered as
+    `decs.all isNameHOL = true` and the conclusion as
+    `evaluateDeclsHOLFinite state decs = some state`.  The four map-shaped state
+    fields (`locals`, `globals`, `code`, `eshapes`) are recorded by the
+    `fmap_as_finite_support` qualifier (canonical witness
+    `holFmapAsFiniteSupportWitness` in this module); the qualifier is
+    representation-only, so the quantifiers, premise and conclusion match HOL. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_names"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evaluateDeclsHOLFinite_names {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (decs : List (DeclHOL width)) (hnames : decs.all isNameHOL = true) :
+    evaluateDeclsHOLFinite state decs = some state := by
+  induction decs generalizing state with
+  | nil => rfl
+  | cons declaration rest ih =>
+      rw [List.all_cons, Bool.and_eq_true] at hnames
+      obtain ⟨hhead, hrest⟩ := hnames
+      cases declaration with
+      | name name fields => exact ih state hrest
+      | decl shape name expression => simp [isNameHOL] at hhead
+      | function declaration => simp [isNameHOL] at hhead
+      | exnDecl exceptionName shape => simp [isNameHOL] at hhead
 
 /-- FLAPJACK-SPECIFIC (no `@[hol]` tag): the clause-for-clause finite context
     evaluator is total.  Its outer `Option` is only the recursive-case assembly

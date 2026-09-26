@@ -380,35 +380,6 @@ theorem evaluateDeclsPanPropsHOLFinite_toExact {width : Nat} {σ : Type}
             simp [evaluateDeclsHOLExact, PanPropsEvalStateFiniteExact.toExact,
               condition, hconditionFalse]
 
-/-- HOL `panProps$evaluate_decls_names` (`panPropsScript.sml:1552-1559`): when
-    every declaration is a `Name`, `evaluate_decls` succeeds and leaves the
-    state unchanged.  Stated over the PanProps finite-support rendering
-    `evaluateDeclsPanPropsHOLFinite`, whose clauses are kernel-checked to project
-    to the exact `evaluateDeclsHOLExact`
-    (`evaluateDeclsPanPropsHOLFinite_toExact`) and whose `evaluate_decls_def`
-    counterpart is tagged on the PanSem carrier (`evaluateDeclsHOLFinite`). The
-    four map fields carried by `PanPropsEvalStateFiniteExact` are the canonical
-    `HolFiniteMapExact` translation (same-module witness
-    `holFmapAsFiniteSupportWitness`); the qualifier is representation-only, so
-    quantifiers, hypotheses and conclusion match HOL `EVERY is_name decs ⇒
-    evaluate_decls s decs = SOME s`. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_names"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
-theorem evaluateDeclsPanPropsHOLFinite_names {width : Nat} {σ : Type} [NeZero width]
-    (state : PanPropsEvalStateFiniteExact width σ) [DecidablePred state.memaddrs]
-    (decs : List (DeclHOL width)) (h : decs.all isNameHOL = true) :
-    evaluateDeclsPanPropsHOLFinite state decs = some state := by
-  induction decs generalizing state with
-  | nil => rfl
-  | cons declaration rest ih =>
-      rw [List.all_cons, Bool.and_eq_true] at h
-      obtain ⟨hhead, hrest⟩ := h
-      cases declaration with
-      | name name fields => exact ih state hrest
-      | decl shape name expression => simp [isNameHOL] at hhead
-      | function declaration => simp [isNameHOL] at hhead
-      | exnDecl exceptionName shape => simp [isNameHOL] at hhead
-
 /-- Flapjack finite-map support: a single `FUPDATE` followed by `FUPDATE_LIST`
     is the `FUPDATE_LIST` with the entry prepended. Infrastructure for the
     `evaluate_decls_functions` port, not a separate HOL declaration. -/

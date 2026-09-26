@@ -74,13 +74,15 @@ so the exact MLString-keyed `compile_prog` boundary
 production String-keyed `compileProgTopHOL`. This equality is NOT definitional:
 it is kernel-proved by `compileProgTopHOLOfExact_declToHOL` using the
 `DeclByteRanged` premise, i.e. propositional (not definitional) equality.
-This is the kernel-checked bridge from the executed parser output to the exact
-carrier. Direct original-Pancake parity evidence for the executed boundary is
+This is the kernel-checked bridge from the parser output to the exact carrier.
+The production source entrypoints compose its premise through entry relocation,
+`pan_simp`, struct compilation, and `compile_top`, then pass the resulting proof
+to `compileProgTopHOLWithMetadataOfExact` in `compileFlapjackEntryCake`. The
+source-shaped Crep output remains a documented carrier mismatch, so this
+routing does not claim an exact HOL `compile_prog` theorem. Direct
+original-Pancake parity evidence for the executed boundary is
 `python3 scripts/check-parity-goldens.py` (wide_constants.pnk, parity
-goldens=1, failures=0). The executed pipeline still calls
-`compileProgTopHOLWithMetadata` directly, so the textual-routing/tagging
-obligation remains tracked separately under parent beads `flapjack-6nn` and
-`flapjack-0up`, not claimed here. -/
+goldens=1, failures=0). -/
 theorem parseTopDecs_routes_exactBoundary {width : Nat} [NeZero width]
     [BEq FunName] [LawfulBEq FunName] [LawfulHashable FunName]
     [OfNat (BitVec width) 0] [OfNat (BitVec width) 1]

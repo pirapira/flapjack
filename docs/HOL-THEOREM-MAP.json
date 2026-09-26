@@ -2399,6 +2399,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "nested_seq_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "nestedSeqHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.1.31): HOL nested_seq_def (cakeml/pancake/panLangScript.sml:211-213) is nested_seq [] = Skip and nested_seq (e::es) = Seq e (nested_seq es), over the polymorphic 'a prog list. nestedSeqHOL matches clause-for-clause over the exact width-indexed ProgHOL carrier (constructor .skip/.seq with matching arities and fields), with [NeZero width] matching HOL's positive word type and no extra hypotheses. The checked bridges nestedSeqHOL_progOfHOL and nestedSeqHOL_progToHOL relate it to the production Flapjack.nestedSeq over the progOfHOL/progToHOL codecs (direct routing unavailable because production is polymorphic over Prog α with String identifiers while the tagged definition is width-indexed). Direct HOL-EVAL rows empty/one/two/assign_seq are in scripts/hol-probes/pan_lang_nested_seq_probe.out, replayed in Flapjack/Test/PanNestedSeqParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "global_var_exp_def",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "globalVarExpHOL",

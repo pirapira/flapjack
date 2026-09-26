@@ -928,7 +928,7 @@ theorem isExnDecl_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL 
     isExnDecl (declOfHOL declaration) = isExnDeclHOL declaration := by
   cases declaration <;> rfl
 
-theorem isName_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL width) :
+@[simp] theorem isName_declOfHOL {width : Nat} [NeZero width] (declaration : DeclHOL width) :
     isName (declOfHOL declaration) = isNameHOL declaration := by
   cases declaration <;> rfl
 

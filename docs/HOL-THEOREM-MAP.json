@@ -7352,14 +7352,6 @@
     "hol_path": null,
     "hol_name": null,
     "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
-    "lean_name": "panValueFlatShapeFuel_pos",
-    "statement_status": "no_hol_reference_pending_classification",
-    "reviewer": "Flapjack-only arithmetic support lemma showing every production shape consumes positive fuel; no standalone HOL declaration is claimed."
-  },
-  {
-    "hol_path": null,
-    "hol_name": null,
-    "lean_path": "Flapjack/Pancake/Proofs/PanStructs/CompileCorrect.lean",
     "lean_name": "panValueFlatFieldsFuel_eq_shapeListFuel",
     "statement_status": "no_hol_reference_pending_classification",
     "reviewer": "Flapjack-only representation bridge equating named-field loader fuel to the corresponding shape-list fuel; support for the untagged mem_load_conversion loader correspondence, not a standalone HOL declaration."
@@ -11262,5 +11254,14 @@
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "Codex (direct source comparison, 2026-09-26, panPropsScript.sml:126): HOL quantifies state/expression/value and states successful eval followed by FEVERY well-formed locals and globals in that order, concluding is_wf_shape_v under the state's struct context. Lean preserves the conjunction, order, and conclusion using exact ExpHOL/ValueHOL/StructContextExact carriers; pointwise lookup premises express FEVERY for the finite-map fields. PanPropsEvalStateFiniteExact owns all four fields as HolFiniteMapExact, the reviewed canonical translation of HOL |->, and its same-module holFmapAsFiniteSupportWitness proves toExact/ofExact roundtrips with PanSemStateExact restricted to finite support. `evalHOL` delegates to the already source-reviewed evalHOLExact through that translation. The qualifier records only the finite-map representation; [NeZero width] is the reviewed positive word dimension carrier, and the explicit DecidablePred state.memaddrs instance renders HOL set membership for memory loads."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "lookup_code_wf_shape_invariant_step",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "lookupCodeWfShapeInvariantStep",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "Codex (direct source comparison, 2026-09-26, panPropsScript.sml:1233): preserves the successful OPT_MMAP(eval s) argexps premise, successful lookup_code result triple, FEVERY locals, FEVERY globals, and FEVERY conclusion for newlocals, in source order. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and same-module holFmapAsFiniteSupportWitness; `lookupCodeHOLFinite` returns the exact FEMPTY |++ ZIP locals map. A successful update-list lookup comes from a zipped `(parameterName,arg)` entry; the second component is in the evaluated argument list, and eval_is_wf_shape_v establishes its wf property. The update uses the lawful MlS equality instance, implementing HOL equality; shapeEqHOL is the reviewed equality test used by lookup_code. The qualifier records only the finite-map carrier. [NeZero width] and DecidablePred memaddrs retain the already reviewed HOL word/set encodings."
   }
 ]

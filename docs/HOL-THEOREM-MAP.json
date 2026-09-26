@@ -11771,5 +11771,37 @@
       "eshapes"
     ],
     "reviewer": "flapjack-luna-b (source review, 2026-09-26 coordinator placement HOLD): HOL panPropsScript.sml:1518-1526 states forall s pan_code s', evaluate_decls s pan_code = SOME s' => s'.code = s.code |++ functions pan_code. Lean retains state/program/result quantifiers, successful-evaluation premise, and code-map conclusion with functionsHOL and HolFiniteMapExact.updateList as the reviewed constructor/list-update renderings. PanPropsEvalStateFiniteExact owns all four finite-map fields and the same-module roundtrip witness; its evaluator's complete Option result is kernel-bridged by evaluateDeclsPanPropsHOLFinite_toCanonical to the canonical tagged PanSem evaluate_decls_def port. A classical wrapper removes the Lean-only DecidablePred argument. The qualifier records only [locals, globals, code, eshapes]."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_upd_clock_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evalHOLFinite_upd_clock_eq",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): HOL panPropsScript.sml:644-652 is a panProps declaration, so the HOL port must live in the PanProps counterpart module/submodule, not this PanSem module. The @[hol] tag was withdrawn; the kernel-checked proof is preserved untagged and the untagged broad-carrier support evalHOLExact_upd_clock_eq remains in PanSem/EvalExact.lean. Relocation is blocked on the PanProps carrier/witness plus canonical-evaluator codec tracked by bead flapjack-lqws."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_upd_code_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evalHOLFinite_upd_code_eq",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): HOL panPropsScript.sml:654-662 is a panProps declaration, so the HOL port must live in the PanProps counterpart module/submodule, not this PanSem module. The @[hol] tag was withdrawn; the kernel-checked proof is preserved untagged and the untagged broad-carrier support evalHOLExact_upd_code_eq remains in PanSem/EvalExact.lean. Relocation is blocked on the PanProps carrier/witness plus canonical-evaluator codec tracked by bead flapjack-lqws."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "eval_upd_eshapes_eq",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evalHOLFinite_upd_eshapes_eq",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): HOL panPropsScript.sml:664-672 is a panProps declaration, so the HOL port must live in the PanProps counterpart module/submodule, not this PanSem module. The @[hol] tag was withdrawn; the kernel-checked proof is preserved untagged and the untagged broad-carrier support evalHOLExact_upd_eshapes_eq remains in PanSem/EvalExact.lean. Relocation is blocked on the PanProps carrier/witness plus canonical-evaluator codec tracked by bead flapjack-lqws."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decl_commute",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
+    "lean_name": "evaluateDeclsHOLFinite_declCommute",
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-ds10 (bead flapjack-4ac.4.79, coordinator HOLD 2026-09-26T16:46Z): HOL panPropsScript.sml:1472-1480 is a panProps declaration, so the HOL port must live in the PanProps counterpart module/submodule, not this PanSem module. The @[hol] tag was withdrawn; the kernel-checked proof is preserved untagged. Relocation is blocked on a same-module PanProps carrier/witness arrangement plus a kernel codec to the canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite (including the returned state); tracked by bead flapjack-lqws. The canonical panSem evaluate_decls_def tag remains correctly in StateExactFiniteMap.lean."
   }
 ]

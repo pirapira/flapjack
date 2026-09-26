@@ -362,6 +362,79 @@ theorem evalPanSemRecursiveCallFiniteContext_while_body_break {width : Nat} {σ 
   rw [if_neg hclock]
   rw [hbody]
 
+/-- HOL `evaluate_def` `Call` clause short circuit: an argument list that fails
+    to evaluate yields the error result at the unchanged context. -/
+theorem evalPanSemRecursiveCallFiniteContext_call_args_none {width : Nat} {σ : Type}
+    [NeZero width]
+    (info : Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width)))
+    (function : MlS) (arguments : List (ExpHOL width)) (context : FiniteEvalContext width σ)
+    (hargs : evalListHOLFinite context.state (h := context.memaddrsDecidable) arguments = none) :
+    evalPanSemRecursiveCallFiniteContext (.call info function arguments) context =
+      some (some PanSemResultExact.error, context) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hargs]
+
+/-- HOL `evaluate_def` `Call` clause short circuit: a function whose code lookup
+    fails yields the error result at the unchanged context. -/
+theorem evalPanSemRecursiveCallFiniteContext_call_lookup_none {width : Nat} {σ : Type}
+    [NeZero width]
+    (info : Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width)))
+    (function : MlS) (arguments : List (ExpHOL width)) (context : FiniteEvalContext width σ)
+    (values : List (ValueHOL width))
+    (hargs : evalListHOLFinite context.state (h := context.memaddrsDecidable) arguments =
+      some values)
+    (hlookupNone : lookupCodeHOLExact context.state.code.lookup function values = none) :
+    evalPanSemRecursiveCallFiniteContext (.call info function arguments) context =
+      some (some PanSemResultExact.error, context) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hargs]
+  dsimp only
+  split
+  · rfl
+  · rename_i hsome
+    rw [hlookupNone] at hsome
+    simp at hsome
+
+/-- HOL `evaluate_def` `DecCall` clause short circuit: an argument list that fails
+    to evaluate yields the error result at the unchanged context. -/
+theorem evalPanSemRecursiveCallFiniteContext_decCall_args_none {width : Nat} {σ : Type}
+    [NeZero width]
+    (resultName : MlS) (shape : ShapeHOL) (function : MlS)
+    (arguments : List (ExpHOL width)) (continuation : ProgHOL width)
+    (context : FiniteEvalContext width σ)
+    (hargs : evalListHOLFinite context.state (h := context.memaddrsDecidable) arguments = none) :
+    evalPanSemRecursiveCallFiniteContext
+        (.decCall resultName shape function arguments continuation) context =
+      some (some PanSemResultExact.error, context) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hargs]
+
+/-- HOL `evaluate_def` `DecCall` clause short circuit: a function whose code
+    lookup fails yields the error result at the unchanged context. -/
+theorem evalPanSemRecursiveCallFiniteContext_decCall_lookup_none {width : Nat} {σ : Type}
+    [NeZero width]
+    (resultName : MlS) (shape : ShapeHOL) (function : MlS)
+    (arguments : List (ExpHOL width)) (continuation : ProgHOL width)
+    (context : FiniteEvalContext width σ) (values : List (ValueHOL width))
+    (hargs : evalListHOLFinite context.state (h := context.memaddrsDecidable) arguments =
+      some values)
+    (hlookupNone : lookupCodeHOLExact context.state.code.lookup function values = none) :
+    evalPanSemRecursiveCallFiniteContext
+        (.decCall resultName shape function arguments continuation) context =
+      some (some PanSemResultExact.error, context) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def]
+  dsimp only
+  rw [hargs]
+  dsimp only
+  split
+  · rfl
+  · rename_i hsome
+    rw [hlookupNone] at hsome
+    simp at hsome
+
 end PanSemStateFiniteExact
 
 end Flapjack

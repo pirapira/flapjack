@@ -734,25 +734,25 @@ theorem evalPanSemRecursiveCallContextHOLExact_call_finiteSupport
             rw [← hres]
             exact PanSemStateExact.finiteSupport_emptyLocals h
           · rw [if_neg hclock] at hres
-            have hentry : ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport :=
+            have hentry : (callEntryStateHOLExact context.state calleeLocals).FiniteSupport :=
               PanSemStateExact.finiteSupport_setLocals_clock context.state calleeLocals
                 (context.state.clock - 1)
                 (lookupCodeHOLExact_calleeLocals_finiteSupport context.state.code function
                   values body calleeLocals returnShape hlookup) h
             cases hbody : evalPanSemRecursiveCallContextHOLExact body
-                (context.withState { context.state with clock := context.state.clock - 1, locals := calleeLocals } rfl rfl) with
+                (context.withState (callEntryStateHOLExact context.state calleeLocals) rfl rfl) with
             | none => simp only [hbody] at hres; cases hres
             | some pair =>
                 obtain ⟨bodyResult, bodyContext⟩ := pair
                 simp only [hbody] at hres
                 have hbodyfs : bodyContext.state.FiniteSupport :=
                   ihBody body
-                    (context.withState { context.state with clock := context.state.clock - 1, locals := calleeLocals } rfl rfl)
+                    (context.withState (callEntryStateHOLExact context.state calleeLocals) rfl rfl)
                     (by exact hentry)
                     (bodyResult, bodyContext) hbody
-                have hfixed : (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (bodyResult, bodyContext.state)).2.FiniteSupport :=
+                have hfixed : (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (bodyResult, bodyContext.state)).2.FiniteSupport :=
                   PanSemStateExact.finiteSupport_fixClock _ _ hbodyfs
-                let fixedCtx : PanSemExactEvalContext width σ := bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (bodyResult, bodyContext.state)).snd rfl rfl
+                let fixedCtx : PanSemExactEvalContext width σ := bodyContext.withState (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (bodyResult, bodyContext.state)).snd rfl rfl
                 have hfixedCtx : fixedCtx.state.FiniteSupport := hfixed
                 cases bodyResult with
                 | none =>
@@ -908,25 +908,25 @@ theorem evalPanSemRecursiveCallContextHOLExact_decCall_finiteSupport
             rw [← hres]
             exact PanSemStateExact.finiteSupport_emptyLocals h
           · rw [if_neg hclock] at hres
-            have hentry : ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ).FiniteSupport :=
+            have hentry : (callEntryStateHOLExact context.state calleeLocals).FiniteSupport :=
               PanSemStateExact.finiteSupport_setLocals_clock context.state calleeLocals
                 (context.state.clock - 1)
                 (lookupCodeHOLExact_calleeLocals_finiteSupport context.state.code function
                   values body calleeLocals returnShape hlookup) h
             cases hbody : evalPanSemRecursiveCallContextHOLExact body
-                (context.withState { context.state with clock := context.state.clock - 1, locals := calleeLocals } rfl rfl) with
+                (context.withState (callEntryStateHOLExact context.state calleeLocals) rfl rfl) with
             | none => simp only [hbody] at hres; cases hres
             | some pair =>
                 obtain ⟨bodyResult, bodyContext⟩ := pair
                 simp only [hbody] at hres
                 have hbodyfs : bodyContext.state.FiniteSupport :=
                   ihBody body
-                    (context.withState { context.state with clock := context.state.clock - 1, locals := calleeLocals } rfl rfl)
+                    (context.withState (callEntryStateHOLExact context.state calleeLocals) rfl rfl)
                     (by exact hentry)
                     (bodyResult, bodyContext) hbody
-                have hfixed : (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (bodyResult, bodyContext.state)).2.FiniteSupport :=
+                have hfixed : (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (bodyResult, bodyContext.state)).2.FiniteSupport :=
                   PanSemStateExact.finiteSupport_fixClock _ _ hbodyfs
-                let fixedCtx : PanSemExactEvalContext width σ := bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (bodyResult, bodyContext.state)).snd rfl rfl
+                let fixedCtx : PanSemExactEvalContext width σ := bodyContext.withState (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (bodyResult, bodyContext.state)).snd rfl rfl
                 have hfixedCtx : fixedCtx.state.FiniteSupport := hfixed
                 cases bodyResult with
                 | none =>
@@ -960,13 +960,13 @@ theorem evalPanSemRecursiveCallContextHOLExact_decCall_finiteSupport
                         by_cases hcond : (shapeEqHOL (shapeOfHOLExact value) shape && shapeEqHOL (shapeOfHOLExact value) returnShape) = true
                         · rw [if_pos hcond] at hres
                           cases hcont : evalPanSemRecursiveCallContextHOLExact continuation
-                              ((bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).withState (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)) rfl rfl) with
+                              ((bodyContext.withState (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).withState (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)) rfl rfl) with
                           | none => try (simp only [hcont] at hres); cases hres
                           | some cpair =>
                               obtain ⟨continuationResult, continuationPost⟩ := cpair
                               try (simp only [hcont] at hres)
-                              have hcontEntry : ((bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).withState (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)) rfl rfl).state.FiniteSupport := by
-                                change (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact ({ context.state with clock := context.state.clock - 1, locals := calleeLocals } : PanSemStateExact width σ) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)).FiniteSupport
+                              have hcontEntry : ((bodyContext.withState (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).withState (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)) rfl rfl).state.FiniteSupport := by
+                                change (setVarHOLExact resultName value ({ (bodyContext.withState (fixClockHOLExact (callEntryStateHOLExact context.state calleeLocals) (some (PanSemResultExact.returned value), bodyContext.state)).snd rfl rfl).state with locals := context.state.locals } : PanSemStateExact width σ)).FiniteSupport
                                 exact PanSemStateExact.finiteSupport_setVar (PanSemStateExact.finiteSupport_setLocals fixedCtx.state context.state.locals h.1 hfixedCtx) resultName value
                               have hcontF : continuationPost.state.FiniteSupport :=
                                 ihContinuation _ hcontEntry (continuationResult, continuationPost) hcont

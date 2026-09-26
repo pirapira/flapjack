@@ -29,7 +29,7 @@ claim the complete recursive HOL `evaluate_def` and has no `@[hol]` tag.
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (ExpHOL ProgHOL)
+open Flapjack.Pancake.PanLang (ExpHOL MlS ProgHOL)
 
 /-- Dispatch exact `ProgHOL` constructors to their reviewed nonrecursive
     `evaluate_def` clauses. `none` marks a recursive or not-yet-reviewed
@@ -104,6 +104,19 @@ def PanSemExactEvalContext.withState {width : Nat} {σ : Type} [NeZero width]
     shMemaddrsDecidable := fun address => by
       rw [hshared]
       exact context.shMemaddrsDecidable address }
+
+-- FLAPJACK-SPECIFIC (not a HOL declaration): named entry state of the broad
+-- `Call`/`DecCall` clause. Naming it lets the finite projection lemmas rewrite
+-- the otherwise head-only record literal.
+def callEntryStateHOLExact {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) (calleeLocals : MlS → Option (ValueHOL width)) :
+    PanSemStateExact width σ :=
+  { state with clock := state.clock - 1, locals := calleeLocals }
+
+@[simp] theorem callEntryStateHOLExact_eq {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) (calleeLocals : MlS → Option (ValueHOL width)) :
+    callEntryStateHOLExact state calleeLocals =
+      { state with clock := state.clock - 1, locals := calleeLocals } := rfl
 
 /-- Exact recursive Dec/Seq/If/While/Call/DecCall and Assign evaluator over the
     state-owned HOL code map.
@@ -194,7 +207,7 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
                       context.withState (emptyLocalsHOLExact state) rfl rfl)
                   else
                     let entry : PanSemStateExact width σ :=
-                      { state with clock := state.clock - 1, locals := calleeLocals }
+                      callEntryStateHOLExact state calleeLocals
                     let entryContext := context.withState entry rfl rfl
                     match evalPanSemRecursiveCallContextHOLExact body entryContext with
                     | none => none
@@ -266,7 +279,7 @@ def evalPanSemRecursiveCallContextHOLExact {width : Nat} {σ : Type} [NeZero wid
                       context.withState (emptyLocalsHOLExact state) rfl rfl)
                   else
                     let entry : PanSemStateExact width σ :=
-                      { state with clock := state.clock - 1, locals := calleeLocals }
+                      callEntryStateHOLExact state calleeLocals
                     let entryContext := context.withState entry rfl rfl
                     match evalPanSemRecursiveCallContextHOLExact body entryContext with
                     | none => none

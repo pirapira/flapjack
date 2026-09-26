@@ -23,6 +23,15 @@ val s0 = ``(^s with <|
       else Word (0w:64 word));
     memaddrs := {(8w:64 word)};
     be := F |>)``;
+(* A width-24 source-word state exercises HOL byte_align's non-power-of-two
+   boundary: dimindex DIV 8 is 3, LOG2 3 is 1, so address 5 aligns to 4. *)
+val s24 = ``(s:(24,unit) crepSem$state) with <|
+    memory := (\(a : 24 word).
+      if a = (4w:24 word) then Word (0x332211w:24 word)
+      else Word (0w:24 word));
+    memaddrs := {(4w:24 word)};
+    be := F |>``;
+val s24BE = ``(^s24 with be := T)``;
 
 fun print_eval label q =
   let
@@ -50,3 +59,11 @@ val _ = print_eval "mem_load_byte_addr9"
       (\(a : 64 word). if a = (8w:64 word)
          then Word (0x1122334455667788w:64 word) else Word (0w:64 word))
       {(8w:64 word)} F (9w:64 word)``;
+
+val _ = print_eval "eval_loadbyte_w24_addr5"
+  ``crepSem$eval ^s24
+      (crepLang$LoadByte (crepLang$Const (5w:24 word)))``;
+
+val _ = print_eval "eval_loadbyte_w24_be_addr5"
+  ``crepSem$eval ^s24BE
+      (crepLang$LoadByte (crepLang$Const (5w:24 word)))``;

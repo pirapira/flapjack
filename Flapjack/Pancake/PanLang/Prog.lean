@@ -58,6 +58,48 @@ inductive ProgHOL (width : Nat) [NeZero width] where
   | annot (tag text : MlS)
   deriving Repr
 
+/-! HOL `panLangScript.sml:127-129` declares three `Overload`s that abbreviate
+    the `Call` constructor with a partially applied call-info argument:
+
+    ```
+    Overload TailCall       = ``Call NONE``
+    Overload AssignCall     = ``\s h. Call (SOME (SOME s , h))``
+    Overload StandAloneCall = ``\h. Call (SOME (NONE , h))``
+    ```
+
+    The exact `ProgHOL.call` constructor has the same info carrier
+    (`Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width))`), so
+    each overload is reproduced below as the identical partially-applied
+    constructor (Lean currying matches HOL's `->` types).  `Overload`s are not
+    datatype constructors, but HOL declares them as named constants with these
+    bodies, and the reference checker indexes `Overload` lines, so they carry
+    `@[hol]` tags. -/
+
+/-- HOL `Overload TailCall = ``Call NONE``` (`panLangScript.sml:127`): a call
+    with no call-info. -/
+@[hol "cakeml/pancake/panLangScript.sml" "TailCall"]
+def tailCallHOL {width : Nat} [NeZero width] :
+    MlS → List (ExpHOL width) → ProgHOL width :=
+  .call none
+
+/-- HOL `Overload AssignCall = ``\s h. Call (SOME (SOME s , h))```
+    (`panLangScript.sml:128`): a call with an assigned destination `s` and a
+    optional exception handler `h`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "AssignCall"]
+def assignCallHOL {width : Nat} [NeZero width]
+    (s : VarKind × MlS) (h : Option (MlS × MlS × ProgHOL width)) :
+    MlS → List (ExpHOL width) → ProgHOL width :=
+  .call (some (some s, h))
+
+/-- HOL `Overload StandAloneCall = ``\h. Call (SOME (NONE , h))```
+    (`panLangScript.sml:129`): a call with no destination but an optional
+    exception handler `h`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "StandAloneCall"]
+def standAloneCallHOL {width : Nat} [NeZero width]
+    (h : Option (MlS × MlS × ProgHOL width)) :
+    MlS → List (ExpHOL width) → ProgHOL width :=
+  .call (some (none, h))
+
 /-- Production programs all of whose identifiers are byte-ranged and whose
     expressions are byte-ranged, hence exactly representable over `MlString`. -/
 def ProgByteRanged {width : Nat} : Prog (BitVec width) → Prop

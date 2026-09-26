@@ -2415,6 +2415,30 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "TailCall",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "tailCallHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, bead flapjack-4ac.1.19): HOL declares Overload TailCall = Call NONE (cakeml/pancake/panLangScript.sml:127), a named constant equal to the partially-applied Call constructor with call-info NONE, of type funname -> 'a exp list -> 'a prog. tailCallHOL is the identical partial application .call none over the exact ProgHOL/MlS/ExpHOL carrier (Lean currying matches HOL's ->), so body and type match definitionally. No hypotheses or side conditions. The HOL declaration is an Overload, which the reference checker indexes."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "AssignCall",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "assignCallHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, bead flapjack-4ac.1.20): HOL declares Overload AssignCall = (\\s h. Call (SOME (SOME s , h))) (cakeml/pancake/panLangScript.sml:128), a named constant returning the partial application Call (SOME (SOME s, h)) for s : varkind # varname and h : (eid # varname # prog) option. assignCallHOL takes the same s/h and returns the identical partial application .call (some (some s, h)) over ProgHOL/MlS/ExpHOL. Same info carrier as the tagged ProgHOL.call; exact modulo Lean's definitional currying."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "StandAloneCall",
+    "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
+    "lean_name": "standAloneCallHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, bead flapjack-4ac.1.21): HOL declares Overload StandAloneCall = (\\h. Call (SOME (NONE , h))) (cakeml/pancake/panLangScript.sml:129), a named constant returning Call (SOME (NONE, h)) for h : (eid # varname # prog) option (destination NONE). standAloneCallHOL takes the same h and returns .call (some (none, h)) over ProgHOL/MlS/ExpHOL. Same info carrier as the tagged ProgHOL.call; exact modulo Lean's definitional currying."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "free_var_ids_def",
     "lean_path": "Flapjack/Pancake/PanLang/Prog.lean",
     "lean_name": "freeVarIdsHOL",

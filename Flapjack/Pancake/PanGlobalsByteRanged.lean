@@ -45,6 +45,33 @@ def GlobalContextShapesByteRanged [BEq String] {width : Nat}
   ∀ name shape address,
     lookupInfo name context.globals = some (shape, address) → ShapeByteRanged shape
 
+/-- Byte-ranged shapes compile to byte-ranged shape-value expressions. -/
+theorem globalShapeVal_byteRanged {width : Nat}
+    (context : GlobalPassContext (BitVec width)) :
+    ∀ shape, ShapeByteRanged shape →
+      ExpByteRanged (globalShapeVal context shape) := by
+  apply Flapjack.Shape.rec
+    (motive_1 := fun shape => ShapeByteRanged shape →
+      ExpByteRanged (globalShapeVal context shape))
+    (motive_2 := fun shapes =>
+      (∀ shape ∈ shapes, ShapeByteRanged shape) →
+        ListExpByteRanged (shapes.map (globalShapeVal context)))
+  · intro _
+    simp [globalShapeVal, ExpByteRanged]
+  · intro shapes ih
+    intro hshape
+    simp only [ShapeByteRanged] at hshape
+    simpa [globalShapeVal, ExpByteRanged] using ih hshape
+  · intro _ _
+    simp [globalShapeVal, ExpByteRanged]
+  · intro _
+    simp [ListExpByteRanged]
+  · intro head tail ihHead ihTail hshapes
+    simp only [ListExpByteRanged, List.map_cons]
+    exact ⟨ihHead (hshapes head (by simp)), ihTail (by
+      intro shape hshape
+      exact hshapes shape (by simp [hshape]))⟩
+
 theorem globalCompileExp_byteRanged [BEq String]
     {width : Nat} (context : GlobalPassContext (BitVec width))
     (hcontext : GlobalContextShapesByteRanged context) :

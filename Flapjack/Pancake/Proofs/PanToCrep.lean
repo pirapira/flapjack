@@ -2010,9 +2010,11 @@ theorem bindPanValueParametersLocalsRelOfPanSem
     exact HOL value/shape carriers are `ValueHOL`/`ShapeHOL`. The complete
     finite-support HOL evaluator and exact Pan-to-Crep state/local relations
     are still missing. Keep these helpers untagged as support, not as ports of
-    `evaluate_shape_invariant_ret_inst`. Its faithful replacement is tracked
-    by bead `flapjack-4ac.5.83`, blocked on `flapjack-4ac.4.67`,
-    `flapjack-pxn.18.3.5.8`, `flapjack-pxn.18.3.7.1.3.1.1.2`, and
+    `evaluate_shape_invariant_ret_inst`. Its faithful replacement remains open
+    on bead `flapjack-4ac.5.83`. The earlier inventory bead
+    `flapjack-4ac.4.67` was closed by source-review disposition; its missing
+    faithful program-level result remains part of this open theorem path, along
+    with `flapjack-pxn.18.3.5.8`, `flapjack-pxn.18.3.7.1.3.1.1.2`, and
     `flapjack-0lj.5`. -/
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state

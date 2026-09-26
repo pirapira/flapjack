@@ -276,15 +276,13 @@ private theorem lookupFieldHOL_isWfShapeValuesHOLExact {width : Nat} [NeZero wid
     `s'.structs`, and any returned/raised payload is well-formed under the
     initial `s.structs`. No Lean declaration currently states that result.
     The prerequisite `eval_is_wf_shape_v` (`panPropsScript.sml:126`) is also
-    unported. The untagged `evalHOLExact_isWfShapeValueHOLExact` helper proves
-    the expression property over `PanSemStateExact`, whose four map fields are
-    unrestricted lookup functions; the source theorem's finite-map carrier is
-    therefore not yet represented. `PanSemStateFiniteExact.evalHOLFinite` has
-    the reviewed finite-map carrier, but no invariant proof; the recursive
-    program evaluator still has an assembly marker and is not assembled over
-    that carrier. Consequently neither the helper nor the partial recursive
-    dispatcher has the required HOL statement/carrier. Inventory bead
-    `flapjack-4ac.4.67` is closed
+    unported. Its prerequisite `eval_is_wf_shape_v` is now tagged with the
+    reviewed finite-map carrier and exact HOL conjunction in
+    `PanProps/EvalInvariant.lean`. The untagged
+    `evalHOLExact_isWfShapeValueHOLExact` helper remains broad-carrier proof
+    support. The full recursive program evaluator still has an assembly marker
+    over function-backed state and is not assembled over the finite-map
+    carrier. Inventory bead `flapjack-4ac.4.67` is closed
     by this source-reviewed disposition; faithful theorem path bead
     `flapjack-4ac.5.83` remains open. -/
 

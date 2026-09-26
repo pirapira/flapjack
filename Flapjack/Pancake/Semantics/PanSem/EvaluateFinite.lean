@@ -30,6 +30,12 @@ and reviewed (`flapjack-qj5` is blocked on `flapjack-6yq`).
 The older delegating adapter `evaluateHOLFiniteViaExact` (and its
 `evalPanSemRecursiveCallHOLFinite_of_broad` / `evaluateHOLFiniteViaExact_of_broad`
 translation lemmas) remains as untagged Flapjack-specific infrastructure.
+
+The module also begins the per-constructor projection equivalence to the broad
+exact evaluator (`flapjack-6yq`): `..._skip_projection` / `_break_projection` /
+`_continue_projection` / `_annot_projection` show that mapping the finite
+evaluator's result through `state.toExact` agrees with `...ContextHOLExact` on
+the constant-state constructors.  The remaining constructors are still to come.
 -/
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
 
@@ -489,6 +495,65 @@ theorem evalPanSemRecursiveCallFiniteContext_decCall_clock_zero {width : Nat} {�
     rw [hlookup] at hsome
     simp at hsome
   · rw [if_pos hclock]
+
+/-- Projection equivalence on `Skip`: mapping the finite evaluator's result
+    through the canonical carrier projection `state.toExact` agrees with the
+    broad exact evaluator on its (forgetful) projection.  First of the
+    per-constructor projection-equivalence lemmas for `flapjack-6yq`. -/
+theorem evalPanSemRecursiveCallFiniteContext_skip_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) :
+    (evalPanSemRecursiveCallFiniteContext (.skip : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact (.skip : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  simp
+
+/-- Projection equivalence on `Break` (see `..._skip_projection`). -/
+theorem evalPanSemRecursiveCallFiniteContext_break_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) :
+    (evalPanSemRecursiveCallFiniteContext (.break : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact (.break : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  simp
+
+/-- Projection equivalence on `Continue` (see `..._skip_projection`). -/
+theorem evalPanSemRecursiveCallFiniteContext_continue_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) :
+    (evalPanSemRecursiveCallFiniteContext (.continue : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact (.continue : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  simp
+
+/-- Projection equivalence on `Annot` (see `..._skip_projection`). -/
+theorem evalPanSemRecursiveCallFiniteContext_annot_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) (tag text : MlS) :
+    (evalPanSemRecursiveCallFiniteContext (.annot tag text : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact (.annot tag text : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  simp
 
 end PanSemStateFiniteExact
 

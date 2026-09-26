@@ -1227,10 +1227,6 @@ private theorem lookupInfoWithRest_fields_wf_for_load
       · simp only [lookupInfoWithRest, hmatch] at hlookup
         exact ih hlookup (structInfosOk_drop 1 ((candidate, entryInfo) :: context) hok)
 
-private theorem panValueFlatShapeFuel_pos (shape : Shape) :
-    1 ≤ panValueFlatShapeFuel shape := by
-  cases shape <;> simp [panValueFlatShapeFuel]
-
 private theorem panValueFlatFieldsFuel_eq_shapeListFuel
     (fields : List (FieldName × Shape)) :
     panValueFlatFieldsFuel fields =

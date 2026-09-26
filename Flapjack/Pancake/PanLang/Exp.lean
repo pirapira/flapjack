@@ -505,6 +505,34 @@ mutual
     all_goals first | sizeOf_list_dec | decreasing_trivial
 end
 
+/-- Transport the canonical output language of `shapeValHOL` to Flapjack's
+generic word carrier. `shapeValHOL` can only return `const` and `rstruct`;
+the fallback cases make this a total Lean function but are unreachable for
+that definition. The constant's exact HOL word is zero, so the parser's
+caller-supplied `ofInt` maps it to the requested carrier. This is a
+Flapjack-specific adapter, not a second HOL declaration. -/
+def decodeShapeValHOL {α : Type} (ofInt : Int → α) :
+    ExpHOL 1 → Flapjack.Exp α
+  | .const _ => .const (ofInt 0)
+  | .rstruct fields => .rStruct (fields.map (decodeShapeValHOL ofInt))
+  | _ => .const (ofInt 0)
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-- Flapjack's generic parser bridge: compute the shape initializer with the
+reviewed HOL-shaped `shapeValHOL` at a valid one-bit word width, then transport
+its canonical zero/record output to the parser's generic word carrier. Shape
+names are discarded by HOL `shape_val` itself; `shapeToHOL`'s byte encoding
+therefore cannot affect this result. Width one is safe here because
+`shapeValHOL` constructs only zero constants and records of those constants;
+the adapter discards the one-bit word and calls `ofInt 0` for the caller's
+carrier. No arithmetic or width-sensitive observation crosses this boundary. -/
+def shapeValViaHOL {α : Type} (ofInt : Int → α) (shape : Flapjack.Shape) :
+    Flapjack.Exp α :=
+  decodeShapeValHOL ofInt
+    (shapeValHOL (width := 1) (shapeToHOL shape))
+
 /-- Flapjack-specific equation for the Lean mutual definition: HOL's
 `shape_val_def` defines `shape_vals` by recursion, but declares no separate
 map theorem. This helper has no separate HOL original. -/
@@ -514,5 +542,153 @@ map theorem. This helper has no separate HOL original. -/
   induction shapes with
   | nil => simp [shapeValsHOL]
   | cons shape shapes ih => simp [shapeValsHOL, ih]
+
+/-! ### HOL's generated `exp_size` / `exp1_size` / `exp2_size` / `exp3_size`
+
+The HOL `Datatype: exp = ...` (`cakeml/pancake/panLangScript.sml:49-66`) command
+also generates the size functions used by `Theorem MEM_IMP_exp_size`
+(lines 198-208).  As with `shape_size`, they are produced by HOL's `Datatype`
+package (`HOL/src/datatype/DataSize.sml`), not written as source declarations, so
+they have no textual HOL name for `scripts/check-hol-refs.py` to resolve and
+cannot carry an `@[hol]` tag.  The equations, printed from a standard-HOL
+reconstruction of the identical datatype (same constructor arities and field
+types; `w2n` is the registered size of `'a word`, `num`'s size is the identity,
+and each operator type `varkind`/`binop`/`panop`/`cmp`/`shift` is a nullary
+datatype whose size is the constant `0`), are pinned in
+`scripts/hol-probes/pan_lang_size_probe.out`:
+
+```
+exp_size f (Const a) = 1 + w2n a
+exp_size f (Var a0 a1) = 1 + (varkind_size a0 + mlstring_size a1)
+exp_size f (RStruct a) = 1 + exp3_size f a
+exp_size f (RField a0 a1) = 1 + (a0 + exp_size f a1)
+exp_size f (NStruct a0 a1) = 1 + (mlstring_size a0 + exp1_size f a1)
+exp_size f (NField a0 a1) = 1 + (mlstring_size a0 + exp_size f a1)
+exp_size f (Load a0 a1) = 1 + (shape_size a0 + exp_size f a1)
+exp_size f (Load32 a) = 1 + exp_size f a
+exp_size f (LoadByte a) = 1 + exp_size f a
+exp_size f (Op a0 a1) = 1 + (binop_size a0 + exp3_size f a1)
+exp_size f (Panop a0 a1) = 1 + (panop_size a0 + exp3_size f a1)
+exp_size f (Cmp a0 a1 a2) = 1 + (cmp_size a0 + (exp_size f a1 + exp_size f a2))
+exp_size f (Shift a0 a1 a2) = 1 + (shift_size a0 + (exp_size f a1 + exp_size f a2))
+exp_size f BaseAddr = 0
+exp_size f TopAddr = 0
+exp_size f BytesInWord = 0
+exp1_size f [] = 0
+exp1_size f (a0::a1) = 1 + (exp2_size f a0 + exp1_size f a1)
+exp2_size f (a0,a1) = 1 + (mlstring_size a0 + exp_size f a1)
+exp3_size f [] = 0
+exp3_size f (a0::a1) = 1 + (exp_size f a0 + exp3_size f a1)
+```
+
+The size-function parameter `f : 'a -> num` of HOL `exp_size` is unused by
+every clause (the word payload `Const ('a word)` is sized by `w2n`, not by `f`);
+it is kept in the Lean signatures so `memImpExpSizeHOL` has HOL's exact shape.
+-/
+
+/-- HOL's generated `varkind_size`: every `varkind` is nullary, so the size is
+    the constant `0`. -/
+def varkindSizeHOL (_ : VarKind) : Nat := 0
+
+/-- HOL's generated `binop_size`: every `binop` is nullary, so the size is the
+    constant `0`. -/
+def binopSizeHOL (_ : BinOp) : Nat := 0
+
+/-- HOL's generated `panop_size`: the single `panop` constructor is nullary, so
+    the size is the constant `0`. -/
+def panopSizeHOL (_ : PanOp) : Nat := 0
+
+/-- HOL's generated `cmp_size`: every `cmp` is nullary, so the size is the
+    constant `0`. -/
+def cmpSizeHOL (_ : Cmp) : Nat := 0
+
+/-- HOL's generated `shift_size`: every `shift` is nullary, so the size is the
+    constant `0`. -/
+def shiftSizeHOL (_ : Shift) : Nat := 0
+
+mutual
+  /-- HOL's generated `exp_size`; the word payload `Const` is sized by `w2n`
+      (`BitVec.toNat`) and the unused size-function parameter `f` is kept. -/
+  def expSizeHOL {width : Nat} [NeZero width] {α : Type} (f : α → Nat) :
+      ExpHOL width → Nat
+    | .const value => 1 + value.toNat
+    | .var kind name => 1 + (varkindSizeHOL kind + mlstringSizeHOL name)
+    | .rstruct fields => 1 + exp3SizeHOL f fields
+    | .rfield index value => 1 + (index + expSizeHOL f value)
+    | .nstruct name fields => 1 + (mlstringSizeHOL name + exp1SizeHOL f fields)
+    | .nfield name value => 1 + (mlstringSizeHOL name + expSizeHOL f value)
+    | .load shape address => 1 + (shapeSizeHOL shape + expSizeHOL f address)
+    | .load32 address => 1 + expSizeHOL f address
+    | .loadByte address => 1 + expSizeHOL f address
+    | .op operator args => 1 + (binopSizeHOL operator + exp3SizeHOL f args)
+    | .panop operator args => 1 + (panopSizeHOL operator + exp3SizeHOL f args)
+    | .cmp operator left right =>
+        1 + (cmpSizeHOL operator + (expSizeHOL f left + expSizeHOL f right))
+    | .shift operator left right =>
+        1 + (shiftSizeHOL operator + (expSizeHOL f left + expSizeHOL f right))
+    | .baseAddr => 0
+    | .topAddr => 0
+    | .bytesInWord => 0
+
+  /-- HOL's generated `exp1_size`, the size of the `(fldname # exp) list` field
+      of `NStruct`. -/
+  def exp1SizeHOL {width : Nat} [NeZero width] {α : Type} (f : α → Nat) :
+      List (MlS × ExpHOL width) → Nat
+    | [] => 0
+    | pair :: rest => 1 + (exp2SizeHOL f pair + exp1SizeHOL f rest)
+
+  /-- HOL's generated `exp2_size`, the size of a `(fldname # exp)` pair. -/
+  def exp2SizeHOL {width : Nat} [NeZero width] {α : Type} (f : α → Nat) :
+      MlS × ExpHOL width → Nat
+    | (name, value) => 1 + (mlstringSizeHOL name + expSizeHOL f value)
+
+  /-- HOL's generated `exp3_size`, the size of the `exp list` fields of
+      `RStruct`/`Op`/`Panop`. -/
+  def exp3SizeHOL {width : Nat} [NeZero width] {α : Type} (f : α → Nat) :
+      List (ExpHOL width) → Nat
+    | [] => 0
+    | e :: es => 1 + (expSizeHOL f e + exp3SizeHOL f es)
+end
+
+/-- Exact port of HOL `panLang$MEM_IMP_exp_size`
+    (`cakeml/pancake/panLangScript.sml:198-208`):
+    `(!xs a. MEM a xs ==> exp_size l a < exp3_size l xs) ∧
+     (!xs a. MEM a xs ==> exp_size l (SND a) < exp1_size l xs)`,
+    over the exact `ExpHOL` carrier and the transcribed generated size
+    functions above.  `f` is HOL's (unused) size-function parameter. -/
+@[hol "cakeml/pancake/panLangScript.sml" "MEM_IMP_exp_size"]
+theorem memImpExpSizeHOL {width : Nat} [NeZero width] {α : Type} (f : α → Nat) :
+    (∀ (xs : List (ExpHOL width)) (a : ExpHOL width),
+        a ∈ xs → expSizeHOL f a < exp3SizeHOL f xs) ∧
+    (∀ (xs : List (MlS × ExpHOL width)) (a : MlS × ExpHOL width),
+        a ∈ xs → expSizeHOL f a.2 < exp1SizeHOL f xs) := by
+  constructor
+  · intro xs
+    induction xs with
+    | nil => intro a h; simp at h
+    | cons x xs ih =>
+      intro a h
+      rw [List.mem_cons] at h
+      rcases h with _h_eq | h_mem
+      · subst a
+        simp only [exp3SizeHOL]
+        omega
+      · have ih' := ih a h_mem
+        simp only [exp3SizeHOL]
+        omega
+  · intro xs
+    induction xs with
+    | nil => intro a h; simp at h
+    | cons x xs ih =>
+      intro a h
+      rw [List.mem_cons] at h
+      rcases h with _h_eq | h_mem
+      · subst a
+        obtain ⟨n, e⟩ := x
+        simp only [exp1SizeHOL, exp2SizeHOL]
+        omega
+      · have ih' := ih a h_mem
+        simp only [exp1SizeHOL]
+        omega
 
 end Flapjack.Pancake.PanLang

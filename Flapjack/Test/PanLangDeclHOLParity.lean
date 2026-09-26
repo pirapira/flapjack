@@ -145,11 +145,13 @@ proves every declaration it returns is `DeclByteRanged`. Composing that with
 `parseTopDecs_routes_exactBoundary`: the exact MLString-keyed compiler boundary
 applied to the parser output equals the production `compileProgTopHOL`. This is
 kernel-proved propositional equality (via the `DeclByteRanged` premise), NOT
-definitional equality. Direct original-Pancake parity for the executed boundary
+definitional equality. The parser-backed production entrypoints now compose
+this invariant through the preceding Pancake passes and route the resulting
+declaration list through `compileProgTopHOLWithMetadataOfExact`. This is a
+carrier-boundary route with source-shaped Crep output, not an exact HOL
+`compile_prog` port. Direct original-Pancake parity for the executed boundary
 is `python3 scripts/check-parity-goldens.py` (wide_constants.pnk, parity
-goldens=1, failures=0). The executed pipeline still calls
-`compileProgTopHOLWithMetadata`; textual routing/tagging is tracked separately
-under parent beads `flapjack-6nn`/`flapjack-0up`. -/
+goldens=1, failures=0). -/
 example :
     Flapjack.Basis.Pure.MlString.toStringOfBytes
       (Flapjack.Basis.Pure.MlString.ofString (String.singleton (Char.ofNat 0x1d518))) ≠
@@ -191,6 +193,21 @@ example : isDeclHOL (DeclHOL.decl .one (s "z") expH) = true := rfl
 example : isDeclHOL (DeclHOL.function fdH) = false := rfl
 example : isFunctionHOL (DeclHOL.function fdH) = true := rfl
 example : isFunctionHOL (DeclHOL.decl .one (s "z") expH) = false := rfl
+
+/-! Exact `is_name` parity (bead flapjack-4ac.1.36): the HOL-EVAL rows
+`is_name_name=T` and `is_name_decl=F` from
+`scripts/hol-probes/pan_lang_decl_predicates_probe.out` are replayed over the
+exact `DeclHOL` carrier through the tagged `isNameHOL`. -/
+
+private def exactIsNameRow : Bool :=
+  isNameHOL (DeclHOL.name (s "S") [] : DeclHOL 64) &&
+  !isNameHOL (DeclHOL.decl .one (s "z") expH)
+
+#eval exactIsNameRow
+#guard exactIsNameRow
+
+example : isNameHOL (DeclHOL.name (s "S") [] : DeclHOL 64) = true := rfl
+example : isNameHOL (DeclHOL.decl .one (s "z") expH) = false := rfl
 
 example :
     functionsHOL (exactDecls ++ exactDecls) =
@@ -236,6 +253,10 @@ example (declaration : DeclHOL 64) :
 example (declaration : DeclHOL 64) :
     Flapjack.isExnDecl (declOfHOL declaration) = isExnDeclHOL declaration :=
   isExnDecl_declOfHOL declaration
+
+example (declaration : DeclHOL 64) :
+    Flapjack.isName (declOfHOL declaration) = isNameHOL declaration :=
+  isName_declOfHOL declaration
 
 example : Flapjack.sizeOfEids (exactDecls.map declOfHOL) =
     (exactDecls.filter isExnDeclHOL).length :=

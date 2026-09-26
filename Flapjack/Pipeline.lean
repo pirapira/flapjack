@@ -1,4 +1,7 @@
 import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.PanGlobalsByteRanged
+import Flapjack.Pancake.PanStructsByteRanged
+import Flapjack.Pancake.PanSimpByteRanged
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.CompileProg
 import Flapjack.CompileFunctionDistinct
@@ -37,6 +40,8 @@ exposed, while instruction selection remains partial in
 -/
 
 namespace Flapjack
+
+open Flapjack.Pancake.PanLang
 
 def pipelineExceptionCodes (fromNat : Nat → α) : Nat → List (Decl α) → InfoMap α
   | _, [] => []
@@ -80,7 +85,7 @@ theorem pipelineExceptionCodes_length
       simp [pipelineExceptionCodes, sizeOfEids]
   | cons declaration declarations ih =>
       cases declaration <;>
-        simp [pipelineExceptionCodes, sizeOfEids, isExnDecl, ih] <;> omega
+        simp [pipelineExceptionCodes, sizeOfEids_cons, isExnDecl, ih] <;> omega
 
 theorem crepGetEidsFromDecls_length
     (fromNat : Nat → α) (declarations : List (Decl α)) :
@@ -290,6 +295,35 @@ def panTargetMoveStartToFront [BEq String]
       match declaration with
       | .function function => function.name != start
       | _ => true) declarations
+
+private theorem mem_of_mem_globalDeclsFilter {α : Type} {predicate : Decl α → Bool}
+    {declaration : Decl α} {declarations : List (Decl α)}
+    (hmem : declaration ∈ globalDeclsFilter predicate declarations) :
+    declaration ∈ declarations := by
+  induction declarations with
+  | nil => rw [globalDeclsFilter.eq_def] at hmem; simp at hmem
+  | cons head tail ih =>
+      simp only [globalDeclsFilter] at hmem
+      by_cases hpred : predicate head = true
+      · simp [hpred] at hmem
+        rcases hmem with heq | htail
+        · subst heq; exact List.mem_cons_self ..
+        · exact List.mem_cons_of_mem head (ih htail)
+      · simp [hpred] at hmem
+        exact List.mem_cons_of_mem head (ih hmem)
+
+/-- Entry relocation preserves the declaration byte-range invariant because
+    both output lists are filters of the input list. -/
+theorem panTargetMoveStartToFront_byteRanged [BEq String] {width : Nat}
+    (start : FunName) (declarations : List (Decl (BitVec width)))
+    (h : ∀ d ∈ declarations, DeclByteRanged d) :
+    ∀ d ∈ panTargetMoveStartToFront start declarations, DeclByteRanged d := by
+  intro d hd
+  unfold panTargetMoveStartToFront at hd
+  rw [List.mem_append] at hd
+  rcases hd with hd | hd
+  · exact h d (mem_of_mem_globalDeclsFilter hd)
+  · exact h d (mem_of_mem_globalDeclsFilter hd)
 
 /-! Source-shaped port of CakeML Pancake's `exports_def`
     (`cakeml/pancake/pan_to_targetScript.sml:10`).  Export collection walks
@@ -592,7 +626,11 @@ def panCompileTap [CakeDisplayWord α]
     `globalCompileTopCake` result at the global pass boundary.  The remaining
     metadata is retained from `globalCompileTop` for callers that inspect the
     intermediate pipeline record; the declarations sent into Crep are the
-    direct output of Cake's tagged `compile_top`. -/
+    direct output of Cake's tagged `compile_top`. Parser-backed production
+    entrypoints provide the byte-range proof composed through the earlier
+    passes, selecting `compileProgTopHOLWithMetadataOfExact` at the
+    declaration-to-Crep boundary. The optional proof preserves this helper's
+    source compatibility for callers that do not carry the codec invariant. -/
 def compileFlapjackEntryCake {width : Nat} [NeZero width]
     [BEq (BitVec width)] [OfNat (BitVec width) 0]
     [OfNat (BitVec width) 1] [Add (BitVec width)] [Mul (BitVec width)]
@@ -600,12 +638,26 @@ def compileFlapjackEntryCake {width : Nat} [NeZero width]
     [PanShiftWidth (BitVec width)]
     (architecture : RiscV.Architecture) (bytesInWord : BitVec width)
     (fromNat : Nat → BitVec width) (start : FunName)
-    (declarations : List (Decl (BitVec width))) :
+    (declarations : List (Decl (BitVec width)))
+    (hdeclarations : Option (Decidable
+      (∀ declaration ∈ declarations, DeclByteRanged declaration)) := none) :
     Option (FlapjackPipelineResult (BitVec width)) :=
-  let declarations := panTargetMoveStartToFront start declarations
-  let simplified := panSimpDecls declarations
+  let moved := panTargetMoveStartToFront start declarations
+  let simplified := panSimpDecls moved
   let structured := structCompileTop simplified
-  let cakeDeclarations := globalCompileTopCake structured start
+  let compiled :=
+    match hdeclarations with
+    | some (.isTrue hinput) =>
+        let hmoved := panTargetMoveStartToFront_byteRanged start declarations hinput
+        let hsimplified := panSimpDecls_byteRanged moved hmoved
+        let hstructured := structCompileTop_byteRanged simplified hsimplified
+        let cakeDeclarations := globalCompileTopCakeOfExact structured start hstructured
+        let hcake := globalCompileTopCakeOfExact_byteRanged structured start hstructured
+        (cakeDeclarations, compileProgTopHOLWithMetadataOfExact cakeDeclarations hcake)
+    | _ =>
+        let cakeDeclarations := globalCompileTopCake structured start
+        (cakeDeclarations, compileProgTopHOLWithMetadata cakeDeclarations)
+  let cakeDeclarations := compiled.1
   match cakeDeclarations with
   | [] => none
   | _ :: _ =>
@@ -613,11 +665,30 @@ def compileFlapjackEntryCake {width : Nat} [NeZero width]
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let metadata := globalCompileTop bytesInWord fromNat prepared
       let globals := { metadata with declarations := cakeDeclarations }
-      let crepe := crepSimpFunctions fromNat
-        (compileProgTopHOLWithMetadata cakeDeclarations)
+      let crepe := crepSimpFunctions fromNat compiled.2
       let loop := pipelineLoopFunctionsSource architecture 1 crepe
       let word := pipelineWordFunctionsSource loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
+
+/-- The parser-proved exact-carrier route returns the same entire pipeline
+    result as the compatibility route. This composes the two reviewed pass
+    equalities at the entrypoint, so the optional proof changes which tagged
+    definitions execute, not the compiler output. -/
+theorem compileFlapjackEntryCake_ofExact_eq {width : Nat} [NeZero width]
+    [BEq (BitVec width)] [OfNat (BitVec width) 0]
+    [OfNat (BitVec width) 1] [Add (BitVec width)] [Mul (BitVec width)]
+    [AndOp (BitVec width)] [ShiftRight (BitVec width)]
+    [PanShiftWidth (BitVec width)]
+    (architecture : RiscV.Architecture) (bytesInWord : BitVec width)
+    (fromNat : Nat → BitVec width) (start : FunName)
+    (declarations : List (Decl (BitVec width)))
+    (h : ∀ declaration ∈ declarations, DeclByteRanged declaration) :
+    compileFlapjackEntryCake architecture bytesInWord fromNat start declarations
+        (some (.isTrue h)) =
+      compileFlapjackEntryCake architecture bytesInWord fromNat start declarations none := by
+  unfold compileFlapjackEntryCake
+  simp only [globalCompileTopCakeOfExact_eq,
+    compileProgTopHOLWithMetadataOfExact_eq]
 
 /-! Executable mirror of the missing-`main` branch of `pan_to_target_all`
     (`cakeml/pancake/pan_passesScript.sml:20-37`): when the program has no
@@ -636,5 +707,27 @@ def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
       .function
         { name := "main", inline := false, exported := false, params := [],
           body := .return (.const 0), returnShape := .one } :: declarations
+
+/-- The target's synthetic default entry uses only byte-range-safe literals,
+    so adding it preserves the parser's declaration codec premise. -/
+theorem panTargetDeclarationsWithDefaultMain_byteRanged {width : Nat}
+    [OfNat (BitVec width) 0] [OfNat (BitVec width) 1]
+    (declarations : List (Decl (BitVec width)))
+    (h : ∀ declaration ∈ declarations, DeclByteRanged declaration) :
+    ∀ declaration ∈ panTargetDeclarationsWithDefaultMain declarations,
+      DeclByteRanged declaration := by
+  unfold panTargetDeclarationsWithDefaultMain
+  split
+  · exact h
+  · cases declarations with
+    | nil => simp [DeclByteRanged]
+    | cons first rest =>
+        intro declaration hmem
+        simp only [List.mem_cons] at hmem
+        rcases hmem with heq | hrest
+        · subst declaration
+          simp [DeclByteRanged, FunDeclByteRanged, ProgByteRanged,
+            ExpByteRanged, NameRanged, ShapeByteRanged, ListParamByteRanged]
+        · exact h declaration (by simp [hrest])
 
 end Flapjack

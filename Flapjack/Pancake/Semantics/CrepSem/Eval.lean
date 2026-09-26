@@ -1389,7 +1389,7 @@ private theorem setWidth_extractLsb_zero_toNat (width length : Nat)
 /-- Flapjack proof infrastructure for the BitVec encoding of HOL `set_byte`;
     HOL has no separate Nat equation for this helper. The lower slice, inserted
     byte, and preserved upper slice occupy disjoint bit ranges. -/
-private theorem holFiniteWordSetByteBitVec_toNat (width offset : Nat)
+theorem holFiniteWordSetByteBitVec_toNat (width offset : Nat)
     (byte value : BitVec width) (hoffset : offset + 8 ≤ width) :
     (holFiniteWordSetByteBitVec width offset byte value).toNat =
       (value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8) +
@@ -1848,6 +1848,68 @@ theorem holFiniteWordSourceMemoryModel_shift_eq_evalPanShiftFull {ι : Type u}
   exact congrArg (Option.map (bitVecToHolWord dimension))
     (wordShiftHOL_eq_evalPanShiftFull operator
       (holWordToBitVec dimension left) (holWordToBitVec dimension right))
+
+/-! The source-shaped operation fields used by the recursive finite-word
+    evaluator agree with the fields of the all-width RISC-V Crep runtime
+    target after the explicit finite-index/BitVec conversion. This pins the
+    production target binding for `Op`, `Cmp`, and `Shift`; it does not identify
+    the explicit `HolFiniteDimension` with HOL's implicit `finite_index`
+    dictionary or establish the surrounding whole-state correspondence. -/
+theorem holFiniteWordSourceModel_ops_eq_riscvWordTarget {ι : Type u}
+    (dimension : HolFiniteDimension ι) (bigEndian : Bool)
+    (operator : BinOp) (values : List (ι → Bool))
+    (crepOperator : CrepOp) (crepValues : List (ι → Bool))
+    (cmp : Cmp) (shift : Shift) (left right : ι → Bool) :
+    ((holFiniteWordSourceMemoryModel dimension bigEndian).wordOp operator values).map
+        (holWordToBitVec dimension) =
+      (RiscV.panRiscVMemoryModelForEndian bigEndian).wordOp operator
+        (values.map (holWordToBitVec dimension)) ∧
+    holWordToBitVec dimension
+        ((holFiniteWordSourceMemoryModel dimension bigEndian).compare cmp left right) =
+      (RiscV.panRiscVMemoryModelForEndian bigEndian).compare cmp
+        (holWordToBitVec dimension left) (holWordToBitVec dimension right) ∧
+    ((holFiniteWordSourceMemoryModel dimension bigEndian).shift shift left right).map
+        (holWordToBitVec dimension) =
+      (RiscV.panRiscVMemoryModelForEndian bigEndian).shift shift
+        (holWordToBitVec dimension left) (holWordToBitVec dimension right) ∧
+    (holFiniteWordSourceCrepOp dimension crepOperator crepValues).map
+        (holWordToBitVec dimension) =
+      crepOpCrepWord (width := dimension.width) crepOperator
+        (crepValues.map (holWordToBitVec dimension)) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  constructor
+  · change ((wordOpHOL operator (values.map (holWordToBitVec dimension))).map
+        (bitVecToHolWord dimension)).map (holWordToBitVec dimension) = _
+    simp only [Option.map_map, Function.comp_def,
+      holWordToBitVec_bitVecToHolWord]
+    change Option.map id (wordOpHOL operator
+      (values.map (holWordToBitVec dimension))) = _
+    rw [← panRiscVWordOp_eq_wordOpHOL (width := dimension.width) operator _]
+    simp only [RiscV.panRiscVMemoryModelForEndian]
+    cases h : RiscV.panRiscVWordOp operator
+        (values.map (holWordToBitVec dimension)) <;> simp
+  constructor
+  · change holWordToBitVec dimension
+        (bitVecToHolWord dimension
+          (wordCmpResultHOL cmp (holWordToBitVec dimension left)
+            (holWordToBitVec dimension right))) = _
+    simp only [holWordToBitVec_bitVecToHolWord]
+    exact (panRiscVCmp_eq_wordCmpResultHOL (width := dimension.width) cmp _ _).symm
+  constructor
+  · change ((wordShiftHOL shift (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right).toNat).map
+          (bitVecToHolWord dimension)).map (holWordToBitVec dimension) = _
+    simp only [Option.map_map, Function.comp_def,
+      holWordToBitVec_bitVecToHolWord]
+    change Option.map id (wordShiftHOL shift (holWordToBitVec dimension left)
+      (holWordToBitVec dimension right).toNat) = _
+    rw [← panRiscVShift_eq_wordShiftHOL (width := dimension.width) shift
+      (holWordToBitVec dimension left) (holWordToBitVec dimension right)]
+    simp only [RiscV.panRiscVMemoryModelForEndian]
+    cases h : RiscV.panRiscVShift shift (holWordToBitVec dimension left)
+        (holWordToBitVec dimension right) <;> simp
+  · exact holFiniteWordSourceCrepOp_to_crepOpCrepWord dimension
+      crepOperator crepValues
 
 /-- BitVec-carrier view of the HOL source memory model. Every field is
     transported from the arbitrary finite-word source operations; this does
@@ -2541,6 +2603,335 @@ theorem crepHolEvalMemLoad32_source_eq_panMemLoad32HOL {ι : Type} {σ : Type}
         state.bigEndian bitAddress).map
           (fun value => BitVec.ofNat dimension.width value.toNat) := hBitLoad
 
+/-! At the shipped RV64 configuration, the executed target byte-load helper
+    also reduces to the same tagged HOL operation. This equation is stated on
+    the explicit `CrepHolState` carrier and preserves both success and domain
+    failure without assuming a successful target result. -/
+
+theorem crepHolEvalMemLoadByte_riscv64_eq_panMemLoadByteHOL {σ : Type}
+    (state : CrepHolState (BitVec 64) σ) (address : BitVec 64) :
+    crepHolEvalMemLoadByte
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian) (8 : BitVec 64)
+        state address =
+      (panMemLoadByteHOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map (fun byte => BitVec.ofNat 64 byte.toNat) := by
+  simp only [crepHolEvalMemLoadByte, panMemLoadByteHOL,
+    RiscV.panRiscVMemoryModelForEndian]
+  have haligned : RiscV.panRiscVByteAlign (8 : BitVec 64) address =
+      panByteAlignHOL address := by
+    have hprod := RiscV.panRiscVByteAlign_eight_eq_bitMask address
+    have hhol : panByteAlignHOL address =
+        BitVec.ofNat 64 ((address.toNat >>> 3) <<< 3) := by
+      simp [panByteAlignHOL, show Nat.log2 (64 / 8) = 3 by decide,
+        Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq]
+    exact hprod.trans hhol.symm
+  simp only [haligned]
+  cases hcell : state.memory (panByteAlignHOL address) with
+  | word value =>
+      by_cases hdomain : state.memaddrs (panByteAlignHOL address) = true
+      · simp only [hcell, PanWordLab.toHolWordLab, hdomain,
+          ↓reduceIte, Option.map_some]
+        have hbyte := panGetByteHOL_eq_panRiscVGetByteEndian
+          address value state.bigEndian
+        have hlt := panRiscVGetByteEndian_toNat_lt_256
+          address value state.bigEndian
+        rw [hbyte]
+        apply congrArg some
+        let byte := RiscV.panRiscVGetByteEndian (8 : BitVec 64)
+          address value state.bigEndian
+        have hbyteVal : (UInt8.ofNat byte.toNat).toNat = byte.toNat :=
+          UInt8.toNat_ofNat_of_lt hlt
+        change byte = BitVec.ofNat 64 (UInt8.ofNat byte.toNat).toNat
+        rw [hbyteVal]
+        apply BitVec.eq_of_toNat_eq
+        simp only [BitVec.toNat_ofNat]
+        exact (Nat.mod_eq_of_lt (by omega : byte.toNat < 2 ^ 64)).symm
+      · simp [hdomain]
+
+theorem crepRuntimeLoadByte_riscv64_eq_panMemLoadByteHOL {σ : Type}
+    (state : CrepHolState (BitVec 64) σ) (address : BitVec 64) :
+    crepRuntimeLoadByte (riscvCrepWordTarget state.toRuntime) address =
+      (panMemLoadByteHOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map (fun byte => BitVec.ofNat 64 byte.toNat) := by
+  calc
+    crepRuntimeLoadByte (riscvCrepWordTarget state.toRuntime) address =
+      panModelReadByte (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs (crepRuntimeMemoryView state.memory)
+        (8 : BitVec 64) address state.bigEndian :=
+          crepRuntimeLoadByte_wordTarget_eq_riscv state.toRuntime address
+    _ = panModelReadByte (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        (8 : BitVec 64) address state.bigEndian := rfl
+    _ = crepHolEvalMemLoadByte
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian) (8 : BitVec 64)
+        state address := by
+          symm
+          exact crepHolEvalMemLoadByte_eq_panModelReadByte _ _ _ _
+    _ = (panMemLoadByteHOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map
+          (fun byte => BitVec.ofNat 64 byte.toNat) :=
+            crepHolEvalMemLoadByte_riscv64_eq_panMemLoadByteHOL state address
+
+theorem crepHolEvalMemLoadByte_source_eq_riscv64 {σ : Type}
+    (state : CrepHolState (Fin 64 → Bool) σ) (address : Fin 64 → Bool) :
+    (crepHolEvalMemLoadByte
+        (holFiniteWordSourceMemoryModel
+          (instFinHolFiniteDimension (width := 64)) state.bigEndian)
+        (bitVecToHolWord (instFinHolFiniteDimension (width := 64))
+          (8 : BitVec 64)) state address).map
+          (holWordToBitVec (instFinHolFiniteDimension (width := 64))) =
+      crepRuntimeLoadByte
+        (riscvCrepWordTarget
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).toRuntime)
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address) := by
+  calc
+    _ = (panMemLoadByteHOL
+        (fun current =>
+          ((state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).memory current).toHolWordLab)
+        (fun current =>
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).memaddrs current = true)
+        state.bigEndian
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address)).map
+          (fun byte => BitVec.ofNat 64 byte.toNat) := by
+            exact crepHolEvalMemLoadByte_source_eq_panMemLoadByteHOL
+              (instFinHolFiniteDimension (width := 64)) state.bigEndian
+              (bitVecToHolWord (instFinHolFiniteDimension (width := 64))
+                (8 : BitVec 64)) state address
+    _ = crepRuntimeLoadByte
+        (riscvCrepWordTarget
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).toRuntime)
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address) := by
+          symm
+          exact crepRuntimeLoadByte_riscv64_eq_panMemLoadByteHOL
+            (state.toHolFiniteBitVecState
+              (instFinHolFiniteDimension (width := 64)))
+            (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address)
+
+/-! RV64 Load32 uses the existing PanSem byte-assembly bridge after explicitly
+    viewing a Crep word-lab memory as PanSem word cells. -/
+
+theorem crepHolEvalMemLoad32_riscv64_eq_panMemLoad32HOL {σ : Type}
+    (state : CrepHolState (BitVec 64) σ) (address : BitVec 64) :
+    crepHolEvalMemLoad32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian) (8 : BitVec 64)
+        state address =
+      (panMemLoad32HOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map (fun value => BitVec.ofNat 64 value.toNat) := by
+  let source : PanSemState (BitVec 64) (FfiState σ) :=
+    { locals := fun _ => none
+      globals := fun _ => none
+      structs := []
+      code := []
+      exceptionShapes := fun _ => none
+      memory := fun current => some (.word (panTheWord (state.memory current)))
+      memaddrs := state.memaddrs
+      sharedMemaddrs := state.shMemaddrs
+      clock := state.clock
+      be := state.bigEndian
+      ffi := state.ffi
+      baseAddress := state.baseAddress
+      topAddress := state.topAddress }
+  have hget (byteAddress value : BitVec 64) :
+      panSemBitVec64WordModel.getByte (8 : BitVec 64) byteAddress value
+          state.bigEndian =
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+          (8 : BitVec 64) byteAddress value state.bigEndian := by
+    rw [panSemBitVec64GetByte_eq_panRiscVGetByteEndian]
+    simp [RiscV.panRiscVMemoryModelForEndian]
+  have hmodel :
+      panModelRead32
+          (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+          state.memaddrs
+          (fun current => some (panTheWord (state.memory current)))
+          (8 : BitVec 64) address state.bigEndian =
+        (panSemBitVec64MemoryAccess source).read32
+          (panSemBitVec64MemoryAccess source).domain source.memory
+          panSemBitVec64BytesInWord address := by
+    change panModelRead32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        (8 : BitVec 64) address state.bigEndian =
+      panModelRead32 panSemBitVec64WordModel state.memaddrs
+        (panValueWordMemory source.memory) (8 : BitVec 64) address state.bigEndian
+    unfold panModelRead32
+    have haligned :
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian).aligned 4 address =
+          panSemBitVec64WordModel.aligned 4 address := rfl
+    have hbyteAlign :
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian).byteAlign
+            (8 : BitVec 64) address =
+          panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address := rfl
+    rw [haligned, hbyteAlign]
+    by_cases ha : panSemBitVec64WordModel.aligned 4 address = true
+    · simp only [if_pos ha]
+      by_cases hd : state.memaddrs
+          (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address) = true
+      · simp only [hd, ↓reduceIte]
+        change some ((RiscV.panRiscVMemoryModelForEndian state.bigEndian).wordOfBytes32
+            state.bigEndian
+            [(RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+                (8 : BitVec 64) address
+                (panTheWord (state.memory
+                  (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address))) state.bigEndian,
+             (RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+                (8 : BitVec 64) (address + 1)
+                (panTheWord (state.memory
+                  (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address))) state.bigEndian,
+             (RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+                (8 : BitVec 64) (address + 2)
+                (panTheWord (state.memory
+                  (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address))) state.bigEndian,
+             (RiscV.panRiscVMemoryModelForEndian state.bigEndian).getByte
+                (8 : BitVec 64) (address + 3)
+                (panTheWord (state.memory
+                  (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address))) state.bigEndian]) =
+          (some (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))).bind
+            (fun value => some (panSemBitVec64WordModel.wordOfBytes32 state.bigEndian
+              [panSemBitVec64WordModel.getByte (8 : BitVec 64) address value state.bigEndian,
+               panSemBitVec64WordModel.getByte (8 : BitVec 64) (address + 1) value state.bigEndian,
+               panSemBitVec64WordModel.getByte (8 : BitVec 64) (address + 2) value state.bigEndian,
+               panSemBitVec64WordModel.getByte (8 : BitVec 64) (address + 3) value state.bigEndian]))
+        simp only [Option.bind_some]
+        rw [← hget address
+          (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))]
+        rw [← hget (address + 1)
+          (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))]
+        rw [← hget (address + 2)
+          (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))]
+        rw [← hget (address + 3)
+          (panTheWord (state.memory
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address)))]
+        rfl
+      · cases hdom : state.memaddrs
+            (panSemBitVec64WordModel.byteAlign (8 : BitVec 64) address) <;>
+          simp_all
+    · simp [ha]
+  calc
+    crepHolEvalMemLoad32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian) (8 : BitVec 64)
+        state address =
+      panModelRead32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs
+        (fun current => some (panTheWord (state.memory current)))
+        (8 : BitVec 64) address state.bigEndian :=
+          crepHolEvalMemLoad32_eq_panModelRead32 _ _ _ _
+    _ = (panSemBitVec64MemoryAccess source).read32
+        (panSemBitVec64MemoryAccess source).domain source.memory
+        panSemBitVec64BytesInWord address := hmodel
+    _ = (panMemLoad32HOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map
+          (fun value => BitVec.ofNat 64 value.toNat) := by
+            have hread := panSemBitVec64Read32_eq_panMemLoad32HOL
+              source source.memory address
+            have hmemory : panValueWordHOL source.memory =
+                (fun current => (state.memory current).toHolWordLab) := by
+              funext current
+              cases hmem : state.memory current with
+              | word value =>
+                  simp [panValueWordHOL, source, hmem, panTheWord,
+                    PanWordLab.toHolWordLab]
+            have hdomain :
+                (fun current =>
+                  (source.memaddrs current &&
+                    decide (panValueWordDefined source.memory current = true)) = true) =
+                (fun current => state.memaddrs current = true) := by
+              funext current
+              cases hmem : state.memory current with
+              | word value => cases hdomain : state.memaddrs current <;>
+                  simp [source, panValueWordDefined, hdomain]
+            simpa [hmemory, hdomain, source, panValueWordHOL, panValueWordDefined,
+              panValueWordMemory, panSemBitVec64BytesInWord,
+              panSemBitVec64MemoryAccess, panValueMemoryAccessOfModel,
+              PanWordLab.toHolWordLab] using hread
+
+theorem crepRuntimeLoad32_riscv64_eq_panMemLoad32HOL {σ : Type}
+    (state : CrepHolState (BitVec 64) σ) (address : BitVec 64) :
+    crepRuntimeLoad32 (riscvCrepWordTarget state.toRuntime) address =
+      (panMemLoad32HOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map (fun value => BitVec.ofNat 64 value.toNat) := by
+  calc
+    crepRuntimeLoad32 (riscvCrepWordTarget state.toRuntime) address =
+      panModelRead32 (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs (crepRuntimeMemoryView state.memory)
+        (8 : BitVec 64) address state.bigEndian :=
+          crepRuntimeLoad32_wordTarget_eq_riscv state.toRuntime address
+    _ = panModelRead32 (RiscV.panRiscVMemoryModelForEndian state.bigEndian)
+        state.memaddrs (fun current => some (panTheWord (state.memory current)))
+        (8 : BitVec 64) address state.bigEndian := rfl
+    _ = crepHolEvalMemLoad32
+        (RiscV.panRiscVMemoryModelForEndian state.bigEndian) (8 : BitVec 64)
+        state address := by
+          symm
+          exact crepHolEvalMemLoad32_eq_panModelRead32 _ _ _ _
+    _ = (panMemLoad32HOL
+        (fun current => (state.memory current).toHolWordLab)
+        (fun current => state.memaddrs current = true)
+        state.bigEndian address).map
+          (fun value => BitVec.ofNat 64 value.toNat) :=
+            crepHolEvalMemLoad32_riscv64_eq_panMemLoad32HOL state address
+
+theorem crepHolEvalMemLoad32_source_eq_riscv64 {σ : Type}
+    (state : CrepHolState (Fin 64 → Bool) σ) (address : Fin 64 → Bool) :
+    (crepHolEvalMemLoad32
+        (holFiniteWordSourceMemoryModel
+          (instFinHolFiniteDimension (width := 64)) state.bigEndian)
+        (bitVecToHolWord (instFinHolFiniteDimension (width := 64))
+          (8 : BitVec 64)) state address).map
+          (holWordToBitVec (instFinHolFiniteDimension (width := 64))) =
+      crepRuntimeLoad32
+        (riscvCrepWordTarget
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).toRuntime)
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address) := by
+  calc
+    _ = (panMemLoad32HOL
+        (fun current =>
+          ((state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).memory current).toHolWordLab)
+        (fun current =>
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).memaddrs current = true)
+        state.bigEndian
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address)).map
+          (fun value => BitVec.ofNat 64 value.toNat) := by
+            exact crepHolEvalMemLoad32_source_eq_panMemLoad32HOL
+              (instFinHolFiniteDimension (width := 64))
+              (bitVecToHolWord (instFinHolFiniteDimension (width := 64))
+                (8 : BitVec 64)) state address
+    _ = crepRuntimeLoad32
+        (riscvCrepWordTarget
+          (state.toHolFiniteBitVecState
+            (instFinHolFiniteDimension (width := 64))).toRuntime)
+        (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address) := by
+          symm
+          exact crepRuntimeLoad32_riscv64_eq_panMemLoad32HOL
+            (state.toHolFiniteBitVecState
+              (instFinHolFiniteDimension (width := 64)))
+            (holWordToBitVec (instFinHolFiniteDimension (width := 64)) address)
+
 theorem crepHolFiniteDimension_local_toBitVec {ι : Type}
     (dimension : HolFiniteDimension ι) (state : CrepHolState (ι → Bool) σ)
     (name : Nat) :
@@ -2730,7 +3121,26 @@ theorem crepHolWordBits_shift_toBitVec [NeZero width]
 /-- Source-shaped Lean translation of HOL `crepSem$eval_def` for every
     positive BitVec word width. It is untagged because the arbitrary HOL word
     carrier remains unrepresented; `evalCrepRuntimeExp_toRuntime_eq` proves
-    this translation agrees constructor by constructor with production. -/
+    this translation agrees constructor by constructor with production.
+
+    Source-reviewed disposition for HOL
+    `eval_nested_decs_seq_res_var_eq`
+    (`pan_to_crepProofScript.sml:596-620`): HOL implicitly universally
+    quantifies `es`, `ns`, `t`, `ev`, and `p`. The four premises are successful
+    evaluation of every expression in `es`, equal lengths of `ns` and `es`,
+    `distinct_lists ns (FLAT (MAP var_cexp es))`, and distinct `ns`. The
+    conclusion is the exact equation for evaluating `nested_decs ns es p`:
+    evaluate `p` after installing `ZIP (ns, ev)`, then restore each original
+    local with `FOLDL res_var` over `ZIP (ns, MAP (FLOOKUP t.locals) ns)`.
+    `nestedDecsHOL` ports only the syntax. This expression evaluator is over
+    production `CrepExp` and `CrepHolState`, while the theorem quantifies over
+    the full Crep program and finite-map state; `evalCrepClockProg` likewise
+    covers only restricted production `CrepClockProg`/`CrepHolState`. There is
+    no full evaluator over `CrepProgHOL`/`CrepExpHOL` and
+    `CrepSemHOLState`, so the equation cannot be stated with these evaluators
+    and no tag is claimed. The faithful replacement is
+    `flapjack-4ac.5.19.1`, dependent on `flapjack-4ac.5.82` and exact Crep
+    carriers `flapjack-pxn.18.3.5.8.8`. -/
 def evalCrepHolExp [NeZero width]
     (state : CrepHolState (RiscV.Word width) σ) :
     CrepExp (RiscV.Word width) → Option (RiscV.Word width)
@@ -2936,6 +3346,38 @@ theorem evalCrepHolFiniteWordSourceExpWordLab_op_eq_wordOpHOL
     Option.bind_some]
   simp [holFiniteWordSourceMemoryModel, mapCrepHolWordLab,
     holWordToBitVec_bitVecToHolWord, Option.map_map, Function.comp_def]
+
+/-- The finite-index source evaluator's successful `Op` clause agrees with
+    the executed RISC-V runtime evaluator on the word-converted expression
+    and operand values.  The hypotheses expose recursive child evaluation on
+    both sides; this pins the constructor dispatch without claiming that the
+    source and production memory/state carriers agree. -/
+theorem evalCrepHolFiniteWordSourceExp_op_eq_riscvRuntime
+    {ι : Type} {σ : Type} (dimension : HolFiniteDimension ι)
+    (state : CrepHolState (ι → Bool) σ) (operator : BinOp)
+    (expressions : List (CrepExp (ι → Bool))) (values : List (ι → Bool))
+    (hSource : expressions.mapM
+      (evalCrepHolFiniteWordSourceExp dimension state) = some values)
+    (hRuntime : (expressions.map (mapCrepExpWord (holWordToBitVec dimension))).mapM
+      (evalCrepRuntimeExp (riscvCrepWordTarget
+        (state.toHolFiniteBitVecState dimension).toRuntime)) =
+        some (values.map (holWordToBitVec dimension))) :
+    (evalCrepHolFiniteWordSourceExp dimension state
+      (.op operator expressions)).map (holWordToBitVec dimension) =
+    evalCrepRuntimeExp (riscvCrepWordTarget
+      (state.toHolFiniteBitVecState dimension).toRuntime)
+      (.op operator (expressions.map
+        (mapCrepExpWord (holWordToBitVec dimension)))) := by
+  letI : NeZero dimension.width := ⟨Nat.ne_of_gt dimension.width_pos⟩
+  simp only [evalCrepHolFiniteWordSourceExp, Option.bind_eq_bind, hSource,
+    Option.bind_some]
+  simp only [evalCrepRuntimeExp, hRuntime]
+  simpa [riscvCrepWordTarget, CrepHolState.toHolFiniteBitVecState,
+    CrepHolState.toRuntime,
+    holFiniteWordSourceMemoryModel, Option.map_map, Function.comp_def]
+    using (holFiniteWordSourceModel_ops_eq_riscvWordTarget dimension
+      state.bigEndian operator values .mul [] .equal .lsl (values.headD 0)
+      (values.headD 0)).1
 
 /-- The recursive source `Load` clause transports to the tagged width-indexed
     HOL `mem_load_def`: it checks the same address domain and returns the same

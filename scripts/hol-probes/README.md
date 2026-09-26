@@ -204,6 +204,12 @@ their equations to `panModelReadByte`/`panModelRead32`, are in
 and remain untagged until its operations are related to HOL's word-derived
 `byte_align`, `get_byte`, `aligned`, and `word_of_bytes` for arbitrary finite
 dimensions.
+The direct `crepSem$eval` fixtures `crep_eval_load_byte_probe.out` and
+`crep_eval_load_32_probe.out` also cover width 24: `LoadByte` at address 5
+returns `Word 51w` little-endian and `Word 17w` big-endian; `Load32` at address
+4 returns `Word 0x113322w`. `Flapjack.Test.PanFixedLoadParity` compares those
+original rows against the finite-word source evaluator and records the RISC-V
+runtime adapter's `none` result at the same alignment boundary.
 The direct width-1 rows `load32_aligned_width1_address0=SOME ...` and
 `load32_unaligned_width1_address1=NONE` were refreshed
 with `HOL4=/home/zksecurity/HOL CAKEML=/home/zksecurity/flapjack2/cakeml
@@ -424,6 +430,15 @@ The focused Pan-to-Crep fixtures are summarized in
 CI validates that each listed direct-HOL case remains present in its committed
 probe output and in the corresponding Lean test with
 `scripts/pan-to-crep-coverage-report.py --check`.
+
+`loop_sem_lprefix_lub_probe.out` records the empty and singleton results, a
+two-element prefix chain, and HOL EVAL of `build_lprefix_lub` for conflicting
+non-chain families. HOL leaves the selected event as Hilbert choice (`@x`) at
+the first conflicting position; `build_lprefix_lub_thm` only characterizes
+the LUB when the input is an `lprefix_chain`. The matching source review is beside
+`SemanticsRunResHOL` in `Flapjack/Pancake/Semantics/PanProps.lean`. Refresh it
+with `HOL_PROBE_ONLY=loop_sem_lprefix_lub_probeScript.sml
+scripts/hol-probes/regenerate.sh`.
 
 `crep_inline_alist_map_probe.out` records direct HOL EVAL of the inline-map
 input carrier at `crep_inlineScript.sml:259-269`: `alist_to_fmap` keeps the

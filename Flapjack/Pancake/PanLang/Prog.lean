@@ -58,6 +58,48 @@ inductive ProgHOL (width : Nat) [NeZero width] where
   | annot (tag text : MlS)
   deriving Repr
 
+/-! HOL `panLangScript.sml:127-129` declares three `Overload`s that abbreviate
+    the `Call` constructor with a partially applied call-info argument:
+
+    ```
+    Overload TailCall       = ``Call NONE``
+    Overload AssignCall     = ``\s h. Call (SOME (SOME s , h))``
+    Overload StandAloneCall = ``\h. Call (SOME (NONE , h))``
+    ```
+
+    The exact `ProgHOL.call` constructor has the same info carrier
+    (`Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width))`), so
+    each overload is reproduced below as the identical partially-applied
+    constructor (Lean currying matches HOL's `->` types).  `Overload`s are not
+    datatype constructors, but HOL declares them as named constants with these
+    bodies, and the reference checker indexes `Overload` lines, so they carry
+    `@[hol]` tags. -/
+
+/-- HOL `Overload TailCall = ``Call NONE``` (`panLangScript.sml:127`): a call
+    with no call-info. -/
+@[hol "cakeml/pancake/panLangScript.sml" "TailCall"]
+def tailCallHOL {width : Nat} [NeZero width] :
+    MlS → List (ExpHOL width) → ProgHOL width :=
+  .call none
+
+/-- HOL `Overload AssignCall = ``\s h. Call (SOME (SOME s , h))```
+    (`panLangScript.sml:128`): a call with an assigned destination `s` and a
+    optional exception handler `h`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "AssignCall"]
+def assignCallHOL {width : Nat} [NeZero width]
+    (s : VarKind × MlS) (h : Option (MlS × MlS × ProgHOL width)) :
+    MlS → List (ExpHOL width) → ProgHOL width :=
+  .call (some (some s, h))
+
+/-- HOL `Overload StandAloneCall = ``\h. Call (SOME (NONE , h))```
+    (`panLangScript.sml:129`): a call with no destination but an optional
+    exception handler `h`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "StandAloneCall"]
+def standAloneCallHOL {width : Nat} [NeZero width]
+    (h : Option (MlS × MlS × ProgHOL width)) :
+    MlS → List (ExpHOL width) → ProgHOL width :=
+  .call (some (none, h))
+
 /-- Production programs all of whose identifiers are byte-ranged and whose
     expressions are byte-ranged, hence exactly representable over `MlString`. -/
 def ProgByteRanged {width : Nat} : Prog (BitVec width) → Prop
@@ -286,7 +328,14 @@ exception identifiers syntactically reachable from a program over the exact
 the identifiers of `ep`, everything else contributes nothing.  The production
 `Flapjack.expIds` is polymorphic over `Prog α` with `String` identifiers, so it
 cannot literally call this word-indexed definition; the checked bridge
-`expIdsHOL_map_toStringOfBytes` connects them clause-for-clause. -/
+`expIdsHOL_map_toStringOfBytes` connects them clause-for-clause on the exact
+HOL carrier. The reverse production-to-HOL roundtrip is available for
+`Prog (BitVec width)` only under `ProgByteRanged`, since `MlString` cannot
+round-trip arbitrary Lean `String` identifiers. A source audit found
+`Pipeline.pipelineGetEids` as the only production definition that calls
+`expIds` to form exception codes, but no compiler caller of `pipelineGetEids`;
+the executed pipeline therefore does not currently route through either
+`expIds` or `expIdsHOL`. -/
 @[hol "cakeml/pancake/panLangScript.sml" "exp_ids_def"]
 def expIdsHOL {width : Nat} [NeZero width] : ProgHOL width → List MlS
   | .skip => []
@@ -350,6 +399,18 @@ word-indexed `ProgHOL` with `MlS`; this checked relation is the connection
     rename_i infoH nameH argsH hNot
     exact (expIds_progOfHOL_call_of_not (info := infoH) (name := nameH)
       (args := argsH) hNot).symm
+
+/-- Flapjack-specific codec theorem (no HOL original: HOL has no
+`ProgByteRanged` predicate or Lean `String`/`MlString` codec premise). On the
+byte-ranged production subset, encoding with `progToHOL` and projecting the
+exact HOL `exp_ids_def` back through `toStringOfBytes` recovers the production
+`expIds` result. This is a checked representation bridge, not a claim that the
+generic production compiler path calls `expIdsHOL`. -/
+theorem expIdsHOL_progToHOL_byteRanged {width : Nat} [NeZero width]
+    (program : Flapjack.Prog (BitVec width))
+    (hRanged : ProgByteRanged program) :
+    (expIdsHOL (progToHOL program)).map toStringOfBytes = Flapjack.expIds program := by
+  rw [expIdsHOL_map_toStringOfBytes, progOfHOL_progToHOL program hRanged]
 
 /-! ### Exact `panLang$fun_ids` (bead flapjack-4ac.1.45)
 
@@ -425,5 +486,137 @@ with `MlS`; this checked relation is the connection (bead flapjack-4ac.1.45). -/
     rename_i infoH nameH argsH hNot
     exact (funIds_progOfHOL_call_of_not (info := infoH) (name := nameH)
       (args := argsH) hNot).symm
+
+/-- Exact port of HOL `panLang$free_var_ids_def` (`cakeml/pancake/panLangScript.sml:347-392`)
+    over the MlString/width-indexed `ProgHOL width` carrier.  Every clause mirrors the
+    HOL clause, including the five `Call` metadata shapes (none/none, none/some-handler,
+    some-local/no-handler, some/none, some/some-handler) and the `ShMemLoad`/`ShMemStore`
+    cases.  The expression variable collector is the tagged `varExpHOL` (`var_exp_def`)
+    and the local shadowing filter is `FILTER ($≠ vn)`.  There is no production
+    Pancake analogue to connect (the only production free-variable collector is the
+    unrelated crepLang `assigned_free_vars`). -/
+@[hol "cakeml/pancake/panLangScript.sml" "free_var_ids_def"]
+def freeVarIdsHOL {width : Nat} [NeZero width] : ProgHOL width → List MlS
+  | .skip => []
+  | .dec vn _ e body => varExpHOL e ++ (freeVarIdsHOL body).filter (fun candidate => candidate != vn)
+  | .assign vk v e => if vk = VarKind.local then v :: varExpHOL e else varExpHOL e
+  | .primitive v _ es => v :: (es.map varExpHOL).flatten
+  | .store e1 e2 => varExpHOL e1 ++ varExpHOL e2
+  | .store32 e1 e2 => varExpHOL e1 ++ varExpHOL e2
+  | .storeByte e1 e2 => varExpHOL e1 ++ varExpHOL e2
+  | .seq first second => freeVarIdsHOL first ++ freeVarIdsHOL second
+  | .ite g first second => varExpHOL g ++ freeVarIdsHOL first ++ freeVarIdsHOL second
+  | .while g body => varExpHOL g ++ freeVarIdsHOL body
+  | .break => []
+  | .continue => []
+  | .call none _ args => (args.map varExpHOL).flatten
+  | .call (some (none, none)) _ args => (args.map varExpHOL).flatten
+  | .call (some (none, some (_, vn, ep))) _ args =>
+      vn :: (freeVarIdsHOL ep ++ (args.map varExpHOL).flatten)
+  | .call (some (some (vk, vn), none)) _ args =>
+      (if vk = VarKind.local then [vn] else []) ++ (args.map varExpHOL).flatten
+  | .call (some (some (vk, vn), some (_, en, ep))) _ args =>
+      ((if vk = VarKind.local then [vn] else []) ++ (en :: freeVarIdsHOL ep)) ++
+        (args.map varExpHOL).flatten
+  | .decCall vn _ _ args body =>
+      vn :: (freeVarIdsHOL body ++ (args.map varExpHOL).flatten)
+  | .extCall _ e1 e2 e3 e4 =>
+      varExpHOL e1 ++ varExpHOL e2 ++ varExpHOL e3 ++ varExpHOL e4
+  | .raise _ e => varExpHOL e
+  | .return e => varExpHOL e
+  | .shMemLoad _ vk v e => if vk = VarKind.local then v :: varExpHOL e else varExpHOL e
+  | .shMemStore _ e1 e2 => varExpHOL e1 ++ varExpHOL e2
+  | .tick => []
+  | .annot _ _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-! ### Exact `panLang$nested_seq` (bead flapjack-4ac.1.31)
+
+HOL `nested_seq_def` (`cakeml/pancake/panLangScript.sml:211-213`) is
+`nested_seq [] = Skip` and `nested_seq (e::es) = Seq e (nested_seq es)`, over
+`'a prog list`.  `nestedSeqHOL` mirrors both clauses over the exact
+width-indexed `ProgHOL` carrier (constructor `.skip`/`.seq` with matching
+arities and fields).  The production `Flapjack.nestedSeq`
+(`Flapjack/Pancake/PanLang.lean:416`) implements the same construction over the
+generic `Prog α` with `String` identifiers, so it cannot literally call the
+width-indexed definition; the kernel-checked bridge `nestedSeqHOL_progOfHOL`
+connects them.  Direct HOL-EVAL rows empty/one/two/assign_seq are in
+`scripts/hol-probes/pan_lang_nested_seq_probe.out`, replayed in
+`Flapjack/Test/PanNestedSeqParity.lean`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "nested_seq_def"]
+def nestedSeqHOL {width : Nat} [NeZero width] : List (ProgHOL width) → ProgHOL width
+  | [] => .skip
+  | statement :: statements => .seq statement (nestedSeqHOL statements)
+
+@[simp] theorem nestedSeqHOL_nil {width : Nat} [NeZero width] :
+    nestedSeqHOL ([] : List (ProgHOL width)) = .skip := rfl
+
+@[simp] theorem nestedSeqHOL_cons {width : Nat} [NeZero width]
+    (statement : ProgHOL width) (statements : List (ProgHOL width)) :
+    nestedSeqHOL (statement :: statements) =
+      .seq statement (nestedSeqHOL statements) := rfl
+
+/-- The exact `nestedSeqHOL` decodes to the production `Flapjack.nestedSeq` over
+    the decoded program list.  Direct executable routing is unavailable because
+    production is polymorphic over `Prog α` with `String` names while the tagged
+    definition is over the word-indexed `ProgHOL`; this checked relation is the
+    connection (bead flapjack-4ac.1.31). -/
+@[simp] theorem nestedSeqHOL_progOfHOL {width : Nat} [NeZero width]
+    (statements : List (ProgHOL width)) :
+    progOfHOL (nestedSeqHOL statements) =
+      Flapjack.nestedSeq (statements.map progOfHOL) := by
+  induction statements with
+  | nil => simp only [nestedSeqHOL_nil, List.map_nil, progOfHOL, Flapjack.nestedSeq]
+  | cons statement statements ih =>
+      simp only [nestedSeqHOL_cons, List.map_cons, Flapjack.nestedSeq, progOfHOL, ih]
+
+/-- Encoding a production nested sequence with `progToHOL` equals the exact
+    `nestedSeqHOL` over the encoded program list. -/
+@[simp] theorem nestedSeqHOL_progToHOL {width : Nat} [NeZero width]
+    (statements : List (Prog (BitVec width))) :
+    progToHOL (Flapjack.nestedSeq statements) =
+      nestedSeqHOL (statements.map progToHOL) := by
+  induction statements with
+  | nil => simp only [nestedSeqHOL_nil, List.map_nil, progToHOL, Flapjack.nestedSeq]
+  | cons statement statements ih =>
+      simp only [nestedSeqHOL_cons, List.map_cons, Flapjack.nestedSeq, progToHOL, ih]
+
+/-- Executable width-indexed nested sequence that routes through the reviewed
+    `nestedSeqHOL`: encode each production statement with `progToHOL`, apply the
+    tagged definition, and decode the result.  On byte-ranged inputs the codec
+    round-trip `progOfHOL_progToHOL` makes this agree with the production
+    `Flapjack.nestedSeq`; `nestedSeqCake_eq` records that relation.  This is
+    production routing infrastructure, not a HOL declaration, so it carries no
+    `@[hol]` tag (bead flapjack-4ac.1.31.1). -/
+def nestedSeqCake {width : Nat} [NeZero width]
+    (statements : List (Prog (BitVec width))) : Prog (BitVec width) :=
+  progOfHOL (nestedSeqHOL (statements.map progToHOL))
+
+/-- The encoded list of a byte-ranged program list decodes back to itself, i.e.
+    `progOfHOL ∘ progToHOL` is the identity pointwise under `ProgByteRanged`. -/
+theorem map_progOfHOL_progToHOL {width : Nat} [NeZero width]
+    (statements : List (Prog (BitVec width)))
+    (hranged : ∀ statement ∈ statements, ProgByteRanged statement) :
+    (statements.map progToHOL).map progOfHOL = statements := by
+  induction statements with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.map_cons]
+      rw [progOfHOL_progToHOL head (hranged head (by simp))]
+      congr 1
+      exact ih (fun statement hstatement => hranged statement (by simp [hstatement]))
+
+/-- The executable `nestedSeqCake` agrees with the production `Flapjack.nestedSeq`
+    whenever every statement round-trips through the exact codec.  This is the
+    routing bridge used by the executed compiler's nested-sequence path; it is
+    Flapjack-specific infrastructure and is not a HOL theorem. -/
+theorem nestedSeqCake_eq {width : Nat} [NeZero width]
+    (statements : List (Prog (BitVec width)))
+    (hranged : ∀ statement ∈ statements, ProgByteRanged statement) :
+    nestedSeqCake statements = Flapjack.nestedSeq statements := by
+  unfold nestedSeqCake
+  rw [nestedSeqHOL_progOfHOL, map_progOfHOL_progToHOL statements hranged]
 
 end Flapjack.Pancake.PanLang

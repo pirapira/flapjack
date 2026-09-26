@@ -512,7 +512,7 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
             self.assertNotIn(key, MAP["tagged_declarations"]())
 
-    def test_pansem_mem_and_shmem_alt_mismatches_are_documented(self):
+    def test_pansem_mem_alt_ports_and_shmem_mismatches_are_classified(self):
         inventory = {
             (record["lean_path"], record["lean_name"]): record
             for record in MAP["build_inventory"]()
@@ -520,27 +520,30 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
         cases = {
             ("Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean",
              "panMemLoad32HOL_eq_alt"):
-                ("mem_load_32_alt", "flapjack-pxn.18.3.6.9.27"),
+                ("mem_load_32_alt", "flapjack-pxn.18.3.6.9.27", "reviewed_exact"),
             ("Flapjack/Pancake/Semantics/PanSem/MemStore32Alt.lean",
              "panMemStore32HOL_eq_alt"):
-                ("mem_store_32_alt", "flapjack-pxn.18.3.6.9.29"),
+                ("mem_store_32_alt", "flapjack-pxn.18.3.6.9.29", "reviewed_exact"),
             ("Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
              "shMemLoadHOLExact"):
-                ("sh_mem_load_def", "flapjack-pxn.18.3.7.1.3.1.1.2.5"),
+                ("sh_mem_load_def", "flapjack-pxn.18.3.7.1.3.1.1.2.5", "documented_mismatch"),
             ("Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
              "shMemStoreHOLExact"):
-                ("sh_mem_store_def", "flapjack-pxn.18.3.7.1.3.1.1.2.5"),
+                ("sh_mem_store_def", "flapjack-pxn.18.3.7.1.3.1.1.2.5", "documented_mismatch"),
         }
-        for key, (hol_name, dep) in cases.items():
+        for key, (hol_name, dep, status) in cases.items():
             record = inventory[key]
             self.assertEqual(
                 (record["hol_path"], record["hol_name"]),
                 ("cakeml/pancake/semantics/panSemScript.sml", hol_name),
             )
-            self.assertEqual(record["statement_status"], "documented_mismatch")
-            self.assertIn(dep, record["reviewer"])
+            self.assertEqual(record["statement_status"], status)
             self.assertTrue(MAP["lean_definition_exists"](MAP["ROOT"], *key))
-            self.assertNotIn(key, MAP["tagged_declarations"]())
+            if status == "reviewed_exact":
+                self.assertIn(key, MAP["tagged_declarations"]())
+            else:
+                self.assertIn(dep, record["reviewer"])
+                self.assertNotIn(key, MAP["tagged_declarations"]())
 
     def test_global_rename_function_name_polymorphic_hol_mismatch_is_documented(
         self,
@@ -708,10 +711,11 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             (record["lean_path"], record["lean_name"]): record
             for record in MAP["build_inventory"]()
         }
-        self.assertNotIn(
-            ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL"),
-            inventory,
-        )
+        compile_prog = inventory[
+            ("Flapjack/Pancake/PanToCrep/CompileProg.lean", "compileProgTopHOL")
+        ]
+        self.assertEqual(compile_prog["hol_name"], "compile_prog_def")
+        self.assertEqual(compile_prog["statement_status"], "documented_mismatch")
         documented_mismatches = (
             "firstCompileProgAllDistinct",
             "firstCompileToCrepAllDistinct",
@@ -1514,6 +1518,65 @@ class ValidateInventoryTest(unittest.TestCase):
         self.assertEqual(record["statement_status"], "documented_mismatch")
         self.assertIn("String", record["reviewer"])
         self.assertNotIn(mismatch, MAP["tagged_declarations"]())
+
+
+class StandaloneFmapResultStatusTest(unittest.TestCase):
+    def _record(self, **overrides):
+        record = {
+            "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+            "hol_name": "get_eids_from_decls_def",
+            "lean_path": "Flapjack/Example.lean",
+            "lean_name": "getEidsFromDeclsHOL",
+            "statement_status": "reviewed_fmap_as_finite_support_result",
+            "reviewer": "source comparison of HOL/Lean carriers",
+            "fmap_as_finite_support_result": True,
+        }
+        record.update(overrides)
+        return record
+
+    def _tag(self, fmap_result=True, fmap_fields=()):
+        return {
+            ("Flapjack/Example.lean", "getEidsFromDeclsHOL"): (
+                "cakeml/pancake/pan_to_crepScript.sml",
+                "get_eids_from_decls_def",
+                (), (), (), fmap_fields, fmap_result,
+            )
+        }
+
+    def _errors(self, record, tagged):
+        return MAP["validate_inventory"]([record], set(), tagged, set())
+
+    def test_accepts_standalone_result_status(self):
+        self.assertEqual(self._errors(self._record(), self._tag()), [])
+
+    def test_rejects_reviewed_exact_for_result_qualifier(self):
+        errors = self._errors(
+            self._record(statement_status="reviewed_exact"), self._tag())
+        self.assertTrue(any("reviewed_exact" in error for error in errors))
+
+    def test_rejects_missing_manifest_field(self):
+        record = self._record()
+        del record["fmap_as_finite_support_result"]
+        errors = self._errors(record, self._tag())
+        self.assertTrue(any("does not match its @[hol] tag" in error for error in errors))
+
+    def test_rejects_result_status_without_qualifier(self):
+        errors = self._errors(self._record(), self._tag(fmap_result=False))
+        self.assertTrue(any("needs a fmap_as_finite_support_result" in error for error in errors))
+
+    def test_rejects_field_and_result_qualifiers_together(self):
+        errors = self._errors(
+            self._record(
+                fmap_as_finite_support=["locals"],
+            ),
+            self._tag(fmap_result=True, fmap_fields=("locals",)),
+        )
+        self.assertTrue(any("mutually exclusive" in error for error in errors))
+
+    def test_rejects_result_status_without_source_note(self):
+        errors = self._errors(
+            self._record(reviewer="inventory only"), self._tag())
+        self.assertTrue(any("source-comparison note" in error for error in errors))
 
 
 if __name__ == "__main__":

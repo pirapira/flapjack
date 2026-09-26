@@ -298,15 +298,33 @@ structure AsmConfig (width : Nat) where
 def asmAligned {width : Nat} (alignment : Nat) (value : BitVec width) : Bool :=
   value.toNat % 2 ^ alignment = 0
 
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "reg_ok_def"]
+/--
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    The HOL tag was withdrawn. -/
 def asmRegOk {width : Nat} (config : AsmConfig width) (register : Nat) : Bool :=
   register < config.regCount && !config.avoidRegs.contains register
 
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "fp_reg_ok_def"]
+/--
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    The HOL tag was withdrawn. -/
 def asmFpRegOk {width : Nat} (config : AsmConfig width) (register : Nat) : Bool :=
   register < config.fpRegCount
 
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "reg_imm_ok_def"]
+/--
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    The HOL tag was withdrawn. -/
 def asmRegImmOk {width : Nat} (config : AsmConfig width) (operator : Sum BinOp Cmp) :
     WordRegImm (BitVec width) → Bool
   | .reg register => asmRegOk config register
@@ -314,8 +332,13 @@ def asmRegImmOk {width : Nat} (config : AsmConfig width) (operator : Sum BinOp C
       (operator == .inl .xor && value == -1) || config.validImm operator value
 
 /-- HOL `offset_ok_def` uses the signed word comparison `<=` (HOL's `<=` on
-words is signed, unlike `word_ls`), so the bounds are compared as integers. -/
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "offset_ok_def"]
+words is signed, unlike `word_ls`), so the bounds are compared as integers.
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def asmOffsetOk {width : Nat} (alignment : Nat)
     (bounds : BitVec width × BitVec width) (offset : BitVec width) : Bool :=
   bounds.1.toInt ≤ offset.toInt && offset.toInt ≤ bounds.2.toInt &&
@@ -339,8 +362,13 @@ def asmCjumpOffsetOk {width : Nat} (config : AsmConfig width) (offset : BitVec w
 def asmLocOffsetOk {width : Nat} (config : AsmConfig width) (offset : BitVec width) : Bool :=
   asmOffsetOk config.codeAlignment config.locOffset offset
 
-/-- HOL `asmScript$arith_ok_def` (`asmScript.sml:191-229`). -/
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "arith_ok_def"]
+/-- HOL `asmScript$arith_ok_def` (`asmScript.sml:191-229`).
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def asmArithOk {width : Nat} (config : AsmConfig width) :
     WordLangArith (BitVec width) → Bool
   | .binop operator destination source right =>
@@ -387,8 +415,13 @@ def asmArithOk {width : Nat} (config : AsmConfig width) :
         asmRegOk config sourceLeft && asmRegOk config sourceRight &&
         (!(config.isa == .mips || config.isa == .riscv) || !(destination == sourceLeft))
 
-/-- HOL `asmScript$fp_ok_def` (`asmScript.sml:231-268`). -/
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "fp_ok_def"]
+/-- HOL `asmScript$fp_ok_def` (`asmScript.sml:231-268`).
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def asmFpOk {width : Nat} (config : AsmConfig width) : WordLangFp → Bool
   | .fpLess destination left right =>
       asmRegOk config destination && asmFpRegOk config left && asmFpRegOk config right
@@ -434,14 +467,24 @@ def asmFpOk {width : Nat} (config : AsmConfig width) : WordLangFp → Bool
   | .fpFromInt destination source =>
       asmFpRegOk config destination && asmFpRegOk config source
 
-/-- HOL `asmScript$cmp_ok_def` (`asmScript.sml:270-272`). -/
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "cmp_ok_def"]
+/-- HOL `asmScript$cmp_ok_def` (`asmScript.sml:270-272`).
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def asmCmpOk {width : Nat} (config : AsmConfig width) (operator : Cmp)
     (register : Nat) (right : WordRegImm (BitVec width)) : Bool :=
   asmRegOk config register && asmRegImmOk config (.inr operator) right
 
-/-- HOL `asmScript$inst_ok_def` (`asmScript.sml:286-299`). -/
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "inst_ok_def"]
+/-- HOL `asmScript$inst_ok_def` (`asmScript.sml:286-299`).
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def asmInstOk {width : Nat} (config : AsmConfig width) : WordLangInst (BitVec width) → Bool
   | .skip => true
   | .const destination _ => asmRegOk config destination
@@ -457,8 +500,13 @@ def asmInstOk {width : Nat} (config : AsmConfig width) : WordLangInst (BitVec wi
          else
           asmByteOffsetOk config offset)
 
-/-- HOL `asmScript$asm_ok_def` (`asmScript.sml:301-313`). -/
-@[hol "cakeml/compiler/encoders/asm/asmScript.sml" "asm_ok_def"]
+/-- HOL `asmScript$asm_ok_def` (`asmScript.sml:301-313`).
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def asmOk {width : Nat} (config : AsmConfig width) : AsmData width → Bool
   | .inst inner => asmInstOk config inner
   | .jump target => asmJumpOffsetOk config target

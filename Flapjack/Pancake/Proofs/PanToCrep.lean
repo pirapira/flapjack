@@ -45,7 +45,25 @@ namespace Flapjack
     (`lookup_success`, `lookup_missing`, `lookup_struct`) are recorded in
     `scripts/hol-probes/globals_lookup_probe.out` and reproduced by
     `Flapjack/Test/PanToCrepGlobalsLookupParity.lean`. Exact-carrier
-    replacement is tracked by `flapjack-pxn.18.3.5.8.8`. -/
+    replacement is tracked by `flapjack-pxn.18.3.5.8.8`.
+
+    HOL `evaluate_nested_decs_load_globals`
+    (`pan_to_crepProofScript.sml:4139-4176`) implicitly universally quantifies
+    `s`, `rv`, `rvs`, `vs`, and `p`. Its four premises are successful
+    `globals_lookup s rv`, the 32-cell bound on `size_of_shape (shape_of rv)`,
+    distinct `vs`, and equality of `LENGTH vs` with that shape size. Its
+    conclusion equates `evaluate (nested_decs vs (load_globals 0w ...) p, s)`
+    with evaluation of `p` after the globals are installed, followed by the
+    exact `FOLDL res_var` restoration from the original locals. Lean has the
+    exact syntax helpers `loadGlobalsHOL` and `nestedDecsHOL` and positive-width
+    `ValueHOL`/`CrepSemHOLState` carriers, but no full `evaluate` over
+    `CrepProgHOL` and `CrepSemHOLState`, nor an exact `globals_lookup` bridge.
+    The available `evalCrepClockProg` is a restricted evaluator over
+    `CrepClockProg`/`CrepExp`/`CrepHolState`; this `globalsLookup` is the
+    production String-backed projection described above. Neither can state the
+    HOL equation or its exact premises, so no theorem tag is claimed. The
+    faithful theorem replacement is tracked by `flapjack-4ac.5.60.1`, gated on
+    `flapjack-4ac.5.82` and `flapjack-pxn.18.3.5.8.8`. -/
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=
   (List.range (Shape.shapeSize (panSemShapeOf value))).mapM
@@ -840,7 +858,7 @@ theorem panToCrepMakeVmapHOL_eq_ctxtFcVars
     panToCrepMakeVmapHOL params =
       (ctxtFc functions exceptionCodes (params.map Prod.fst) (params.map Prod.snd)
         (panToCrepVars params)).vars := by
-  simp only [panToCrepMakeVmapHOL, ctxtFc, panToCrepVars]
+  simp only [panToCrepMakeVmapHOL, ctxtFc, panToCrepVars_eq]
   rw [compileParamVars_range_withShape params 0]
   simp
 
@@ -2010,10 +2028,32 @@ theorem bindPanValueParametersLocalsRelOfPanSem
     exact HOL value/shape carriers are `ValueHOL`/`ShapeHOL`. The complete
     finite-support HOL evaluator and exact Pan-to-Crep state/local relations
     are still missing. Keep these helpers untagged as support, not as ports of
-    `evaluate_shape_invariant_ret_inst`. Its faithful replacement is tracked
-    by bead `flapjack-4ac.5.83`, blocked on `flapjack-4ac.4.67`,
-    `flapjack-pxn.18.3.5.8`, `flapjack-pxn.18.3.7.1.3.1.1.2`, and
-    `flapjack-0lj.5`. -/
+    `evaluate_shape_invariant_ret_inst`. Its faithful replacement remains open
+    on bead `flapjack-4ac.5.83`. The expression-level prerequisite
+    `eval_is_wf_shape_v` is now tagged over the reviewed finite-map carrier in
+    `PanProps/EvalInvariant.lean`; the complete recursive program invariant is
+    still missing. Current theorem-path blockers include the exact lookup-code
+    invariant `.4.66.1`, finite-support program evaluation, and exact
+    PanLang/Pan-to-Crep carriers.
+
+    Separate source-reviewed disposition for HOL
+    `evaluate_shape_invariant_ret_inst2` (`pan_to_crepProofScript.sml:3031-3044`):
+    its five premises are `OPT_MMAP (eval s) argexps = SOME args`, successful
+    `lookup_code s.code fname args = SOME (p2,newlocals,rsh)`, successful
+    evaluation of `p` from `dec_clock s` with `newlocals`, `state_rel s t`,
+    and `locals_rel ctxt s.locals t_locs`. It concludes the same Return or
+    Exception payload `is_wf_shape_v_nil` disjunction, with true for other
+    results. The proof uses `lookup_code_wf_shape_invariant_step` to establish
+    the newly bound locals invariant before `evaluate_is_wf_shape_invariant`;
+    these are proved facts, not additional theorem premises. Existing
+    `localsRelWfShape` and `evalPanSemStateExpsWfShapeOfStateRel` cover only
+    production String-backed relations and a 64-bit expression evaluator.
+    The full source evaluator and exact MlString-keyed Pan-to-Crep state/local
+    relations are not available as one exact carrier, so this theorem stays
+    untagged. Its faithful replacement is `flapjack-4ac.5.47.1`, dependent on
+    `flapjack-4ac.3.52.1`, `flapjack-4ac.5.83`, and exact PanSem state/name
+    carriers. The exact lookup invariant is tracked separately by
+    `flapjack-4ac.4.66.1`. -/
 
 /-- HOL `locals_rel_wf_shape`: every source local covered by the local-state
     relation is a well-formed value in the empty struct context. -/
@@ -2836,7 +2876,7 @@ theorem alookupCompileToCrepCode [NeZero width]
             (panToCrepGetEidsFromDeclsHOL declarations))
           entry.2.1 entry.2.2.1))), ?_, ?_⟩
   · rw [hdecomp, List.map_append, List.map_cons]
-    simp [panToCrepVars, Shape.shapeSize]
+    simp [panToCrepVars, crepVarsHOL]
   · intro p hp
     obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hp
     simpa using hnotin q hq
@@ -2957,7 +2997,7 @@ theorem panToCrepCompFuncRiscV_eq_compileCodeRelProg
     panToCrepMkCtxtHOL, ctxtFc]
   rw [panToCrepMakeVmapHOL_eq_ctxtFcVars vshs (functionInfosHOL declarations)
     (panToCrepGetEidsFromDeclsHOL declarations)]
-  simp only [panToCrepVars, maxList_range, ctxtFc]
+  simp only [panToCrepVars_eq, maxList_range, ctxtFc]
 
 /-- Source-shaped port (Flapjack-specific; NOT an exact HOL port) of HOL `mk_ctxt_code_imp_code_rel`
     (`cakeml/pancake/proofs/pan_to_crepProofScript.sml:4604`): with distinct
@@ -3011,8 +3051,7 @@ theorem mkCtxtCodeImpCodeRel [NeZero width]
     rw [FLOOKUP_FUPDATE_LIST_reverse_eq_lookup]
     rw [alookupCompileToCrepCodeGeneral declarations function vshs prog rshape
       hsource]
-    rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg]
-    rfl
+    rw [panToCrepCompFuncRiscV_eq_compileCodeRelProg, panToCrepVars_eq]
 
 /-- Consumption adapter: a width-indexed `codeRelW` hypothesis is the generic
     `codeRel` at `BitVec width` (`codeRelW_iff_codeRel`), so the existing

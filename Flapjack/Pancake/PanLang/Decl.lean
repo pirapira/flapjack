@@ -190,6 +190,14 @@ def isExnDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
   | .exnDecl _ _ => true
   | _ => false
 
+/-- Exact port of HOL `panLang$is_name` (`panLangScript.sml:244-247`):
+`is_name (Name _ _) = T`, `is_name _ = F`, over the same reviewed word-indexed
+`DeclHOL width` carrier as the sibling `is_decl`/`is_exn_decl` ports. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_name_def"]
+def isNameHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .name _ _ => true
+  | _ => false
+
 /-- Exact port of HOL `panLang$is_function` (`panLangScript.sml:314-317`):
 `is_function (Function _) = T`, `is_function _ = F`, over the same reviewed
 `DeclHOL width` carrier. -/
@@ -199,13 +207,12 @@ def isFunctionHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
   | _ => false
 
 /-- Exact port of HOL `panLang$inlinable` (`panLangScript.sml:389-391`):
-`inlinable (Function fi) = fi.inline` and `inlinable _ = F`.  The inspected
+`inlinable (Function fi) = fi.inline` and `inlinable _ = F`. The inspected
 `inline` bit is the same field of the reviewed `FunDeclHOL`/`fun_decl` carrier,
-so this is exact over the word-indexed `DeclHOL width`.  Production
-`Flapjack.inlinable` is polymorphic over generic `Decl α` and cannot literally
-call this word-indexed definition; the checked bridges `inlinable_declOfHOL`
-and `inlinable_map_declOfHOL` relate them, the latter matching the executed
-optimizer's `functions (FILTER inlinable prog)` selection. -/
+so this is exact over the word-indexed `DeclHOL width`. Production
+`Flapjack.inlinable` is polymorphic over generic `Decl α`; the checked adapter
+below projects just its observed constructor/inline fields into an exact
+one-bit witness before the executed compiler uses this predicate. -/
 @[hol "cakeml/pancake/panLangScript.sml" "inlinable_def"]
 def inlinableHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
   | .function declaration => declaration.inline
@@ -218,10 +225,10 @@ def inlinableHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
 
 /-- The exact `inlinableHOL` selects exactly the same declarations as the
 production `Flapjack.inlinable` under the `declOfHOL` codec, so an executable
-`FILTER inlinable` over production declarations corresponds to filtering the
-word-indexed declarations by the reviewed predicate.  Direct executable routing
-is unavailable because production is polymorphic over generic `Decl α` with
-`String` names while this definition is over the word-indexed `DeclHOL`. -/
+`FILTER inlinable` over the decoded exact carrier corresponds to filtering the
+word-indexed declarations by the reviewed predicate. The production compiler
+now uses `inlinableThroughHOL` to run that predicate before filtering its
+original list. -/
 theorem inlinable_map_declOfHOL {width : Nat} [NeZero width]
     (declarations : List (DeclHOL width)) :
     (declarations.map declOfHOL).filter Flapjack.inlinable =
@@ -237,6 +244,42 @@ theorem inlinable_map_declOfHOL {width : Nat} [NeZero width]
     | decl _ _ _ => simp [Flapjack.inlinable, inlinableHOL, declOfHOL, ih]
     | exnDecl _ _ => simp [Flapjack.inlinable, inlinableHOL, declOfHOL, ih]
     | name _ _ => simp [Flapjack.inlinable, inlinableHOL, declOfHOL, ih]
+
+/-- Flapjack-specific total adapter that projects only the fields inspected by
+HOL `inlinable` into its exact one-bit declaration carrier. For a function it
+preserves the inline bit in an exact `Function`; every other production
+constructor is represented by an exact non-function `Decl`. Names, bodies,
+and word values are irrelevant to this predicate. The caller filters its
+original production list, so no generic `String`/`α` value is decoded or
+rewritten. Width one is only a well-typed carrier for the dummy declaration:
+HOL `inlinable` observes the function constructor and its inline bit, never a
+word value, so changing the width cannot change the predicate result. -/
+def inlinableThroughHOL {α : Type} : Flapjack.Decl α → Bool
+  | .function declaration =>
+      inlinableHOL (.function
+        ({ name := ofString "", inline := declaration.inline, exported := false,
+           params := [], body := .skip, returnShape := .one } : FunDeclHOL 1))
+  | _ =>
+      inlinableHOL (.decl ShapeHOL.one (ofString "") (.const 0) : DeclHOL 1)
+
+/-- The exact predicate adapter agrees with the generic production predicate
+for every declaration. This is a field-projection bridge for `inlinable`, not
+a claim that generic production `Decl α` is itself the exact HOL carrier. -/
+@[simp] theorem inlinableThroughHOL_eq {α : Type}
+    (declaration : Flapjack.Decl α) :
+    inlinableThroughHOL declaration = Flapjack.inlinable declaration := by
+  cases declaration <;> rfl
+
+/-- Filtering through exact `inlinableHOL` preserves the production source
+list and selects the same declarations as the generic helper. -/
+theorem filter_inlinableThroughHOL {α : Type}
+    (declarations : List (Flapjack.Decl α)) :
+    declarations.filter inlinableThroughHOL =
+      declarations.filter Flapjack.inlinable := by
+  induction declarations with
+  | nil => rfl
+  | cons declaration declarations ih =>
+      simp only [List.filter_cons, inlinableThroughHOL_eq, ih]
 
 /-- Exact port of HOL `panLang$size_of_eids` (`panLangScript.sml:249-251`):
 `size_of_eids prog = LENGTH (FILTER is_exn_decl prog)`, the number of top-level

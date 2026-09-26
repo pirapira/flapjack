@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.AstHOL
 import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Pancake.PanLang
 import Flapjack.Pancake.PanLang.Shape
@@ -54,6 +55,7 @@ import Flapjack.Pancake.Semantics.PanSem.TotalSteps
 import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.Semantics.PanSem.StateExact
 import Flapjack.Pancake.Semantics.PanSem.StateExactFiniteMap
+import Flapjack.Pancake.Semantics.PanSem.EvaluateFinite
 import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 import Flapjack.Pancake.Semantics.PanSem.IsValidValueExact
 import Flapjack.Pancake.Semantics.PanSem.DecExact
@@ -74,9 +76,16 @@ import Flapjack.Pancake.Semantics.PanSem.StateExactFinite
 import Flapjack.Pancake.Semantics.PanSem.MemByteAssembly
 import Flapjack.Pancake.Semantics.PanSem.MemLoad32Alt
 import Flapjack.Pancake.Semantics.PanSem.MemStore32Alt
+import Flapjack.Pancake.Semantics.PanSem.ByteRoundtrip
+import Flapjack.Misc.GoodDimindex
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
+import Flapjack.Pancake.Semantics.PanProps.MemByteArray
 import Flapjack.Pancake.Semantics.PanSem.ShMemExact
 import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
+import Flapjack.Pancake.Semantics.PanProps.EvalInvariant
+import Flapjack.Pancake.Semantics.PanProps.EvaluateResultInvariant
+import Flapjack.Pancake.Semantics.PanProps.LocalisedExpSimps
+import Flapjack.Pancake.Semantics.PanProps.NamelessExpSimps
 import Flapjack.Pancake.Semantics.ByteAlignBridge
 import Flapjack.Pancake.Semantics.LoopProps
 import Flapjack.PanObservationalSemantics
@@ -95,12 +104,15 @@ import Flapjack.PanSimpLocalised
 import Flapjack.Pancake.PanStructs
 import Flapjack.Pancake.Proofs.PanStructs.CompileCorrect
 import Flapjack.Pancake.PanGlobals
+import Flapjack.Pancake.PanGlobalsByteRanged
 import Flapjack.Pancake.Proofs.PanGlobals
 import Flapjack.Pancake.Proofs.PanToCrep.EvaluateCases
 import Flapjack.Pancake.Proofs.PanToCrep.TotalEvaluateCases
 import Flapjack.Pancake.Proofs.PanToCrep
+import Flapjack.Pancake.Proofs.PanToCrep.StateRelFiniteSupport
 import Flapjack.Pancake.Proofs.PanToCrep.Primop
 import Flapjack.Pancake.Proofs.PanToCrep.CompileProgParams
+import Flapjack.Pancake.Proofs.PanToWord
 import Flapjack.Pipeline
 import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.RiscV.CorrectnessTraps
@@ -131,6 +143,9 @@ import Flapjack.CompileParamVarsBounds
 import Flapjack.CrepeContextBounds
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pancake.PanToCrep.ExpHdlExact
+import Flapjack.Pancake.PanToCrep.ContextExact
+import Flapjack.Pancake.PanToCrep.ContextBridge
+import Flapjack.Pancake.PanToCrep.ContextProductionEvidence
 import Flapjack.Pancake.Proofs.CrepArith
 import Flapjack.Pancake.Proofs.CrepInline
 import Flapjack.CompileFunctionDistinct

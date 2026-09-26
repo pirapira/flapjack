@@ -1,4 +1,5 @@
 import Flapjack.Parser
+import Flapjack.Parser.ParseTopDecsByteRanged
 import Flapjack.Pancake.PanToCrep.Compile
 import Flapjack.Pipeline
 import Flapjack.Pancake.LoopToWord
@@ -26,13 +27,17 @@ def p9Source : String :=
 /-- Compile `p1` to its source-shaped loop-level functions, then lower each
     function through the source-facing pipeline boundary. -/
 def p1WordBoundaries :
-    Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) := do
-  let declarations ← match Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
-    | Except.ok declarations => some declarations | Except.error _ => none
-  let pipeline ← compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
-      (fun value => BitVec.ofNat 64 value) "main"
-      (panTargetDeclarationsWithDefaultMain declarations)
-  some (pipelineWordFunctionsSource pipeline.loop)
+    Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) :=
+  match hparse : Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
+  | Except.error _ => none
+  | Except.ok declarations =>
+      let hparsed := Parser.parseTopDecs_declByteRanged
+        (BitVec.ofInt 64) p1Source false declarations hparse
+      let htarget := panTargetDeclarationsWithDefaultMain_byteRanged declarations hparsed
+      (compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
+        (fun value => BitVec.ofNat 64 value) "main"
+        (panTargetDeclarationsWithDefaultMain declarations) (some (.isTrue htarget))).map
+        (fun pipeline => pipelineWordFunctionsSource pipeline.loop)
 
 /-- The Word-space names of every lowered `p1` function. -/
 def p1WordVariableNames : Option (List (List Nat)) :=
@@ -70,13 +75,17 @@ def p1CallCutsets : Option (List (List (List Nat))) :=
         (fun live => live.mergeSort (fun a b => a < b))))
 
 def p9WordBoundaries :
-    Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) := do
-  let declarations ← match Parser.parseTopDecs (BitVec.ofInt 64) p9Source with
-    | Except.ok declarations => some declarations | Except.error _ => none
-  let pipeline ← compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
-      (fun value => BitVec.ofNat 64 value) "main"
-      (panTargetDeclarationsWithDefaultMain declarations)
-  some (pipelineWordFunctionsSource pipeline.loop)
+    Option (List (Nat × List Nat × WordProg (RiscV.Word 64))) :=
+  match hparse : Parser.parseTopDecs (BitVec.ofInt 64) p9Source with
+  | Except.error _ => none
+  | Except.ok declarations =>
+      let hparsed := Parser.parseTopDecs_declByteRanged
+        (BitVec.ofInt 64) p9Source false declarations hparse
+      let htarget := panTargetDeclarationsWithDefaultMain_byteRanged declarations hparsed
+      (compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
+        (fun value => BitVec.ofNat 64 value) "main"
+        (panTargetDeclarationsWithDefaultMain declarations) (some (.isTrue htarget))).map
+        (fun pipeline => pipelineWordFunctionsSource pipeline.loop)
 
 def p9CallCutsets : Option (List (List (List Nat))) :=
   p9WordBoundaries.map (fun functions =>
@@ -116,12 +125,15 @@ def callCutsetNamespaceOracle : Bool :=
 /- The source-facing entry path must use Cake's `comp_func` context and its
    `oCompile` loop-live pass, rather than the legacy pass-local context. -/
 def p1EntryUsesSourceLoop : Bool :=
-  match Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
+  match hparse : Parser.parseTopDecs (BitVec.ofInt 64) p1Source with
   | Except.error _ => false
   | Except.ok declarations =>
+      let hparsed := Parser.parseTopDecs_declByteRanged
+        (BitVec.ofInt 64) p1Source false declarations hparse
+      let htarget := panTargetDeclarationsWithDefaultMain_byteRanged declarations hparsed
       match compileFlapjackEntryCake .rv64i (BitVec.ofNat 64 8)
           (fun value => BitVec.ofNat 64 value) "main"
-          (panTargetDeclarationsWithDefaultMain declarations) with
+          (panTargetDeclarationsWithDefaultMain declarations) (some (.isTrue htarget)) with
       | none => false
       | some pipeline =>
           pipeline.loop.map (fun (_, parameters, _) => parameters) ==

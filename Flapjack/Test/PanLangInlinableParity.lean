@@ -53,4 +53,27 @@ example : Flapjack.inlinable (declOfHOL (functionDeclHOL true)) =
     inlinableHOL (functionDeclHOL true) :=
   inlinable_declOfHOL _
 
+def productionUnicodeInline : Flapjack.Decl (BitVec 8) :=
+  .function
+    { name := String.singleton (Char.ofNat 0x1d518)
+      inline := true
+      exported := false
+      params := []
+      body := .skip
+      returnShape := .one }
+
+def exactFilterPreservesUnicodeName : Bool :=
+  match ([productionUnicodeInline].filter inlinableThroughHOL) with
+  | [.function declaration] =>
+      declaration.name == String.singleton (Char.ofNat 0x1d518) && declaration.inline
+  | _ => false
+
+#guard exactFilterPreservesUnicodeName
+
+example {width : Nat} [NeZero width]
+    (declarations : List (Flapjack.Decl (BitVec width))) :
+    declarations.filter inlinableThroughHOL =
+      declarations.filter Flapjack.inlinable :=
+  filter_inlinableThroughHOL declarations
+
 end Flapjack.Test.PanLangInlinableParity

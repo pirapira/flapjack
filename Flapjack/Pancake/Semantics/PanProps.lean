@@ -81,18 +81,15 @@ the tag; the faithful port is tracked by
 remains successful with the same value when only `s.memaddrs` is widened.
 The conjunction premise is successful evaluation AND `s.memaddrs ⊆ memaddrs`;
 the conclusion evaluates the record update `s with memaddrs := memaddrs`.
-Lean's `evalHOLExact` has the corresponding broad-state behavior, but its
-`PanSemStateExact` carrier uses unrestricted lookup functions for locals,
-globals, code, and exception shapes. HOL's state uses finite maps for those
-fields. The finite-support evaluator/carrier is in
-`PanSem/StateExactFiniteMap.lean`; the canonical `fmap_as_finite_support`
-qualifier requires its owning carrier structure and witness in the tagged
-module, so the imported carrier cannot be tagged from this counterpart and a
-duplicate state carrier is not an acceptable shortcut. No exact theorem tag is
-claimed. The faithful PanProps port is tracked by
-`flapjack-4ac.4.98.1`. The canonical finite-map carrier bead
-`flapjack-pxn.18.3.7.1.3.1.1.2` is complete; the remaining gap is a
-checker-supported owner/witness placement for this PanProps theorem. -/
+The broad `evalHOLExact` remains untagged because `PanSemStateExact` uses
+unrestricted lookup functions for locals, globals, code, and exception shapes.
+The exact port `evalSwapMemaddrsHOLFinite` lives in the PanProps submodule
+`PanProps/EvalInvariant.lean`, whose `PanPropsEvalStateFiniteExact` carrier
+owns the four `HolFiniteMapExact` fields and the same-module canonical
+roundtrip witness. Its `evalHOL` view delegates through that checked carrier
+translation. Source review also checks the three load paths: shape loads use
+`mem_load_swap_memaddrs`, while 32-bit and byte loads depend only on membership
+of their aligned address in the domain. -/
 
 /-! Cake's local `dropWhile_eq_cons_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when

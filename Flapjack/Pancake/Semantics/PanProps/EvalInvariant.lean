@@ -219,6 +219,105 @@ def evalHOL {width : Nat} {σ : Type} [NeZero width]
     ExpHOL width → Option (ValueHOL width) :=
   @evalHOLExact width σ _ state.toExact h
 
+private theorem panMemLoad32HOL_monoDomain {width : Nat} [NeZero width]
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain1 domain2 : RiscV.Word width → Prop)
+    [DecidablePred domain1] [DecidablePred domain2]
+    (bigEndian : Bool) (address : RiscV.Word width)
+    (hsubset : ∀ current, domain1 current → domain2 current)
+    {value : RiscV.Word 32}
+    (hload : panMemLoad32HOL memory domain1 bigEndian address = some value) :
+    panMemLoad32HOL memory domain2 bigEndian address = some value := by
+  unfold panMemLoad32HOL at hload ⊢
+  by_cases haligned : address.toNat % 4 = 0
+  · simp only [if_pos haligned] at hload ⊢
+    cases hmemory : memory (panByteAlignHOL (width := width) address) with
+    | word word =>
+        simp only [hmemory] at hload ⊢
+        by_cases hdomain : domain1 (panByteAlignHOL (width := width) address)
+        · simp only [if_pos hdomain] at hload
+          have hdomain2 := hsubset _ hdomain
+          simp only [if_pos hdomain2]
+          exact hload
+        · simp [hdomain] at hload
+  · simp [haligned] at hload
+
+private theorem evalHOLExactMemaddrsMono {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateExact width σ) [DecidablePred state.memaddrs]
+    (memaddrs : RiscV.Word width → Prop) [DecidablePred memaddrs]
+    (hsubset : ∀ address, state.memaddrs address → memaddrs address) :
+    ∀ expression value,
+      evalHOLExact state expression = some value →
+        evalHOLExact { state with memaddrs := memaddrs } expression = some value := by
+  intro expression
+  induction expression using evalHOLExact.induct (state := state)
+      (motive_2 := fun fields => ∀ values,
+        evalListFieldsHOLExact state fields = some values →
+          evalListFieldsHOLExact { state with memaddrs := memaddrs } fields = some values)
+      (motive_3 := fun expressions => ∀ values,
+        evalListHOLExact state expressions = some values →
+          evalListHOLExact { state with memaddrs := memaddrs } expressions = some values)
+  case case4 fields ih =>
+    intro value hEval
+    cases hFields : evalListHOLExact state fields with
+    | none => simp [evalHOLExact, hFields] at hEval
+    | some values =>
+        simp only [evalHOLExact, hFields] at hEval
+        cases hEval
+        simp [evalHOLExact, ih values hFields]
+  case case15 shape address hShape word hAddress ih =>
+    intro value hEval
+    have hAddress' := ih (.val (.word word)) hAddress
+    have hLoad : memLoadHOLExact shape word state.memaddrs state.memory state.structs =
+        some value := by
+      simpa [evalHOLExact, hShape, hAddress] using hEval
+    have hLoad' := memLoadHOLExactSwapMemaddrs.1 shape word state.memaddrs
+      state.memory state.structs value memaddrs ⟨hLoad, hsubset⟩
+    simpa [evalHOLExact, hShape, hAddress'] using hLoad'
+  case case18 address word hAddress ih =>
+    intro value hEval
+    have hAddress' := ih (.val (.word word)) hAddress
+    have hRead : Option.map (fun loaded =>
+        .val (.word (BitVec.ofNat width loaded.toNat)))
+        (panMemLoad32HOL state.memory state.memaddrs state.be word) = some value := by
+      simpa [evalHOLExact, hAddress] using hEval
+    cases hSource : panMemLoad32HOL state.memory state.memaddrs state.be word with
+    | none => simp [hSource] at hRead
+    | some loaded =>
+        have hValue : ValueHOL.val (.word (BitVec.ofNat width loaded.toNat)) = value := by
+          simpa [hSource] using hRead
+        have hLoad' := panMemLoad32HOL_monoDomain state.memory state.memaddrs
+          memaddrs state.be word hsubset hSource
+        simpa [evalHOLExact, hAddress', hLoad'] using hValue
+  all_goals
+    try intro result hEval
+    simp_all [evalHOLExact, evalListHOLExact, evalListFieldsHOLExact,
+      panMemLoadByteHOL]
+
+/-- Exact port of HOL `eval_swap_memaddrs`
+    (`cakeml/pancake/semantics/panPropsScript.sml:1703-1715`). It keeps HOL's
+    conjunction premise and record-update conclusion. The state uses the local
+    finite-support carrier and the qualifier records precisely its four HOL
+    finite-map fields. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "eval_swap_memaddrs"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+theorem evalSwapMemaddrsHOLFinite {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanPropsEvalStateFiniteExact width σ)
+      [DecidablePred state.memaddrs]
+      (expression : ExpHOL width) (value : ValueHOL width)
+      (memaddrs : RiscV.Word width → Prop) [DecidablePred memaddrs],
+      (state.evalHOL expression = some value ∧
+        (∀ address, state.memaddrs address → memaddrs address)) →
+          ({ state with memaddrs := memaddrs }.evalHOL expression = some value) := by
+  intro state hmemaddrs expression value memaddrs hmemaddrs2 h
+  letI : DecidablePred state.toExact.memaddrs := by
+    simpa [PanPropsEvalStateFiniteExact.toExact] using hmemaddrs
+  have hEval : evalHOLExact state.toExact expression = some value := by
+    simpa [evalHOL] using h.1
+  have hWidened := evalHOLExactMemaddrsMono state.toExact memaddrs h.2
+    expression value hEval
+  simpa [evalHOL, PanPropsEvalStateFiniteExact.toExact] using hWidened
+
 /-- `OPT_MMAP eval` over the same finite-support carrier. -/
 def evalListHOL {width : Nat} {σ : Type} [NeZero width]
     (state : PanPropsEvalStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :

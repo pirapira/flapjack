@@ -75,6 +75,36 @@ WITHDRAWN_HOL_DECLARATIONS = {
         "context carrier replacement is tracked by flapjack-pxn.18.3.5.8.13 "
         "(under flapjack-pxn.18.3.5.8, parent flapjack-pxn.18.3.5.7.2)."
     ),
+    ("Flapjack/Pancake/PanToCrep/Compile.lean", "makeFuncsHOL"): (
+        "cakeml/pancake/pan_to_crepScript.sml",
+        "make_funcs_def",
+        "flapjack-ds9 (source comparison, bead flapjack-4ac.2.17): "
+        "FLAPJACK-SPECIFIC / not an exact HOL port, @[hol] tag withdrawn. HOL "
+        "make_funcs_def (pan_to_crepScript.sml:366-373) is "
+        "`make_funcs prog = alist_to_fmap (MAP3 (λx y z. (x,y,z)) (MAP FST prog) "
+        "(MAP (FST o SND) prog) (MAP (SND o SND o SND) prog))` keyed by "
+        "funname = mlstring and valued by (varname # shape) list # shape, with "
+        "alist_to_fmap a right fold of FUPDATE (first duplicate name wins). Lean "
+        "makeFuncsHOL keys by FunName = String and stores production "
+        "VarName = String and Shape (named : StructName = String), not HOL's "
+        "mlstring carriers; its input also mentions the production Prog α body "
+        "carrier even though make_funcs ignores bodies; and its result is a "
+        "FiniteMap function (raw α → Option β, admitting infinite support) "
+        "rather than HOL's fmap, built by FUPDATE_LIST FEMPTY over the reversed "
+        "association list. The names_as_string qualifier cannot authorize the "
+        "Shape and Prog carriers or the FiniteMap-vs-fmap representation, and "
+        "no NameRanged byte witness applies because the output is a finite map "
+        "of function signatures, not a name. The theorem-map make_funcs_def -> "
+        "crepToLoopMakeFuncsHOL entry is the exact port of the different "
+        "crep_to_loopScript.sml declaration, not this one. Direct HOL-EVAL rows "
+        "make_funcs_empty_params/make_funcs_param_entry/make_funcs_absent/"
+        "make_funcs_duplicate_first_wins are in "
+        "scripts/hol-probes/crep_make_funcs_probe.out and exercised by "
+        "makeFuncsGuard (Flapjack/Test/PanToCrepCodeRelParity.lean) and "
+        "makeFuncsOracle (Flapjack/Test/CompileToCrepeParity.lean). The faithful "
+        "exact-carrier port is tracked by flapjack-pxn.18.3.5.8 (parent "
+        "flapjack-pxn.18.3.5.7.2)."
+    ),
     ("Flapjack/Pancake/Proofs/PanToCrep.lean", "tlc"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
         "tlc_def",

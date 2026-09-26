@@ -69,10 +69,13 @@ theorem panValueShape_eq_panSemShapeOf_tagged (context : StructContext) (value :
       exact congrArg Shape.comb (List.map_congr_left ih)
   | case3 name fields => simp only [panValueShape, panSemShapeOf]
 
-/- The carrier shape matches HOL `word_lab = Word ('a word)`; positivity is
-   required because every HOL finite word has a nonzero dimension. The `word_lab`
-   tag remains withheld until the downstream exact-carrier closure tracked by
-   `flapjack-0lj.5` is complete. -/
+/- Exact port of HOL `panSem$word_lab` (`panSemScript.sml:17`):
+   `word_lab = Word ('a word)`. A HOL word has positive `dimindex`; Lean's
+   `[NeZero width]` gives the same positive-width carrier, with one constructor
+   and one `BitVec width` payload. The BitVec width is the canonical finite-word
+   representation used throughout this port. The direct production-carrier
+   conversions below remain Flapjack-specific infrastructure. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "word_lab"]
 inductive HolWordLab (width : Nat) [NeZero width] where
   | word (value : BitVec width)
   deriving BEq, DecidableEq, Repr

@@ -43,8 +43,9 @@ abbrev MlStringHOL := Flapjack.Basis.Pure.MlString.MlString
     `HolWordLab width`, `List (ValueHOL width)`, `List (MlStringHOL × ValueHOL width)`
     match the HOL datatype (`Val ('a word_lab)`, `RStruct (v list)`,
     `NStruct stcname ((fldname # v) list)`).  Like production `PanValue` it
-    derives only `Repr`.  The `[NeZero width]` binder matches HOL's positive
-    `dimindex`; the payload `HolWordLab` is the (tag-withheld) generic carrier. -/
+    derives only `Repr`. The `[NeZero width]` binder matches HOL's positive
+    `dimindex`, and its payload `HolWordLab` is the exact positive-width port
+    of HOL `word_lab`. -/
 @[hol "cakeml/pancake/semantics/panSemScript.sml" "v"]
 inductive ValueHOL (width : Nat) [NeZero width] where
   | val (value : HolWordLab width)

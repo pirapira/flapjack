@@ -163,6 +163,7 @@ import Flapjack.Test.CrepLookupCodeHOLParity
 import Flapjack.Test.CrepExpHOLParity
 import Flapjack.Test.CrepProgHOLParity
 import Flapjack.Test.CrepEvalConstructorParity
+import Flapjack.Test.CrepSemEvalExactParity
 import Flapjack.Test.CrepLocalsWordLabParity
 import Flapjack.Test.CrepMemoryRelParity
 import Flapjack.Test.CrepSemStateExactParity

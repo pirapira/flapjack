@@ -5580,6 +5580,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
+    "hol_name": "ValWord",
+    "lean_path": "Flapjack/Pancake/Semantics/PanSem/ValueHOL.lean",
+    "lean_name": "valWordHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.3.3). HOL `Overload ValWord = \"\\w. Val (Word w)\"` (panSemScript.sml:26) has no quantifier/side condition of its own: it is the total abbreviation sending `w : 'a word` to `Val (Word w)` over `panSem$v = Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)` with `word_lab = Word ('a word)`. Lean `valWordHOL {width} [NeZero width] (word : BitVec width) : ValueHOL width := .val (.word word)` is the exact rendering over the tagged exact `ValueHOL` carrier (`@[hol ... \"v\"]`, ctor arities 1/1/2, `HolWordLab.word` payload); the `[NeZero width]` binder mirrors HOL's positive `dimindex`. Exact partial application, no extra hypotheses or side conditions."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
     "hol_name": "empty_locals_def",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem.lean",
     "lean_name": "panEmptyLocals",

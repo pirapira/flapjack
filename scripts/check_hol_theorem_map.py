@@ -1392,6 +1392,10 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     # These source/theorem pairs were checked against their HOL declaration
     # statements in the active review task, not merely copied from attributes.
     reviewed_exact = {
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isStackVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isPhyVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isAllocVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "conventionPartitions"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_less_than"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_not_in"),
         ("Flapjack/Pancake/Proofs/CrepInline.lean", "genlist_all_distinct"),

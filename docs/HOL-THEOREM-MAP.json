@@ -9576,32 +9576,32 @@
     "hol_name": "is_stack_var_def",
     "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
     "lean_name": "isStackVar",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.5.15.1.2): HOL is_stack_var_def (reg_allocScript.sml:1132-1134) is `is_stack_var (n:num) = (n MOD 4 = 3)`. Lean isStackVar (n : Nat) : Bool := n % 4 = 3 uses Nat `%` = HOL `MOD`, same modulus 4 and residue 3, no extra hypotheses."
   },
   {
     "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
     "hol_name": "is_phy_var_def",
     "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
     "lean_name": "isPhyVar",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.5.15.1.2): HOL is_phy_var_def (reg_allocScript.sml:1135-1137) is `is_phy_var (n:num) = (n MOD 2 = 0)`. Lean isPhyVar (n : Nat) : Bool := n % 2 = 0 uses Nat `%` = HOL `MOD`, same modulus 2 and residue 0, no extra hypotheses."
   },
   {
     "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
     "hol_name": "is_alloc_var_def",
     "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
     "lean_name": "isAllocVar",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.5.15.1.2): HOL is_alloc_var_def (reg_allocScript.sml:1138-1140) is `is_alloc_var (n:num) = (n MOD 4 = 1)`. Lean isAllocVar (n : Nat) : Bool := n % 4 = 1 uses Nat `%` = HOL `MOD`, same modulus 4 and residue 1, no extra hypotheses."
   },
   {
     "hol_path": "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
     "hol_name": "convention_partitions",
     "lean_path": "Flapjack/Compiler/Backend/RegAlloc.lean",
     "lean_name": "conventionPartitions",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.5.15.1.2): HOL convention_partitions (reg_allocScript.sml:1142-1151) is `!n. (is_stack_var n <=> ~is_phy_var n /\\ ~is_alloc_var n) /\\ (is_phy_var n <=> ~is_stack_var n /\\ ~is_alloc_var n) /\\ (is_alloc_var n <=> ~is_phy_var n /\\ ~is_stack_var n)` over num. Lean conventionPartitions (n : Nat) states the same three conjuncts with the same predicate order and Bool <=> rendered as Iff-on-`= true`; only HOL's explicit universal quantifier is the Lean binders, and Nat = num."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",

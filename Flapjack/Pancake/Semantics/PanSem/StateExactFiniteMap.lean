@@ -60,7 +60,8 @@ import Flapjack.Pancake.Semantics.PanSem.FiniteSupportStep
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ProgHOL ExpHOL)
+open Flapjack.Pancake.PanLang
+  (MlS ShapeHOL StructContextExact ProgHOL ExpHOL DeclHOL isWfShapeExactHOL)
 
 /-- `HolFiniteMapExact` is extensional: two values with the same `lookup` are
     equal, because the `finiteSupport` field is a proof of a proposition.  This
@@ -1055,6 +1056,55 @@ decreasing_by
     exact Nat.lt_of_le_of_lt
       (fixClockHOLFinite_clock_le entry (bodyResult, bodyContext.state))
       (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
+
+/-- HOL `evaluate_decls_def` (`cakeml/pancake/semantics/panSemScript.sml:814-837`)
+    over the finite-support state carrier.  Its clauses match the HOL definition
+    one by one: `[]` returns the state unchanged; a `Name` declaration is
+    skipped; a `Decl` evaluates its initialiser with the tagged `evalHOLFinite`
+    under cleared locals (`emptyLocalsHOLFinite`, i.e. `s with locals := FEMPTY`)
+    and, on shape agreement, updates `globals`; a `Function` is admitted when its
+    parameters and return shape are well formed and then stored in `code`; an
+    `ExnDecl` is admitted when its identifier is fresh and its shape is well
+    formed, then stored in `eshapes`.  Every HOL `|+` (`FUPDATE`) is the
+    canonical `HolFiniteMapExact.update`.  The four map-shaped fields
+    (`locals`, `globals`, `code`, `eshapes`) are recorded by the
+    `fmap_as_finite_support` qualifier (canonical witness
+    `holFmapAsFiniteSupportWitness` in this module). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "evaluate_decls_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+def evaluateDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
+    List (DeclHOL width) → Option (PanSemStateFiniteExact width σ)
+  | [] => some state
+  | .name _ _ :: declarations => evaluateDeclsHOLFinite state declarations
+  | .decl shape name expression :: declarations =>
+      letI : DecidablePred (state.emptyLocalsHOLFinite.memaddrs) := h
+      match evalHOLFinite (emptyLocalsHOLFinite state) expression with
+      | some value =>
+          if shapeEqHOL shape (shapeOfHOLExact value) then
+            letI : DecidablePred (setGlobalHOLFinite name value state).memaddrs := h
+            evaluateDeclsHOLFinite (setGlobalHOLFinite name value state) declarations
+          else none
+      | none => none
+  | .function declaration :: declarations =>
+      let entry : List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL :=
+        (declaration.params, declaration.body, declaration.returnShape)
+      if declaration.params.all
+            (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+          isWfShapeExactHOL state.structs declaration.returnShape then
+        let updated : PanSemStateFiniteExact width σ :=
+          { state with code := state.code.update (declaration.name, entry) }
+        letI : DecidablePred updated.memaddrs := h
+        evaluateDeclsHOLFinite updated declarations
+      else none
+  | .exnDecl exceptionName shape :: declarations =>
+      if (state.eshapes.lookup exceptionName).isNone &&
+          isWfShapeExactHOL state.structs shape then
+        let updated : PanSemStateFiniteExact width σ :=
+          { state with eshapes := state.eshapes.update (exceptionName, shape) }
+        letI : DecidablePred updated.memaddrs := h
+        evaluateDeclsHOLFinite updated declarations
+      else none
 
 /-- FLAPJACK-SPECIFIC (no `@[hol]` tag): the clause-for-clause finite context
     evaluator is total.  Its outer `Option` is only the recursive-case assembly

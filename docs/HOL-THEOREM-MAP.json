@@ -5970,8 +5970,8 @@
     "hol_name": "compile_prog_distinct_params",
     "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/CompileProgParams.lean",
     "lean_name": "compileProgTopHOL_params_nodup",
-    "statement_status": "reviewed_exact",
-    "reviewer": "Codex (premise-free HOL EVERY/ALL_DISTINCT shape over exact compile_prog triples)"
+    "statement_status": "documented_mismatch",
+    "reviewer": "flapjack-luna-b source comparison (2026-09-26; exact compile_prog follow-up flapjack-4ac.2.20): Lean uses production Decl (BitVec width) with String names/Shape/Prog and production compileProgTopHOL output, rather than HOL's positive-width word-indexed prog and exact compile_prog triples with mlstring/CrepProgHOL; Lean also admits BitVec 0. Keep the useful analogue untagged until ported over DeclHOL and exact compile_prog."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_to_crepProofScript.sml",

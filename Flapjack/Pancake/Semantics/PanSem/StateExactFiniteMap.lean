@@ -893,6 +893,38 @@ def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width
                         context.withState (emptyLocalsHOLFinite state) rfl rfl)
                     else some (some .error, context)
                   else some (some .error, context)
+      | .shMemLoad size kind name address =>
+          let evalExpression := fun (_ : PanSemStateExact width σ)
+              (expression : ExpHOL width) => evalHOLExact state.toExact expression
+          let output := shMemLoadClauseHOLExact state.toExact size kind name address
+            evalExpression
+          some (output.1, context.withState
+            (ofExact output.2 (shMemLoadClauseHOLExact_finiteSupport state.toExact
+              size kind name address evalExpression state.toExact_finiteSupport))
+            (by
+              have hdom := (shMemLoadClauseHOLExact_preservesDomains state.toExact
+                size kind name address evalExpression).1
+              exact hdom)
+            (by
+              have hdom := (shMemLoadClauseHOLExact_preservesDomains state.toExact
+                size kind name address evalExpression).2
+              exact hdom))
+      | .shMemStore size address value =>
+          let evalExpression := fun (_ : PanSemStateExact width σ)
+              (expression : ExpHOL width) => evalHOLExact state.toExact expression
+          let output := shMemStoreClauseHOLExact state.toExact size address value
+            evalExpression
+          some (output.1, context.withState
+            (ofExact output.2 (shMemStoreClauseHOLExact_finiteSupport state.toExact
+              size address value evalExpression state.toExact_finiteSupport))
+            (by
+              have hdom := (shMemStoreClauseHOLExact_preservesDomains state.toExact
+                size address value evalExpression).1
+              exact hdom)
+            (by
+              have hdom := (shMemStoreClauseHOLExact_preservesDomains state.toExact
+                size address value evalExpression).2
+              exact hdom))
       | other =>
           match hres : evalPanSemNonrecursiveHOLFinite state other with
           | none => none
@@ -962,11 +994,11 @@ theorem evalPanSemRecursiveCallFiniteContext_total {width : Nat} {σ : Type} [Ne
     (program : ProgHOL width) (context : FiniteEvalContext width σ) :
     ∃ output, evalPanSemRecursiveCallFiniteContext program context = some output := by
   fun_induction evalPanSemRecursiveCallFiniteContext program context <;> simp_all
-  case case63 =>
-    rename_i inst context state other x12 x11 x10 x9 x8 x7 x6 x5 x4 x3 x2 x1 x0 hres
-    cases other <;> simp_all [evalPanSemNonrecursiveHOLFinite, evalPanSemNonrecursiveHOLExact]
-    · exact x12 _ _ _ _ rfl rfl rfl rfl
-    · exact x7 _ _ _ _ _ rfl rfl rfl rfl rfl
+  case case65 =>
+    rename_i instNeZero ctx stateFinite program decNeg seqNeg x12 x11 x10 x9 x8 x7 x6 x5 x4 x3 x2 x1 x0 hres
+    cases program <;> simp_all [evalPanSemNonrecursiveHOLFinite, evalPanSemNonrecursiveHOLExact]
+    · exact decNeg _ _ _ _ rfl rfl rfl rfl
+    · exact x9 _ _ _ _ _ rfl rfl rfl rfl rfl
 
 /-- FLAPJACK-SPECIFIC provisional projection (not a HOL declaration; carries no
     `@[hol]` tag): the state-level view of the clause-for-clause finite context

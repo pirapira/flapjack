@@ -387,6 +387,27 @@ def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
       { state.toExact with locals := resVarHOLExact state.toExact.locals entry } := by
   simp only [PanSemStateFiniteExact.toExact, lookup_resVarEq_toExact]
 
+/-- A finite-support plain `locals` record update is compatible with the broad
+    exact one.  This bridges the `Call`/`DecCall` caller-locals restore. -/
+@[simp] theorem toExact_setLocals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    (locals : HolFiniteMapExact MlS (ValueHOL width)) :
+    ({ state with locals := locals } : PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := locals.lookup } := by
+  cases state
+  rfl
+
+/-- A combined finite `locals`/`clock` record update is compatible with the broad
+    exact one.  This bridges the `Call`/`DecCall` entry state. -/
+@[simp] theorem toExact_setLocals_clock {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    (locals : HolFiniteMapExact MlS (ValueHOL width)) (clock : Nat) :
+    ({ state with locals := locals, clock := clock } :
+        PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := locals.lookup, clock := clock } := by
+  cases state
+  rfl
+
 /-- HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`) over the
     finite-support state carrier.  The body delegates to the exact broad
     evaluator through the canonical translation `toExact`; it does NOT

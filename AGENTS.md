@@ -246,6 +246,25 @@ statement only: it does not authorize changed quantifiers, hypotheses,
 conclusions, `BEq` side conditions, or word-model differences, and every tagged
 declaration still needs its own statement/side-condition review.
 
+**Qualify standalone finite-map carriers.** Use
+`(fmap_as_finite_support_result)` when a tagged declaration is not a structure
+field but whose own input or result carrier is the reviewed canonical
+`HolFiniteMapExact` translation (for example a HOL definition that returns a
+finite map directly, such as `get_eids_from_decls_def`). This is distinct from
+`fmap_as_finite_support`, which names the fields of an owning carrier; the two
+qualifiers are mutually exclusive. The tagged declaration's own signature must
+mention `HolFiniteMapExact`; a raw function-backed `α → Option β` map is
+ineligible. The module must contain a checked canonical witness named
+`holFmapAsFiniteSupportResultWitness_<declaration>`, whose statement mentions the
+tagged declaration and a lookup operation, and states a real lookup-level
+equality/iff conclusion (a missing, vacuous, type-name-only, wrongly-named, or
+unrelated witness is rejected). The reference checker verifies
+carrier/witness shape and Lake checks the proof; neither establishes HOL
+correspondence. The qualifier is a representation statement only: it does not
+authorize changed quantifiers, hypotheses, conclusions, `BEq` side conditions,
+or word-model differences, and the manifest must use status
+`reviewed_fmap_as_finite_support_result` after source comparison.
+
 **Port the executable path, too.** As HOL definitions are ported, make the
 compiler that `flapjack-compile` actually runs call the reviewed `@[hol]`
 definitions. A tagged proof-only duplicate beside a different production

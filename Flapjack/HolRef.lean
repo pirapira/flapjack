@@ -97,6 +97,14 @@ structure HolRef where
       it does not authorize changed hypotheses, results, `BEq` side conditions,
       or word-model differences. -/
   fmapAsFiniteSupport : Array String := #[]
+  /-- Standalone declarations (definitions or theorems) whose own input or
+      result carrier is the reviewed canonical `HolFiniteMapExact` translation,
+      rather than a structure field. Distinct from `fmapAsFiniteSupport`, which
+      names fields of an owning carrier structure. The module must contain a
+      checked canonical witness of lookup-level correspondence to the HOL
+      finite-map operation/result. This is a representation statement only; it
+      does not authorize changed hypotheses, results, or word-model differences. -/
+  fmapAsFiniteSupportResult : Bool := false
   deriving Inhabited, Repr, BEq
 
 open Lean
@@ -106,10 +114,12 @@ syntax "(" "list_as_array" ":=" "[" ident,+ "]" ")" : holQualifier
 syntax "(" "names_as_string" ":=" "[" ident,+ "]" ")" : holQualifier
 syntax "(" "names_as_string_boundary" ":=" "[" ident,+ "]" ")" : holQualifier
 syntax "(" "fmap_as_finite_support" ":=" "[" ident,+ "]" ")" : holQualifier
+syntax "(" "fmap_as_finite_support_result" ")" : holQualifier
 syntax (name := hol) "hol " str str (num)? holQualifier* : attr
 
 private def checkedHolRef (path name : String) (line? : Option Nat := none)
-    (listAsArray namesAsString namesAsStringBoundary fmapAsFiniteSupport : Array String := #[]) : CoreM HolRef := do
+    (listAsArray namesAsString namesAsStringBoundary fmapAsFiniteSupport : Array String := #[])
+    (fmapAsFiniteSupportResult : Bool := false) : CoreM HolRef := do
   unless path.startsWith "cakeml/" && path.endsWith ".sml" do
     throwError "@[hol]: path must be a repository-relative `cakeml/...Script.sml` file, got {path}"
   if name.isEmpty || name.any Char.isWhitespace then
@@ -124,18 +134,20 @@ private def checkedHolRef (path name : String) (line? : Option Nat := none)
     throwError "@[hol]: names_as_string_boundary identifiers must also appear in names_as_string"
   if fmapAsFiniteSupport.toList.eraseDups.length != fmapAsFiniteSupport.size then
     throwError "@[hol]: fmap_as_finite_support fields must be distinct"
-  pure { path, name, line?, listAsArray, namesAsString, namesAsStringBoundary, fmapAsFiniteSupport }
+  pure { path, name, line?, listAsArray, namesAsString, namesAsStringBoundary, fmapAsFiniteSupport, fmapAsFiniteSupportResult }
 
-private def parseHolQualifier (stx : Syntax) : CoreM (String × Array String) := do
+private def parseHolQualifier (stx : Syntax) : CoreM (String × Array String × Bool) := do
   match stx with
   | `(holQualifier| (list_as_array := [$fields:ident,*])) =>
-      pure ("list_as_array", fields.getElems.map (fun field => field.getId.eraseMacroScopes.toString))
+      pure ("list_as_array", fields.getElems.map (fun field => field.getId.eraseMacroScopes.toString), false)
   | `(holQualifier| (names_as_string := [$names:ident,*])) =>
-      pure ("names_as_string", names.getElems.map (fun field => field.getId.eraseMacroScopes.toString))
+      pure ("names_as_string", names.getElems.map (fun name => name.getId.eraseMacroScopes.toString), false)
   | `(holQualifier| (names_as_string_boundary := [$names:ident,*])) =>
-      pure ("names_as_string_boundary", names.getElems.map (fun field => field.getId.eraseMacroScopes.toString))
+      pure ("names_as_string_boundary", names.getElems.map (fun name => name.getId.eraseMacroScopes.toString), false)
   | `(holQualifier| (fmap_as_finite_support := [$fields:ident,*])) =>
-      pure ("fmap_as_finite_support", fields.getElems.map (fun field => field.getId.eraseMacroScopes.toString))
+      pure ("fmap_as_finite_support", fields.getElems.map (fun field => field.getId.eraseMacroScopes.toString), false)
+  | `(holQualifier| (fmap_as_finite_support_result)) =>
+      pure ("fmap_as_finite_support_result", #[], true)
   | _ => throwError "@[hol]: malformed qualifier"
 
 private def parseHolRefAttribute (stx : Syntax) : CoreM HolRef := do
@@ -144,13 +156,15 @@ private def parseHolRefAttribute (stx : Syntax) : CoreM HolRef := do
     let mut namesAsString : Array String := #[]
     let mut namesAsStringBoundary : Array String := #[]
     let mut fmapAsFiniteSupport : Array String := #[]
+    let mut fmapAsFiniteSupportResult : Bool := false
     for qualifier in qualifiers do
-      let (kind, fields) ← parseHolQualifier qualifier
+      let (kind, fields, isResult) ← parseHolQualifier qualifier
       if kind == "list_as_array" then listAsArray := listAsArray ++ fields
       else if kind == "names_as_string" then namesAsString := namesAsString ++ fields
       else if kind == "names_as_string_boundary" then namesAsStringBoundary := namesAsStringBoundary ++ fields
+      else if kind == "fmap_as_finite_support_result" then fmapAsFiniteSupportResult := isResult
       else fmapAsFiniteSupport := fmapAsFiniteSupport ++ fields
-    checkedHolRef path name line? listAsArray namesAsString namesAsStringBoundary fmapAsFiniteSupport
+    checkedHolRef path name line? listAsArray namesAsString namesAsStringBoundary fmapAsFiniteSupport fmapAsFiniteSupportResult
   match stx with
   | `(attr| hol $path:str $name:str $line:num $qualifiers:holQualifier*) =>
       parse path.getString name.getString (some line.getNat) qualifiers
@@ -174,7 +188,9 @@ private def HolRef.qualifierSuffix (ref : HolRef) : String :=
     s!" (names_as_string_boundary := [{String.intercalate ", " ref.namesAsStringBoundary.toList}])"
   let fmapAsFiniteSupport := if ref.fmapAsFiniteSupport.isEmpty then "" else
     s!" (fmap_as_finite_support := [{String.intercalate ", " ref.fmapAsFiniteSupport.toList}])"
-  listAsArray ++ namesAsString ++ namesAsStringBoundary ++ fmapAsFiniteSupport
+  let fmapAsFiniteSupportResult := if ref.fmapAsFiniteSupportResult then
+    " (fmap_as_finite_support_result)" else ""
+  listAsArray ++ namesAsString ++ namesAsStringBoundary ++ fmapAsFiniteSupport ++ fmapAsFiniteSupportResult
 
 /-! Parser regressions for the original syntax, each qualifier alone, and both
 qualifiers together. These elaborate temporary syntax values only; they do not
@@ -246,6 +262,12 @@ run_cmd do
     catch _ => pure true
   unless fmapDuplicateRejected do
     throwError "@[hol] duplicate fmap_as_finite_support fields must be rejected"
+  let fmapResultSyntax ← `(attr| hol "cakeml/pancake/pan_to_crepScript.sml" "get_eids_from_decls_def"
+    (fmap_as_finite_support_result))
+  let fmapResultRef ← Lean.Elab.Command.liftCoreM (parseHolRefAttribute fmapResultSyntax)
+  unless fmapResultRef.fmapAsFiniteSupportResult && fmapResultRef.fmapAsFiniteSupport.isEmpty &&
+      HolRef.qualifierSuffix fmapResultRef == " (fmap_as_finite_support_result)" do
+    throwError "@[hol] fmap_as_finite_support_result syntax regression"
 
 /-- The HOL cross-reference attached to `declName`, if any. -/
 def HolRef.get? (env : Environment) (declName : Name) : Option HolRef :=

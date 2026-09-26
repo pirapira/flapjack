@@ -128,7 +128,8 @@ elab "#emit_hol_type_hashes" : command => do
             ("list_as_array", toJson ref.listAsArray),
             ("names_as_string", toJson ref.namesAsString),
             ("names_as_string_boundary", toJson ref.namesAsStringBoundary),
-            ("fmap_as_finite_support", toJson ref.fmapAsFiniteSupport)])]
+            ("fmap_as_finite_support", toJson ref.fmapAsFiniteSupport),
+            ("fmap_as_finite_support_result", toJson ref.fmapAsFiniteSupportResult)])]
         match definitionBody? info with
         | some body =>
             fields := fields ++ [("value_expr", toJson (reprStr (canonicalExpr body)))]

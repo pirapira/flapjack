@@ -45,6 +45,9 @@ NAMES_AS_STRING_BOUNDARY_RE = re.compile(
 FMAP_AS_FINITE_SUPPORT_RE = re.compile(
     r'\(\s*fmap_as_finite_support\s*:=\s*\[([^]]*)\]\s*\)'
 )
+FMAP_AS_FINITE_SUPPORT_RESULT_RE = re.compile(
+    r'\(\s*fmap_as_finite_support_result\s*\)'
+)
 DECL_RE = re.compile(
     r"^\s*(?:@\[[^\]]*\]\s*)?(?:private\s+|protected\s+|noncomputable\s+|partial\s+|unsafe\s+)*"
     r"(?:theorem|lemma|def|abbrev|instance|inductive|structure|class|opaque|axiom)\s+"
@@ -154,6 +157,7 @@ def hol_attribute_sites(lines: list[str]):
                     fields_for(NAMES_AS_STRING_RE),
                     fields_for(NAMES_AS_STRING_BOUNDARY_RE),
                     fields_for(FMAP_AS_FINITE_SUPPORT_RE),
+                    bool(FMAP_AS_FINITE_SUPPORT_RESULT_RE.search(attribute)),
                 )
         start = None
         chunks = []
@@ -485,6 +489,85 @@ def fmap_as_finite_support_errors(
     return errors
 
 
+def fmap_as_finite_support_result_witness_name(decl_name: str) -> str:
+    """Canonical witness name for a standalone HolFiniteMapExact declaration."""
+    return f"holFmapAsFiniteSupportResultWitness_{decl_name}"
+
+
+def has_fmap_result_witness(
+    lines: list[str], decl_name: str, module: str
+) -> tuple[bool, str]:
+    """Require the canonical standalone finite-map translation witness.
+
+    The witness is `holFmapAsFiniteSupportResultWitness_<decl>`; it must mention
+    the tagged declaration and a lookup operation, and must state an
+    equality/iff conclusion. A missing, vacuous, wrongly-named, unrelated, or
+    type-name-only witness is rejected.
+    Lake checks the proof; this gate checks presence and shape.
+    """
+    if decl_name in ("?", ""):
+        return (False, "could not identify the tagged declaration name")
+    source = strip_lean_comments("\n".join(lines))
+    witness = fmap_as_finite_support_result_witness_name(decl_name)
+    pattern = re.compile(
+        rf"^\s*(?:@\[[\s\S]*?\]\s*)?(?:private\s+|protected\s+)?"
+        rf"(?:theorem|lemma)\s+{re.escape(witness)}\b(?P<statement>[\s\S]*?):=",
+        re.M,
+    )
+    matches = list(pattern.finditer(source))
+    if not matches:
+        return (
+            False,
+            f"in {module} has no same-module checked witness `{witness}` "
+            f"for the tagged declaration `{decl_name}`",
+        )
+    for match in matches:
+        statement = match.group("statement")
+        if not identifier_token_occurs(statement, decl_name):
+            return (
+                False,
+                f"witness `{witness}` does not mention the tagged declaration "
+                f"`{decl_name}`",
+            )
+        if not re.search(r"(?i)\b(?:lookup|flookup)\b", statement):
+            return (
+                False,
+                f"witness `{witness}` does not state a lookup-level "
+                "correspondence to the HOL finite map",
+            )
+        if "=" not in statement and "\u2194" not in statement:
+            return (
+                False,
+                f"witness `{witness}` is vacuous: no equality/iff conclusion",
+            )
+    return (True, "")
+
+
+def fmap_as_finite_support_result_errors(
+    lines: list[str], module: str,
+    declaration_text: str, decl_name: str,
+) -> list[str]:
+    """Validate a standalone declaration whose own carrier is HolFiniteMapExact.
+
+    Unlike `fmap_as_finite_support`, which names fields of an owning structure,
+    this qualifier applies to a definition or theorem that returns (or consumes)
+    a `HolFiniteMapExact` directly. The tagged declaration must mention the
+    approved carrier (a raw `α → Option β` map is ineligible) and the module
+    must provide the canonical lookup-level witness.
+    """
+    errors: list[str] = []
+    if "HolFiniteMapExact" not in declaration_text:
+        errors.append(
+            "fmap_as_finite_support_result requires the tagged declaration's own "
+            "input/result carrier to use the approved HolFiniteMapExact "
+            "translation; a raw `\u03b1 \u2192 Option \u03b2` function map is ineligible"
+        )
+    ok, message = has_fmap_result_witness(lines, decl_name, module)
+    if not ok:
+        errors.append(f"fmap_as_finite_support_result {message}")
+    return errors
+
+
 def has_list_array_witness(lines: list[str], field: str) -> bool:
     """Require a same-module, kernel-checked representation theorem for a field.
 
@@ -682,7 +765,7 @@ def main(argv: list[str]) -> int:
         module = module_name(lean_path)
         module_reported = False
         for (number, hol_path, hol_name, hol_line, list_fields,
-             names_fields, boundary_fields, fmap_fields) in hol_attribute_sites(lines):
+             names_fields, boundary_fields, fmap_fields, fmap_result) in hol_attribute_sites(lines):
             where = f"{rel}:{number}"
             lean_decl = find_lean_decl(lines, number - 1)
             if module not in reachable and not module_reported:
@@ -702,6 +785,13 @@ def main(argv: list[str]) -> int:
                     f"{where}: {error}"
                     for error in fmap_as_finite_support_errors(
                         lines, fmap_fields, rel, tagged_declaration_text(lines, number)
+                    )
+                )
+            if fmap_result:
+                errors.extend(
+                    f"{where}: {error}"
+                    for error in fmap_as_finite_support_result_errors(
+                        lines, rel, tagged_declaration_text(lines, number), lean_decl
                     )
                 )
             if names_fields or boundary_fields:

@@ -1225,7 +1225,9 @@ run_probe loop_semantics_probeScript.sml loop_semantics_probe.out \
   return_clock_zero return_clock_one "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_lprefix_lub_probeScript.sml loop_sem_lprefix_lub_probe.out \
   empty_lub_0 singleton_lub_0 singleton_lub_1 \
+  prefix_chain_lub_0 prefix_chain_lub_1 \
   conflicting_prefixes_lub_0 conflicting_prefixes_lub_1 \
+  conflicting_suffixes_lub_0 conflicting_suffixes_lub_1 \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_cut_state_probeScript.sml loop_sem_cut_state_probe.out \
   hit_first loc_preserved "$cake_dir/pancake/semantics/loopSemScript.sml"

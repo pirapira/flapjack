@@ -1,4 +1,5 @@
 import Flapjack.HolRef
+import Flapjack.Basis.Pure.MlString
 import Flapjack.FiniteMap.Basic
 
 /-!
@@ -24,6 +25,40 @@ abbrev DeclarationName := String
     representation difference. -/
 @[hol "cakeml/pancake/panLangScript.sml" "index"]
 abbrev Index := Nat
+
+/-- Exact port of HOL `panLang$stcname` (`cakeml/pancake/panLangScript.sml:21`):
+    `Type stcname = ``:mlstring```.  The exact Cake `mlstring` carrier is the
+    tagged `Flapjack.Basis.Pure.MlString.MlString`; this is the source-alias
+    counterpart with no payload, side condition, or representation difference.
+    (The production `StructName := String` alias above is the untagged
+    String-backed implementation tracked by `flapjack-pxn.18.3.5.8`.) -/
+@[hol "cakeml/pancake/panLangScript.sml" "stcname"]
+abbrev Stcname := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$fldname` (`cakeml/pancake/panLangScript.sml:23`):
+    `Type fldname = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "fldname"]
+abbrev Fldname := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$varname` (`cakeml/pancake/panLangScript.sml:25`):
+    `Type varname = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "varname"]
+abbrev Varname := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$funname` (`cakeml/pancake/panLangScript.sml:27`):
+    `Type funname = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "funname"]
+abbrev Funname := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$eid` (`cakeml/pancake/panLangScript.sml:29`):
+    `Type eid = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "eid"]
+abbrev Eid := Flapjack.Basis.Pure.MlString.MlString
+
+/-- Exact port of HOL `panLang$decname` (`cakeml/pancake/panLangScript.sml:31`):
+    `Type decname = ``:mlstring```, over the tagged exact `MlString` carrier. -/
+@[hol "cakeml/pancake/panLangScript.sml" "decname"]
+abbrev Decname := Flapjack.Basis.Pure.MlString.MlString
 
 /- FLAPJACK-SPECIFIC (not an exact HOL port): the `Named` field carrier differs.
 HOL `panLangScript.sml:21` aliases `stcname = ``:mlstring``` and the datatype is

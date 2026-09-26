@@ -837,6 +837,20 @@ finite-to-broad projection proof and the clause-for-clause tagged finite
 `flapjack-qj5`).  A preservation fact about either adapter alone would
 therefore not yet be a source-reviewed port of this theorem.  The faithful
 finite-state theorem is tracked by `flapjack-4ac.4.63.1`.
+
+### Source-review disposition: `evaluate_min_clock`
+
+HOL `panPropsScript.sml:822` states that if
+`evaluate (prog, s) = (q, r)` and `q ≠ SOME TimeOut`, then there is an input
+clock `k` for which evaluation returns the same result and all the same
+post-state components except that the clock is zero.  Its proof depends on
+`evaluate_clock_sub`; it does not assume an evaluator-success marker as a
+premise.  There is deliberately no `@[hol]` theorem for this result yet:
+`evaluateHOLFiniteViaExact` is the total pair-shaped adapter, but it delegates
+through the unrestricted-map `PanSemStateExact` evaluator, while the direct
+finite evaluator's source projection and tagged `evaluate_def` remain in
+progress (`flapjack-6yq` / `flapjack-qj5`).  The faithful finite-state theorem
+is tracked by `flapjack-4ac.4.47.1`.
 -/
 
 /-- Flapjack-specific adapter from the PanProps finite-support state to the

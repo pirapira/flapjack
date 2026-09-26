@@ -7,6 +7,7 @@ import Flapjack.Pancake.Semantics.PanSem.LocalUpdatesExact
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 import Flapjack.Pancake.Semantics.PanSem.DeclContextExact
 import Flapjack.Pancake.Semantics.PanSem.EvalExact
+import Flapjack.Pancake.Semantics.PanProps.StructsSimps
 
 /-!
 HOL counterpart module for `cakeml/pancake/semantics/panPropsScript.sml`.

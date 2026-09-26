@@ -329,6 +329,51 @@ DOCUMENTED_MISMATCHES = {
         "not yet kernel-bridged to the canonical tagged PanSem evaluator. The HOL tag was "
         "withdrawn; DS10 owns the canonical tagged port on fleet-deepseek-v41-ten.",
     ),
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_names"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "evaluate_decls_names",
+        "flapjack-ds10 (bead flapjack-4ac.4.87, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
+        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
+        "PanProps counterpart with a same-module carrier/witness and a kernel codec to the canonical "
+        "tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite. Tracked by flapjack-lqws."
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_functions"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "evaluate_decls_functions",
+        "flapjack-ds10 (beads flapjack-4ac.4.86/4ac.4.84, coordinator HOLD 2026-09-26T16:46Z): a "
+        "panProps-sourced theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending "
+        "relocation to the PanProps counterpart with a kernel codec to the canonical tagged evaluator. "
+        "Tracked by flapjack-lqws."
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evalHOLFinite_upd_clock_eq"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "eval_upd_clock_eq",
+        "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
+        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
+        "PanProps counterpart. Tracked by flapjack-lqws."
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evalHOLFinite_upd_code_eq"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "eval_upd_code_eq",
+        "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
+        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
+        "PanProps counterpart. Tracked by flapjack-lqws."
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evalHOLFinite_upd_eshapes_eq"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "eval_upd_eshapes_eq",
+        "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
+        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
+        "PanProps counterpart. Tracked by flapjack-lqws."
+    ),
+    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_declCommute"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "evaluate_decl_commute",
+        "flapjack-ds10 (bead flapjack-4ac.4.79, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
+        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
+        "PanProps counterpart with a kernel codec to the canonical tagged evaluator. Tracked by "
+        "flapjack-lqws."
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem/Eval.lean", "evalCrepHolExp"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
         "eval_nested_decs_seq_res_var_eq",

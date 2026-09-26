@@ -1136,6 +1136,90 @@ theorem EVERY_fperm_decs [BEq String] (source target : FunName)
   globalRenameDecls_all_of_predicate source target predicate declarations
     hother hfunction
 
+/-- Exact port of HOL `EVERY_fperm_decs`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2436-2442`) over the
+    reviewed word-indexed `DeclHOL width` carrier.
+
+    HOL states, for a Prop-valued predicate `P`:
+    `EVERY (λd. ¬ is_function d ⇒ P d) decs ∧
+     EVERY (λd. ∀fi. d = Function fi ⇒
+       P (Function (fi with <|name := fperm_name f g fi.name;
+                              body := fperm f g fi.body|>))) decs
+     ⇒ EVERY P (fperm_decs f g decs)`.
+    The two `EVERY` hypotheses are membership-quantified `Prop` predicates
+    over `DeclHOL width` (`∀ d ∈ decs, ...`, HOL's `EVERY` at `Prop`), the
+    renamed-function hypothesis destructures exactly as HOL's `Function fi`
+    (the renamed declaration uses the exact `fpermName`/`fpermHOL`), and the
+    conclusion is `∀ d ∈ fpermDecsHOL f g decs, P d`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "EVERY_fperm_decs"]
+theorem EVERY_fperm_decsHOL {width : Nat} [NeZero width] (f g : MlS)
+    (P : DeclHOL width → Prop) (decs : List (DeclHOL width))
+    (hother : ∀ d ∈ decs, isFunctionHOL d = false → P d)
+    (hfunction : ∀ d ∈ decs, ∀ fi : FunDeclHOL width, d = .function fi →
+        P (.function { fi with
+          name := fpermName f g fi.name
+          body := fpermHOL f g fi.body })) :
+    ∀ d ∈ fpermDecsHOL f g decs, P d := by
+  revert hother hfunction
+  induction decs with
+  | nil => intro _ _ d hd; simp [fpermDecsHOL] at hd
+  | cons d ds ih =>
+      intro hother hfunction e he
+      cases d with
+      | function fi =>
+          simp only [fpermDecsHOL, List.mem_cons] at he
+          rcases he with heq | hmem
+          · subst heq
+            exact hfunction (.function fi) (by simp) fi rfl
+          · exact ih (fun x hx => hother x (by simp [hx]))
+              (fun x hx fj hj => hfunction x (by simp [hx]) fj hj) e hmem
+      | decl shape name value =>
+          simp only [fpermDecsHOL, List.mem_cons] at he
+          rcases he with heq | hmem
+          · subst heq; exact hother (.decl shape name value) (by simp) rfl
+          · exact ih (fun x hx => hother x (by simp [hx]))
+              (fun x hx fj hj => hfunction x (by simp [hx]) fj hj) e hmem
+      | exnDecl exceptionName shape =>
+          simp only [fpermDecsHOL, List.mem_cons] at he
+          rcases he with heq | hmem
+          · subst heq; exact hother (.exnDecl exceptionName shape) (by simp) rfl
+          · exact ih (fun x hx => hother x (by simp [hx]))
+              (fun x hx fj hj => hfunction x (by simp [hx]) fj hj) e hmem
+      | name struct fields =>
+          simp only [fpermDecsHOL, List.mem_cons] at he
+          rcases he with heq | hmem
+          · subst heq; exact hother (.name struct fields) (by simp) rfl
+          · exact ih (fun x hx => hother x (by simp [hx]))
+              (fun x hx fj hj => hfunction x (by simp [hx]) fj hj) e hmem
+
+/-- Exact port of HOL `FILTER_decs_fperm_decs`
+    (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2832-2838`) over the
+    reviewed word-indexed `DeclHOL width` carrier: removing the function
+    declarations commutes with `fpermDecsHOL`.  HOL's `$¬ ∘ is_function` is
+    `fun d => !isFunctionHOL d` and HOL's `FILTER` is `List.filter`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "FILTER_decs_fperm_decs"]
+theorem FILTER_decs_fperm_decsHOL {width : Nat} [NeZero width] (f g : MlS)
+    (code : List (DeclHOL width)) :
+    (fpermDecsHOL f g code).filter (fun d => !isFunctionHOL d) =
+      code.filter (fun d => !isFunctionHOL d) := by
+  induction code with
+  | nil => simp [fpermDecsHOL]
+  | cons d ds ih =>
+      cases d with
+      | function fi =>
+          simp only [fpermDecsHOL, List.filter_cons]
+          rw [if_neg (by simp [isFunctionHOL]), if_neg (by simp [isFunctionHOL])]
+          exact ih
+      | decl shape name value =>
+          simp only [fpermDecsHOL, List.filter_cons]
+          rw [if_pos (by simp [isFunctionHOL]), if_pos (by simp [isFunctionHOL]), ih]
+      | exnDecl exceptionName shape =>
+          simp only [fpermDecsHOL, List.filter_cons]
+          rw [if_pos (by simp [isFunctionHOL]), if_pos (by simp [isFunctionHOL]), ih]
+      | name struct fields =>
+          simp only [fpermDecsHOL, List.filter_cons]
+          rw [if_pos (by simp [isFunctionHOL]), if_pos (by simp [isFunctionHOL]), ih]
+
 /-- Flapjack-only analogue of Cake's `compile_decs_FILTER_decs`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2822`): filtering the
     source program to its value declarations leaves the initializers and the

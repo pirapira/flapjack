@@ -2568,11 +2568,27 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "fpermHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.3.5.8.20) HOL fperm_def (pan_globalsScript.sml:191-214) has seven equations (Dec, Seq, If, While, Call with optional rtyp/handler, DecCall, default). The exact Lean port fpermHOL is over the reviewed word-indexed ProgHOL width carrier with MlS identifiers; the Call metadata nesting Option (Option (VarKind × MlS) × Option (MlS × MlS × ProgHOL width)) matches HOL (((varkind # varname) option # ((eid # varname # prog) option)) option) constructor-for-constructor, the call/decCall names use the reviewed exact polymorphic fpermName, and every expression payload is left untouched. No qualifier applies. Direct HOL rows in scripts/hol-probes/pan_globals_fperm_probe.out."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
     "hol_name": "fperm_decs_def",
     "lean_path": "Flapjack/Pancake/PanGlobals.lean",
     "lean_name": "globalRenameDecls",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-dlc.13) against pan_globalsScript.sml:216-221: the three fperm_decs equations ([], Function fi::decs renaming fi.name via fperm_name and fi.body via fperm, other d::decs unchanged) match globalRenameDecls clause-for-clause. The mismatch is the imported declaration carrier: production Decl α contains Prog α/Exp α (Const : α, String identifiers) and Shape (Named : String), while HOL decl carries word-valued expressions with mlstring identifiers and shape (PanLang.lean:14-28, 226-269). names_as_string cannot repair the expression/Shape carrier difference, so the tag remains withdrawn pending the exact-carrier transformation flapjack-6nn.3.1 / flapjack-pxn.18.3.5.8. Direct HOL rows mixed / empty / singleton_nonfunction are in pan_globals_fperm_decs_probe.out and sampled by Flapjack/Test/PanGlobalsFpermDecsParity.lean."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_globalsScript.sml",
+    "hol_name": "fperm_decs_def",
+    "lean_path": "Flapjack/Pancake/PanGlobals.lean",
+    "lean_name": "fpermDecsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.3.5.8.20) HOL fperm_decs_def (pan_globalsScript.sml:216-221) has three equations ([], Function fi::decs renaming fi.name via fperm_name and fi.body via fperm, other d::decs unchanged). The exact Lean port fpermDecsHOL is over List (DeclHOL width) with MlString identifiers, uses the reviewed exact fpermName/fpermHOL, and matches clause-for-clause. No qualifier applies."
   },
   {
     "hol_path": "cakeml/pancake/pan_globalsScript.sml",
@@ -2826,6 +2842,14 @@
     "lean_name": "FILTER_decs_fperm_decs",
     "statement_status": "documented_mismatch",
     "reviewer": "Codex (source comparison) Carrier note: keyed by FunName/VarName/ExceptionId/StructName = String (via Decl/FunDecl/Shape/functionEntries/exceptionEntries) while HOL pan_globalsProofScript.sml uses mlstring; tag state is documented_mismatch pending the exact MlString carrier (flapjack-pxn.18.3.5.8)."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "FILTER_decs_fperm_decs",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "FILTER_decs_fperm_decsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.3.5.8.15) HOL FILTER_decs_fperm_decs (pan_globalsProofScript.sml:2832-2838) states forall f g code, FILTER ($¬ ∘ is_function) (fperm_decs f g code) = FILTER ($¬ ∘ is_function) code. The exact Lean port is over List (DeclHOL width) with the reviewed fpermDecsHOL and isFunctionHOL, List.filter for HOL FILTER and fun d => !isFunctionHOL d for HOL $¬ ∘ is_function. No hypotheses, no weakened conclusion, no qualifier."
   },
   {
     "hol_path": null,
@@ -4994,6 +5018,14 @@
     "lean_name": "EVERY_fperm_decs",
     "statement_status": "documented_mismatch",
     "reviewer": "flapjack-main (source comparison with pan_globalsProofScript.sml:2436-2442): HOL uses MlString names and a quantified Prop-valued P over HOL declarations; this executable analogue uses production String names and a Bool-valued predicate. Exact theorem remains untagged and is tracked by flapjack-pxn.18.3.5.8.14."
+  },
+  {
+    "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+    "hol_name": "EVERY_fperm_decs",
+    "lean_path": "Flapjack/Pancake/Proofs/PanGlobals.lean",
+    "lean_name": "EVERY_fperm_decsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-pxn.18.3.5.8.14) HOL EVERY_fperm_decs[local] (pan_globalsProofScript.sml:2436-2442) states forall f g decs, EVERY (λd. ¬is_function d ⇒ P d) decs ∧ EVERY (λd. ∀fi. d = Function fi ⇒ P (Function (fi with <|name := fperm_name f g fi.name; body := fperm f g fi.body|>))) decs ⇒ EVERY P (fperm_decs f g decs). The exact Lean port is over DeclHOL width with a Prop-valued P, rendering each HOL EVERY as the membership-quantified forall d ∈ ..., the boolean is_function as isFunctionHOL d = false, and the renamed function with the exact fpermName/fpermHOL. No extra hypotheses, no weakened conclusion, no qualifier."
   },
   {
     "hol_path": "cakeml/pancake/proofs/pan_globalsProofScript.sml",

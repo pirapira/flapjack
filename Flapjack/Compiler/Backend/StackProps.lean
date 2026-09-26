@@ -66,8 +66,13 @@ decreasing_by all_goals decreasing_trivial
 /-- HOL `stackProps$addr_ok_def` (`stackPropsScript.sml:801-810`), over the
 faithful `asm` address carrier.  `Load`/`Store`/`Load32`/`Store32` use the
 word address offset; `Load16`/`Store16` use the halfword offset and are
-unavailable on `Ag32`; every other memory operation uses the byte offset. -/
-@[hol "cakeml/compiler/backend/semantics/stackPropsScript.sml" "addr_ok_def"]
+unavailable on `Ag32`; every other memory operation uses the byte offset.
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def asmAddrOk {width : Nat} (config : AsmConfig width) :
     WordMemOp → WordLangAddr (BitVec width) → Bool
   | operator, .addr base offset =>

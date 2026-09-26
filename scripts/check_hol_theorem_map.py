@@ -38,6 +38,104 @@ DATA_DECLARATION_RE = re.compile(
 # inventory small and source-reviewed; a mismatch row is not generated merely
 # because an arbitrary Lean def happens to mention a HOL name.
 WITHDRAWN_HOL_DECLARATIONS = {
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmRegOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "reg_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL reg_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmFpRegOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "fp_reg_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL fp_reg_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmRegImmOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "reg_imm_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL reg_imm_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmOffsetOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "offset_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL offset_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmArithOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "arith_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL arith_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmFpOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "fp_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL fp_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmCmpOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "cmp_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL cmp_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmInstOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "inst_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL inst_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Encoders/Asm.lean", "asmOk"): (
+        "cakeml/compiler/encoders/asm/asmScript.sml",
+        "asm_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL asm_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Compiler/Backend/StackProps.lean", "asmAddrOk"): (
+        "cakeml/compiler/backend/semantics/stackPropsScript.sml",
+        "addr_ok_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL addr_ok_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Pancake/WordConvs.lean", "distinctTarReg"): (
+        "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+        "distinct_tar_reg_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL distinct_tar_reg_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Pancake/WordConvs.lean", "twoRegInst"): (
+        "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+        "two_reg_inst_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL two_reg_inst_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Pancake/WordConvs.lean", "instOkLess"): (
+        "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+        "inst_ok_less_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL inst_ok_less_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
+    ("Flapjack/Pancake/WordConvs.lean", "instArgConvention"): (
+        "cakeml/compiler/backend/semantics/wordConvsScript.sml",
+        "inst_arg_convention_def",
+        "flapjack-ds8 (bead flapjack-4ac.6): HOL inst_arg_convention_def uses a positive-dimensional word type; "
+        "the Lean declaration quantifies width : Nat with no [NeZero width] binder, so BitVec 0 "
+        "is admitted.  The HOL tag was withdrawn pending a faithful width-restricted restatement."
+    ),
     ("Flapjack/Pancake/WordLang.lean", "everyVarImm"): (
         "cakeml/compiler/backend/wordLangScript.sml",
         "every_var_imm_def",
@@ -223,6 +321,14 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
+    ("Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean", "evaluateDeclsNamesHOLFinite"): (
+        "cakeml/pancake/semantics/panPropsScript.sml",
+        "evaluate_decls_names",
+        "flapjack-ds8 (bead flapjack-4ac.6 audit, coordinator HOLD 2026-09-26T16:13Z): the "
+        "theorem is stated over the PanProps duplicate evaluator evaluateDeclsPanPropsHOLFinite, "
+        "not yet kernel-bridged to the canonical tagged PanSem evaluator. The HOL tag was "
+        "withdrawn; DS10 owns the canonical tagged port on fleet-deepseek-v41-ten.",
+    ),
     ("Flapjack/Pancake/Semantics/CrepSem/Eval.lean", "evalCrepHolExp"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
         "eval_nested_decs_seq_res_var_eq",
@@ -1318,6 +1424,7 @@ VALID_STATUSES = {
     "reviewed_names_as_string",
     "reviewed_list_as_array_names_as_string",
     "reviewed_fmap_as_finite_support",
+    "reviewed_fmap_as_finite_support_result",
     "pending_statement_review",
     "documented_mismatch",
     "no_hol_reference_pending_classification",
@@ -1438,24 +1545,24 @@ def data_declarations(root: Path = ROOT) -> set[tuple[str, str]]:
 
 def tagged_declarations(
     root: Path = ROOT,
-) -> dict[tuple[str, str], tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]]]:
+) -> dict[tuple[str, str], tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], bool]]:
     """Return Lean file/name to HOL file/name for every active ``@[hol]``."""
     tagged: dict[
         tuple[str, str],
-        tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...]],
+        tuple[str, str, tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], bool],
     ] = {}
     for path in REFS["lean_files"]():
         rel = path.relative_to(root).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
         for (line, hol_path, hol_name, _hol_line, list_fields,
-             names_fields, boundary_fields, fmap_fields) in HOL_ATTRIBUTE_SITES(lines):
+             names_fields, boundary_fields, fmap_fields, fmap_result) in HOL_ATTRIBUTE_SITES(lines):
             lean_name = FIND_LEAN_DECL(lines, line - 1)
             key = (rel, lean_name)
             # Source-line disambiguation is checked against the HOL script by
             # check-hol-refs.py. The inventory keys the declaration by its
             # stable HOL file/name pair, not by an editable source line.
             value = (hol_path, hol_name, list_fields, names_fields,
-                     boundary_fields, fmap_fields)
+                     boundary_fields, fmap_fields, fmap_result)
             if key in tagged and tagged[key] != value:
                 raise ValueError(f"conflicting @[hol] references for {rel}:{lean_name}")
             tagged[key] = value
@@ -1467,7 +1574,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
     tagged = tagged_declarations(root)
     inventory: dict[tuple[str, str], dict[str, Any]] = {}
     for (lean_path, lean_name), (
-        hol_path, hol_name, list_fields, names_fields, boundary_fields, fmap_fields
+        hol_path, hol_name, list_fields, names_fields, boundary_fields, fmap_fields,
+        fmap_result,
     ) in tagged.items():
         entry = {
             "hol_path": hol_path,
@@ -1485,6 +1593,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
             entry["names_as_string_boundary"] = list(boundary_fields)
         if fmap_fields:
             entry["fmap_as_finite_support"] = list(fmap_fields)
+        if fmap_result:
+            entry["fmap_as_finite_support_result"] = True
         inventory[(lean_path, lean_name)] = entry
 
     for lean_path, lean_name in proof_theorem_declarations(root):
@@ -1610,6 +1720,22 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/FfiHOL.lean", "initialHolFfiState"),
         ("Flapjack/FfiHOL.lean", "HolFfiResult"),
         ("Flapjack/FfiHOL.lean", "callFFIHOL"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isStackVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isPhyVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "isAllocVar"),
+        ("Flapjack/Compiler/Backend/RegAlloc.lean", "conventionPartitions"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "leftShiftInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "rightShiftInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "constInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "loadInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "storeInst"),
+        ("Flapjack/Compiler/Backend/StackRemove.lean", "haltInst"),
+        ("Flapjack/Compiler/Backend/StackNames.lean", "progComp"),
+        ("Flapjack/Compiler/Backend/StackNames.lean", "progCompEntry"),
+        ("Flapjack/Compiler/Backend/StackNames.lean", "compile"),
+        ("Flapjack/Compiler/Backend/StackNames.lean", "map_fst_compile"),
+        ("Flapjack/Pancake/PanStructs.lean", "afindi"),
+        ("Flapjack/Misc/Sptree.lean", "NumSet"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is
@@ -1661,16 +1787,18 @@ def validate_inventory(
 
         hol_path, hol_name = record["hol_path"], record["hol_name"]
         tag = tagged.get(key)
-        if tag is not None and len(tag) < 6:
-            tag = tag + ((),) * (6 - len(tag))
+        if tag is not None and len(tag) < 7:
+            tag = tag + ((),) * (7 - len(tag))
         list_fields = tag[2] if tag is not None else ()
         names_fields = tag[3] if tag is not None else ()
         boundary_fields = tag[4] if tag is not None else ()
         fmap_fields = tag[5] if tag is not None else ()
+        fmap_result = bool(tag[6]) if tag is not None else False
         manifest_list_fields = tuple(record.get("list_as_array", ()))
         manifest_names_fields = tuple(record.get("names_as_string", ()))
         manifest_boundary_fields = tuple(record.get("names_as_string_boundary", ()))
         manifest_fmap_fields = tuple(record.get("fmap_as_finite_support", ()))
+        manifest_fmap_result = bool(record.get("fmap_as_finite_support_result", False))
         if manifest_list_fields != list_fields:
             errors.append(
                 f"{key[0]}:{key[1]}: manifest list_as_array fields do not match its @[hol] tag"
@@ -1687,6 +1815,37 @@ def validate_inventory(
             errors.append(
                 f"{key[0]}:{key[1]}: manifest fmap_as_finite_support fields do not match its @[hol] tag"
             )
+        if manifest_fmap_result != fmap_result:
+            errors.append(
+                f"{key[0]}:{key[1]}: manifest fmap_as_finite_support_result does not match its @[hol] tag"
+            )
+        if fmap_result and fmap_fields:
+            errors.append(
+                f"{key[0]}:{key[1]}: fmap_as_finite_support_result (standalone carrier) and "
+                "fmap_as_finite_support (structure fields) are mutually exclusive"
+            )
+        if fmap_result and status == "reviewed_exact":
+            errors.append(
+                f"{key[0]}:{key[1]}: fmap_as_finite_support_result @[hol] tag cannot have "
+                "reviewed_exact status; use reviewed_fmap_as_finite_support_result after source comparison"
+            )
+        if fmap_result and status != "reviewed_fmap_as_finite_support_result":
+            errors.append(
+                f"{key[0]}:{key[1]}: fmap_as_finite_support_result @[hol] tag needs a reviewed "
+                "source classification (reviewed_fmap_as_finite_support_result)"
+            )
+        if not fmap_result and status == "reviewed_fmap_as_finite_support_result":
+            errors.append(
+                f"{key[0]}:{key[1]}: reviewed_fmap_as_finite_support_result needs a "
+                "fmap_as_finite_support_result @[hol] tag"
+            )
+        if fmap_result:
+            reviewer_text = reviewer.lower() if isinstance(reviewer, str) else ""
+            if "source" not in reviewer_text:
+                errors.append(
+                    f"{key[0]}:{key[1]}: reviewed_fmap_as_finite_support_result requires a "
+                    "source-comparison note in the reviewer field"
+                )
         if not set(boundary_fields) <= set(names_fields):
             errors.append(
                 f"{key[0]}:{key[1]}: names_as_string_boundary must be a subset of names_as_string"

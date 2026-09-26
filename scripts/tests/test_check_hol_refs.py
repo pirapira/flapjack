@@ -18,7 +18,7 @@ class HolAttributeSitesTest(unittest.TestCase):
     def test_single_line(self):
         self.assertEqual(
             list(SITES(['@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]'])),
-            [(1, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), (), ())],
+            [(1, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), (), (), False)],
         )
 
     def test_multiline(self):
@@ -29,7 +29,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 'theorem compileTopShapeWf : True := trivial',
             ])),
             [(1, "cakeml/pancake/proofs/pan_globalsProofScript.sml",
-              "compile_top_shape_wf", None, (), (), (), ())],
+              "compile_top_shape_wf", None, (), (), (), (), False)],
         )
 
     def test_comments_do_not_count(self):
@@ -39,7 +39,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '-- @[hol "cakeml/pancake/pan_globalsScript.sml" "bad"]',
                 '@[hol "cakeml/pancake/pan_globalsScript.sml" "compile_top_def"]',
             ])),
-            [(3, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), (), ())],
+            [(3, "cakeml/pancake/pan_globalsScript.sml", "compile_top_def", None, (), (), (), (), False)],
         )
 
     def test_source_line(self):
@@ -47,7 +47,7 @@ class HolAttributeSitesTest(unittest.TestCase):
             list(SITES(['@[hol "cakeml/pancake/proofs/pan_to_crepProofScript.sml"',
                         '  "locals_rel_wf_shape" 2345]'])),
             [(1, "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
-              "locals_rel_wf_shape", 2345, (), (), (), ())],
+              "locals_rel_wf_shape", 2345, (), (), (), (), False)],
         )
 
     def test_list_as_array_fields(self):
@@ -57,7 +57,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '  "dec_deg_def" (list_as_array := [degrees, moves])]'
             ])),
             [(1, "cakeml/compiler/backend/reg_alloc/reg_allocScript.sml",
-              "dec_deg_def", None, ("degrees", "moves"), (), (), ())],
+              "dec_deg_def", None, ("degrees", "moves"), (), (), (), False)],
         )
 
     def test_names_as_string_and_boundary_qualifiers(self):
@@ -68,7 +68,7 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '  (names_as_string_boundary := [generated])]',
             ])),
             [(1, "cakeml/pancake/panLangScript.sml", "varname", None,
-              (), ("name", "generated"), ("generated",), ())],
+              (), ("name", "generated"), ("generated",), (), False)],
         )
 
     def test_fmap_as_finite_support_fields(self):
@@ -78,8 +78,125 @@ class HolAttributeSitesTest(unittest.TestCase):
                 '  (fmap_as_finite_support := [locals, globals])]'
             ])),
             [(1, "cakeml/pancake/semantics/panSemScript.sml",
-              "set_var_def", None, (), (), (), ("locals", "globals"))],
+              "set_var_def", None, (), (), (), ("locals", "globals"), False)],
         )
+
+    def test_fmap_as_finite_support_result_qualifier(self):
+        self.assertEqual(
+            list(SITES([
+                '@[hol "cakeml/pancake/pan_to_crepScript.sml" "get_eids_from_decls_def"',
+                '  (fmap_as_finite_support_result)]'
+            ])),
+            [(1, "cakeml/pancake/pan_to_crepScript.sml",
+              "get_eids_from_decls_def", None, (), (), (), (), True)],
+        )
+
+    def test_fmap_as_finite_support_result_accepts_lookup_witness(self):
+        lines = [
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) :=",
+            "  fun _ => none",
+            "",
+            "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL",
+            "    (decls : DeclHOL width) (key : MlS) :",
+            "    (getEidsFromDeclsHOL decls).lookup key =",
+            "      (rawDecls decls).lookup key :=",
+            "  rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            lines, "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertEqual(errors, [])
+
+    def test_fmap_as_finite_support_result_rejects_self_equality(self):
+        lines = [
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) := fun _ => none",
+            "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL",
+            "    (decls : DeclHOL width) (key : MlS) :",
+            "    (getEidsFromDeclsHOL decls).lookup key =",
+            "      (getEidsFromDeclsHOL decls).lookup key :=",
+            "  rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            lines, "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertTrue(any("self-equality" in error for error in errors))
+
+    def test_fmap_as_finite_support_result_rejects_premise_assumed_relation(self):
+        lines = [
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) := fun _ => none",
+            "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL",
+            "    (decls : DeclHOL width) (key : MlS)",
+            "    (h : (getEidsFromDeclsHOL decls).lookup key = (rawDecls decls).lookup key) :",
+            "    (getEidsFromDeclsHOL decls).lookup key = (rawDecls decls).lookup key :=",
+            "  h",
+        ]
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            lines, "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertTrue(any("assumes the target relation" in error for error in errors))
+
+    def test_fmap_as_finite_support_result_rejects_raw_option_map(self):
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            ["def getEids : MlS → Option (BitVec width) := fun _ => none"],
+            "Example.lean",
+            "def getEids : MlS → Option (BitVec width)",
+            "getEids",
+        )
+        self.assertTrue(any("HolFiniteMapExact" in error for error in errors))
+
+    def test_fmap_as_finite_support_result_requires_canonical_witness(self):
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            ["def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) := fun _ => none"],
+            "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertTrue(any("witness" in error for error in errors))
+
+    def test_fmap_as_finite_support_result_rejects_vacuous_witness(self):
+        lines = [
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) := fun _ => none",
+            "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL : True := trivial",
+        ]
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            lines, "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertTrue(errors)
+
+    def test_fmap_as_finite_support_result_rejects_wrong_declaration(self):
+        lines = [
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) := fun _ => none",
+            "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL",
+            "    (x : Nat) : x = x := rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            lines, "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertTrue(any("tagged declaration" in error for error in errors))
+
+    def test_fmap_as_finite_support_result_rejects_unrelated_witness(self):
+        lines = [
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width) := fun _ => none",
+            "theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL",
+            "    (other : HolFiniteMapExact MlS (BitVec width)) : other.lookup k = other.lookup k :=",
+            "  rfl",
+        ]
+        errors = CHECKER["fmap_as_finite_support_result_errors"](
+            lines, "Example.lean",
+            "def getEidsFromDeclsHOL : HolFiniteMapExact MlS (BitVec width)",
+            "getEidsFromDeclsHOL",
+        )
+        self.assertTrue(any("tagged declaration" in error for error in errors))
 
     def test_fmap_as_finite_support_accepts_canonical_carrier(self):
         lines = [

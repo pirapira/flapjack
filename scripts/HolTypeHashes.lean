@@ -1,4 +1,5 @@
 import Flapjack.Compiler.Backend.BackendCommon
+import Flapjack.Compiler.Backend.RegAlloc
 import Flapjack.AstHOL
 import Flapjack.Compiler.Backend.StackLang
 import Flapjack.Compiler.Backend.StackLang.Prog
@@ -80,6 +81,8 @@ import Flapjack.Pancake.Semantics.PanSem.StateDefsExact
 import Flapjack.Pancake.WordLang
 import Flapjack.Pancake.WordConvs
 import Flapjack.RiscV.CorrectnessEncoding
+import Flapjack.Compiler.Backend.StackProps
+import Flapjack.Pancake.PanStructs
 
 open Lean Elab Command Flapjack
 
@@ -126,7 +129,8 @@ elab "#emit_hol_type_hashes" : command => do
             ("list_as_array", toJson ref.listAsArray),
             ("names_as_string", toJson ref.namesAsString),
             ("names_as_string_boundary", toJson ref.namesAsStringBoundary),
-            ("fmap_as_finite_support", toJson ref.fmapAsFiniteSupport)])]
+            ("fmap_as_finite_support", toJson ref.fmapAsFiniteSupport),
+            ("fmap_as_finite_support_result", toJson ref.fmapAsFiniteSupportResult)])]
         match definitionBody? info with
         | some body =>
             fields := fields ++ [("value_expr", toJson (reprStr (canonicalExpr body)))]

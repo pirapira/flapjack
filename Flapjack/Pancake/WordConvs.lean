@@ -103,8 +103,13 @@ def extractLabels {width : Nat} : WordLangProgHOL (BitVec width) → List (Nat �
 /-- Exact source counterpart of CakeML `wordConvs$distinct_tar_reg_def`
 (`cakeml/compiler/backend/semantics/wordConvsScript.sml:267-279`): whether an
 instruction's destination differs from the registers it reads.  Every other
-instruction is accepted. -/
-@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "distinct_tar_reg_def"]
+instruction is accepted.
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def distinctTarReg {width : Nat} : WordLangInst (BitVec width) → Bool
   | .arith (.binop _ r1 _ ri) => match ri with
       | .reg r => decide (r ≠ r1)
@@ -120,8 +125,13 @@ def distinctTarReg {width : Nat} : WordLangInst (BitVec width) → Bool
 /-- Exact source counterpart of CakeML `wordConvs$two_reg_inst_def`
 (`cakeml/compiler/backend/semantics/wordConvsScript.sml:284-296`): whether an
 instruction is two-register (the destination equals the first source) for the
-arithmetic forms that require it.  Every other instruction is accepted. -/
-@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "two_reg_inst_def"]
+arithmetic forms that require it.  Every other instruction is accepted.
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def twoRegInst {width : Nat} : WordLangInst (BitVec width) → Bool
   | .arith (.binop _ r1 r2 _) => r1 == r2
   | .arith (.shift _ r1 r2 _) => r1 == r2
@@ -192,8 +202,13 @@ weaker per-instruction well-formedness predicate used by
 register checks and only constrains the configuration-dependent immediate and
 offset conditions.  The `Mem` branch lists `Load`/`Store`/`Load16`/`Store16`/
 `Load32`/`Store32` in its first case, so the `hw_offset_ok` case is only
-reachable for the remaining memops in the HOL definition. -/
-@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "inst_ok_less_def"]
+reachable for the remaining memops in the HOL definition.
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def instOkLess {width : Nat} (config : AsmConfig width) :
     WordLangInst (BitVec width) → Bool
   | .arith (.binop operator _ _ (.imm value)) => config.validImm (.inl operator) value
@@ -293,8 +308,13 @@ def fullInstOkLess {width : Nat} (config : AsmConfig width) :
   | _ => true
 
 /-- HOL `wordConvs$inst_arg_convention` (`wordConvsScript.sml:378-386`):
-per-instruction calling-convention argument placement. -/
-@[hol "cakeml/compiler/backend/semantics/wordConvsScript.sml" "inst_arg_convention_def"]
+per-instruction calling-convention argument placement.
+    Not an exact HOL port: this Lean declaration quantifies `width : Nat`
+    without `[NeZero width]`, so `BitVec 0` is admitted, whereas HOL `word`
+    dimensions are positive.  The manifest records this mismatch (bead
+    flapjack-4ac.6); restore the HOL tag only after correcting the width
+    binder and reviewing callers.
+    -/
 def instArgConvention {width : Nat} : WordLangInst (BitVec width) -> Bool
   | .arith (.addCarry _ _ _ r4) => r4 == 0
   | .arith (.shift _ _ _ (.reg r)) => r == 8

@@ -403,12 +403,14 @@ def evalHOLFinite {width : Nat} {σ : Type} [NeZero width]
     ExpHOL width → Option (ValueHOL width) :=
   @evalHOLExact width σ _ state.toExact h
 
-/-- HOL `eval_upd_clock_eq` (`cakeml/pancake/semantics/panPropsScript.sml:645`):
-    `eval (t with clock := ck) e = eval t e` over the finite-support state
-    carrier.  The evaluator never inspects `clock`; the untagged broad-carrier
-    support is `evalHOLExact_upd_clock_eq`. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "eval_upd_clock_eq"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `eval_upd_clock_eq` (`cakeml/pancake/semantics/panPropsScript.sml:645`) is a
+    PanProps declaration, so its HOL port belongs in the PanProps counterpart
+    module, not this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag
+    was withdrawn pending relocation. `eval (t with clock := ck) e = eval t e`
+    still holds here over the finite-support state carrier; the evaluator never
+    inspects `clock`, and the untagged broad-carrier support is
+    `evalHOLExact_upd_clock_eq`. -/
 theorem evalHOLFinite_upd_clock_eq {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
     (ck : Nat) (e : ExpHOL width) :
@@ -416,12 +418,13 @@ theorem evalHOLFinite_upd_clock_eq {width : Nat} {σ : Type} [NeZero width]
   simp only [evalHOLFinite]
   exact evalHOLExact_upd_clock_eq state.toExact e ck
 
-/-- HOL `eval_upd_code_eq` (`cakeml/pancake/semantics/panPropsScript.sml:654`):
-    `eval (t with code := code) e = eval t e` over the finite-support state
-    carrier.  The evaluator never inspects `code`; the untagged broad-carrier
-    support is `evalHOLExact_upd_code_eq`. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "eval_upd_code_eq"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `eval_upd_code_eq` (`cakeml/pancake/semantics/panPropsScript.sml:654`) is a
+    PanProps declaration, so its HOL port belongs in the PanProps counterpart
+    module, not this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag
+    was withdrawn pending relocation. `eval (t with code := code) e = eval t e`
+    still holds here; the evaluator never inspects `code`, and the untagged
+    broad-carrier support is `evalHOLExact_upd_code_eq`. -/
 theorem evalHOLFinite_upd_code_eq {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
     (code : HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
@@ -430,12 +433,13 @@ theorem evalHOLFinite_upd_code_eq {width : Nat} {σ : Type} [NeZero width]
   simp only [evalHOLFinite]
   exact evalHOLExact_upd_code_eq state.toExact e code.lookup
 
-/-- HOL `eval_upd_eshapes_eq` (`cakeml/pancake/semantics/panPropsScript.sml:663`):
-    `eval (t with eshapes := esh) e = eval t e` over the finite-support state
-    carrier.  The evaluator never inspects `eshapes`; the untagged broad-carrier
-    support is `evalHOLExact_upd_eshapes_eq`. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "eval_upd_eshapes_eq"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `eval_upd_eshapes_eq` (`cakeml/pancake/semantics/panPropsScript.sml:663`) is a
+    PanProps declaration, so its HOL port belongs in the PanProps counterpart
+    module, not this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag
+    was withdrawn pending relocation. `eval (t with eshapes := esh) e = eval t e`
+    still holds here; the evaluator never inspects `eshapes`, and the untagged
+    broad-carrier support is `evalHOLExact_upd_eshapes_eq`. -/
 theorem evalHOLFinite_upd_eshapes_eq {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
     (es : HolFiniteMapExact MlS ShapeHOL) (e : ExpHOL width) :
@@ -1147,19 +1151,15 @@ def evaluateDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width]
         evaluateDeclsHOLFinite updated declarations
       else none
 
-/-- HOL `panProps$evaluate_decls_names` (`panPropsScript.sml:1552-1559`): when
-    every declaration is a `Name`, `evaluate_decls` succeeds and leaves the state
-    unchanged.  This is stated over the canonical tagged finite-map evaluator
-    `evaluateDeclsHOLFinite`, the exact Lean counterpart of HOL
-    `panSem$evaluate_decls`; the `EVERY is_name decs` premise is rendered as
-    `decs.all isNameHOL = true` and the conclusion as
-    `evaluateDeclsHOLFinite state decs = some state`.  The four map-shaped state
-    fields (`locals`, `globals`, `code`, `eshapes`) are recorded by the
-    `fmap_as_finite_support` qualifier (canonical witness
-    `holFmapAsFiniteSupportWitness` in this module); the qualifier is
-    representation-only, so the quantifiers, premise and conclusion match HOL. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_names"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `panProps$evaluate_decls_names` (`panPropsScript.sml:1552-1559`) is a PanProps
+    declaration, so its HOL port belongs in the PanProps counterpart module, not
+    this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag was
+    withdrawn pending relocation to a PanProps submodule that owns the state
+    carrier and its canonical witness. The Lean fact still holds: when every
+    declaration is a `Name`, `evaluateDeclsHOLFinite` succeeds and leaves the
+    state unchanged (`decs.all isNameHOL = true` renders HOL `EVERY is_name
+    decs`). -/
 theorem evaluateDeclsHOLFinite_names {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
     (decs : List (DeclHOL width)) (hnames : decs.all isNameHOL = true) :
@@ -1195,17 +1195,14 @@ private theorem updateList_nil {α β : Type} [BEq α] [LawfulBEq α]
   funext key
   rfl
 
-/-- HOL `panProps$evaluate_decls_functions` (`panPropsScript.sml:1518-1526`):
-    a successful evaluation records exactly the function entries of the program
-    in `code`. Stated over the canonical tagged finite-map evaluator
-    `evaluateDeclsHOLFinite`, the exact Lean counterpart of HOL
-    `panSem$evaluate_decls`. The result state is quantified explicitly and
-    related by `= some result`, the repository's rendering of HOL's `SOME s'`
-    premise; `updateList` is the canonical finite-map `|++`. The
-    `fmap_as_finite_support` qualifier records only the four `|->` fields, so
-    the quantifiers, premise and conclusion match HOL. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decls_functions"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `panProps$evaluate_decls_functions` (`panPropsScript.sml:1518-1526`) is a
+    PanProps declaration, so its HOL port belongs in the PanProps counterpart
+    module, not this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag
+    was withdrawn pending relocation to a PanProps submodule that owns the state
+    carrier and its canonical witness. The Lean fact still holds: a successful
+    `evaluateDeclsHOLFinite` records exactly the function entries of the program
+    in `code` (`updateList` is the canonical finite-map `|++`). -/
 theorem evaluateDeclsHOLFinite_functions {width : Nat} {σ : Type} [NeZero width] :
     ∀ (state : PanSemStateFiniteExact width σ) [DecidablePred state.memaddrs]
       (program : List (DeclHOL width)) (result : PanSemStateFiniteExact width σ),
@@ -1290,16 +1287,16 @@ section
 
 set_option maxHeartbeats 4000000
 
-/-- HOL `panProps$evaluate_decl_commute` (`panPropsScript.sml:1472-1480`):
-    swapping an adjacent `Function` and `Decl` declaration leaves the result of
-    `evaluate_decls` unchanged, because `Decl` clears the locals and updates only
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `panProps$evaluate_decl_commute` (`panPropsScript.sml:1472-1480`) is a PanProps
+    declaration, so its HOL port belongs in the PanProps counterpart module, not
+    this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag was
+    withdrawn pending relocation to a PanProps submodule that owns the state
+    carrier and its canonical witness. The Lean fact still holds: swapping an
+    adjacent `Function` and `Decl` declaration leaves `evaluateDeclsHOLFinite`
+    unchanged, because `Decl` clears the locals and updates only
     `globals`/`eshapes`, while `Function` updates only `code` and the evaluator
-    does not read `code`. Stated over the canonical tagged finite-map evaluator
-    `evaluateDeclsHOLFinite`, the exact Lean counterpart of HOL
-    `panSem$evaluate_decls`. The `fmap_as_finite_support` qualifier records only
-    the four `|->` fields, so the quantifiers and conclusion match HOL. -/
-@[hol "cakeml/pancake/semantics/panPropsScript.sml" "evaluate_decl_commute"
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+    does not read `code`. -/
 theorem evaluateDeclsHOLFinite_declCommute {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
     (fi : FunDeclHOL width) (sh : ShapeHOL) (v' : MlS) (e : ExpHOL width)

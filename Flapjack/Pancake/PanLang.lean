@@ -1,6 +1,7 @@
 import Flapjack.HolRef
 import Flapjack.Basis.Pure.MlString
 import Flapjack.FiniteMap.Basic
+import Flapjack.AstHOL
 
 /-!
 The core Flapjack syntax.
@@ -212,21 +213,14 @@ instance (priority := 10) panCmpOfLt [LT α]
   lower left right := decide (left < right)
   less left right := decide (left < right)
 
-/- FLAPJACK-SPECIFIC (not an exact HOL port of `panLangScript.sml:19`): the
-cited HOL declaration `Type shift = ``:ast$shift``` is a *type alias*, not a
-datatype definition; its four nullary constructors `Lsl | Lsr | Asr | Ror` come
-from the aliased `ast$shift` datatype (`cakeml/semantics/astScript.sml:21`).
-Lean `Shift` below has the same four constructors, so it matches the underlying
-`ast$shift` carrier, but tagging it against the panLang alias declaration would
-conflate an alias with an inductive definition, so no `@[hol]` tag is attached.
-A genuine exact port of `ast$shift` belongs in that theory's counterpart; the
-panLang alias itself (`Type shift`) stays an open inventory item (`flapjack-4ac.1.1`). -/
-inductive Shift where
-  | lsl
-  | lsr
-  | asr
-  | ror
-  deriving DecidableEq, Repr
+/-- Exact port of HOL `panLang$shift` (`cakeml/pancake/panLangScript.sml:19`):
+`Type shift = ``:ast$shift```.  This is a genuine source alias, not a new
+datatype: the aliased carrier is the exact `ast$shift` datatype `Flapjack.Shift`
+in `Flapjack/AstHOL.lean` (tagged against `cakeml/semantics/astScript.sml`), and
+this declaration records the panLang alias with no payload, side condition, or
+representation difference. -/
+@[hol "cakeml/pancake/panLangScript.sml" "shift"]
+abbrev PanLangShift := Flapjack.Shift
 
 /-!
 The source language distinguishes logical and arithmetic right shifts, and

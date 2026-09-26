@@ -1429,6 +1429,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Decl.lean", "isDeclHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "isFunctionHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "isNameHOL"),
+        ("Flapjack/Pancake/PanLang/Shape.lean", "memImpShapeSizeHOL"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_append"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isFunction"),
         ("Flapjack/Pancake/Semantics/PanProps.lean", "functionsHOL_filter_isDecl"),
@@ -1450,6 +1451,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/Semantics/PanProps.lean", "optMmapEqSomeHelper"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
+        ("Flapjack/Pancake/PanLang/Exp.lean", "memImpExpSizeHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "crepVarsHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "loadMemOpHOL"),
         ("Flapjack/Pancake/Semantics/PanProps/LocalisedExpSimps.lean", "localisedExpSimpsHOL"),
@@ -1484,6 +1486,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Shape.lean", "sizeOfShapeHOL"),
         ("Flapjack/Pancake/PanLang/Shape.lean", "shapeToStrHOL"),
         ("Flapjack/Pancake/PanLang/Shape.lean", "withShapeHOL"),
+        ("Flapjack/AstHOL.lean", "Shift"),
+        ("Flapjack/Pancake/PanLang.lean", "PanLangShift"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

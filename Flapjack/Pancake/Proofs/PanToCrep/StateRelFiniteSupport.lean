@@ -17,7 +17,8 @@ support and the faithful evaluator proof.
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (MlS ShapeHOL ProgHOL)
+open Flapjack.Pancake.PanLang
+  (MlS ShapeHOL ProgHOL StructContextExact isWfShapeExactHOL)
 
 /-- Exact finite-support shape of the proof context used in HOL `locals_rel`.
     This replaces the production String/Shape-valued context only for the
@@ -81,7 +82,7 @@ def panToCrepLocalsRelFiniteExact {width : Nat} [NeZero width]
         context.vars.lookup name = some (shapeOfHOLExact value, slots) ∧
         slots.mapM targetLocals.lookup = some words ∧
         flattenHOL value = words ∧
-        isWfShapeValueHOLExact [] value = true
+        isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact value) = true
 
 /-- The exact finite-support locals relation immediately supplies the
     `is_wf_shape_v_nil` fact for every present source local, matching HOL's
@@ -93,10 +94,27 @@ theorem panToCrepLocalsRelFiniteExact_shapeProjection {width : Nat} [NeZero widt
     (name : MlS) (value : ValueHOL width)
     (hrel : panToCrepLocalsRelFiniteExact context sourceLocals targetLocals)
     (hlookup : sourceLocals.lookup name = some value) :
-    isWfShapeValueHOLExact [] value = true := by
+    isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact value) = true := by
   obtain ⟨slots, words, _hcontext, _hmapped, _hflatten, hwf⟩ :=
     hrel.2.2 name value hlookup
   exact hwf
+
+/-- The value-level well-formedness fact is a separate bridge from the literal
+    HOL `locals_rel` conjunct `is_wf_shape_nil (shape_of v)`. -/
+theorem panToCrepLocalsRelFiniteExact_valueShapeProjection {width : Nat} [NeZero width]
+    (context : PanToCrepProofContextFiniteExact width)
+    (sourceLocals : HolFiniteMapExact MlS (ValueHOL width))
+    (targetLocals : HolFiniteMapExact Nat (HolWordLab width))
+    (name : MlS) (value : ValueHOL width)
+    (hrel : panToCrepLocalsRelFiniteExact context sourceLocals targetLocals)
+    (hlookup : sourceLocals.lookup name = some value) :
+    isWfShapeValueHOLExact [] value = true := by
+  have hshape := panToCrepLocalsRelFiniteExact_shapeProjection
+    context sourceLocals targetLocals name value hrel hlookup
+  have hbridge := isWfShapeExactHOL_shapeOfHOLExact_eq_isWfShapeValueHOLExact_nil
+    ([] : StructContextExact) rfl value
+  rw [hbridge] at hshape
+  exact hshape
 
 /-- Projection of HOL `state_rel_def`'s structural-context conjunct. -/
 theorem panToCrepStateRelFiniteExact_structs {width : Nat} {σ : Type}

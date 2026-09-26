@@ -1562,7 +1562,7 @@
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "structs_simps",
-    "lean_path": "Flapjack/Pancake/Semantics/PanProps/StructsSimps.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
     "lean_name": "structsSimpsHOLFinite",
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": [
@@ -1571,7 +1571,7 @@
       "code",
       "eshapes"
     ],
-    "reviewer": "Codex (source comparison): exact six projection equations from panPropsScript.sml:1217 over the full PanSem state carrier. The local Lean carrier has the same state fields and HolFiniteMapExact representation for all four HOL finite-map fields; its same-module toPanSemStateExact/ofPanSemStateExact roundtrip is kernel checked. No output list representation or name-byte behavior is changed. The qualifier records only finite support."
+    "reviewer": "Codex (source comparison): exact six projection equations from panPropsScript.sml:1217 over the full PanSem state carrier. Reuses the existing PanPropsEvalStateFiniteExact owner and its same-module toExact/ofExact roundtrip witness in EvalInvariant.lean; no second state carrier is introduced. The qualifier records only finite support for locals/globals/code/eshapes."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",

@@ -5647,8 +5647,8 @@
     "hol_name": "mem_load_32_alt",
     "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean",
     "lean_name": "panMemLoad32HOL_eq_alt",
-    "statement_status": "documented_mismatch",
-    "reviewer": "flapjack-ds5 (source comparison, 2026-09-25; bead flapjack-4ac.3.13; FLAPJACK-SPECIFIC, documented_mismatch). HOL mem_load_32_alt (panSemScript.sml:108-135) restates mem_load_32 for an arbitrary 'a word memory. panMemLoad32HOL_eq_alt (MemLoad32Alt.lean:163) proves the same OR/shift form but is width-64-specialized (RiscV.Word 64) and the byte codec get_byte lives in HOL stdlib outside the cakeml submodule. Exact arbitrary-width port tracked by flapjack-pxn.18.3.6.9.27."
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-luna-c (source comparison, 2026-09-26; bead flapjack-pxn.18.3.6.9.27). Compared panSemScript.sml:108-135 clause by clause: the aligned-2 guard is address.toNat MOD 4 = 0, byte_align selects the same total HolWordLab cell, the domain miss returns NONE, and success widens the four get_byte results to word32 and assembles LE shifts 0/8/16/24 or BE shifts 24/16/8/0. The theorem is polymorphic over every positive BitVec width. `panGetByteHOL_toNat_lt_width` proves the intermediate memory-width embedding preserves each source UInt8, including sub-byte dimensions, so it implements the HOL w2w input exactly. Direct HOL mem_load_32_def observations in pan_sem_state_eval_probe.out are paired with this equality theorem; the fixture instantiates widths 1, 4, 24, and 64. The executable RISC-V codec adapter remains a separate relation and is not claimed as routed by this theorem."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

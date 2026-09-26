@@ -5685,7 +5685,7 @@
   {
     "hol_path": "cakeml/misc/miscScript.sml",
     "hol_name": "good_dimindex_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemByteExact.lean",
+    "lean_path": "Flapjack/Misc/GoodDimindex.lean",
     "lean_name": "goodDimindex",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.4.59.1). HOL miscScript.sml:4315 defines good_dimindex (:'a) as dimindex (:'a) = 32 \\/ dimindex (:'a) = 64. Lean goodDimindex takes the word width (the HOL dimindex) and is exactly width = 32 \\/ width = 64. No extra cases or side conditions."
@@ -5693,7 +5693,7 @@
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "read_write_bytearray_lemma",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/MemByteExact.lean",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
     "lean_name": "readWriteBytearrayLemma",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.4.59.1). HOL panPropsScript.sml:1119 quantifies n : num, addr : 'a word, bytes : word8 list and proves good_dimindex(:a) /\\ read_bytearray addr n (mem_load_byte m addrs be) = SOME bytes ==> write_bytearray addr bytes m addrs be = m. The Lean statement has the same single conjunction antecedent and the same conclusion: memory is the total HolWordLab map (HOL 'a word -> 'a word_lab), domain is the Prop predicate with DecidablePred evidence (HOL word set), bytes is List UInt8 (HOL word8 list), the reader is panMemLoadByteHOL (mem_load_byte_def) fed to readBytearrayHOL (read_bytearray_def), and the write is panWriteBytearrayHOL (write_bytearray_def). goodDimindex width is the HOL good_dimindex. The proof inducts on length like HOL and uses the width-generic byte roundtrip panSetByteHOL_panGetByteHOL (ByteRoundtrip.lean, the untagged analogue of byteScript.sml:847) after splitting good_dimindex to width = 32 \\/ width = 64, exactly as HOL uses set_byte_get_byte and good_dimindex_def."

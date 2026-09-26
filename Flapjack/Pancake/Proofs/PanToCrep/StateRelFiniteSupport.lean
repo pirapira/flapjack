@@ -76,9 +76,8 @@ def panToCrepLocalsRelFiniteExact {width : Nat} [NeZero width]
         flattenHOL value = words ∧
         isWfShapeExactHOL ([] : StructContextExact) (shapeOfHOLExact value) = true
 
-/-- The exact finite-support locals relation immediately supplies the
-    `is_wf_shape_v_nil` fact for every present source local, matching HOL's
-    `locals_rel_wf_shape` proof. -/
+/-- The exact finite-support locals relation immediately supplies the literal
+    `is_wf_shape_nil (shape_of v)` fact for every present source local. -/
 theorem panToCrepLocalsRelFiniteExact_shapeProjection {width : Nat} [NeZero width]
     (context : PanToCrepContextExact width)
     (sourceLocals : HolFiniteMapExact MlS (ValueHOL width))

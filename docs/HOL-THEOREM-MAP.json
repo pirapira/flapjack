@@ -1847,6 +1847,19 @@
   },
   {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "context",
+    "lean_path": "Flapjack/Pancake/PanToCrep/ContextExact.lean",
+    "lean_name": "PanToCrepContextExact",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": [
+      "vars",
+      "funcs",
+      "eids"
+    ],
+    "reviewer": "flapjack-luna-b (source comparison, beads flapjack-4ac.2.1 and .2.1.1; pan_to_crepScript.sml:10-16): the record fields match: vars maps MlString/varname to ShapeHOL and List Nat; funcs maps MlString/funname to List (MlString × ShapeHOL) × ShapeHOL; eids maps MlString/eid to BitVec width for HOL 'a word; vmax is Nat. Lean uses the canonical HolFiniteMapExact carrier for HOL fmap fields, with same-module toBroad/ofBroad roundtrip witness holFmapAsFiniteSupportWitness. The qualifier records only this finite-support representation. The field values are checked against the direct HOL `mk_ctxt_fields` record row from `mk_ctxt_def` in scripts/hol-probes/compile_to_crep_probe.out by Flapjack.Test.PanToCrepContextExactParity."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "ret_var_def",
     "lean_path": "Flapjack/Pancake/PanToCrep.lean",
     "lean_name": "retVarHOL",
@@ -10672,96 +10685,96 @@
     "hol_name": "ffi_outcome",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFfiOutcome",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (bead flapjack-qxj): HOL Datatype ffi_outcome = FFI_failed | FFI_diverged (ffiScript.sml:15-17); Lean inductive HolFfiOutcome failed|diverged, same constructor order and arity, no fields; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "oracle_result",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolOracleResult",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL oracle_result = Oracle_return 'ffi (word8 list) | Oracle_final ffi_outcome (:19-21); Lean HolOracleResult.ret (value:sigma) (bytes:List (BitVec 8)) | .final (outcome); polymorphic 'ffi = sigma, word8 = BitVec 8, field order matches; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "shmem_op",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolShmemOp",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL shmem_op = MappedRead | MappedWrite (:23-25); Lean HolShmemOp mappedRead|mappedWrite; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "ffiname",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFfiName",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL ffiname = ExtCall mlstring | SharedMem shmem_op (:27-29); Lean HolFfiName.extCall MlString | .sharedMem HolShmemOp over the tagged exact mlstring carrier; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "oracle_function",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolOracleFunction",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL Type oracle_function = :'ffi -> word8 list -> word8 list -> 'ffi oracle_result (:31); Lean abbrev HolOracleFunction sigma := sigma -> List (BitVec 8) -> List (BitVec 8) -> HolOracleResult sigma; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "oracle",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolOracle",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL Type oracle = :ffiname -> 'ffi oracle_function (:32); Lean abbrev HolOracle sigma := HolFfiName -> HolOracleFunction sigma; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "io_event",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolIoEvent",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL io_event = IO_event ffiname (word8 list) ((word8 # word8) list) (:41-42); Lean structure HolIoEvent name/configuration/bytes : List (BitVec 8 x BitVec 8); word8 = BitVec 8, HOL product = Prod, field order matches; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "final_event",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFinalEvent",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL final_event = Final_event ffiname (word8 list) (word8 list) ffi_outcome (:44-46); Lean structure HolFinalEvent name/configuration/bytes/outcome; order and types match; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "ffi_state",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFfiState",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL Datatype ffi_state = <| oracle : 'ffi oracle; ffi_state : 'ffi; io_events : io_event list |> (:48-52); Lean structure HolFfiState oracle/ffiState:sigma/ioEvents:List HolIoEvent; field order and types match (Lean field ffiState renders HOL ffi_state); exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "initial_ffi_state_def",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "initialHolFfiState",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL initial_ffi_state oc ffi = <| oracle := oc; ffi_state := ffi; io_events := [] |> (:55-57); Lean initialHolFfiState oracle state = {oracle, ffiState := state, ioEvents := []}; exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "ffi_result",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "HolFfiResult",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL ffi_result = FFI_return ('ffi ffi_state) (word8 list) | FFI_final final_event (:59-61); Lean HolFfiResult.ret (state:HolFfiState sigma) (bytes) | .final (event); exact."
   },
   {
     "hol_path": "cakeml/semantics/ffi/ffiScript.sml",
     "hol_name": "call_FFI_def",
     "lean_path": "Flapjack/FfiHOL.lean",
     "lean_name": "callFFIHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 source review (flapjack-qxj): HOL call_FFI st s conf bytes = if s <> ExtCall \u00ab\u00bb then (case st.oracle s st.ffi_state conf bytes of Oracle_return ... | Oracle_final ...) else FFI_return st bytes (:65-73); Lean callFFIHOL uses the complementary guard `if name = .extCall (implode [])`; ExtCall \u00ab\u00bb is the empty mlstring (implode []), and the oracle-return/length-check/IO_event ZIP/FFI_failed/FFI_final branches are clause-for-clause identical, so the definition is behaviorally exact (polarity-only difference in the guard); exact."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",

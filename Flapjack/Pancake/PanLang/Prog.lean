@@ -286,7 +286,14 @@ exception identifiers syntactically reachable from a program over the exact
 the identifiers of `ep`, everything else contributes nothing.  The production
 `Flapjack.expIds` is polymorphic over `Prog α` with `String` identifiers, so it
 cannot literally call this word-indexed definition; the checked bridge
-`expIdsHOL_map_toStringOfBytes` connects them clause-for-clause. -/
+`expIdsHOL_map_toStringOfBytes` connects them clause-for-clause on the exact
+HOL carrier. The reverse production-to-HOL roundtrip is available for
+`Prog (BitVec width)` only under `ProgByteRanged`, since `MlString` cannot
+round-trip arbitrary Lean `String` identifiers. A source audit found
+`Pipeline.pipelineGetEids` as the only production definition that calls
+`expIds` to form exception codes, but no compiler caller of `pipelineGetEids`;
+the executed pipeline therefore does not currently route through either
+`expIds` or `expIdsHOL`. -/
 @[hol "cakeml/pancake/panLangScript.sml" "exp_ids_def"]
 def expIdsHOL {width : Nat} [NeZero width] : ProgHOL width → List MlS
   | .skip => []
@@ -350,6 +357,18 @@ word-indexed `ProgHOL` with `MlS`; this checked relation is the connection
     rename_i infoH nameH argsH hNot
     exact (expIds_progOfHOL_call_of_not (info := infoH) (name := nameH)
       (args := argsH) hNot).symm
+
+/-- Flapjack-specific codec theorem (no HOL original: HOL has no
+`ProgByteRanged` predicate or Lean `String`/`MlString` codec premise). On the
+byte-ranged production subset, encoding with `progToHOL` and projecting the
+exact HOL `exp_ids_def` back through `toStringOfBytes` recovers the production
+`expIds` result. This is a checked representation bridge, not a claim that the
+generic production compiler path calls `expIdsHOL`. -/
+theorem expIdsHOL_progToHOL_byteRanged {width : Nat} [NeZero width]
+    (program : Flapjack.Prog (BitVec width))
+    (hRanged : ProgByteRanged program) :
+    (expIdsHOL (progToHOL program)).map toStringOfBytes = Flapjack.expIds program := by
+  rw [expIdsHOL_map_toStringOfBytes, progOfHOL_progToHOL program hRanged]
 
 /-! ### Exact `panLang$fun_ids` (bead flapjack-4ac.1.45)
 

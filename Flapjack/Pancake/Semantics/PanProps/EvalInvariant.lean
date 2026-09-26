@@ -1106,6 +1106,39 @@ theorem evaluateDeclsPanPropsHOLFinite_toCanonical {width : Nat} {σ : Type}
               | true => exact False.elim (hcondition hcond)
             simp [condition, hconditionFalse, hconditionCanonical]
 
+/-- Flapjack-specific representation adapter for PanProps theorems that need
+    the local same-module finite-map witness. Evaluation itself is performed
+    by the canonical tagged PanSem finite-support evaluator; only successful
+    result states are converted back to this module's carrier. This avoids a
+    second evaluator definition in a PanProps theorem statement. The complete
+    `Option` result is equivalent to the local recursive proof helper by
+    `evaluateDeclsPanPropsHOLFinite_toCanonical`. -/
+def evaluateDeclsPanPropsCanonical {width : Nat} {σ : Type}
+    [NeZero width] (state : PanPropsEvalStateFiniteExact width σ)
+    [DecidablePred state.memaddrs] (program : List (DeclHOL width)) :
+    Option (PanPropsEvalStateFiniteExact width σ) :=
+  (PanSemStateFiniteExact.evaluateDeclsHOLFinite state.toPanSemFinite program).map
+    PanPropsEvalStateFiniteExact.ofPanSemFinite
+
+/-- The counterpart-module adapter above uses the canonical evaluator rather
+    than duplicating its clauses; its result codec agrees with the local proof
+    helper on both failure and success. -/
+theorem evaluateDeclsPanPropsCanonical_eqHOLFinite {width : Nat} {σ : Type}
+    [NeZero width] (state : PanPropsEvalStateFiniteExact width σ)
+    [DecidablePred state.memaddrs] (program : List (DeclHOL width)) :
+    evaluateDeclsPanPropsCanonical state program =
+      evaluateDeclsPanPropsHOLFinite state program := by
+  unfold evaluateDeclsPanPropsCanonical
+  have h := evaluateDeclsPanPropsHOLFinite_toCanonical state program
+  calc
+    _ = (PanSemStateFiniteExact.evaluateDeclsHOLFinite
+        state.toPanSemFinite program).map PanPropsEvalStateFiniteExact.ofPanSemFinite := rfl
+    _ = ((evaluateDeclsPanPropsHOLFinite state program).map
+        PanPropsEvalStateFiniteExact.toPanSemFinite).map
+        PanPropsEvalStateFiniteExact.ofPanSemFinite := by rw [← h]
+    _ = evaluateDeclsPanPropsHOLFinite state program := by
+      cases evaluateDeclsPanPropsHOLFinite state program <;> simp
+
 private theorem panMemLoad32HOL_monoDomain {width : Nat} [NeZero width]
     (memory : RiscV.Word width → HolWordLab width)
     (domain1 domain2 : RiscV.Word width → Prop)

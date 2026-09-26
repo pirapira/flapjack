@@ -76,6 +76,7 @@ import Flapjack.Pancake.Semantics.PanSem.MemByteAssembly
 import Flapjack.Pancake.Semantics.PanSem.MemLoad32Alt
 import Flapjack.Pancake.Semantics.PanSem.MemStore32Alt
 import Flapjack.Pancake.Semantics.PanSem.ByteRoundtrip
+import Flapjack.Pancake.Semantics.PanSem.MemByteExact
 import Flapjack.Pancake.Semantics.PanSem.MemLoadHOL
 import Flapjack.Pancake.Semantics.PanProps.MemByteArray
 import Flapjack.Pancake.Semantics.PanSem.ShMemExact

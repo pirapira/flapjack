@@ -55,6 +55,8 @@ import Flapjack.Pancake.Semantics.PanSem.Primop
 import Flapjack.Pancake.Semantics.PanSemStateEval
 import Flapjack.Pancake.Semantics.PanSem.MemLoad32Alt
 import Flapjack.Pancake.Semantics.PanSem.MemStore32Alt
+import Flapjack.Pancake.Semantics.PanSem.ByteRoundtrip
+import Flapjack.Pancake.Semantics.PanSem.MemByteExact
 import Flapjack.Pancake.Semantics.PanSem.TotalSteps
 import Flapjack.Pancake.Semantics.PanSem.ValueHOL
 import Flapjack.Pancake.Semantics.PanSem.StateExact

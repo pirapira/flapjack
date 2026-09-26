@@ -1433,6 +1433,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Decl.lean", "exceptionsHOL"),
         ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "loadMemOpHOL"),
+        ("Flapjack/Pancake/Semantics/PanSem/MemByteExact.lean", "goodDimindex"),
+        ("Flapjack/Pancake/Semantics/PanSem/MemByteExact.lean", "readWriteBytearrayLemma"),
         ("Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean", "panMemLoad32HOL_eq_alt"),
         ("Flapjack/Pancake/Semantics/PanSem/MemStore32Alt.lean", "panMemStore32HOL_eq_alt"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "storeMemOpHOL"),

@@ -102,7 +102,7 @@ import Flapjack.Pancake.Semantics.PanSemStateEval
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ExpHOL)
+open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ExpHOL ProgHOL)
 open Flapjack.Pancake.PanLang (isWfShapeExactHOL structContextLookupHOL)
 
 /-- HOL `isValWord` over the exact value carrier `ValueHOL` (the `v`-level
@@ -252,5 +252,49 @@ mutual
         | some value, some values => some ((name, value) :: values)
         | _, _ => none
 end
+
+/-! ## Field-independence of the exact evaluator
+
+The exact `evalHOLExact` reads only `locals`, `globals`, `structs`, `memory`,
+`memaddrs`, `be`, `baseAddr` and `topAddr`; it never inspects `clock`, `code`
+or `eshapes`.  The untagged lemmas below record that independence over the
+broad `PanSemStateExact` carrier (unrestricted lookup functions).  Their
+faithful finite-support renderings over `PanSemStateFiniteExact`, which carry
+the `@[hol]` tags for `eval_upd_clock_eq`, `eval_upd_code_eq` and
+`eval_upd_eshapes_eq`, live in `StateExactFiniteMap.lean`. -/
+
+/-- Untagged broad-carrier support for HOL `eval_upd_clock_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:645`): rewriting the `clock`
+    field does not change the exact evaluator's result. -/
+theorem evalHOLExact_upd_clock_eq {width : Nat} {σ : Type} [NeZero width]
+    (s : PanSemStateExact width σ) [DecidablePred s.memaddrs] (e : ExpHOL width) :
+    ∀ (ck : Nat), evalHOLExact { s with clock := ck } e = evalHOLExact s e := by
+  induction e using evalHOLExact.induct (state := s)
+    (motive_2 := fun fs => ∀ ck, evalListFieldsHOLExact { s with clock := ck } fs = evalListFieldsHOLExact s fs)
+    (motive_3 := fun es => ∀ ck, evalListHOLExact { s with clock := ck } es = evalListHOLExact s es)
+  all_goals (try intro c) <;> (try simp only [evalHOLExact, evalListHOLExact, evalListFieldsHOLExact]) <;> (try rfl) <;> simp_all
+
+/-- Untagged broad-carrier support for HOL `eval_upd_code_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:654`): rewriting the `code`
+    field does not change the exact evaluator's result. -/
+theorem evalHOLExact_upd_code_eq {width : Nat} {σ : Type} [NeZero width]
+    (s : PanSemStateExact width σ) [DecidablePred s.memaddrs] (e : ExpHOL width) :
+    ∀ (c : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL)),
+      evalHOLExact { s with code := c } e = evalHOLExact s e := by
+  induction e using evalHOLExact.induct (state := s)
+    (motive_2 := fun fs => ∀ c, evalListFieldsHOLExact { s with code := c } fs = evalListFieldsHOLExact s fs)
+    (motive_3 := fun es => ∀ c, evalListHOLExact { s with code := c } es = evalListHOLExact s es)
+  all_goals (try intro c) <;> (try simp only [evalHOLExact, evalListHOLExact, evalListFieldsHOLExact]) <;> (try rfl) <;> simp_all
+
+/-- Untagged broad-carrier support for HOL `eval_upd_eshapes_eq`
+    (`cakeml/pancake/semantics/panPropsScript.sml:663`): rewriting the `eshapes`
+    field does not change the exact evaluator's result. -/
+theorem evalHOLExact_upd_eshapes_eq {width : Nat} {σ : Type} [NeZero width]
+    (s : PanSemStateExact width σ) [DecidablePred s.memaddrs] (e : ExpHOL width) :
+    ∀ (es : MlS → Option ShapeHOL), evalHOLExact { s with eshapes := es } e = evalHOLExact s e := by
+  induction e using evalHOLExact.induct (state := s)
+    (motive_2 := fun fs => ∀ es, evalListFieldsHOLExact { s with eshapes := es } fs = evalListFieldsHOLExact s fs)
+    (motive_3 := fun es' => ∀ es, evalListHOLExact { s with eshapes := es } es' = evalListHOLExact s es')
+  all_goals (try intro c) <;> (try simp only [evalHOLExact, evalListHOLExact, evalListFieldsHOLExact]) <;> (try rfl) <;> simp_all
 
 end Flapjack

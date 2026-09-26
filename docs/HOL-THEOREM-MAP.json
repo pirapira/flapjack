@@ -1553,6 +1553,14 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "localised_exp_simps",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/LocalisedExpSimps.lean",
+    "lean_name": "localisedExpSimpsHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.4.71). HOL panPropsScript.sml:1366 defines localised_exp_simps as the LIST_CONJ over exp_cons_patterns of localised_exp applied to each exp constructor pattern, eval-reduced and rewritten with GSYM localised_exp_real_def. The Lean theorem is the same 16-conjunct collection over the exact ExpHOL width carrier in constructor order (Const, Var, RStruct, RField, NStruct, NField, Load, Load32, LoadByte, Op, Panop, Cmp, Shift, BaseAddr, TopAddr, BytesInWord); each right-hand side is HOL's every_exp unfolding with P = (\\e. case e of Var tp _ => tp = Local | _ => T) (localisedExpPredHOL) and the EVERY/MAP SND folds rendered as everyExpListHOL/everyExpFieldListHOL, matching the tagged every_exp_def and localised_exp_real_def ports. HOL (tp = Local) is decide (vk = VarKind.local). No extra hypotheses or side conditions."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "fdoms_eq_flookup_some_none",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",
     "lean_name": "fdoms_eq_flookup_some_none",

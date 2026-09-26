@@ -1435,6 +1435,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Exp.lean", "varExpHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "crepVarsHOL"),
         ("Flapjack/Pancake/PanToCrep/Compile.lean", "loadMemOpHOL"),
+        ("Flapjack/Pancake/Semantics/PanProps/LocalisedExpSimps.lean", "localisedExpSimpsHOL"),
         ("Flapjack/Pancake/Semantics/PanSem/MemByteExact.lean", "goodDimindex"),
         ("Flapjack/Pancake/Semantics/PanSem/MemByteExact.lean", "readWriteBytearrayLemma"),
         ("Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean", "panMemLoad32HOL_eq_alt"),

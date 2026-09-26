@@ -65,16 +65,16 @@ tag the broad analogues. The faithful port is tracked by
 `prog`, successful result `s'`, and replacement address set `memaddrs`. From
 `evaluate_decls s prog = SOME s'` and `s.memaddrs ⊆ memaddrs`, it concludes
 successful evaluation from `s` with only `memaddrs` replaced, yielding `s'`
-with the same replacement set. The closest Lean evaluator,
-`evaluateDeclsHOLExact`, has that recursive declaration behavior over
-`PanSemStateExact`, but its locals/globals/code/eshapes are unrestricted lookup
-functions rather than HOL finite maps. The finite-support state currently has
-no corresponding exact declaration evaluator in the PanProps counterpart, and
-the `fmap_as_finite_support` tag requires the owner and witness in the tagged
-module. Thus the broad evaluator is not an exact HOL carrier and cannot receive
-the tag; the faithful port is tracked by
-`flapjack-4ac.4.102.1`, dependent on
-`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+with the same replacement set. The broad Lean `evaluateDeclsHOLExact` remains
+untagged because `PanSemStateExact` uses unrestricted lookup functions for
+locals/globals/code/eshapes. The exact local evaluator and tagged theorem
+`evaluateDeclsMemaddrsMonoHOLFinite` are in `PanProps/EvalInvariant.lean`,
+using the existing `PanPropsEvalStateFiniteExact` owner and same-module
+canonical roundtrip witness. Its clauses match the source: names skip;
+expressions evaluate with empty locals before a shape check and global update;
+functions check parameter/return shapes before code update; exceptions check
+absence and shape before exception-shape update. The only extra proof evidence
+is decidability for HOL's word-set membership. -/
 
 /-! Source review for HOL `eval_swap_memaddrs`
 (`panPropsScript.sml:1703-1715`): HOL states that successful `eval s exp`

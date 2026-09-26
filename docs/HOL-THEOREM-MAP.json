@@ -121,6 +121,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "MEM_IMP_shape_size",
+    "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
+    "lean_name": "memImpShapeSizeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.1.22): HOL MEM_IMP_shape_size (cakeml/pancake/panLangScript.sml:131-137) is `!shapes a. MEM a shapes ==> shape_size a < 1 + shape1_size shapes` over the generated datatype size functions of `Datatype: shape = One | Comb (shape list) | Named stcname`. Lean memImpShapeSizeHOL : (shapes : List ShapeHOL) -> (a : ShapeHOL) -> a ∈ shapes -> shapeSizeHOL a < 1 + shape1SizeHOL shapes matches the quantifier order, the MEM hypothesis, and the strict-inequality conclusion over the exact ShapeHOL carrier. The HOL size functions are produced by the Datatype package (HOL/src/datatype/DataSize.sml), have no textual source declaration, and therefore cannot carry an @[hol] tag; their equations are transcribed in Shape.lean and pinned by a standard-HOL reconstruction of the identical datatype (constructor arities and field types) in scripts/hol-probes/pan_lang_size_probe.out: shape_size One = 0; shape_size (Comb a) = 1 + shape1_size a; shape_size (Named a) = 1 + mlstring_size a; shape1_size [] = 0; shape1_size (a0::a1) = 1 + (shape_size a0 + shape1_size a1); mlstring_size (implode a) = 1 + list_size char_size a with char_size = 0 (HOL/src/string/stringScript.sml:179)."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "exp",
     "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
     "lean_name": "ExpHOL",

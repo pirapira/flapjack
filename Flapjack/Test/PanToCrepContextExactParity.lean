@@ -12,6 +12,7 @@ namespace Flapjack.Test.PanToCrepContextExactParity
 
 open Flapjack
 open Flapjack.Pancake.PanLang (MlS ShapeHOL NameRanged ShapeByteRanged shapeOfHOL)
+open Flapjack.Basis.Pure.MlString
 open Flapjack.Pancake.PanLang (DeclByteRanged FunDeclByteRanged ParamByteRanged
   ListParamByteRanged ProgByteRanged ExpByteRanged)
 
@@ -100,6 +101,28 @@ example : sample.eids.lookup e = some (2 : BitVec 8) := by
   simp [sample, e, HolFiniteMapExact.update, HolFiniteMapExact.empty, FUPDATE]
 
 example : sample.vmax = 3 := rfl
+
+/-! The production bridge exposes exact context lookups to the String/Shape
+compiler boundary using decoded byte names and shapes. -/
+example : sample.toProduction.vars (toStringOfBytes p) = some (.one, [0]) := by
+  rw [PanToCrepContextExact.toProduction_vars_lookup]
+  simp [sample, p, Flapjack.Pancake.PanLang.shapeOfHOL,
+    HolFiniteMapExact.update, HolFiniteMapExact.empty, FUPDATE]
+
+example : sample.toProduction.funcs (toStringOfBytes f) =
+    some ([(toStringOfBytes p, .one)], .one) := by
+  rw [PanToCrepContextExact.toProduction_funcs_lookup]
+  simp [sample, f, p, Flapjack.Pancake.PanLang.shapeOfHOL,
+    HolFiniteMapExact.update, HolFiniteMapExact.empty, FUPDATE]
+
+example : sample.toProduction.eids (toStringOfBytes e) = some (2 : BitVec 8) := by
+  rw [PanToCrepContextExact.toProduction_eids_lookup]
+  simp [sample, e, HolFiniteMapExact.update, HolFiniteMapExact.empty, FUPDATE]
+
+example : Flapjack.Pancake.PanLang.NameRanged (toStringOfBytes p) :=
+  PanToCrepContextExact.toProduction_key_nameRanged p
+
+example : sample.toProduction.vmax = sample.vmax := rfl
 
 example : PanToCrepContextExact.ofBroad
     (PanToCrepContextExact.toBroad sample) = sample :=

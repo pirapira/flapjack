@@ -387,6 +387,27 @@ def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
       { state.toExact with locals := resVarHOLExact state.toExact.locals entry } := by
   simp only [PanSemStateFiniteExact.toExact, lookup_resVarEq_toExact]
 
+/-- A finite-support plain `locals` record update is compatible with the broad
+    exact one.  This bridges the `Call`/`DecCall` caller-locals restore. -/
+@[simp] theorem toExact_setLocals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    (locals : HolFiniteMapExact MlS (ValueHOL width)) :
+    ({ state with locals := locals } : PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := locals.lookup } := by
+  cases state
+  rfl
+
+/-- A combined finite `locals`/`clock` record update is compatible with the broad
+    exact one.  This bridges the `Call`/`DecCall` entry state. -/
+@[simp] theorem toExact_setLocals_clock {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    (locals : HolFiniteMapExact MlS (ValueHOL width)) (clock : Nat) :
+    ({ state with locals := locals, clock := clock } :
+        PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := locals.lookup, clock := clock } := by
+  cases state
+  rfl
+
 /-- HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`) over the
     finite-support state carrier.  The body delegates to the exact broad
     evaluator through the canonical translation `toExact`; it does NOT
@@ -696,6 +717,51 @@ theorem evaluateHOLFiniteViaExact_snd_toExact_eq {width : Nat} {σ : Type} [NeZe
     simp only [hp]
   exact ⟨pair, hp, heq, by rw [heq]⟩
 
+/-- FLAPJACK-SPECIFIC helper (not a HOL declaration): the finite-support code
+    lookup.  It wraps `lookupCodeHOLExact`'s callee-local function as a
+    `HolFiniteMapExact`, so the finite evaluator can bind the lookup result in a
+    plain `match` instead of a dependent `match hlookup : ...` (whose equation
+    blocks the projection proofs). -/
+def lookupCodeHOLFinite {width : Nat} [NeZero width]
+    (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (fname : MlS) (values : List (ValueHOL width)) :
+    Option (ProgHOL width × HolFiniteMapExact MlS (ValueHOL width) × ShapeHOL) :=
+  match h : lookupCodeHOLExact code fname values with
+  | none => none
+  | some (body, calleeLocals, returnShape) =>
+      some (body,
+        { lookup := calleeLocals,
+          finiteSupport := lookupCodeHOLExact_calleeLocals_finiteSupport
+            code fname values body calleeLocals returnShape h },
+        returnShape)
+
+/-- `lookupCodeHOLFinite` fails exactly when the underlying HOL lookup fails. -/
+theorem lookupCodeHOLFinite_eq_none_iff {width : Nat} [NeZero width]
+    (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (fname : MlS) (values : List (ValueHOL width)) :
+    lookupCodeHOLFinite code fname values = none ↔
+      lookupCodeHOLExact code fname values = none := by
+  unfold lookupCodeHOLFinite
+  split <;> simp_all
+
+/-- A successful `lookupCodeHOLFinite` forgets to the underlying HOL lookup
+    result (the callee map is projected through `.lookup`). -/
+theorem lookupCodeHOLFinite_eq_some {width : Nat} [NeZero width]
+    (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (fname : MlS) (values : List (ValueHOL width)) (body : ProgHOL width)
+    (callee : HolFiniteMapExact MlS (ValueHOL width)) (returnShape : ShapeHOL)
+    (h : lookupCodeHOLFinite code fname values = some (body, callee, returnShape)) :
+    lookupCodeHOLExact code fname values = some (body, callee.lookup, returnShape) := by
+  unfold lookupCodeHOLFinite at h
+  split at h
+  · simp at h
+  · rename_i heq
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨hb, hcallee, hrs⟩ := h
+    rw [hb, hrs] at heq
+    subst hcallee
+    simpa using heq
+
 /-- FLAPJACK-SPECIFIC evaluation context threading the decidability of the two
     address-domain predicates through the recursive finite evaluator.  Mirroring
     `PanSemExactEvalContext`, this is required because a recursive result state
@@ -863,15 +929,13 @@ def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width
           match evalListHOLFinite state arguments with
           | none => some (some .error, context)
           | some values =>
-              match hlookup : lookupCodeHOLExact state.code.lookup function values with
+              match lookupCodeHOLFinite state.code.lookup function values with
               | none => some (some .error, context)
-              | some (body, calleeLocals, returnShape) =>
+              | some (body, callee, returnShape) =>
                   if state.clock = 0 then
                     some (some .timeOut,
                       context.withState (emptyLocalsHOLFinite state) rfl rfl)
                   else
-                    let callee : HolFiniteMapExact MlS (ValueHOL width) :=
-                      { lookup := calleeLocals, finiteSupport := lookupCodeHOLExact_calleeLocals_finiteSupport state.code.lookup function values body calleeLocals returnShape hlookup }
                     let entry : PanSemStateFiniteExact width σ := { state with clock := state.clock - 1, locals := callee }
                     let entryContext := context.withState entry rfl rfl
                     match evalPanSemRecursiveCallFiniteContext body entryContext with
@@ -936,15 +1000,13 @@ def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width
           match evalListHOLFinite state arguments with
           | none => some (some .error, context)
           | some values =>
-              match hlookup : lookupCodeHOLExact state.code.lookup function values with
+              match lookupCodeHOLFinite state.code.lookup function values with
               | none => some (some .error, context)
-              | some (body, calleeLocals, returnShape) =>
+              | some (body, callee, returnShape) =>
                   if state.clock = 0 then
                     some (some .timeOut,
                       context.withState (emptyLocalsHOLFinite state) rfl rfl)
                   else
-                    let callee : HolFiniteMapExact MlS (ValueHOL width) :=
-                      { lookup := calleeLocals, finiteSupport := lookupCodeHOLExact_calleeLocals_finiteSupport state.code.lookup function values body calleeLocals returnShape hlookup }
                     let entry : PanSemStateFiniteExact width σ := { state with clock := state.clock - 1, locals := callee }
                     let entryContext := context.withState entry rfl rfl
                     match evalPanSemRecursiveCallFiniteContext body entryContext with

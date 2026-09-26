@@ -11645,12 +11645,30 @@
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_swap_memaddrs",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsSwapMemaddrsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "Codex (direct source comparison, 2026-09-26, bead flapjack-4ac.4.99; panPropsScript.sml:1718): quantifier order is state, declaration program, successful result state, replacement memaddrs. The premise is successful evaluate_decls and HOL set inclusion of the original state's address domain in the replacement domain, rendered pointwise for Lean's predicate-valued domain. The conclusion changes only memaddrs in the initial and successful result states. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and same-module canonical roundtrip witness. The PanProps state has a field-for-field roundtrip codec to PanSemStateFiniteExact, and evaluateDeclsPanPropsHOLFinite_toCanonical kernel-checks equality of the full Option result (including none and mapped successful states) with canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite. The proof uses the source-reviewed evaluateDeclsPanPropsMemaddrsMono induction and evalSwapMemaddrs on initializer expressions; the evaluator's Name, Decl, Function, and ExnDecl clauses agree with panSemScript.sml:814-837. [NeZero width] and DecidablePred memaddrs are Lean evidence for HOL's nonempty word index and executable word-set membership. The qualifier records only the four finite-map carriers."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "evaluate_decls_swap_memory",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
     "lean_name": "evaluateDeclsSwapMemoryHOLFinite",
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "flapjack-luna-b (direct source comparison, bead flapjack-4ac.4.101.1; panPropsScript.sml:1750-1763): quantifier order is state, declaration program, successful result state, replacement memory. The premise is the exact conjunction of successful evaluate_decls and pointwise equality of old/replacement memories on the original state.memaddrs domain; the conclusion replaces only memory in the initial state and in the successful result. The proof uses the tagged evalSwapMemoryHOLFinite on each Decl expression, then induction over the HOL evaluate_decls clauses. Its local finite-support evaluator is an untagged PanProps adapter whose full Option result is kernel-checked equivalent via evaluateDeclsPanPropsHOLFinite_toExact to established evaluateDeclsHOLExact; the actual tagged PanSem evaluate_decls_def counterpart remains open as flapjack-4ac.3.53. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and same-module canonical witness; the qualifier records only those four HOL maps. [NeZero width]/DecidablePred retain the existing HOL word/set rendering."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "evaluate_decls_swap_locals",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean",
+    "lean_name": "evaluateDeclsSwapLocalsHOLFinite",
+    "statement_status": "reviewed_fmap_as_finite_support",
+    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
+    "reviewer": "Codex (direct source comparison, 2026-09-26, bead flapjack-4ac.4.95; panPropsScript.sml:1645): quantifier order is state, declaration program, successful result state, replacement locals. The premise is successful evaluate_decls and the conclusion evaluates from the state with only locals replaced, returning the successful result with only locals replaced. PanPropsEvalStateFiniteExact owns the four HolFiniteMapExact fields and same-module canonical roundtrip witness. The PanProps state has a field-for-field roundtrip codec to PanSemStateFiniteExact, and evaluateDeclsPanPropsHOLFinite_toCanonical kernel-checks equality of the full Option result (including none and mapped successful states) with canonical tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite. Its Decl clause clears locals before evaluating the initializer; Name, Function, and ExnDecl preserve locals while making the same checks and updates as the source. The qualifier records only the four HOL finite-map carriers. [NeZero width] and DecidablePred memaddrs retain the current positive-width and word-set evidence."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",

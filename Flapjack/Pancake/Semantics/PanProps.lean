@@ -50,7 +50,24 @@ carrier also admits holes, whereas HOL `llist` values are prefix-shaped; the
 repository has no reviewed qualifier/witness for translating HOL `llist` to
 this carrier. Both the choice boundary and carrier translation are tracked by
 `flapjack-4ac.4.105.2`; the dependent wrapper port is
-`flapjack-4ac.4.105.1`. -/
+`flapjack-4ac.4.105.1`.
+
+The direct HOL probe in `scripts/hol-probes/loop_sem_lprefix_lub_probe.out`
+sharpens the choice boundary: the empty family reduces to `NONE`; singleton
+and prefix-chain inputs expose their forced heads, while the tail remains a
+`LUNFOLD` expression containing `build_lprefix_lub_f`; for conflicting
+families, EVAL leaves the selected event under the same opaque choice
+expression. Thus the probe cannot provide a deterministic event value to
+translate for a non-chain family. `build_lprefix_lub_thm` only proves the
+least-upper-bound property when the input family satisfies `lprefix_chain`.
+Since `semantics_wrapper_def` accepts arbitrary `f` and does not supply that
+premise, a Lean `Classical.choose` result cannot be claimed equal to HOL's
+independently selected result. A relational choice model could describe the
+possible outputs, but it would change the deterministic result carrier and
+would not be an exact executable definition. Keep the generic wrapper
+untagged and its faithful port open until a source-reviewed HOL `llist` and
+choice correspondence is available; the existing chain-specific
+`buildLoopLprefixLub` remains limited to its explicit chain contract. -/
 
 /-! Source review for HOL `semantics_wrapper_eq`
 (`panPropsScript.sml:1831-1929`): the theorem is generic in arbitrary abstract

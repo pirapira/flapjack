@@ -224,6 +224,63 @@ structure CrepSemHOLState (width : Nat) [NeZero width] (ffiState : Type) where
   baseAddr : BitVec width
   topAddr : BitVec width
 
+/-- Exact executable port of CakeML Pancake `crepSem$eval_def`
+(`cakeml/pancake/semantics/crepSemScript.sml:90-137`).  It evaluates the
+exact `CrepExpHOL` syntax over the faithful `HolWordLab` result and the
+`CrepSemHOLState` carrier.  The finite-map qualifier names only `locals` and
+`globals`, the fields read with HOL `FLOOKUP`; the `code` map is not read by
+expression evaluation.  The positive-width `BitVec` model represents HOL's
+nonempty finite word dimension.  `HolWordLab` has only `Word`, so HOL's
+`EVERY isWord` guard is always true for values produced here. -/
+@[hol "cakeml/pancake/semantics/crepSemScript.sml" "eval_def"
+  (fmap_as_finite_support := [locals, globals])]
+def evalCrepSemHOLExp {width : Nat} [NeZero width] {ffiState : Type}
+    (state : CrepSemHOLState width ffiState) [DecidablePred state.memaddrs] :
+    CrepExpHOL width → Option (HolWordLab width)
+  | .const value => some (.word value)
+  | .var name => state.locals.lookup name
+  | .load address => do
+      let address ← evalCrepSemHOLExp state address
+      match address with
+      | .word word =>
+          if state.memaddrs word then some (state.memory word) else none
+  | .load32 address => do
+      let address ← evalCrepSemHOLExp state address
+      match address with
+      | .word word =>
+          (panMemLoad32HOL state.memory state.memaddrs state.be word).map
+            (fun value => .word (BitVec.ofNat width value.toNat))
+  | .loadByte address => do
+      let address ← evalCrepSemHOLExp state address
+      match address with
+      | .word word =>
+          (panMemLoadByteHOL state.memory state.memaddrs state.be word).map
+            (fun value => .word (BitVec.ofNat width value.toNat))
+  | .loadGlob address => state.globals.lookup address
+  | .op operator args => do
+      let values ← args.mapM (evalCrepSemHOLExp state)
+      (wordOpHOL operator (values.map (fun value =>
+        match value with | .word word => word))).map HolWordLab.word
+  | .crepOp operator args => do
+      let values ← args.mapM (evalCrepSemHOLExp state)
+      (crepOpCrepWord operator (values.map (fun value =>
+        match value with | .word word => word))).map HolWordLab.word
+  | .cmp operator left right => do
+      let left ← evalCrepSemHOLExp state left
+      let right ← evalCrepSemHOLExp state right
+      match left, right with
+      | .word left, .word right =>
+          some (.word (Compiler.Encoders.Asm.wordCmpResultHOL operator left right))
+  | .shift operator left right => do
+      let left ← evalCrepSemHOLExp state left
+      let right ← evalCrepSemHOLExp state right
+      match left, right with
+      | .word left, .word right =>
+          (wordShiftHOL operator left right.toNat).map HolWordLab.word
+  | .baseAddr => some (.word state.baseAddr)
+  | .topAddr => some (.word state.topAddr)
+termination_by expression => sizeOf expression
+
 /-- Broad (unrestricted) counterpart of `CrepSemHOLState`: the three map fields
 are plain lookup functions, a strict superset of HOL's finite maps. It exists
 only to state the canonical finite-map translation witness

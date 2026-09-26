@@ -655,6 +655,25 @@ theorem evalPanSemRecursiveCallFiniteContext_extCall_projection {width : Nat} {�
   simp only [Option.map_some, FiniteEvalContext.withState_state,
     PanSemExactEvalContext.withState_state, toExact_ofExact]
 
+/-- Projection equivalence on `Tick` (see `..._skip_projection`). -/
+theorem evalPanSemRecursiveCallFiniteContext_tick_projection {width : Nat} {σ : Type}
+    [NeZero width] (context : FiniteEvalContext width σ) :
+    (evalPanSemRecursiveCallFiniteContext (.tick : ProgHOL width) context).map
+        (fun pair => (pair.1, pair.2.state.toExact)) =
+      (evalPanSemRecursiveCallContextHOLExact (.tick : ProgHOL width)
+        { state := context.state.toExact
+          memaddrsDecidable := context.memaddrsDecidable
+          shMemaddrsDecidable := context.shMemaddrsDecidable }).map
+        (fun pair => (pair.1, pair.2.state)) := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_def,
+    evalPanSemRecursiveCallContextHOLExact.eq_def]
+  dsimp only
+  by_cases hclock : context.state.clock = 0
+  · rw [if_pos hclock, if_pos hclock]
+    rfl
+  · rw [if_neg hclock, if_neg hclock]
+    rfl
+
 end PanSemStateFiniteExact
 
 end Flapjack

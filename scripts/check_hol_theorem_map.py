@@ -1412,6 +1412,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Pancake/PanLang/Decl.lean", "sizeOfEidsHOL"),
         ("Flapjack/Pancake/PanLang/Decl.lean", "inlinableHOL"),
         ("Flapjack/Pancake/PanLang/Prog.lean", "funIdsHOL"),
+        ("Flapjack/Pancake/PanLang/Exp.lean", "shapeValHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

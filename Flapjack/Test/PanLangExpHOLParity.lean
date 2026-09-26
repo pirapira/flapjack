@@ -130,4 +130,21 @@ example : expOfHOL (expToHOL (Exp.nField "foo" (Exp.const (7 : BitVec 64)))) =
     Exp.nField "foo" (Exp.const (7 : BitVec 64)) :=
   expOfHOL_expToHOL _ (by simp [ExpByteRanged])
 
+/-! ### `panLang$shape_val` parity (bead `flapjack-4ac.1.29`)
+
+The rows reproduce `scripts/hol-probes/pan_lang_shape_val_probe.out`:
+`shape_val One = Const 0w`, `shape_val (Comb [...]) = RStruct [...]` with one
+zero word per component, and `shape_val (Named _) = Const 0w`. -/
+
+example : shapeValHOL (width := 64) (ShapeHOL.one) =
+    (ExpHOL.const 0 : ExpHOL 64) := by simp [shapeValHOL]
+
+example : shapeValHOL (width := 64)
+      (ShapeHOL.comb [ShapeHOL.one, ShapeHOL.named (ofString "n"), ShapeHOL.one]) =
+    (ExpHOL.rstruct [ExpHOL.const 0, ExpHOL.const 0, ExpHOL.const 0] :
+      ExpHOL 64) := by simp [shapeValHOL]
+
+example : shapeValHOL (width := 64) (ShapeHOL.named (ofString "n")) =
+    (ExpHOL.const 0 : ExpHOL 64) := by simp [shapeValHOL]
+
 end Flapjack.Test.PanLangExpHOLParity

@@ -2297,6 +2297,14 @@
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shape_val_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Exp.lean",
+    "lean_name": "shapeValHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds6 (source comparison, bead flapjack-4ac.1.29): HOL shape_val (cakeml/pancake/panLangScript.sml:190-196) is the mutual shape_val/shape_vals pair: shape_val One = Const 0w, shape_val (Comb shapes) = RStruct (shape_vals shapes), shape_val (Named nm) = Const 0w, with shape_vals the list map. shapeValHOL/shapeValsHOL match clause-for-clause over the exact ShapeHOL/ExpHOL carriers, and shapeValsHOL_eq_map records that shape_vals is the list map. Direct HOL-EVAL rows one/comb/named in scripts/hol-probes/pan_lang_shape_val_probe.out are replayed on the exact carrier in Flapjack/Test/PanLangExpHOLParity.lean. The kernel-checked expOfHOL_shapeValHOL (Flapjack/PanValues.lean) bridges to the executed production shapeVal through expOfHOL/shapeOfHOL; production shapeVal stays untagged."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "load_op_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/Compile.lean",
     "lean_name": "loadMemOpHOL",

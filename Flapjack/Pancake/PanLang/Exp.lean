@@ -476,4 +476,41 @@ decreasing_by
        have hlt := List.sizeOf_lt_of_mem mem
        omega)
 
+/-! ### Exact panLang$shape_val -/
+
+mutual
+  /-- Exact port of HOL `panLang$shape_val`
+  (`cakeml/pancake/panLangScript.sml:190`): the canonical zero-valued
+  expression of a shape.  A scalar and a named shape both give the zero word;
+  a combination gives a record of the component expressions.  Mirrors the HOL
+  mutual definition with `shape_vals`. -/
+  @[hol "cakeml/pancake/panLangScript.sml" "shape_val_def"]
+  def shapeValHOL {width : Nat} [NeZero width] : ShapeHOL → ExpHOL width
+    | .one => .const 0
+    | .comb shapes => .rstruct (shapeValsHOL shapes)
+    | .named _ => .const 0
+  termination_by shape => sizeOf shape
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  /-- Exact port of HOL `panLang$shape_vals` (the list clause of
+  `shape_val_def`, `cakeml/pancake/panLangScript.sml:194`). -/
+  def shapeValsHOL {width : Nat} [NeZero width] :
+      List ShapeHOL → List (ExpHOL width)
+    | [] => []
+    | shape :: shapes => shapeValHOL shape :: shapeValsHOL shapes
+  termination_by shapes => sizeOf shapes
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+end
+
+/-- HOL `shape_vals` is the list map of `shape_val`; this records that the
+Lean mutual pair realizes the two HOL clauses. -/
+@[simp] theorem shapeValsHOL_eq_map {width : Nat} [NeZero width]
+    (shapes : List ShapeHOL) :
+    shapeValsHOL shapes = shapes.map (shapeValHOL (width := width)) := by
+  induction shapes with
+  | nil => simp [shapeValsHOL]
+  | cons shape shapes ih => simp [shapeValsHOL, ih]
+
 end Flapjack.Pancake.PanLang

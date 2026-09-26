@@ -366,6 +366,20 @@ theorem PanSemStateExact.finiteSupport_setClock {width : Nat} {σ : Type} [NeZer
     ({ state with clock := clock } : PanSemStateExact width σ).FiniteSupport := by
   simpa [PanSemStateExact.FiniteSupport] using h
 
+/-- The recursive `Call` branch builds its entry state by replacing `locals`
+    with the `Zipped` callee locals and decrementing `clock`. Only the map
+    fields `locals`/`globals`/`code`/`eshapes` matter for finite support, so the
+    entry state is finite-support whenever the caller state is and the callee
+    locals have finite support. -/
+theorem PanSemStateExact.finiteSupport_setLocals_clock {width : Nat} {σ : Type}
+    [NeZero width] (state : PanSemStateExact width σ)
+    (locals : MlS → Option (ValueHOL width)) (clock : Nat)
+    (hl : ∃ keys : List MlS, ∀ key, locals key ≠ none → key ∈ keys)
+    (h : state.FiniteSupport) :
+    ({ state with locals := locals, clock := clock } : PanSemStateExact width σ).FiniteSupport := by
+  obtain ⟨_, hg, hc, he⟩ := h
+  exact ⟨hl, hg, hc, he⟩
+
 /-- The Zipped `lookup_code` locals map has finite support. -/
 theorem lookupCodeHOLExact_calleeLocals_finiteSupport {width : Nat} [NeZero width]
     (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))

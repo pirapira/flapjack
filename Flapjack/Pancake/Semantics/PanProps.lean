@@ -86,6 +86,22 @@ equality and receives no tag. The faithful theorem port is tracked by
 in `flapjack-4ac.4.105.1` and the exact PanSem semantics port
 `flapjack-4ac.3.52.2`. -/
 
+/-! Source review for HOL `io_events_eq_imp_ffi_eq`
+(`panPropsScript.sml:974-1019`): its quantified variables are `p`, `s`, `res`,
+and `t`; the premises are `evaluate (p,s) = (res,t)` and equality of the
+initial and final `ffi.io_events` lists, and the conclusion is equality of the
+entire final and initial `ffi_state` records. The Lean `HolFfiState` carrier
+preserves HOL's oracle, host-state, and event-list fields, and
+`PanSemStateFiniteExact` contains that exact carrier. The available executable
+`evaluateHOLFinite` interface adds an outer `Option` and returns the exact
+result/state pair through the recursive finite evaluator; there is not yet a
+kernel-checked induction theorem over that evaluator proving that equal event
+lists force equality of both the oracle and host-state fields in every Call,
+DecCall, ExtCall, and shared-memory branch. No similar event-prefix lemma is
+tagged as this theorem. The faithful theorem port is tracked by
+`flapjack-4ac.4.51.1`; it must state the same successful-evaluation and
+event-equality premises and prove equality of the complete `HolFfiState`. -/
+
 /-! Source review for HOL `semantics_decls_has_main'`
 (`panPropsScript.sml:1628-1638`): HOL assumes
 `semantics_decls s start code <> Fail` and proves that

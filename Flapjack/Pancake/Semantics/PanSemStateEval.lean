@@ -416,7 +416,8 @@ mutual
       (memory : RiscV.Word width → HolWordLab width) (structs : StructContextHOL) :
       Option (HolValue width) :=
     match shape with
-    | .one => if domain address then some (.val (memory address)) else none
+    | .one => if domain address then
+        some (.val (HolWordLab.toPanWordLab (memory address))) else none
     | .comb shapes =>
         match panMemLoadsHOL shapes address domain memory structs with
         | some values => some (.rStruct values)
@@ -992,7 +993,7 @@ theorem panMemLoadHOL_named_some (name : StructName) (structs : StructContext)
     production-side helpers. -/
 
 theorem HolValue.toPanValue_val {width : Nat} (bits : RiscV.Word width) :
-    HolValue.toPanValue (width := width) (HolValue.val (HolWordLab.word bits)) =
+    HolValue.toPanValue (width := width) (HolValue.val (PanWordLab.word bits)) =
       PanValue.word bits := by
   rw [HolValue.toPanValue]
 
@@ -1383,7 +1384,7 @@ def panOpHOL {width : Nat} [NeZero width] (operator : PanOp) (values : List (Ris
     (`cakeml/pancake/semantics/panSemScript.sml:44-62`).  The fields are the
     source state components; `memaddrs`/`shMemaddrs` render the HOL word sets
     as predicates. -/
-structure PanSemHolState (width : Nat) (σ : Type) where
+structure PanSemHolState (width : Nat) (σ : Type) [NeZero width] where
   locals : VarName → Option (HolValue width)
   globals : VarName → Option (HolValue width)
   structs : StructContextHOL
@@ -1934,7 +1935,7 @@ theorem evalPanValueExp_op_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq St
             (fun values => Option.map PanValue.word (access.wordOp operator values)))
         = Option.map HolValue.toPanValue
             (if hvs.all holValueIsWord = true then
-              Option.map (fun word => HolValue.val (HolWordLab.word word))
+              Option.map (fun word => HolValue.val (PanWordLab.word word))
                 (wordOpHOL operator (List.map holValueWord hvs))
             else none)
       rw [Option.bind_some]
@@ -1945,7 +1946,7 @@ theorem evalPanValueExp_op_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq St
         rw [hwordOp]
         change Option.map PanValue.word (wordOpHOL operator (hvs.map holValueWord))
           = Option.map HolValue.toPanValue
-              (Option.map (fun word => HolValue.val (HolWordLab.word word))
+              (Option.map (fun word => HolValue.val (PanWordLab.word word))
                 (wordOpHOL operator (hvs.map holValueWord)))
         rw [Option.map_map]
         congr 1
@@ -2038,7 +2039,7 @@ theorem evalPanValueExp_panOp_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq
                                     Option.map_some]
                                   simp
                                   rw [show (HolValue.toPanValue ∘
-                                        fun (w : RiscV.Word width) => HolValue.val (HolWordLab.word w))
+                                        fun (w : RiscV.Word width) => HolValue.val (PanWordLab.word w))
                                       = (fun w => PanValue.word w) from by
                                     funext w
                                     exact HolValue.toPanValue_val w]
@@ -2143,7 +2144,7 @@ theorem evalPanValueExp_shift_eq_evalHOL {width : Nat} [NeZero width] [LawfulBEq
                       cases w2 with
                       | word rw =>
                           simp [hshift]
-                          rw [show (HolValue.toPanValue ∘ fun word => HolValue.val (HolWordLab.word word))
+                          rw [show (HolValue.toPanValue ∘ fun word => HolValue.val (PanWordLab.word word))
                               = (fun word => PanValue.word word) from by
                                 funext word
                                 exact HolValue.toPanValue_val word]
@@ -2194,7 +2195,7 @@ theorem evalPanValueExp_load32_eq_evalHOL {width : Nat} [NeZero width] [LawfulBE
               change Option.map PanValue.word (access.read32 access.domain memory bytesInWord bits)
                 = Option.map HolValue.toPanValue
                     (Option.map (fun (value : RiscV.Word 32) =>
-                        HolValue.val (HolWordLab.word (BitVec.ofNat width value.toNat)))
+                        HolValue.val (PanWordLab.word (BitVec.ofNat width value.toNat)))
                       (panMemLoad32HOL state.memory state.memaddrs state.be bits))
               rw [hread bits]
               rw [Option.map_map]
@@ -2235,7 +2236,7 @@ theorem evalPanValueExp_loadByte_eq_evalHOL {width : Nat} [NeZero width] [Lawful
               change Option.map PanValue.word (access.readByte access.domain memory bytesInWord bits)
                 = Option.map HolValue.toPanValue
                     (Option.map (fun (byte : UInt8) =>
-                        HolValue.val (HolWordLab.word (BitVec.ofNat width byte.toNat)))
+                        HolValue.val (PanWordLab.word (BitVec.ofNat width byte.toNat)))
                       (panMemLoadByteHOL state.memory state.memaddrs state.be bits))
               rw [hread bits]
               rw [Option.map_map]
@@ -2676,7 +2677,7 @@ def nbOpHOL : OpSize → Nat
 `varname` is `mlstring` whereas the Lean state uses `VarName = String`. The
 `@[hol]` tag is therefore withheld; an exact port keyed by `MlString` is tracked
 by the dependency bead `flapjack-pxn.18.4.3.77.8.1`. -/
-def lookupKvarHOL {width : Nat} (kind : VarKind) (name : VarName)
+def lookupKvarHOL {width : Nat} [NeZero width] (kind : VarKind) (name : VarName)
     (state : PanSemHolState width σ) : Option (HolValue width) :=
   match kind with
   | .local => state.locals name
@@ -2687,7 +2688,7 @@ def lookupKvarHOL {width : Nat} (kind : VarKind) (name : VarName)
 `varname` is `mlstring`, Lean `VarName` is `String`). The `@[hol]` tag is
 therefore withheld; an exact port keyed by `MlString` is tracked by the
 dependency bead `flapjack-pxn.18.4.3.77.8.1`. -/
-def setKvarHOL {width : Nat} (kind : VarKind) (name : VarName)
+def setKvarHOL {width : Nat} [NeZero width] (kind : VarKind) (name : VarName)
     (value : HolValue width) (state : PanSemHolState width σ) : PanSemHolState width σ :=
   match kind with
   | .local =>

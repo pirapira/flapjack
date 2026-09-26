@@ -499,7 +499,7 @@ example :
 
 /-- Equation lemmas of the exact-HOL `HolValue.toPanValue` isomorphism. -/
 example :
-    HolValue.toPanValue (width := 64) (HolValue.val (HolWordLab.word (7 : RiscV.Word 64))) =
+    HolValue.toPanValue (width := 64) (HolValue.val (PanWordLab.word (7 : RiscV.Word 64))) =
       PanValue.word (7 : RiscV.Word 64) :=
   HolValue.toPanValue_val (7 : RiscV.Word 64)
 
@@ -510,11 +510,11 @@ example :
 
 example :
     HolValue.toPanValue (width := 64)
-        (HolValue.nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]) =
+        (HolValue.nStruct "S" [("f", HolValue.val (PanWordLab.word (7 : RiscV.Word 64)))]) =
       PanValue.nStruct "S" [("f", PanValue.word (7 : RiscV.Word 64))] :=
   by
     simpa [HolValue.toPanValue_val] using
-      HolValue.toPanValue_nStruct "S" [("f", HolValue.val (HolWordLab.word (7 : RiscV.Word 64)))]
+      HolValue.toPanValue_nStruct "S" [("f", HolValue.val (PanWordLab.word (7 : RiscV.Word 64)))]
 
 /-- Fuel-indexed Comb/List/Fields/Named equivalence with the tagged exact `mem_load_def`
 port, extracted from the conjunction produced by the mutual fuel induction. -/

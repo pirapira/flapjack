@@ -1400,6 +1400,23 @@ DOCUMENTED_MISMATCHES = {
         "inline-map carrier flapjack-e7w.1 and open epic flapjack-e7w.2 for the "
         "full compile_inl_top and production-inliner port."
     ),
+    ("Flapjack/Pancake/Proofs/PanToCrep/CompileProgParams.lean", "compileProgTopHOL_params_nodup"): (
+        "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
+        "compile_prog_distinct_params",
+        "flapjack-luna-b (source comparison, 2026-09-26; follow exact "
+        "compile_prog carrier work flapjack-4ac.2.20; FLAPJACK-SPECIFIC, "
+        "documented_mismatch). HOL compile_prog_distinct_params "
+        "(pan_to_crepProofScript.sml:4684-4691) quantifies over the positive-"
+        "width word-indexed HOL program and concludes about exact "
+        "compile_prog triples (mlstring names, CrepProgHOL bodies). Lean "
+        "compileProgTopHOL_params_nodup instead quantifies over production "
+        "Decl (BitVec width), String names, production Shape/Prog, and concludes "
+        "about production String/CrepProg output; its unrestricted width also "
+        "admits BitVec 0. The proposition's parameter-slot result is useful, "
+        "but these input/output carriers and width domain are not authorized by "
+        "a qualifier. Remove the HOL tag until the statement is ported over "
+        "DeclHOL and exact compile_prog."
+    ),
 }
 VALID_STATUSES = {
     "reviewed_exact",

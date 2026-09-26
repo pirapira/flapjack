@@ -1,4 +1,5 @@
 lookup_code_nonempty_success=T
+lookup_code_wf_shape_invariant_step_success=T
 lookup_code_missing_function=T
 lookup_code_wrong_arity=T
 lookup_code_wrong_shape=T

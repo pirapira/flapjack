@@ -813,6 +813,16 @@ theorem evalPanSemRecursiveCallFiniteContext_seq_projection {width : Nat} {σ : 
           simp only [Option.map_some]
           congr 1
 
+/-- Alignment helper: `evalHOLExact` on `context.toExact` agrees with
+    `evalHOLExact` on `context.state.toExact` (same instance).  Flapjack-specific. -/
+theorem evalHOLExact_toExact_eq {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (expression : ExpHOL width) :
+    @Flapjack.evalHOLExact width σ _ context.toExact.state context.toExact.memaddrsDecidable
+        expression =
+      @Flapjack.evalHOLExact width σ _ context.state.toExact context.memaddrsDecidable
+        expression :=
+  rfl
+
 end PanSemStateFiniteExact
 
 end Flapjack

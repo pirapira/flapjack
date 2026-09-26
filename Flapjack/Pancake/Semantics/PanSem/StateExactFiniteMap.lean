@@ -829,6 +829,22 @@ def toExact {width : Nat} {σ : Type} [NeZero width]
   cases context
   rfl
 
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): the finite `Call`/`DecCall` entry
+    context (entry state `{ state with clock := state.clock - 1, locals := callee }`)
+    projects to the broad exact entry context.  This names the otherwise head-only
+    let-bound `entryContext` occurrence so the `Call`/`DecCall` projection proofs
+    can rewrite it without touching the evaluator or its `decreasing_by`. -/
+@[simp] theorem toExact_callEntryContext {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ)
+    (callee : HolFiniteMapExact MlS (ValueHOL width)) :
+    (context.withState
+        ({ context.state with clock := context.state.clock - 1, locals := callee } :
+          PanSemStateFiniteExact width σ) rfl rfl).toExact =
+      context.toExact.withState
+        ({ context.state.toExact with clock := context.state.clock - 1, locals := callee.lookup } : PanSemStateExact width σ) rfl rfl := by
+  cases context
+  rfl
+
 /-- FLAPJACK-SPECIFIC (not a HOL declaration): a finite evaluation context is
     determined by its state; the two `DecidablePred` fields are proof-irrelevant
     for the respective (transported) predicates.  Used to compare contexts built

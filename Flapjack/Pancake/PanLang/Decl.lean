@@ -190,6 +190,14 @@ def isExnDeclHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
   | .exnDecl _ _ => true
   | _ => false
 
+/-- Exact port of HOL `panLang$is_name` (`panLangScript.sml:244-247`):
+`is_name (Name _ _) = T`, `is_name _ = F`, over the same reviewed word-indexed
+`DeclHOL width` carrier as the sibling `is_decl`/`is_exn_decl` ports. -/
+@[hol "cakeml/pancake/panLangScript.sml" "is_name_def"]
+def isNameHOL {width : Nat} [NeZero width] : DeclHOL width → Bool
+  | .name _ _ => true
+  | _ => false
+
 /-- Exact port of HOL `panLang$is_function` (`panLangScript.sml:314-317`):
 `is_function (Function _) = T`, `is_function _ = F`, over the same reviewed
 `DeclHOL width` carrier. -/

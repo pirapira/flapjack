@@ -14,6 +14,11 @@ The recursive evaluator cases at width 24 are also checked against direct
 `crep_eval_load_32_probe.out` (`crepSemScript.sml:90-137`). The source-shaped
 runtime agrees with those rows. The production RISC-V runtime adapter returns
 `none` for the same addresses because its byte alignment differs at width 24.
+The shipped `flapjack-compile` entry paths instantiate width 64 and target
+`rv64i` in `Flapjack/CompileMain.lean:96,108,120`; therefore the width-24
+counterexample is for the generic production evaluator adapter, not a CLI-
+reachable compiler configuration. The RV64 load cases below remain checked
+against the direct Crep HOL observations.
 
 The probe uses a little-endian 64-bit word cell at byte address 8. Pancake
 rejects the unaligned 32-bit load at address 9 and reads the four bytes at

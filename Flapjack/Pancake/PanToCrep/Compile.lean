@@ -755,26 +755,55 @@ theorem panToCrepMakeFuncs_eq_map (declarations : List (Decl α)) :
       cases declaration <;>
         simp [panToCrepMakeFuncs, functionEntries, ih]
 
-/-! Source-shaped port (Flapjack-specific; NOT an exact HOL port) of CakeML's
-    `crep_vars_def` (`pan_to_crepScript.sml:376-380`).  The Crepe function
-    interface exposes one consecutive slot for every flattened parameter word,
-    matching HOL's `GENLIST I (size_of_shape (Comb (MAP SND params)))` through
-    `List.range` and the production `Shape.shapeSize` fold. -/
--- FLAPJACK-SPECIFIC (not an exact HOL port). Two carrier mismatches beyond a
--- name representation: (1) `params : List (VarName × Shape)` uses `VarName` =
--- `String`, while HOL takes `(varname # shape) list` with `varname` =
--- `mlstring`; (2) the shape carrier is the production `Shape`
--- (`named : StructName` = `String`) folded by the untagged `Shape.shapeSize`,
--- not HOL's `shape` (`named : mlstring`) folded by `sizeOfShapeHOL`
--- (`@[hol ... "size_of_shape_def"]`, `PanLang/Shape.lean`).  The
--- `names_as_string` qualifier cannot cover the second difference, so the tag
--- stays withdrawn.  No exact-carrier `crep_vars` exists yet; the faithful port
--- is tracked by `flapjack-pxn.18.3.5.8` (parent `flapjack-pxn.18.3.5.7.2`).
--- Direct HOL-oracle-derived rows are exercised by `Test/CompileToCrepeParity.lean`
--- (`crepVarsOracle`).  This production analogue remains useful to the executed
--- compiler and is deliberately untagged.
+/-! Exact port of HOL `pan_to_crep$crep_vars`
+    (`cakeml/pancake/pan_to_crepScript.sml:376-380`):
+
+```
+crep_vars params =
+  let shapes = MAP SND params;
+      len    = size_of_shape (Comb shapes) in
+      GENLIST I len
+```
+
+HOL infers the polymorphic type `('a # shape) list -> num list`: the first
+component of each parameter pair is never inspected, and `shape` carries no
+word width.  The Lean statement is therefore polymorphic in `α`, and the shape
+carrier is the exact `ShapeHOL` (names are discarded, so no `names_as_string`
+qualifier is needed).  `GENLIST I len` is `List.range len` and
+`size_of_shape (Comb shapes)` is the tagged
+`sizeOfShapeHOL (.comb shapes)` (`@[hol ... "size_of_shape_def"]`,
+`PanLang/Shape.lean`). -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "crep_vars_def"]
+def crepVarsHOL {α : Type}
+    (params : List (α × Flapjack.Pancake.PanLang.ShapeHOL)) : List Nat :=
+  List.range
+    (Flapjack.Pancake.PanLang.sizeOfShapeHOL
+      (.comb (params.map Prod.snd)))
+
+/-! Production `crep_vars` for the executed compiler, routed through the
+    reviewed exact port `crepVarsHOL`: the `String`/`Shape` parameter carrier is
+    encoded by the `shapeToHOL` codec before the slot list is computed.  Direct
+    HOL-oracle-derived rows are exercised by `Test/CompileToCrepeParity.lean`
+    (`crepVarsOracle`). -/
 def panToCrepVars (params : List (VarName × Shape)) : List Nat :=
-  List.range (Shape.shapeSize (.comb (params.map Prod.snd)))
+  crepVarsHOL
+    (params.map fun parameter =>
+      (parameter.1, Flapjack.Pancake.PanLang.shapeToHOL parameter.2))
+
+/-- The routed production definition computes the same consecutive slot list as
+    HOL's `GENLIST I (size_of_shape (Comb (MAP SND params)))` formula.  Names
+    are inert on both sides, so no byte-rangedness hypothesis is needed. -/
+@[simp] theorem panToCrepVars_eq (params : List (VarName × Shape)) :
+    panToCrepVars params =
+      List.range (Shape.shapeSize (.comb (params.map Prod.snd))) := by
+  have hmap :
+      (params.map fun parameter =>
+        (parameter.1, Flapjack.Pancake.PanLang.shapeToHOL parameter.2)).map Prod.snd
+        = (params.map Prod.snd).map Flapjack.Pancake.PanLang.shapeToHOL := by
+    simp [List.map_map, Function.comp_def]
+  simp only [panToCrepVars, crepVarsHOL, hmap,
+    Flapjack.Pancake.PanLang.sizeOfShapeHOL_comb,
+    sizeOfShapesHOL_shapeToHOL, Shape.shapeSize]
 
 /-! Legacy list-backed `pan_to_crep$compile` implementation. It is retained
     for list-context analyses, but is not the exact HOL `compile_def` port:

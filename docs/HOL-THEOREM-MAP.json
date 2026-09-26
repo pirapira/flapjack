@@ -5603,6 +5603,22 @@
     "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.8). HOL `Type index = ``:num``` (panLangScript.sml:33) aliases the natural-number type. Lean `Flapjack.Index` (PanLang.lean, `abbrev Index := Nat`) is the exact alias over the same carrier: no payload, side condition, or representation difference."
   },
   {
+    "hol_path": "cakeml/semantics/astScript.sml",
+    "hol_name": "shift",
+    "lean_path": "Flapjack/AstHOL.lean",
+    "lean_name": "Shift",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-afa). HOL `Datatype shift = Lsl | Lsr | Asr | Ror` (cakeml/semantics/astScript.sml:21) has four nullary constructors in that order. Lean `Flapjack.Shift` (Flapjack/AstHOL.lean) has exactly the constructors `lsl | lsr | asr | ror` in the same order, no payload, width parameter, or side condition; the module is the primary counterpart of cakeml/semantics/astScript.sml. Exact carrier and constructor correspondence."
+  },
+  {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "shift",
+    "lean_path": "Flapjack/Pancake/PanLang.lean",
+    "lean_name": "PanLangShift",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.1). HOL `Type shift = ``:ast$shift``` (panLangScript.sml:19) is a type alias, not a datatype definition. Lean `Flapjack.PanLangShift` (PanLang.lean, `abbrev PanLangShift := Flapjack.Shift`) is a genuine alias to the exact `ast$shift` carrier `Flapjack.Shift` in Flapjack/AstHOL.lean (tagged against astScript.sml:21), so the panLang declaration is recorded as an alias with no new datatype or representation difference."
+  },
+  {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "stcname",
     "lean_path": "Flapjack/Pancake/PanLang.lean",

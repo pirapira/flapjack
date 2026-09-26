@@ -376,5 +376,77 @@ theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes_of_byteRanged (s : Flapja
     Shape.shapeToString s =
       Flapjack.Basis.Pure.MlString.toStringOfBytes (shapeToStrHOL (shapeToHOL s)) :=
   shapeToString_eq_shapeToStrHOL_toStringOfBytes s (shapeByteRanged_shapeToString_bytes s h)
+/-! ### HOL's generated `shape_size` / `shape1_size`
 
+The HOL `Datatype: shape = One | Comb (shape list) | Named stcname`
+(`cakeml/pancake/panLangScript.sml:35-39`) command also generates the datatype
+size functions `shape_size`/`shape1_size` used by `Theorem MEM_IMP_shape_size`
+(lines 131-137).  Those functions are produced by HOL's `Datatype` package
+(`HOL/src/datatype/DataSize.sml`), not written as source declarations, so they
+have no textual HOL name for `scripts/check-hol-refs.py` to resolve and cannot
+carry an `@[hol]` tag.  The equations, printed from a standard-HOL reconstruction
+of the same datatype (identical constructor arities and field types, `char_size`
+from `HOL/src/string/stringScript.sml:179`), are
+
+```
+mlstring_size (implode a) = 1 + list_size char_size a
+shape_size One = 0
+shape_size (Comb a) = 1 + shape1_size a
+shape_size (Named a) = 1 + mlstring_size a
+shape1_size [] = 0
+shape1_size (a0::a1) = 1 + (shape_size a0 + shape1_size a1)
+```
+
+They are transcribed below so that `memImpShapeSizeHOL` has HOL's exact
+statement. -/
+
+/-- HOL `char_size` (`HOL/src/string/stringScript.sml:179`): `char_size c = 0`
+    for every `char`.  Needed only to spell HOL's generated `mlstring_size`. -/
+def holCharSize (_ : Flapjack.Basis.Pure.MlString.HolChar) : Nat := 0
+
+/-- HOL's generated list size: `list_size f [] = 0` and
+    `list_size f (x :: xs) = 1 + f x + list_size f xs`
+    (`HOL/src/list/src/listScript.sml:529-532`). -/
+def listSizeHOL {α : Type} (f : α → Nat) : List α → Nat
+  | [] => 0
+  | x :: xs => 1 + f x + listSizeHOL f xs
+
+/-- HOL's generated `mlstring_size` (for `Datatype: mlstring = implode string`,
+    `cakeml/basis/pure/mlstringScript.sml:19-21`):
+    `mlstring_size (implode a) = 1 + list_size char_size a`. -/
+def mlstringSizeHOL : MlS → Nat
+  | .implode data => 1 + listSizeHOL holCharSize data
+
+mutual
+  /-- HOL's generated `shape_size`. -/
+  def shapeSizeHOL : ShapeHOL → Nat
+    | .one => 0
+    | .comb shapes => 1 + shape1SizeHOL shapes
+    | .named name => 1 + mlstringSizeHOL name
+
+  /-- HOL's generated `shape1_size`, the list size of `shape`. -/
+  def shape1SizeHOL : List ShapeHOL → Nat
+    | [] => 0
+    | shape :: shapes => 1 + shapeSizeHOL shape + shape1SizeHOL shapes
+end
+
+/-- Exact port of HOL `panLang$MEM_IMP_shape_size`
+    (`cakeml/pancake/panLangScript.sml:131-137`):
+    `!shapes a. MEM a shapes ==> shape_size a < 1 + shape1_size shapes`,
+    over the exact `ShapeHOL` carrier and the transcribed generated size
+    functions above. -/
+@[hol "cakeml/pancake/panLangScript.sml" "MEM_IMP_shape_size"]
+theorem memImpShapeSizeHOL (shapes : List ShapeHOL) (a : ShapeHOL)
+    (h : a ∈ shapes) : shapeSizeHOL a < 1 + shape1SizeHOL shapes := by
+  induction shapes with
+  | nil => simp at h
+  | cons s ss ih =>
+    rw [List.mem_cons] at h
+    rcases h with h_eq | h_mem
+    · subst h_eq
+      simp only [shape1SizeHOL]
+      omega
+    · have ih' := ih h_mem
+      simp only [shape1SizeHOL]
+      omega
 end Flapjack.Pancake.PanLang

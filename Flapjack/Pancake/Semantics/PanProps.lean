@@ -320,7 +320,15 @@ private theorem lookupFieldHOL_isWfShapeValuesHOLExact {width : Nat} [NeZero wid
     `be`, `eshapes`, `base_addr`, `structs`, `code`, and `ffi.oracle`; it has
     no exact finite-map program-evaluator result carrier yet. The related
     faithful inventory bead `.4.61` blocks on the finite-support evaluator
-    bead `.3.52.1`.
+    bead `.3.52.1`. The source theorem `evaluate_global_shape_invariant`
+    (`panPropsScript.sml:1183`) quantifies over `p`, initial state `s`, result
+    `res`, post-state `st`, global name `n`, and initial value `v`; from
+    `evaluate (p,s) = (res,st)` and `FLOOKUP s.globals n = SOME v`, it concludes
+    that some `v'` remains at `n` in `st.globals` with `shape_of v' =
+    shape_of v`. The Lean finite-map evaluator currently covers expressions
+    only (`evalHOLFinite`), with no exact whole-program result/post-state
+    evaluator to state this theorem over. The faithful inventory bead `.4.62`
+    therefore depends on `.3.52.1`; no HOL tag is claimed here.
     The expression prerequisite `eval_is_wf_shape_v`
     (`panPropsScript.sml:126`) is now tagged with the
     reviewed finite-map carrier and exact HOL conjunction in

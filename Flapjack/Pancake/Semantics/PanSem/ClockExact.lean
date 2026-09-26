@@ -17,11 +17,16 @@ HOL `panSemScript.sml` proves:
 The function-backed rendering below is `fix_clock_IMP_LESS_EQ` over the
 `mlstring`-keyed `PanSemStateExact` record. Its theorem tag is withheld because
 that record has unrestricted lookup-function fields where HOL `state` has
-finite-map fields. `evaluate_clock`/`fix_clock_evaluate` mention the recursive
-`evaluate` itself. The currently available `evalHOLFinite` is a clause-shaped
+finite-map fields. HOL `evaluate_clock` has exactly the hypothesis
+`evaluate (prog,s) = (r,s')` and concludes `s'.clock <= s.clock`; it adds no
+fuel, evaluator-totality, or state-invariant premise. The Lean clock-bound
+interfaces below instead take a supplied evaluator and a clock-bound
+hypothesis, so they do not prove this whole-evaluator implication.
+`evaluate_clock`/`fix_clock_evaluate` mention the recursive `evaluate` itself.
+The currently available `evalHOLFinite` is a clause-shaped expression
 rendering over `PanSemStateFiniteExact`, but it delegates to `evalHOLExact` and
-is not the total recursive `evaluate` quantified by these theorems; the total
-dispatcher is still being assembled under
+is not the total recursive statement evaluator quantified by these theorems;
+the total dispatcher is still being assembled under
 `flapjack-pxn.18.4.3.77.2`. Also, `fix_clock_evaluate` states equality of the
 whole `(result, state)` pair after clamping the post-state clock, not merely a
 bound on one helper call. Therefore neither theorem is tagged or proved from

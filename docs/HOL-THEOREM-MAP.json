@@ -11624,5 +11624,37 @@
     "lean_name": "panExpsOfNestedSeqHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-luna-c (direct source comparison, 2026-09-26; pan_to_wordProofScript.sml:1018-1025): HOL universally quantifies a list of PanLang programs and states exps_of (panLang$nested_seq es) = FLAT (MAP exps_of es). Lean quantifies List (ProgHOL width), uses the exact nestedSeqHOL and expsOfHOL ports, and states the same flattened mapped list. [NeZero width] represents HOL's positive word dimension; no extra hypothesis or representation qualifier is added. This theorem is the named proof consumer of expsOfHOL requested by bead flapjack-p12."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
+    "lean_name": "panToCrepLocalsRelFiniteExact_shapeProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific projection support over exact finite-support PanSem/CrepSem map carriers and the reviewed PanToCrepContextExact context. It extracts the literal final HOL locals_rel_def conjunct is_wf_shape_nil (shape_of v) for a present local; the separate valueShapeProjection derives value-level well-formedness through the exact is_wf_shape_v_nil equivalence. It is not a port of locals_rel_wf_shape. Kept untagged because the current fmap_as_finite_support qualifier cannot represent this multi-carrier relation; the faithful theorem path remains flapjack-4ac.5.83."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
+    "lean_name": "panToCrepStateRelFiniteExact_structs",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific projection support for the exact finite-support state-relation adapter. It exposes the source structural-context field used by the HOL proof but is not itself a port of state_rel_def. Kept untagged pending multi-carrier finite-map qualifier support and the faithful theorem path flapjack-4ac.5.83."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
+    "lean_name": "panToCrepLocalsRelFiniteExact_valueShapeProjection",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific bridge from the literal is_wf_shape_nil (shape_of v) conjunct in the exact local relation to value-level is_wf_shape_v. The proof uses the exact is_wf_shape_v_nil equivalence; it is support for, not a port of, locals_rel_wf_shape. It uses PanToCrepContextExact and remains untagged pending multi-carrier finite-map qualifier support and the faithful theorem path flapjack-4ac.5.83."
+  },
+  {
+    "hol_path": null,
+    "hol_name": null,
+    "lean_path": "Flapjack/Pancake/Proofs/PanToCrep/StateRelFiniteSupport.lean",
+    "lean_name": "panToCrepExactInitialShapeInvariant",
+    "statement_status": "no_hol_reference_pending_classification",
+    "reviewer": "Flapjack-specific composition of the exact finite-support Pan-to-Crep local and state relation support. It derives precisely the locals/globals well-formedness premises needed by the evaluator invariant: local values use locals_rel's literal is_wf_shape_nil (shape_of v) conjunct, source structs are empty by state_rel, and source globals are FEMPTY. It is not a port of evaluate_is_wf_shape_invariant or locals_rel_wf_shape; kept untagged pending the multi-carrier relation qualifier and complete evaluator invariant for flapjack-4ac.5.83."
   }
 ]

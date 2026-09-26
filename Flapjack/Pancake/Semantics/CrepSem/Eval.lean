@@ -1389,7 +1389,7 @@ private theorem setWidth_extractLsb_zero_toNat (width length : Nat)
 /-- Flapjack proof infrastructure for the BitVec encoding of HOL `set_byte`;
     HOL has no separate Nat equation for this helper. The lower slice, inserted
     byte, and preserved upper slice occupy disjoint bit ranges. -/
-private theorem holFiniteWordSetByteBitVec_toNat (width offset : Nat)
+theorem holFiniteWordSetByteBitVec_toNat (width offset : Nat)
     (byte value : BitVec width) (hoffset : offset + 8 ≤ width) :
     (holFiniteWordSetByteBitVec width offset byte value).toNat =
       (value.toNat / 2 ^ (offset + 8)) * 2 ^ (offset + 8) +

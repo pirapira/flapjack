@@ -60,7 +60,9 @@ import Flapjack.Pancake.Semantics.PanSem.FiniteSupportStep
 
 namespace Flapjack
 
-open Flapjack.Pancake.PanLang (MlS ShapeHOL StructContextExact ProgHOL ExpHOL)
+open Flapjack.Pancake.PanLang
+  (MlS ShapeHOL StructContextExact ProgHOL ExpHOL DeclHOL FunDeclHOL isWfShapeExactHOL isNameHOL
+    functionsHOL)
 
 /-- `HolFiniteMapExact` is extensional: two values with the same `lookup` are
     equal, because the `finiteSupport` field is a proof of a proposition.  This
@@ -102,7 +104,22 @@ theorem HolFiniteMapExact.lookup_update_pointwise {α β : Type} [BEq α] [Lawfu
 
 /-- Finite-support mirror of `PanSemStateExact`.  The four map-shaped
     components are `HolFiniteMapExact` values, i.e. finite support holds by
-    construction, matching HOL's `|->` fields. -/
+    construction, matching HOL's `|->` fields.
+
+    This is the exact Lean counterpart of the HOL `panSem$state` datatype
+    (`cakeml/pancake/semantics/panSemScript.sml:46-64`): the 13 fields appear in
+    the same order with the same meaning.  The name-bearing maps
+    `locals`/`globals`/`code`/`eshapes` are the reviewed canonical
+    `HolFiniteMapExact` translation of HOL's `|->` fields; the `structs`
+    component is the exact `StructContextExact` context, `memory` is the exact
+    `RiscV.Word width → HolWordLab width` carrier, the address domains are
+    predicates, and `ffi`/`clock`/`be`/`base_addr`/`top_addr` keep HOL's
+    meanings.  The `fmap_as_finite_support` qualifier records only this
+    finite-map representation and authorizes no other difference; the canonical
+    witness `holFmapAsFiniteSupportWitness` below is the roundtrip between this
+    structure and the broad `PanSemStateExact`. -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "state"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
 structure PanSemStateFiniteExact (width : Nat) (σ : Type) [NeZero width] where
   locals : HolFiniteMapExact MlS (ValueHOL width)
   globals : HolFiniteMapExact MlS (ValueHOL width)
@@ -361,6 +378,36 @@ def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
       simp only [HolFiniteMapExact.resVarEq, resVarHOLExact,
         HolFiniteMapExact.lookup_updateEq, FUPDATE_HOL]
 
+/-- A finite-support local `resVarEq` record update is compatible with the broad
+    exact one.  This bridges the `Dec` clause's restored state. -/
+@[simp] theorem toExact_resVarEq_locals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) (entry : MlS × Option (ValueHOL width)) :
+    ({ state with locals := HolFiniteMapExact.resVarEq state.locals entry } :
+        PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := resVarHOLExact state.toExact.locals entry } := by
+  simp only [PanSemStateFiniteExact.toExact, lookup_resVarEq_toExact]
+
+/-- A finite-support plain `locals` record update is compatible with the broad
+    exact one.  This bridges the `Call`/`DecCall` caller-locals restore. -/
+@[simp] theorem toExact_setLocals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    (locals : HolFiniteMapExact MlS (ValueHOL width)) :
+    ({ state with locals := locals } : PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := locals.lookup } := by
+  cases state
+  rfl
+
+/-- A combined finite `locals`/`clock` record update is compatible with the broad
+    exact one.  This bridges the `Call`/`DecCall` entry state. -/
+@[simp] theorem toExact_setLocals_clock {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ)
+    (locals : HolFiniteMapExact MlS (ValueHOL width)) (clock : Nat) :
+    ({ state with locals := locals, clock := clock } :
+        PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := locals.lookup, clock := clock } := by
+  cases state
+  rfl
+
 /-- HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`) over the
     finite-support state carrier.  The body delegates to the exact broad
     evaluator through the canonical translation `toExact`; it does NOT
@@ -376,6 +423,50 @@ def evalHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
     ExpHOL width → Option (ValueHOL width) :=
   @evalHOLExact width σ _ state.toExact h
+
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `eval_upd_clock_eq` (`cakeml/pancake/semantics/panPropsScript.sml:645`) is a
+    PanProps declaration, so its HOL port belongs in the PanProps counterpart
+    module, not this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag
+    was withdrawn pending relocation. `eval (t with clock := ck) e = eval t e`
+    still holds here over the finite-support state carrier; the evaluator never
+    inspects `clock`, and the untagged broad-carrier support is
+    `evalHOLExact_upd_clock_eq`. -/
+theorem evalHOLFinite_upd_clock_eq {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (ck : Nat) (e : ExpHOL width) :
+    evalHOLFinite { state with clock := ck } e = evalHOLFinite state e := by
+  simp only [evalHOLFinite]
+  exact evalHOLExact_upd_clock_eq state.toExact e ck
+
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `eval_upd_code_eq` (`cakeml/pancake/semantics/panPropsScript.sml:654`) is a
+    PanProps declaration, so its HOL port belongs in the PanProps counterpart
+    module, not this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag
+    was withdrawn pending relocation. `eval (t with code := code) e = eval t e`
+    still holds here; the evaluator never inspects `code`, and the untagged
+    broad-carrier support is `evalHOLExact_upd_code_eq`. -/
+theorem evalHOLFinite_upd_code_eq {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (code : HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (e : ExpHOL width) :
+    evalHOLFinite { state with code := code } e = evalHOLFinite state e := by
+  simp only [evalHOLFinite]
+  exact evalHOLExact_upd_code_eq state.toExact e code.lookup
+
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `eval_upd_eshapes_eq` (`cakeml/pancake/semantics/panPropsScript.sml:663`) is a
+    PanProps declaration, so its HOL port belongs in the PanProps counterpart
+    module, not this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag
+    was withdrawn pending relocation. `eval (t with eshapes := esh) e = eval t e`
+    still holds here; the evaluator never inspects `eshapes`, and the untagged
+    broad-carrier support is `evalHOLExact_upd_eshapes_eq`. -/
+theorem evalHOLFinite_upd_eshapes_eq {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (es : HolFiniteMapExact MlS ShapeHOL) (e : ExpHOL width) :
+    evalHOLFinite { state with eshapes := es } e = evalHOLFinite state e := by
+  simp only [evalHOLFinite]
+  exact evalHOLExact_upd_eshapes_eq state.toExact e es.lookup
 
 /-- Finite-support carrier rendering of the `OPT_MMAP eval` list step; delegates
     through `toExact` (untagged helper, not a HOL declaration). -/
@@ -626,6 +717,51 @@ theorem evaluateHOLFiniteViaExact_snd_toExact_eq {width : Nat} {σ : Type} [NeZe
     simp only [hp]
   exact ⟨pair, hp, heq, by rw [heq]⟩
 
+/-- FLAPJACK-SPECIFIC helper (not a HOL declaration): the finite-support code
+    lookup.  It wraps `lookupCodeHOLExact`'s callee-local function as a
+    `HolFiniteMapExact`, so the finite evaluator can bind the lookup result in a
+    plain `match` instead of a dependent `match hlookup : ...` (whose equation
+    blocks the projection proofs). -/
+def lookupCodeHOLFinite {width : Nat} [NeZero width]
+    (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (fname : MlS) (values : List (ValueHOL width)) :
+    Option (ProgHOL width × HolFiniteMapExact MlS (ValueHOL width) × ShapeHOL) :=
+  match h : lookupCodeHOLExact code fname values with
+  | none => none
+  | some (body, calleeLocals, returnShape) =>
+      some (body,
+        { lookup := calleeLocals,
+          finiteSupport := lookupCodeHOLExact_calleeLocals_finiteSupport
+            code fname values body calleeLocals returnShape h },
+        returnShape)
+
+/-- `lookupCodeHOLFinite` fails exactly when the underlying HOL lookup fails. -/
+theorem lookupCodeHOLFinite_eq_none_iff {width : Nat} [NeZero width]
+    (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (fname : MlS) (values : List (ValueHOL width)) :
+    lookupCodeHOLFinite code fname values = none ↔
+      lookupCodeHOLExact code fname values = none := by
+  unfold lookupCodeHOLFinite
+  split <;> simp_all
+
+/-- A successful `lookupCodeHOLFinite` forgets to the underlying HOL lookup
+    result (the callee map is projected through `.lookup`). -/
+theorem lookupCodeHOLFinite_eq_some {width : Nat} [NeZero width]
+    (code : MlS → Option (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (fname : MlS) (values : List (ValueHOL width)) (body : ProgHOL width)
+    (callee : HolFiniteMapExact MlS (ValueHOL width)) (returnShape : ShapeHOL)
+    (h : lookupCodeHOLFinite code fname values = some (body, callee, returnShape)) :
+    lookupCodeHOLExact code fname values = some (body, callee.lookup, returnShape) := by
+  unfold lookupCodeHOLFinite at h
+  split at h
+  · simp at h
+  · rename_i heq
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨hb, hcallee, hrs⟩ := h
+    rw [hb, hrs] at heq
+    subst hcallee
+    simpa using heq
+
 /-- FLAPJACK-SPECIFIC evaluation context threading the decidability of the two
     address-domain predicates through the recursive finite evaluator.  Mirroring
     `PanSemExactEvalContext`, this is required because a recursive result state
@@ -662,6 +798,52 @@ def withState {width : Nat} {σ : Type} [NeZero width]
     context.withState context.state hmem hshared = context := by
   cases context
   simp [FiniteEvalContext.withState]
+
+/-- `withState` is independent of the particular equality proofs. -/
+theorem withState_congr {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (state : PanSemStateFiniteExact width σ)
+    (h1 h1' : state.memaddrs = context.state.memaddrs)
+    (h2 h2' : state.shMemaddrs = context.state.shMemaddrs) :
+    withState context state h1 h2 = withState context state h1' h2' := by
+  cases context
+  simp only [withState]
+
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): forgetful projection of a finite
+    evaluation context to the exact (unrestricted-map) evaluation context, by
+    translating the state through `toExact` and reusing the two address-domain
+    deciders.  This is the context-level relation used to relate the finite
+    evaluator to `evalPanSemRecursiveCallContextHOLExact`. -/
+def toExact {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) : PanSemExactEvalContext width σ :=
+  { state := context.state.toExact
+    memaddrsDecidable := context.memaddrsDecidable
+    shMemaddrsDecidable := context.shMemaddrsDecidable }
+
+/-- `toExact` commutes with `withState`. -/
+@[simp] theorem toExact_withState {width : Nat} {σ : Type} [NeZero width]
+    (context : FiniteEvalContext width σ) (state : PanSemStateFiniteExact width σ)
+    (hmem : state.memaddrs = context.state.memaddrs)
+    (hshared : state.shMemaddrs = context.state.shMemaddrs) :
+    (withState context state hmem hshared).toExact =
+      context.toExact.withState state.toExact hmem hshared := by
+  cases context
+  rfl
+
+/-- FLAPJACK-SPECIFIC (not a HOL declaration): a finite evaluation context is
+    determined by its state; the two `DecidablePred` fields are proof-irrelevant
+    for the respective (transported) predicates.  Used to compare contexts built
+    by different `withState` call sites without unfolding their proof terms. -/
+theorem ext {width : Nat} {σ : Type} [NeZero width]
+    {c1 c2 : FiniteEvalContext width σ} (h : c1.state = c2.state) : c1 = c2 := by
+  cases c1 with
+  | mk s1 m1 sh1 =>
+  cases c2 with
+  | mk s2 m2 sh2 =>
+  dsimp only at h
+  subst h
+  congr
+  · exact Subsingleton.elim _ _
+  · exact Subsingleton.elim _ _
 
 end FiniteEvalContext
 
@@ -747,15 +929,13 @@ def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width
           match evalListHOLFinite state arguments with
           | none => some (some .error, context)
           | some values =>
-              match hlookup : lookupCodeHOLExact state.code.lookup function values with
+              match lookupCodeHOLFinite state.code.lookup function values with
               | none => some (some .error, context)
-              | some (body, calleeLocals, returnShape) =>
+              | some (body, callee, returnShape) =>
                   if state.clock = 0 then
                     some (some .timeOut,
                       context.withState (emptyLocalsHOLFinite state) rfl rfl)
                   else
-                    let callee : HolFiniteMapExact MlS (ValueHOL width) :=
-                      { lookup := calleeLocals, finiteSupport := lookupCodeHOLExact_calleeLocals_finiteSupport state.code.lookup function values body calleeLocals returnShape hlookup }
                     let entry : PanSemStateFiniteExact width σ := { state with clock := state.clock - 1, locals := callee }
                     let entryContext := context.withState entry rfl rfl
                     match evalPanSemRecursiveCallFiniteContext body entryContext with
@@ -820,15 +1000,13 @@ def evalPanSemRecursiveCallFiniteContext {width : Nat} {σ : Type} [NeZero width
           match evalListHOLFinite state arguments with
           | none => some (some .error, context)
           | some values =>
-              match hlookup : lookupCodeHOLExact state.code.lookup function values with
+              match lookupCodeHOLFinite state.code.lookup function values with
               | none => some (some .error, context)
-              | some (body, calleeLocals, returnShape) =>
+              | some (body, callee, returnShape) =>
                   if state.clock = 0 then
                     some (some .timeOut,
                       context.withState (emptyLocalsHOLFinite state) rfl rfl)
                   else
-                    let callee : HolFiniteMapExact MlS (ValueHOL width) :=
-                      { lookup := calleeLocals, finiteSupport := lookupCodeHOLExact_calleeLocals_finiteSupport state.code.lookup function values body calleeLocals returnShape hlookup }
                     let entry : PanSemStateFiniteExact width σ := { state with clock := state.clock - 1, locals := callee }
                     let entryContext := context.withState entry rfl rfl
                     match evalPanSemRecursiveCallFiniteContext body entryContext with
@@ -985,6 +1163,231 @@ decreasing_by
     exact Nat.lt_of_le_of_lt
       (fixClockHOLFinite_clock_le entry (bodyResult, bodyContext.state))
       (Nat.sub_lt (Nat.pos_of_ne_zero (by omega)) (by decide))
+
+/-- HOL `evaluate_decls_def` (`cakeml/pancake/semantics/panSemScript.sml:814-837`)
+    over the finite-support state carrier.  Its clauses match the HOL definition
+    one by one: `[]` returns the state unchanged; a `Name` declaration is
+    skipped; a `Decl` evaluates its initialiser with the tagged `evalHOLFinite`
+    under cleared locals (`emptyLocalsHOLFinite`, i.e. `s with locals := FEMPTY`)
+    and, on shape agreement, updates `globals`; a `Function` is admitted when its
+    parameters and return shape are well formed and then stored in `code`; an
+    `ExnDecl` is admitted when its identifier is fresh and its shape is well
+    formed, then stored in `eshapes`.  Every HOL `|+` (`FUPDATE`) is the
+    canonical `HolFiniteMapExact.update`.  The four map-shaped fields
+    (`locals`, `globals`, `code`, `eshapes`) are recorded by the
+    `fmap_as_finite_support` qualifier (canonical witness
+    `holFmapAsFiniteSupportWitness` in this module). -/
+@[hol "cakeml/pancake/semantics/panSemScript.sml" "evaluate_decls_def"
+  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+def evaluateDeclsHOLFinite {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs] :
+    List (DeclHOL width) → Option (PanSemStateFiniteExact width σ)
+  | [] => some state
+  | .name _ _ :: declarations => evaluateDeclsHOLFinite state declarations
+  | .decl shape name expression :: declarations =>
+      letI : DecidablePred (state.emptyLocalsHOLFinite.memaddrs) := h
+      match evalHOLFinite (emptyLocalsHOLFinite state) expression with
+      | some value =>
+          if shapeEqHOL shape (shapeOfHOLExact value) then
+            letI : DecidablePred (setGlobalHOLFinite name value state).memaddrs := h
+            evaluateDeclsHOLFinite (setGlobalHOLFinite name value state) declarations
+          else none
+      | none => none
+  | .function declaration :: declarations =>
+      let entry : List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL :=
+        (declaration.params, declaration.body, declaration.returnShape)
+      if declaration.params.all
+            (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+          isWfShapeExactHOL state.structs declaration.returnShape then
+        let updated : PanSemStateFiniteExact width σ :=
+          { state with code := state.code.update (declaration.name, entry) }
+        letI : DecidablePred updated.memaddrs := h
+        evaluateDeclsHOLFinite updated declarations
+      else none
+  | .exnDecl exceptionName shape :: declarations =>
+      if (state.eshapes.lookup exceptionName).isNone &&
+          isWfShapeExactHOL state.structs shape then
+        let updated : PanSemStateFiniteExact width σ :=
+          { state with eshapes := state.eshapes.update (exceptionName, shape) }
+        letI : DecidablePred updated.memaddrs := h
+        evaluateDeclsHOLFinite updated declarations
+      else none
+
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `panProps$evaluate_decls_names` (`panPropsScript.sml:1552-1559`) is a PanProps
+    declaration, so its HOL port belongs in the PanProps counterpart module, not
+    this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag was
+    withdrawn pending relocation to a PanProps submodule that owns the state
+    carrier and its canonical witness. The Lean fact still holds: when every
+    declaration is a `Name`, `evaluateDeclsHOLFinite` succeeds and leaves the
+    state unchanged (`decs.all isNameHOL = true` renders HOL `EVERY is_name
+    decs`). -/
+theorem evaluateDeclsHOLFinite_names {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (decs : List (DeclHOL width)) (hnames : decs.all isNameHOL = true) :
+    evaluateDeclsHOLFinite state decs = some state := by
+  induction decs generalizing state with
+  | nil => rfl
+  | cons declaration rest ih =>
+      rw [List.all_cons, Bool.and_eq_true] at hnames
+      obtain ⟨hhead, hrest⟩ := hnames
+      cases declaration with
+      | name name fields => exact ih state hrest
+      | decl shape name expression => simp [isNameHOL] at hhead
+      | function declaration => simp [isNameHOL] at hhead
+      | exnDecl exceptionName shape => simp [isNameHOL] at hhead
+
+/-- Flapjack finite-map support: a single `FUPDATE` followed by `FUPDATE_LIST`
+    is the `FUPDATE_LIST` with the entry prepended. Infrastructure for the
+    `evaluate_decls_functions` port, not a separate HOL declaration. -/
+private theorem updateList_cons {α β : Type} [BEq α] [LawfulBEq α]
+    (map : HolFiniteMapExact α β) (entry : α × β) (entries : List (α × β)) :
+    (map.update entry).updateList entries = map.updateList (entry :: entries) := by
+  apply HolFiniteMapExact.ext
+  funext key
+  simp only [HolFiniteMapExact.lookup_updateList, FUPDATE_LIST_cons]
+  rfl
+
+/-- Flapjack finite-map support: `updateList` with no entries is the identity.
+    Infrastructure for the `evaluate_decls_functions` port, not a separate HOL
+    declaration. -/
+private theorem updateList_nil {α β : Type} [BEq α] [LawfulBEq α]
+    (map : HolFiniteMapExact α β) : map.updateList [] = map := by
+  apply HolFiniteMapExact.ext
+  funext key
+  rfl
+
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `panProps$evaluate_decls_functions` (`panPropsScript.sml:1518-1526`) is a
+    PanProps declaration, so its HOL port belongs in the PanProps counterpart
+    module, not this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag
+    was withdrawn pending relocation to a PanProps submodule that owns the state
+    carrier and its canonical witness. The Lean fact still holds: a successful
+    `evaluateDeclsHOLFinite` records exactly the function entries of the program
+    in `code` (`updateList` is the canonical finite-map `|++`). -/
+theorem evaluateDeclsHOLFinite_functions {width : Nat} {σ : Type} [NeZero width] :
+    ∀ (state : PanSemStateFiniteExact width σ) [DecidablePred state.memaddrs]
+      (program : List (DeclHOL width)) (result : PanSemStateFiniteExact width σ),
+      evaluateDeclsHOLFinite state program = some result →
+      result.code = state.code.updateList (functionsHOL program) := by
+  intro state hstate program
+  induction program generalizing state with
+  | nil =>
+      intro result hresult
+      simp only [evaluateDeclsHOLFinite, Option.some.injEq] at hresult
+      subst hresult
+      exact (updateList_nil state.code).symm
+  | cons declaration rest ih =>
+      intro result hresult
+      cases declaration with
+      | name name fields =>
+          simp only [evaluateDeclsHOLFinite, functionsHOL] at hresult ⊢
+          exact ih state result hresult
+      | decl shape name expression =>
+          simp only [evaluateDeclsHOLFinite, functionsHOL] at hresult ⊢
+          letI : DecidablePred (emptyLocalsHOLFinite state).memaddrs := hstate
+          cases heval : evalHOLFinite (emptyLocalsHOLFinite state) expression with
+          | none => simp [heval] at hresult
+          | some value =>
+              by_cases hshape : shapeEqHOL shape (shapeOfHOLExact value)
+              · simp only [heval, if_pos hshape] at hresult
+                have htail := ih
+                  { state with globals := state.globals.update (name, value) }
+                  result hresult
+                simpa using htail
+              · simp [heval, hshape] at hresult
+      | function declaration =>
+          let condition := declaration.params.all
+            (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+            isWfShapeExactHOL state.structs declaration.returnShape
+          simp only [evaluateDeclsHOLFinite, functionsHOL] at hresult ⊢
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_true] at hresult
+            have htail := ih
+              { state with code := state.code.update (declaration.name,
+                (declaration.params, declaration.body, declaration.returnShape)) }
+              result hresult
+            rw [htail]
+            exact updateList_cons state.code
+              (declaration.name,
+                (declaration.params, declaration.body, declaration.returnShape))
+              (functionsHOL rest)
+          · have hfalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact absurd hcond hcondition
+            simp [condition, hfalse] at hresult
+      | exnDecl exceptionName shape =>
+          let condition := (state.eshapes.lookup exceptionName).isNone &&
+            isWfShapeExactHOL state.structs shape
+          simp only [evaluateDeclsHOLFinite, functionsHOL] at hresult ⊢
+          by_cases hcondition : condition = true
+          · simp only [condition, hcondition, if_true] at hresult
+            have htail := ih
+              { state with eshapes := state.eshapes.update (exceptionName, shape) }
+              result hresult
+            simpa using htail
+          · have hfalse : condition = false := by
+              cases hcond : condition with
+              | false => rfl
+              | true => exact absurd hcond hcondition
+            simp [condition, hfalse] at hresult
+
+/-- Infrastructure for `evaluate_decl_commute`: the canonical finite evaluator
+    is unchanged when only the `code` field of a state whose locals have been
+    cleared is updated (`eval_upd_code_eq` applied under `emptyLocalsHOLFinite`).
+    Not a separate HOL declaration. -/
+private theorem evalHOLFinite_emptyLocals_code {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (c : HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ProgHOL width × ShapeHOL))
+    (e : ExpHOL width) :
+    @evalHOLFinite width σ _ (emptyLocalsHOLFinite { state with code := c }) h e
+      = @evalHOLFinite width σ _ (emptyLocalsHOLFinite state) h e :=
+  @evalHOLFinite_upd_code_eq width σ _ (emptyLocalsHOLFinite state) h c e
+
+section
+
+set_option maxHeartbeats 4000000
+
+/-- FLAPJACK-SPECIFIC provisional rendering (no `@[hol]` tag): HOL
+    `panProps$evaluate_decl_commute` (`panPropsScript.sml:1472-1480`) is a PanProps
+    declaration, so its HOL port belongs in the PanProps counterpart module, not
+    this PanSem module (coordinator HOLD 2026-09-26T16:46Z). The tag was
+    withdrawn pending relocation to a PanProps submodule that owns the state
+    carrier and its canonical witness. The Lean fact still holds: swapping an
+    adjacent `Function` and `Decl` declaration leaves `evaluateDeclsHOLFinite`
+    unchanged, because `Decl` clears the locals and updates only
+    `globals`/`eshapes`, while `Function` updates only `code` and the evaluator
+    does not read `code`. -/
+theorem evaluateDeclsHOLFinite_declCommute {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) [h : DecidablePred state.memaddrs]
+    (fi : FunDeclHOL width) (sh : ShapeHOL) (v' : MlS) (e : ExpHOL width)
+    (ds : List (DeclHOL width)) :
+    evaluateDeclsHOLFinite state (.function fi :: .decl sh v' e :: ds)
+      = evaluateDeclsHOLFinite state (.decl sh v' e :: .function fi :: ds) := by
+  simp only [evaluateDeclsHOLFinite]
+  rw [evalHOLFinite_emptyLocals_code]
+  simp only [setGlobalHOLFinite]
+  by_cases hwf : (fi.params.all (fun parameter => isWfShapeExactHOL state.structs parameter.2) &&
+      isWfShapeExactHOL state.structs fi.returnShape) = true
+  · rw [if_pos hwf]
+    letI : DecidablePred state.emptyLocalsHOLFinite.memaddrs := h
+    cases hev : evalHOLFinite (emptyLocalsHOLFinite state) e with
+    | none => rfl
+    | some value =>
+        by_cases hshape : shapeEqHOL sh (shapeOfHOLExact value) = true
+        · simp [hshape, hwf]
+        · simp [hshape]
+  · rw [if_neg hwf]
+    letI : DecidablePred state.emptyLocalsHOLFinite.memaddrs := h
+    cases hev : evalHOLFinite (emptyLocalsHOLFinite state) e with
+    | none => rfl
+    | some value =>
+        by_cases hshape : shapeEqHOL sh (shapeOfHOLExact value) = true
+        · simp [hshape, hwf]
+        · simp [hshape]
+
+end
 
 /-- FLAPJACK-SPECIFIC (no `@[hol]` tag): the clause-for-clause finite context
     evaluator is total.  Its outer `Option` is only the recursive-case assembly

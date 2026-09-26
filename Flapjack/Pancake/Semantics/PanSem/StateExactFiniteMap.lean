@@ -853,12 +853,15 @@ def toExact {width : Nat} {σ : Type} [NeZero width]
     the record-update form. -/
 theorem toExact_callEntryContext_eq {width : Nat} {σ : Type} [NeZero width]
     (context : FiniteEvalContext width σ)
-    (callee : HolFiniteMapExact MlS (ValueHOL width)) :
+    (callee : HolFiniteMapExact MlS (ValueHOL width))
+    (p1 : ({ locals := callee.lookup, globals := context.toExact.state.globals, structs := context.toExact.state.structs, code := context.state.code.lookup, eshapes := context.toExact.state.eshapes, memory := context.toExact.state.memory, memaddrs := context.toExact.state.memaddrs, shMemaddrs := context.toExact.state.shMemaddrs, clock := context.toExact.state.clock - 1, be := context.toExact.state.be, ffi := context.toExact.state.ffi, baseAddr := context.toExact.state.baseAddr, topAddr := context.toExact.state.topAddr } : PanSemStateExact width σ).memaddrs = context.toExact.state.memaddrs)
+    (p2 : ({ locals := callee.lookup, globals := context.toExact.state.globals, structs := context.toExact.state.structs, code := context.state.code.lookup, eshapes := context.toExact.state.eshapes, memory := context.toExact.state.memory, memaddrs := context.toExact.state.memaddrs, shMemaddrs := context.toExact.state.shMemaddrs, clock := context.toExact.state.clock - 1, be := context.toExact.state.be, ffi := context.toExact.state.ffi, baseAddr := context.toExact.state.baseAddr, topAddr := context.toExact.state.topAddr } : PanSemStateExact width σ).shMemaddrs = context.toExact.state.shMemaddrs) :
     context.toExact.withState
-        ({ locals := callee.lookup, globals := context.toExact.state.globals, structs := context.toExact.state.structs, code := context.state.code.lookup, eshapes := context.toExact.state.eshapes, memory := context.toExact.state.memory, memaddrs := context.toExact.state.memaddrs, shMemaddrs := context.toExact.state.shMemaddrs, clock := context.state.clock - 1, be := context.toExact.state.be, ffi := context.toExact.state.ffi, baseAddr := context.toExact.state.baseAddr, topAddr := context.toExact.state.topAddr } : PanSemStateExact width σ) rfl rfl =
+        ({ locals := callee.lookup, globals := context.toExact.state.globals, structs := context.toExact.state.structs, code := context.state.code.lookup, eshapes := context.toExact.state.eshapes, memory := context.toExact.state.memory, memaddrs := context.toExact.state.memaddrs, shMemaddrs := context.toExact.state.shMemaddrs, clock := context.toExact.state.clock - 1, be := context.toExact.state.be, ffi := context.toExact.state.ffi, baseAddr := context.toExact.state.baseAddr, topAddr := context.toExact.state.topAddr } : PanSemStateExact width σ) p1 p2 =
       (context.withState
         ({ context.state with clock := context.state.clock - 1, locals := callee } :
           PanSemStateFiniteExact width σ) rfl rfl).toExact := by
+  apply PanSemExactEvalContext.ext
   cases context
   rfl
 

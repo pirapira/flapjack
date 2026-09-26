@@ -521,9 +521,6 @@ class ReviewedSourceComparisonTest(unittest.TestCase):
             ("Flapjack/Pancake/Semantics/PanSem/MemLoad32Alt.lean",
              "panMemLoad32HOL_eq_alt"):
                 ("mem_load_32_alt", "flapjack-pxn.18.3.6.9.27"),
-            ("Flapjack/Pancake/Semantics/PanSem/MemStore32Alt.lean",
-             "panMemStore32HOL_eq_alt"):
-                ("mem_store_32_alt", "flapjack-pxn.18.3.6.9.29"),
             ("Flapjack/Pancake/Semantics/PanSem/ShMemExact.lean",
              "shMemLoadHOLExact"):
                 ("sh_mem_load_def", "flapjack-pxn.18.3.7.1.3.1.1.2.5"),

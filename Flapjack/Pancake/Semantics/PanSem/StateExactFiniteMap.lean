@@ -381,13 +381,17 @@ def evalListFieldsHOLFinite {width : Nat} {σ : Type} [NeZero width]
     state.evalListFieldsHOLFinite fields =
       @evalListFieldsHOLExact width σ _ state.toExact h fields := rfl
 
-/-- Finite-support carrier wrapper for the exact recursive program evaluator:
-    it runs the broad exact evaluator on the forgetful projection `toExact`,
-    then rebuilds the resulting state as a finite-support value via `ofExact`,
-    using the result-state preservation theorem
-    `evalPanSemRecursiveCallContextHOLExact_finiteSupport`.  This is the
-    finite-map rendering of HOL `panSem$evaluate`; the clause bodies are the
-    reviewed exact clauses. -/
+/-- FLAPJACK-SPECIFIC ADAPTER (not itself the tagged HOL `evaluate_def` port):
+    it runs the broad, context-returning exact evaluator
+    `evalPanSemRecursiveCallContextHOLExact` on the forgetful projection
+    `toExact`, then rebuilds the resulting state as a finite-support value via
+    `ofExact`, using the result-state preservation theorem
+    `evalPanSemRecursiveCallContextHOLExact_finiteSupport`.  Because it returns
+    the assembly-marked `Option (Option PanSemResultExact × state)` pair and
+    reconstructs the state through `ofExact`, this declaration is deliberately
+    untagged.  The faithful tagged `evaluate_def` port over the finite-support
+    carrier is `evaluateHOLFinite` below, whose clause surface is recorded in
+    `Flapjack.Pancake.Semantics.PanSem.EvaluateFinite`. -/
 def evalPanSemRecursiveCallHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :

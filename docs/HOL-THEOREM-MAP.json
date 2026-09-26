@@ -10668,6 +10668,14 @@
     "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.28). HOL panLangScript.sml:180-188 defines shape_to_str over the mlstring-named shape: shape_to_str One = strlit \"1\"; shape_to_str (Comb []) = strlit \"{}\" (HOL comments it 'should never happen'); shape_to_str (Comb (x::xs)) = concat (strlit \"{\" :: shape_to_str x :: MAP (\\x. strlit \",\" ^ x) (MAP shape_to_str xs) ++ [strlit \"}\"]); shape_to_str (Named nm) = nm. Lean shapeToStrHOL is stated over the exact MlString-backed ShapeHOL carrier and returns MlS (the faithful mlstring): .one => ofString \"1\", .comb [] => ofString \"{}\", .comb (head::tail) => mlstrConcat (ofString \"{\" :: shapeToStrHOL head :: (tail.map (fun field => mlstrAppend (ofString \",\") (shapeToStrHOL field))) ++ [ofString \"}\"]), .named name => name. HOL concat (list concat of mlstrings) is rendered by the untagged mlstrConcat (fold with mlstrAppend), HOL ^ (mlstring concatenation) by the untagged mlstrAppend (append of the underlying character lists), and HOL strlit by ofString (exact on the ASCII literals used). No extra hypotheses or side conditions. The production Shape.shapeToString remains untagged (carrier Lean String, not mlstring)."
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "with_shape_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Shape.lean",
+    "lean_name": "withShapeHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.52). HOL panLangScript.sml:216-220 defines with_shape [] _ = [] and with_shape (sh::shs) e = TAKE (size_of_shape sh) e :: with_shape shs (DROP (size_of_shape sh) e), polymorphic in the element type of the list being split. Lean withShapeHOL is the same polymorphic function over the exact ShapeHOL carrier: [] => [], shape::shapes, values => values.take (sizeOfShapeHOL shape) :: withShapeHOL shapes (values.drop (sizeOfShapeHOL shape)). HOL TAKE/DROP are Lean List.take/List.drop and size_of_shape is the tagged sizeOfShapeHOL; no extra hypotheses or side conditions. The production Shape.withShape (consumed by the untagged PanProps flatten/with_shape lemmas) remains untagged because its carrier is the String-based Shape."
+  },
+  {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",
     "hol_name": "list_insert_SNOC",
     "lean_path": "Flapjack/Pancake/CrepToLoop/StateRel.lean",

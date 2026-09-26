@@ -185,4 +185,17 @@ def shapeToStrHOL : ShapeHOL → MlS
           [Flapjack.Basis.Pure.MlString.ofString "}"])
   | .named name => name
 
+/-! HOL `panLang$with_shape` (`cakeml/pancake/panLangScript.sml:216-220`) splits
+    a list into consecutive blocks whose lengths are the `size_of_shape` of each
+    shape: `with_shape [] _ = []` and `with_shape (sh::shs) e = TAKE
+    (size_of_shape sh) e :: with_shape shs (DROP (size_of_shape sh) e)`.  The
+    exact port is polymorphic in the list element type and uses the tagged
+    `sizeOfShapeHOL`; `TAKE`/`DROP` are Lean's `List.take`/`List.drop`. -/
+@[hol "cakeml/pancake/panLangScript.sml" "with_shape_def"]
+def withShapeHOL {α : Type} : List ShapeHOL → List α → List (List α)
+  | [], _ => []
+  | shape :: shapes, values =>
+      values.take (sizeOfShapeHOL shape) ::
+        withShapeHOL shapes (values.drop (sizeOfShapeHOL shape))
+
 end Flapjack.Pancake.PanLang

@@ -185,29 +185,6 @@ def shapeToStrHOL : ShapeHOL → MlS
           [Flapjack.Basis.Pure.MlString.ofString "}"])
   | .named name => name
 
-private theorem ofString_append (left right : String) :
-    Flapjack.Basis.Pure.MlString.ofString (left ++ right) =
-      mlstrAppend (Flapjack.Basis.Pure.MlString.ofString left)
-        (Flapjack.Basis.Pure.MlString.ofString right) := by
-  simp [Flapjack.Basis.Pure.MlString.ofString, mlstrAppend,
-    Flapjack.Basis.Pure.MlString.MlString.explode_implode,
-    String.toList_append, List.map_append]
-
-private theorem mlstrAppend_assoc (first second third : MlS) :
-    mlstrAppend (mlstrAppend first second) third =
-      mlstrAppend first (mlstrAppend second third) := by
-  simp [mlstrAppend, Flapjack.Basis.Pure.MlString.MlString.explode_implode,
-    List.append_assoc]
-
-private theorem mlstrConcat_append (left right : List MlS) :
-    mlstrConcat (left ++ right) =
-      mlstrAppend (mlstrConcat left) (mlstrConcat right) := by
-  induction left with
-  | nil => simp [mlstrConcat, mlstrAppend]
-  | cons head tail ih =>
-      simp only [List.cons_append, mlstrConcat]
-      rw [ih, mlstrAppend_assoc]
-
 private theorem foldlShapeStrings_append_prefix (fields : List Flapjack.Shape)
     (leading initial : String) :
     fields.foldl
@@ -222,67 +199,6 @@ private theorem foldlShapeStrings_append_prefix (fields : List Flapjack.Shape)
       simp only [List.foldl_cons]
       simpa only [String.append_assoc] using
         ih leading (initial ++ "," ++ Flapjack.Shape.shapeToString field)
-
-private theorem shapeToStringTail_toHOL (tail : List Flapjack.Shape)
-    (h : ∀ field ∈ tail,
-      Flapjack.Basis.Pure.MlString.ofString (Flapjack.Shape.shapeToString field) =
-        shapeToStrHOL (shapeToHOL field)) :
-    Flapjack.Basis.Pure.MlString.ofString
-        (tail.foldl
-          (fun result field => result ++ "," ++ Flapjack.Shape.shapeToString field) "") =
-      mlstrConcat (tail.map (fun field =>
-        mlstrAppend (Flapjack.Basis.Pure.MlString.ofString ",")
-          (shapeToStrHOL (shapeToHOL field)))) := by
-  induction tail with
-  | nil => simp [mlstrConcat, Flapjack.Basis.Pure.MlString.ofString]
-  | cons field tail ih =>
-      have hfield := h field (by simp)
-      have htail : ∀ nested ∈ tail,
-          Flapjack.Basis.Pure.MlString.ofString
-              (Flapjack.Shape.shapeToString nested) =
-            shapeToStrHOL (shapeToHOL nested) := by
-        intro nested hmem
-        exact h nested (by simp [hmem])
-      have ihTail := ih htail
-      rw [List.foldl_cons]
-      have hfold := foldlShapeStrings_append_prefix tail
-        ("," ++ Flapjack.Shape.shapeToString field) ""
-      have hfold' :
-          tail.foldl
-              (fun result field => result ++ "," ++ Flapjack.Shape.shapeToString field)
-              ("," ++ Flapjack.Shape.shapeToString field) =
-            ("," ++ Flapjack.Shape.shapeToString field) ++
-              tail.foldl
-                (fun result field => result ++ "," ++ Flapjack.Shape.shapeToString field)
-                "" := by
-        simpa using hfold
-      rw [show "" ++ "," ++ Flapjack.Shape.shapeToString field =
-          "," ++ Flapjack.Shape.shapeToString field by simp]
-      rw [hfold']
-      rw [ofString_append, ofString_append, hfield, ihTail]
-      simp [mlstrConcat, mlstrAppend_assoc]
-
-private theorem shapeToString_toHOL (shape : Flapjack.Shape) :
-    Flapjack.Basis.Pure.MlString.ofString (Flapjack.Shape.shapeToString shape) =
-      shapeToStrHOL (shapeToHOL shape) := by
-  fun_induction Flapjack.Shape.shapeToString shape with
-  | case1 => simp [shapeToStrHOL, shapeToHOL]
-  | case2 => simp [shapeToStrHOL, shapeToHOL]
-  | case3 head tail ihHead ihTail =>
-    have htail := shapeToStringTail_toHOL tail ihTail
-    simp_all [shapeToHOL, shapeToStrHOL, mlstrAppend, mlstrConcat, List.map_map,
-      Flapjack.Basis.Pure.MlString.ofString,
-      Flapjack.Basis.Pure.MlString.MlString.explode_implode,
-      String.toList_append, List.map_append, mlstrConcat_append]
-    have hHeadBytes := congrArg Flapjack.Basis.Pure.MlString.MlString.explode ihHead
-    have hTailBytes := congrArg Flapjack.Basis.Pure.MlString.MlString.explode htail
-    simp only [Flapjack.Basis.Pure.MlString.MlString.explode] at hHeadBytes hTailBytes
-    simp only [Flapjack.Basis.Pure.MlString.MlString.explode]
-    rw [hHeadBytes]
-    exact congrArg
-      (fun bytes : List Flapjack.Basis.Pure.MlString.HolChar =>
-        (shapeToStrHOL (shapeToHOL head)).explode ++ (bytes ++ [125#8])) hTailBytes
-  | case4 name => simp [shapeToStrHOL, shapeToHOL]
 
 private def StringByteRanged (text : String) : Prop :=
   ∀ character ∈ text.toList, character.toNat < 256
@@ -382,30 +298,6 @@ private theorem shapeToString_byteRanged (shape : Flapjack.Shape)
       intro hname
       simpa [StringByteRanged, ShapeByteRanged,
         Flapjack.Shape.shapeToString] using hname
-
-/-- Production diagnostic rendering agrees with the exact HOL
-    `shape_to_str_def` on byte-ranged shapes. The premise is needed because
-    `String -> MlString` truncates non-byte characters; `shapeToStrHOL` itself
-    remains the tagged definition over the exact MlString carrier. This bridge
-    is untagged infrastructure connecting the executable String implementation
-    to that port; it has no separate HOL declaration because it relates the
-    Flapjack String/MlString codec to the tagged definition. -/
-theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes
-    (shape : Flapjack.Shape) (hshape : ShapeByteRanged shape) :
-    Flapjack.Shape.shapeToString shape =
-      Flapjack.Basis.Pure.MlString.toStringOfBytes
-        (shapeToStrHOL (shapeToHOL shape)) := by
-  calc
-    Flapjack.Shape.shapeToString shape =
-        Flapjack.Basis.Pure.MlString.toStringOfBytes
-          (Flapjack.Basis.Pure.MlString.ofString
-            (Flapjack.Shape.shapeToString shape)) := by
-      symm
-      exact Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes
-        _ (shapeToString_byteRanged shape hshape)
-    _ = Flapjack.Basis.Pure.MlString.toStringOfBytes
-          (shapeToStrHOL (shapeToHOL shape)) := by
-      rw [shapeToString_toHOL]
 
 /-! HOL `panLang$with_shape` (`cakeml/pancake/panLangScript.sml:216-220`) splits
     a list into consecutive blocks whose lengths are the `size_of_shape` of each
@@ -524,15 +416,17 @@ theorem ofString_shapeToString (s : Flapjack.Shape) :
         mlstrAppend_implode_nil, mlstrAppend_assoc]
   | case4 name => simp only [Shape.shapeToString, shapeToHOL, shapeToStrHOL]
 
-/-- String-level corollary of `ofString_shapeToString`: when every character of
-    the production rendering is a byte, `toStringOfBytes` inverts `ofString` and
-    recovers `Shape.shapeToString`.  FLAPJACK-SPECIFIC, untagged. -/
-theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes (s : Flapjack.Shape)
-    (h : ∀ c ∈ (Shape.shapeToString s).toList, c.toNat < 256) :
+/-- String-level corollary of `ofString_shapeToString`: the shape-indexed
+    `ShapeByteRanged` premise implies that every production-rendered character
+    is a byte, so `toStringOfBytes` recovers the production String. This is
+    FLAPJACK-SPECIFIC, untagged infrastructure; the exact HOL definition remains
+    tagged as `shapeToStrHOL`. -/
+theorem shapeToString_eq_shapeToStrHOL_toStringOfBytes
+    (s : Flapjack.Shape) (hshape : ShapeByteRanged s) :
     Shape.shapeToString s =
       Flapjack.Basis.Pure.MlString.toStringOfBytes (shapeToStrHOL (shapeToHOL s)) := by
   rw [← ofString_shapeToString s,
     Flapjack.Basis.Pure.MlString.toStringOfBytes_ofString_of_bytes]
-  exact h
+  exact shapeToString_byteRanged s hshape
 
 end Flapjack.Pancake.PanLang

@@ -777,6 +777,42 @@ theorem evalPanSemRecursiveCallFiniteContext_shMemStore_projection {width : Nat}
   dsimp only
   rfl
 
+/-- Projection equivalence on `Seq`, stated with projection hypotheses for the
+    two recursive sub-calls so that it composes into the general induction.
+    This is Flapjack-specific infrastructure; it is not a HOL declaration. -/
+theorem evalPanSemRecursiveCallFiniteContext_seq_projection {width : Nat} {σ : Type}
+    [NeZero width] (first second : ProgHOL width) (context : FiniteEvalContext width σ)
+    (ihFirst : ∀ (o : Option (Option (PanSemResultExact width) × FiniteEvalContext width σ)),
+        evalPanSemRecursiveCallFiniteContext first context = o →
+        evalPanSemRecursiveCallContextHOLExact first context.toExact =
+          Option.map (fun p => (p.1, p.2.toExact)) o)
+    (ihSecond : ∀ (fc : FiniteEvalContext width σ)
+        (o : Option (Option (PanSemResultExact width) × FiniteEvalContext width σ)),
+        evalPanSemRecursiveCallFiniteContext second fc = o →
+        evalPanSemRecursiveCallContextHOLExact second fc.toExact =
+          Option.map (fun p => (p.1, p.2.toExact)) o) :
+    Option.map (fun p => (p.1, p.2.toExact))
+        (evalPanSemRecursiveCallFiniteContext (.seq first second) context) =
+      evalPanSemRecursiveCallContextHOLExact (.seq first second) context.toExact := by
+  rw [evalPanSemRecursiveCallFiniteContext.eq_2,
+    evalPanSemRecursiveCallContextHOLExact.eq_2]
+  cases hfin : evalPanSemRecursiveCallFiniteContext first context with
+  | none =>
+      rw [ihFirst none hfin]
+      simp only [Option.map_none]
+  | some pair =>
+      obtain ⟨firstResult, firstContext⟩ := pair
+      rw [ihFirst (some (firstResult, firstContext)) hfin]
+      simp only [Option.map_some]
+      cases firstResult with
+      | none =>
+          simp only []
+          rw [← ihSecond _ _ rfl]
+          congr 1
+      | some r =>
+          simp only [Option.map_some]
+          congr 1
+
 end PanSemStateFiniteExact
 
 end Flapjack

@@ -40,6 +40,18 @@ commit, verification results, or exact blocked reason on the bead, and notify
 the coordinator. Keep dependency beads open until their own acceptance criteria
 are met.
 
+Close a theorem-port bead only after the theorem itself is source-reviewed and
+kernel-checked in Lean, with a justified `@[hol]` qualifier when needed. A
+mismatch classification or other disposition is not a completed port. If an
+unqualified port is specifically required, track it on a bead that explicitly
+says so in its title and acceptance criteria.
+
+If a claimed porting bead needs an unported prerequisite, create a commit-sized
+bead for that prerequisite, add a blocking dependency from the original bead,
+record the exact blocker, then unassign yourself from the original bead. Claim
+the prerequisite or another ready bead rather than holding the blocked bead;
+notify the coordinator of the new dependency and assignment change.
+
 For an executable HOL definition, landing a tagged proof-side duplicate is
 partial progress: keep its inventory bead open until the executed compiler
 uses the reviewed definition, or a documented, measured performance exception

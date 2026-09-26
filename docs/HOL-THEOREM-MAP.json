@@ -11259,15 +11259,6 @@
     "reviewer": "flapjack-ds3 (source comparison, bead flapjack-pxn.18.3.7.1.3.1.1.2.5): HOL eval_def panSemScript.sml:209-283 ported over PanSemStateFiniteExact (locals/globals/code/eshapes are HolFiniteMapExact, the canonical Lean translation of HOL's `|->`, canonical witness holFmapAsFiniteSupportWitness in the same module). The body delegates through toExact to the reviewed exact evaluator and does NOT syntactically present HOL's clause-shaped body; each of the fifteen clauses was reviewed against the HOL source and is exposed by the clause-shaped equations in Flapjack/Pancake/Semantics/PanSem/EvalFinite.lean. Qualifier is representation-only."
   },
   {
-    "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
-    "hol_name": "evaluate_def",
-    "lean_path": "Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean",
-    "lean_name": "evaluateHOLFinite",
-    "statement_status": "reviewed_fmap_as_finite_support",
-    "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
-    "reviewer": "flapjack-ds5 (source comparison, bead flapjack-qj5): HOL evaluate_def panSemScript.sml:556-779 returns a genuine `result option × state` pair and is well-founded recursion on (state.clock, sizeOf prog). evaluateHOLFinite returns exactly that pair: its body extracts the total finite-support recursive evaluator evalPanSemRecursiveCallHOLFinite (whose outer assembly marker is always `some`, since evalPanSemRecursiveCallContextHOLExact_total proves the broad evaluator total when the clock measure is respected), so the outer assembly Option of the broad evaluator is absent and the result is HOL's `result option × state`. As with the reviewed evalHOLFinite, the body delegates through toExact to the exact clause-for-clause evaluator rather than syntactically presenting HOL's body; the exact clause-for-clause body is the reviewed evalPanSemRecursiveCallContextHOLExact (TotalEvalExact.lean), whose eq_def clauses mirror HOL evaluate_def. The state's four finite-map fields (locals/globals/code/eshapes) are the canonical HolFiniteMapExact translation of HOL's `|->` (canonical witness holFmapAsFiniteSupportWitness in the same module). Flapjack/Pancake/Semantics/PanSem/EvaluateFinite.lean exposes the finite wrapper clause-level: evalPanSemRecursiveCallHOLFinite_of_broad / evaluateHOLFinite_of_broad are uniform in the program and broad result (so they cover every clause at once), and evaluateHOLFinite_skip/_break/_continue instantiate the Skip/Break/Continue clauses. The fmap_as_finite_support qualifier is representation-only and does not change the quantifiers, side conditions, or result."
-  },
-  {
     "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
     "hol_name": "exp_hdl_def",
     "lean_path": "Flapjack/Pancake/PanToCrep/ExpHdlExact.lean",

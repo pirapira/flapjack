@@ -389,9 +389,9 @@ def evalListFieldsHOLFinite {width : Nat} {σ : Type} [NeZero width]
     `evalPanSemRecursiveCallContextHOLExact_finiteSupport`.  Because it returns
     the assembly-marked `Option (Option PanSemResultExact × state)` pair and
     reconstructs the state through `ofExact`, this declaration is deliberately
-    untagged.  The faithful tagged `evaluate_def` port over the finite-support
-    carrier is `evaluateHOLFinite` below, whose clause surface is recorded in
-    `Flapjack.Pancake.Semantics.PanSem.EvaluateFinite`. -/
+    untagged.  A faithful tagged `evaluate_def` port over the finite-support
+    carrier requires a finite eval context that threads
+    `memaddrsDecidable`/`shMemaddrsDecidable`; tracked by `flapjack-6yq`. -/
 def evalPanSemRecursiveCallHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
@@ -479,22 +479,18 @@ theorem evalPanSemNonrecursiveHOLFinite_toExact {width : Nat} {σ : Type} [NeZer
   unfold evalPanSemNonrecursiveHOLFinite
   split <;> simp_all only [Option.map_some, toExact_ofExact] <;> rfl
 
-/-- Exact finite-map rendering of HOL `evaluate_def`
-    (`cakeml/pancake/semantics/panSemScript.sml:556-779`): `evaluate (prog, s) =
-    (res, s')` with `res : result option` and `s'` the post-state.  The body
-    extracts the total finite-support recursive evaluator
-    `evalPanSemRecursiveCallHOLFinite`, whose outer assembly marker is always
-    `some`, so it returns a genuine `result option × state` pair and not the
-    assembly `Option`.  As with the reviewed `evalHOLFinite`, the body delegates
-    through the exact evaluator (HOL's `evaluate_def` is well-founded recursion),
-    so the per-clause review surface is the clause-shaped `[simp]` equations in
-    `Flapjack/Pancake/Semantics/PanSem/EvaluateFinite.lean`, not the body text.
-    The state's four finite-map fields (`locals`, `globals`, `code`, `eshapes`)
-    are the canonical `HolFiniteMapExact` translation of HOL's `|->`, recorded by
-    the `fmap_as_finite_support` qualifier (canonical witness
-    `holFmapAsFiniteSupportWitness` in this module). -/
-@[hol "cakeml/pancake/semantics/panSemScript.sml" "evaluate_def" 556
-  (fmap_as_finite_support := [locals, globals, code, eshapes])]
+/-- FLAPJACK-SPECIFIC (not the tagged HOL `evaluate_def` port): finite-support
+    rendering of HOL `evaluate` (`cakeml/pancake/semantics/panSemScript.sml:556`)
+    returning a genuine `result option × state` pair.  The body extracts the
+    total finite-support recursive evaluator `evalPanSemRecursiveCallHOLFinite`
+    (its outer assembly marker is always `some`, so the assembly `Option` is
+    dropped).  It is deliberately untagged: the body delegates through
+    `toExact`, so it does not syntactically present HOL's clause-shaped body,
+    and the delegating wrapper exposes only the Skip/Break/Continue equations
+    uniformly, not the six recursive HOL clauses.  The faithful tagged port
+    requires threading `memaddrsDecidable`/`shMemaddrsDecidable` through a
+    finite eval context; tracked by `flapjack-6yq` (which blocks
+    `flapjack-qj5`). -/
 def evaluateHOLFinite {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs] :
@@ -505,9 +501,9 @@ def evaluateHOLFinite {width : Nat} {σ : Type} [NeZero width]
       | some pair => pair
       | none => (none, state)
 
-/-- Result bridge: the tagged finite evaluator is exactly the `some` output of
+/-- Result bridge: the finite evaluator is exactly the `some` output of
     the total finite-support recursive evaluator, so it is the canonical
-    finite-map rendering of HOL `evaluate`. -/
+    finite-map rendering of HOL `evaluate` (Flapjack-specific, untagged). -/
 theorem evaluateHOLFinite_eq_some {width : Nat} {σ : Type} [NeZero width]
     (state : PanSemStateFiniteExact width σ)
     [h : DecidablePred state.memaddrs] [hshared : DecidablePred state.shMemaddrs]
@@ -518,7 +514,7 @@ theorem evaluateHOLFinite_eq_some {width : Nat} {σ : Type} [NeZero width]
   unfold evaluateHOLFinite
   simp only [hp]
 
-/-- Projection bridge: forgetting the finite support of the tagged evaluator's
+/-- Projection bridge: forgetting the finite support of the finite evaluator's
     post-state recovers the broad exact evaluator's output, transported along
     `toExact`. -/
 theorem evaluateHOLFinite_snd_toExact_eq {width : Nat} {σ : Type} [NeZero width]

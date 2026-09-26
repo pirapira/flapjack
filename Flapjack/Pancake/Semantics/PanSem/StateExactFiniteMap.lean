@@ -376,6 +376,15 @@ def emptyLocalsHOLFinite {width : Nat} {σ : Type} [NeZero width]
       simp only [HolFiniteMapExact.resVarEq, resVarHOLExact,
         HolFiniteMapExact.lookup_updateEq, FUPDATE_HOL]
 
+/-- A finite-support local `resVarEq` record update is compatible with the broad
+    exact one.  This bridges the `Dec` clause's restored state. -/
+@[simp] theorem toExact_resVarEq_locals {width : Nat} {σ : Type} [NeZero width]
+    (state : PanSemStateFiniteExact width σ) (entry : MlS × Option (ValueHOL width)) :
+    ({ state with locals := HolFiniteMapExact.resVarEq state.locals entry } :
+        PanSemStateFiniteExact width σ).toExact =
+      { state.toExact with locals := resVarHOLExact state.toExact.locals entry } := by
+  simp only [PanSemStateFiniteExact.toExact, lookup_resVarEq_toExact]
+
 /-- HOL `eval_def` (`cakeml/pancake/semantics/panSemScript.sml:209-283`) over the
     finite-support state carrier.  The body delegates to the exact broad
     evaluator through the canonical translation `toExact`; it does NOT

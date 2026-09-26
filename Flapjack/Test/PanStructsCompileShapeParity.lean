@@ -1,7 +1,40 @@
 import Flapjack.Pancake.PanStructs
+import Flapjack.Pancake.PanStructsByteRanged
 import Flapjack.Pancake.Proofs.PanStructs
 
 namespace Flapjack.Test.PanStructsCompileShapeParity
+
+open Flapjack.Pancake.PanLang
+
+private def byteRangedStructCompileInput : List (Decl (BitVec 8)) :=
+  [ .name "Packet" [("field", .one)]
+  , .decl (.named "Packet") "packet" (.const (7 : BitVec 8))
+  , .function {
+      name := "getField"
+      inline := false
+      exported := false
+      params := [("value", .named "Packet")]
+      body := .return (.nField "field" (.var .local "value"))
+      returnShape := .one
+    }
+  ]
+
+private theorem byteRangedStructCompileInput_ok :
+    ∀ declaration ∈ byteRangedStructCompileInput, DeclByteRanged declaration := by
+  intro declaration hmem
+  simp [byteRangedStructCompileInput] at hmem
+  rcases hmem with hmem | hmem | hmem
+  · cases hmem
+    simp [DeclByteRanged, NameRanged, ListParamByteRanged, ParamByteRanged, ShapeByteRanged]
+  · cases hmem
+    simp [DeclByteRanged, NameRanged, ShapeByteRanged, ExpByteRanged]
+  · cases hmem
+    simp [DeclByteRanged, FunDeclByteRanged, NameRanged, ListParamByteRanged,
+      ParamByteRanged, ShapeByteRanged, ProgByteRanged, ExpByteRanged]
+
+example : ∀ declaration ∈ structCompileTop byteRangedStructCompileInput,
+    DeclByteRanged declaration :=
+  structCompileTop_byteRanged byteRangedStructCompileInput byteRangedStructCompileInput_ok
 
 /-! Direct parity for `pan_structs$compile_shape_def`
     (`pan_structsScript.sml:37`).  The nested cases distinguish the source's

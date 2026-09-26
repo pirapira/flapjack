@@ -2110,6 +2110,14 @@
     "reviewer": "flapjack-ds4 (source comparison, bead flapjack-4ac.1.42): HOL is_function (panLangScript.sml:314-317) is is_function (Function _) = T /\\ is_function _ = F, polymorphic in the word type. isFunctionHOL matches clause-for-clause over the reviewed word-indexed DeclHOL width carrier, with [NeZero width] matching HOL's positive word type and no extra hypotheses. Direct HOL-EVAL rows function=T / global=F are in scripts/hol-probes/pan_lang_is_function_probe.out, replayed in Flapjack/Test/PanLangIsFunctionParity.lean. The production globalDeclIsFunction (String-backed generic Decl) stays untagged."
   },
   {
+    "hol_path": "cakeml/pancake/panLangScript.sml",
+    "hol_name": "is_name_def",
+    "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
+    "lean_name": "isNameHOL",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds9 (source comparison, bead flapjack-4ac.1.36): HOL is_name (cakeml/pancake/panLangScript.sml:244-247) is is_name (Name _ _) = T /\\ is_name _ = F, polymorphic in the word type. isNameHOL matches clause-for-clause over the reviewed word-indexed DeclHOL width carrier (the accepted rendering of HOL's polymorphic decl; see the tagged decl), with [NeZero width] matching HOL's positive word type and no extra hypotheses. Direct HOL-EVAL rows is_name_name=T and is_name_decl=F are in scripts/hol-probes/pan_lang_decl_predicates_probe.out, replayed in Flapjack/Test/PanLangDeclHOLParity.lean. The production isName (String-backed generic Decl) stays untagged; the kernel-checked isName_declOfHOL (Flapjack/Pancake/PanGlobals.lean) bridges it."
+  },
+  {
     "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
     "hol_name": "functions_append",
     "lean_path": "Flapjack/Pancake/Semantics/PanProps.lean",

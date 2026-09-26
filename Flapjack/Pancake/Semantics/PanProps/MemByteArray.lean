@@ -89,4 +89,23 @@ theorem panWriteBytearrayPreservesWordAt {width : Nat} [NeZero width]
   exact panWriteBytearrayHOL_preservesWordAt address' bytes memory domain bigEndian
     address word hMemory
 
+/-- Exact statement of HOL `write_bytearray_update_byte`. HOL's
+`byte_aligned ad` is `byte_align ad = ad` (`alignmentScript.sml:27`), rendered
+here with `panByteAlignHOL`; HOL `word8 list` is `List UInt8`. The HOL word
+width remains polymorphic, as does this theorem's `width`. Unlike the support
+lemma above, the alignment and existential word premise form one antecedent. -/
+@[hol "cakeml/pancake/semantics/panPropsScript.sml" "write_bytearray_update_byte"]
+theorem writeBytearrayUpdateByte {width : Nat} [NeZero width]
+    (bytes : List UInt8) (address address' : RiscV.Word width)
+    (memory : RiscV.Word width → HolWordLab width)
+    (domain : RiscV.Word width → Prop) [DecidablePred domain]
+    (bigEndian : Bool) :
+    (panByteAlignHOL address = address ∧
+      (∃ word : RiscV.Word width, memory address = .word word)) →
+      ∃ word : RiscV.Word width,
+        panWriteBytearrayHOL address' bytes memory domain bigEndian address = .word word := by
+  rintro ⟨haligned, word, hmemory⟩
+  exact panWriteBytearrayPreservesWordAt bytes address address' memory domain
+    bigEndian haligned word hmemory
+
 end Flapjack

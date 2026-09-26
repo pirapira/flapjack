@@ -11270,5 +11270,13 @@
     "statement_status": "reviewed_fmap_as_finite_support",
     "fmap_as_finite_support": ["locals", "globals", "code", "eshapes"],
     "reviewer": "Codex (direct source comparison, 2026-09-26, panPropsScript.sml:126): HOL quantifies state/expression/value and states successful eval followed by FEVERY well-formed locals and globals in that order, concluding is_wf_shape_v under the state's struct context. Lean preserves the conjunction, order, and conclusion using exact ExpHOL/ValueHOL/StructContextExact carriers; pointwise lookup premises express FEVERY for the finite-map fields. PanPropsEvalStateFiniteExact owns all four fields as HolFiniteMapExact, the reviewed canonical translation of HOL |->, and its same-module holFmapAsFiniteSupportWitness proves toExact/ofExact roundtrips with PanSemStateExact restricted to finite support. `evalHOL` delegates to the already source-reviewed evalHOLExact through that translation. The qualifier records only the finite-map representation; [NeZero width] is the reviewed positive word dimension carrier, and the explicit DecidablePred state.memaddrs instance renders HOL set membership for memory loads."
+  },
+  {
+    "hol_path": "cakeml/pancake/semantics/panPropsScript.sml",
+    "hol_name": "write_bytearray_update_byte",
+    "lean_path": "Flapjack/Pancake/Semantics/PanProps/MemByteArray.lean",
+    "lean_name": "writeBytearrayUpdateByte",
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-main (direct source review, 2026-09-26; bead flapjack-4ac.4.58.1): HOL panPropsScript.sml:1098-1104 quantifies bytes, ad, ad', m, adrs, be. The single antecedent is byte_aligned ad AND an existential Word cell at m ad; the conclusion existentially witnesses a Word cell at ad after write_bytearray ad' bytes m adrs be. Lean retains the same order and conjunction, with polymorphic word width, UInt8 for HOL word8, HolWordLab for HOL word_lab, and panByteAlignHOL ad = ad for byte_aligned ad (alignmentScript.sml:27). DecidablePred domain is computational evidence for HOL set membership, not a logical side condition."
   }
 ]

@@ -10632,8 +10632,8 @@
     "hol_name": "size_of_sh_with_ctxt_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "sizeOfShapeWithContextHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.26). HOL panLangScript.sml:164-171 defines size_of_sh_with_ctxt ctxt One = 1, size_of_sh_with_ctxt ctxt (Comb shapes) = SUM (MAP (size_of_sh_with_ctxt ctxt) shapes), and size_of_sh_with_ctxt ctxt (Named name) = case ALOOKUP ctxt name of SOME info => info.size | NONE => 1. Lean sizeOfShapeWithContextHOL has the same three clauses over the exact carriers: ShapeHOL (one/comb/named), StructContextExact = List (MlS x StructInfoHOLExact), and StructInfoHOLExact (the tagged exact struct_info with fields and Nat size). The HOL SUM (MAP ...) fold is rendered by the mutually recursive sizeOfShapesWithContextHOL with the []/0 and +/cons clauses, and HOL ALOOKUP is rendered by structContextLookupHOL (structContextLookupHOL_nil, structContextLookupHOL_cons). No extra hypotheses or side conditions."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",
@@ -10696,16 +10696,16 @@
     "hol_name": "is_wf_flds_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "isWfFldsExactHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.24). HOL panLangScript.sml:148-152 defines is_wf_flds ctxt [] = T and is_wf_flds ctxt ((fld,sh)::flds) = is_wf_shape ctxt sh and is_wf_flds ctxt flds. Lean isWfFldsExactHOL has exactly the same two clauses over the exact carriers: the field list is List (MlS x ShapeHOL) with MlS the mlstring name and ShapeHOL the exact shape carrier; the field name fld is ignored exactly as HOL ignores it, and is_wf_shape is the tagged exact isWfShapeExactHOL. No extra hypotheses or side conditions."
   },
   {
     "hol_path": "cakeml/pancake/panLangScript.sml",
     "hol_name": "is_wf_ctxt_def",
     "lean_path": "Flapjack/Pancake/PanLang/Decl.lean",
     "lean_name": "isWfCtxtExactHOL",
-    "statement_status": "pending_statement_review",
-    "reviewer": "flapjack-deepseek (source comparison)"
+    "statement_status": "reviewed_exact",
+    "reviewer": "flapjack-ds8 (source comparison, 2026-09-26; bead flapjack-4ac.1.25). HOL panLangScript.sml:154-161 defines is_wf_ctxt [] = T and is_wf_ctxt ((nm,info)::ctxt') = (ALOOKUP ctxt' nm = NONE) and is_wf_flds ctxt' info.fields and is_wf_ctxt ctxt'. Lean isWfCtxtExactHOL has exactly the same clauses over the exact carriers: StructContextExact = List (MlS x StructInfoHOLExact) with MlS the mlstring name and StructInfoHOLExact the tagged exact struct_info; ALOOKUP ctxt' nm = NONE is rendered by (structContextLookupHOL name rest).isNone (structContextLookupHOL is the reviewed first-match ALOOKUP used by the tagged exact isWfShapeExactHOL); is_wf_flds is the exact isWfFldsExactHOL, and the Bool and-chain preserves HOL conjunction order. No extra hypotheses or side conditions."
   },
   {
     "hol_path": "cakeml/pancake/proofs/crep_to_loopProofScript.sml",

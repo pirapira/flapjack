@@ -45,7 +45,25 @@ namespace Flapjack
     (`lookup_success`, `lookup_missing`, `lookup_struct`) are recorded in
     `scripts/hol-probes/globals_lookup_probe.out` and reproduced by
     `Flapjack/Test/PanToCrepGlobalsLookupParity.lean`. Exact-carrier
-    replacement is tracked by `flapjack-pxn.18.3.5.8.8`. -/
+    replacement is tracked by `flapjack-pxn.18.3.5.8.8`.
+
+    HOL `evaluate_nested_decs_load_globals`
+    (`pan_to_crepProofScript.sml:4139-4176`) implicitly universally quantifies
+    `s`, `rv`, `rvs`, `vs`, and `p`. Its four premises are successful
+    `globals_lookup s rv`, the 32-cell bound on `size_of_shape (shape_of rv)`,
+    distinct `vs`, and equality of `LENGTH vs` with that shape size. Its
+    conclusion equates `evaluate (nested_decs vs (load_globals 0w ...) p, s)`
+    with evaluation of `p` after the globals are installed, followed by the
+    exact `FOLDL res_var` restoration from the original locals. Lean has the
+    exact syntax helpers `loadGlobalsHOL` and `nestedDecsHOL` and positive-width
+    `ValueHOL`/`CrepSemHOLState` carriers, but no full `evaluate` over
+    `CrepProgHOL` and `CrepSemHOLState`, nor an exact `globals_lookup` bridge.
+    The available `evalCrepClockProg` is a restricted evaluator over
+    `CrepClockProg`/`CrepExp`/`CrepHolState`; this `globalsLookup` is the
+    production String-backed projection described above. Neither can state the
+    HOL equation or its exact premises, so no theorem tag is claimed. The
+    faithful theorem replacement is tracked by `flapjack-4ac.5.60.1`, gated on
+    `flapjack-4ac.5.82` and `flapjack-pxn.18.3.5.8.8`. -/
 def globalsLookup (state : CrepRuntimeState α σ) (value : PanValue α) :
     Option (List (PanWordLab α)) :=
   (List.range (Shape.shapeSize (panSemShapeOf value))).mapM

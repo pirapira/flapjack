@@ -69,42 +69,36 @@ theorem panValueShape_eq_panSemShapeOf_tagged (context : StructContext) (value :
       exact congrArg Shape.comb (List.map_congr_left ih)
   | case3 name fields => simp only [panValueShape, panSemShapeOf]
 
-/-- Counterpart of HOL `panSem$word_lab` (`panSemScript.sml:17`,
-    `word_lab = Word ('a word) End`): a single `word` constructor carrying the
-    word payload, indexed by `width` with a `BitVec width` payload.  The
-    executable code uses the generic `PanWordLab` (`Flapjack/PanValues.lean`),
-    and the two are related by the checked isomorphism below at each width. -/
--- FLAPJACK-SPECIFIC (not a statement-exact HOL port): HOL
--- `word_lab = Word ('a word)` has one constructor and one word payload, which
--- matches `.word (BitVec width)` at every positive width. This Lean inductive
--- quantifies over every `width : Nat`, including zero; HOL's finite word
--- carrier has a positive `dimindex` and has no width-zero instance. The extra
--- width-zero carrier in this family has no HOL counterpart. Adding
--- `[NeZero width]` to this inductive (as on `CrepProgHOL`) propagates through
--- `HolValue`, `CrepLocalsExact`, and the frozen `PanSemStateEval.lean`, so the
--- tag stays withheld until the dependency slice in `flapjack-0lj.5` lands.
-inductive HolWordLab (width : Nat) where
+/- The carrier shape matches HOL `word_lab = Word ('a word)`; positivity is
+   required because every HOL finite word has a nonzero dimension. The `word_lab`
+   tag remains withheld until the downstream exact-carrier closure tracked by
+   `flapjack-0lj.5` is complete. -/
+inductive HolWordLab (width : Nat) [NeZero width] where
   | word (value : BitVec width)
   deriving BEq, DecidableEq, Repr
 
 /-- The isomorphism from the exact port to production `PanWordLab`. -/
-def HolWordLab.toPanWordLab {width : Nat} : HolWordLab width → PanWordLab (BitVec width)
+def HolWordLab.toPanWordLab {width : Nat} [NeZero width] :
+    HolWordLab width → PanWordLab (BitVec width)
   | .word value => .word value
 
 /-- The isomorphism from production `PanWordLab` to the exact port. -/
-def PanWordLab.toHolWordLab {width : Nat} : PanWordLab (BitVec width) → HolWordLab width
+def PanWordLab.toHolWordLab {width : Nat} [NeZero width] :
+    PanWordLab (BitVec width) → HolWordLab width
   | .word value => .word value
 
-@[simp] theorem HolWordLab.toPanWordLab_toHolWordLab {width : Nat} (value : HolWordLab width) :
+@[simp] theorem HolWordLab.toPanWordLab_toHolWordLab {width : Nat} [NeZero width]
+    (value : HolWordLab width) :
     value.toPanWordLab.toHolWordLab = value := by
   cases value <;> rfl
 
-@[simp] theorem PanWordLab.toHolWordLab_toPanWordLab {width : Nat}
+@[simp] theorem PanWordLab.toHolWordLab_toPanWordLab {width : Nat} [NeZero width]
     (value : PanWordLab (BitVec width)) :
     value.toHolWordLab.toPanWordLab = value := by
   cases value <;> rfl
 
-@[simp] theorem HolWordLab.toPanWordLab_word {width : Nat} (value : BitVec width) :
+@[simp] theorem HolWordLab.toPanWordLab_word {width : Nat} [NeZero width]
+    (value : BitVec width) :
     (HolWordLab.word value).toPanWordLab = PanWordLab.word value := rfl
 
 /-- Source-shaped port of HOL `panSem$v` (`panSemScript.sml:22`,
@@ -117,12 +111,12 @@ def PanWordLab.toHolWordLab {width : Nat} : PanWordLab (BitVec width) → HolWor
 -- (`panSemScript.sml:22`) is
 -- `Val ('a word_lab) | RStruct (v list) | NStruct stcname ((fldname # v) list)`
 -- with `stcname`/`fldname` = `mlstring`, whereas this Lean `nStruct` carries
--- `StructName`/`FieldName = String`. Constructor names/arities match, but the
--- name carriers differ, so no tag is attached until an exact MlString-backed
--- value datatype is introduced (tracked by `flapjack-pxn.18.3.5.8`, parent
--- `flapjack-0lj`).
+-- `StructName`/`FieldName = String`. This compatibility carrier is explicitly
+-- Flapjack-specific and keeps its word payload in production `PanWordLab`;
+-- the exact `ValueHOL` in `PanSem/ValueHOL.lean` uses positive-width
+-- `HolWordLab` instead. No tag is attached to this String-backed carrier.
 inductive HolValue (width : Nat) where
-  | val (value : HolWordLab width)
+  | val (value : PanWordLab (BitVec width))
   | rStruct (fields : List (HolValue width))
   | nStruct (name : StructName) (fields : List (FieldName × HolValue width))
   deriving Repr

@@ -29,6 +29,40 @@ inductive SemanticsRunResHOL (α : Type u) where
   | Incomplete
   deriving DecidableEq, Repr
 
+/-! Source review for HOL `semantics_wrapper_eq`
+(`panPropsScript.sml:1831-1929`): the theorem is generic in arbitrary abstract
+and concrete functions `absf, concf : Nat → SemanticsRunResHOL α × List β`. Its
+six premises are: `semantics_wrapper absf ≠ Fail`; every non-`RunError` abstract
+observation has a matching concrete observation at some extended clock; every
+concrete non-`Incomplete` observation is stable under further clock increase;
+the same stability for abstract observations; and, separately for abstract
+and concrete observations, if the result at `k + k'` is `(Incomplete, ev)`,
+there are `r'` and `ev'` with the result at `k` equal to `(r', ev')` and
+`IS_PREFIX ev ev'`. These premises imply equality of the two
+`semantics_wrapper` results. The closest Flapjack API,
+`PanObservationalSemantics.panSemantics`, specializes the functions to a
+`PanSemanticsHooks` evaluator over `Option PanValueFfiClockResult`, and takes a
+caller-supplied prefix chain/LUB. It has neither the arbitrary result carrier
+nor the generic wrapper equality statement, so it is not a port and receives
+no HOL tag. The faithful theorem port is tracked by
+`flapjack-4ac.4.106.1`, depending on the exact wrapper/LUB carrier work in
+`flapjack-4ac.4.105.1`. -/
+
+/-! Source review for HOL `pan_sem_is_wrapper`
+(`panPropsScript.sml:1931-1954`): with no premises, HOL equates
+`panSem.semantics s start` to `semantics_wrapper` applied to the clock-indexed
+`evaluate (TailCall start [], s with clock := k)`, mapping `TimeOut` to
+`Incomplete`, `FinalFFI e` to `CompleteResult (FFI_outcome e)`, `Return _` to
+`CompleteResult Success`, and every other result to `RunError`; the event
+component is `s.ffi.io_events`. The closest Flapjack definition,
+`PanObservationalSemantics.panSemantics`, instead takes arbitrary
+`PanSemanticsHooks`, uses `PanValueFfiClockResult`/`FfiState` carriers, and
+requires a caller-provided event-prefix chain/LUB. It does not state the HOL
+equality and receives no tag. The faithful theorem port is tracked by
+`flapjack-4ac.4.107.1`, depending on exact `semantics_wrapper_def` carrier work
+in `flapjack-4ac.4.105.1` and the exact PanSem semantics port
+`flapjack-4ac.3.52.2`. -/
+
 /-! Source review for HOL `eval_swap_memory`
 (`panPropsScript.sml:1734-1742`): the exact theorem quantifies `s`, `exp`, `v`,
 and an arbitrary replacement memory `mry`; it assumes successful `eval s exp`

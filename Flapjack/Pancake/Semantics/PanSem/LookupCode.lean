@@ -12,6 +12,17 @@ The `@[hol]` tag is therefore withheld (bead `flapjack-0lj` / `flapjack-4w9`);
 the exact MlString-keyed port is tracked by `flapjack-pxn.18.3.5.8`.
 `lookupPanSemStateCodeHOL` adapts the finite-support production `PanSemState.code`
 through its extensional lookup view.
+
+The HOL theorem `lookup_code_wf_shape_invariant_step`
+(`cakeml/pancake/semantics/panPropsScript.sml:1233`) has no exact Lean port
+here. It assumes successful HOL expression evaluation, successful `lookup_code`,
+and `FEVERY` well-formedness of both source locals and globals, then proves
+`FEVERY` well-formedness of the returned `newlocals`. This module's helpers use
+String-keyed production names and `PanValue`; they are not that theorem. The
+faithful replacement must use the exact `MlString`/`ValueHOL` carriers and the
+finite-map state owner, preserve all four premises and the exact conclusion, and
+meet the same-module `fmap_as_finite_support` owner/witness rule. Tracked by
+`flapjack-4ac.4.66.1`; no HOL tag is claimed here.
 -/
 
 namespace Flapjack

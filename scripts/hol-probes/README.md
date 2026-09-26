@@ -431,6 +431,15 @@ CI validates that each listed direct-HOL case remains present in its committed
 probe output and in the corresponding Lean test with
 `scripts/pan-to-crep-coverage-report.py --check`.
 
+`loop_sem_lprefix_lub_probe.out` records the empty-family result and HOL EVAL
+of `build_lprefix_lub` for the conflicting non-chain family
+`{fromList [1], fromList [2]}`. HOL leaves the selected event as Hilbert
+choice (`@x`) in that case; `build_lprefix_lub_thm` only characterizes the LUB
+when the input is an `lprefix_chain`. The matching source review is beside
+`SemanticsRunResHOL` in `Flapjack/Pancake/Semantics/PanProps.lean`. Refresh it
+with `HOL_PROBE_ONLY=loop_sem_lprefix_lub_probeScript.sml
+scripts/hol-probes/regenerate.sh`.
+
 `crep_inline_alist_map_probe.out` records direct HOL EVAL of the inline-map
 input carrier at `crep_inlineScript.sml:259-269`: `alist_to_fmap` keeps the
 first duplicate association-list binding, lookups for another row are

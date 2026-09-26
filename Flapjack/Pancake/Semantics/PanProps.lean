@@ -29,6 +29,25 @@ inductive SemanticsRunResHOL (α : Type u) where
   | Incomplete
   deriving DecidableEq, Repr
 
+/-! Source review for the unported HOL `semantics_wrapper_def`
+(`panPropsScript.sml:1824-1829`): the divergence branch applies
+`LUB`/`build_lprefix_lub` to the set
+`IMAGE (fromList ∘ SND ∘ f) UNIV` without a chain premise. The HOL helper
+`build_lprefix_lub` is defined by `LUNFOLD` of `build_lprefix_lub_f`; each
+unfold step uses `lprefix_chain_nth`, whose `some` selects an element when
+one exists. Its theorem `build_lprefix_lub_thm` establishes the least-upper-
+bound property only when the family is an `lprefix_chain`. Thus the arbitrary
+function accepted by the definition includes non-chain families, for which
+the selected conflicting event at an index is not characterized by that
+theorem. The existing Lean `LoopLprefixLub`/`buildLoopLprefixLub` instead
+requires a chain proof and chooses an indexed event using Lean's classical
+choice; it gives no translation of HOL's unconstrained selection on
+non-chains. This is a carrier/choice mismatch in the definition's behavior,
+not merely a missing proof premise. No `@[hol]` tag is appropriate until a
+reviewed Lean representation of the generic lazy-list LUB and its HOL choice
+boundary is available. The exact prerequisite and dependent wrapper port are
+tracked by `flapjack-4ac.4.105.2` and `flapjack-4ac.4.105.1`. -/
+
 /-! Source review for HOL `semantics_wrapper_eq`
 (`panPropsScript.sml:1831-1929`): the theorem is generic in arbitrary abstract
 and concrete functions `absf, concf : Nat → SemanticsRunResHOL α × List β`. Its

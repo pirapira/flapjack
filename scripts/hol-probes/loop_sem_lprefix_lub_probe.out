@@ -1,1 +1,21 @@
 empty_lub_0=NONE
+conflicting_prefixes_lub_0=LNTH 0
+  (case
+     OPTION_MAP (λx. (1,x))
+       (if (∃x l. (l = [|1|] ∨ l = [|2|]) ∧ LNTH 0 l = SOME x) then
+          SOME (@x. ∃l. (l = [|1|] ∨ l = [|2|]) ∧ LNTH 0 l = SOME x)
+        else NONE)
+   of
+     NONE => [||]
+   | SOME (v1,v2) =>
+     v2:::LUNFOLD (build_lprefix_lub_f (λll. ll = [|1|] ∨ ll = [|2|])) v1)
+conflicting_prefixes_lub_1=LNTH 1
+  (case
+     OPTION_MAP (λx. (1,x))
+       (if (∃x l. (l = [|1|] ∨ l = [|2|]) ∧ LNTH 0 l = SOME x) then
+          SOME (@x. ∃l. (l = [|1|] ∨ l = [|2|]) ∧ LNTH 0 l = SOME x)
+        else NONE)
+   of
+     NONE => [||]
+   | SOME (v1,v2) =>
+     v2:::LUNFOLD (build_lprefix_lub_f (λll. ll = [|1|] ∨ ll = [|2|])) v1)

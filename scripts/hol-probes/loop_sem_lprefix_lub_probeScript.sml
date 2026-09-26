@@ -25,5 +25,13 @@ fun print_eval label q =
   end;
 
 val empty_chain = ``({} : num llist -> bool)``;
+val conflicting_prefixes =
+  ``(\ll. ll = llist$fromList [1] \/ ll = llist$fromList [2])``;
 
 val _ = print_eval "empty_lub_0" ``LNTH 0 (lprefix_lub$build_lprefix_lub ^empty_chain)``;
+(* Outside lprefix_chain, HOL's selected element is not characterized by
+   build_lprefix_lub_thm; record the concrete choice made by this HOL run. *)
+val _ = print_eval "conflicting_prefixes_lub_0"
+  ``LNTH 0 (lprefix_lub$build_lprefix_lub ^conflicting_prefixes)``;
+val _ = print_eval "conflicting_prefixes_lub_1"
+  ``LNTH 1 (lprefix_lub$build_lprefix_lub ^conflicting_prefixes)``;

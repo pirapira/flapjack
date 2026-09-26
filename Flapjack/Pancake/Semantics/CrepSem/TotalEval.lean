@@ -348,7 +348,22 @@ def evalCrepClockLeaf {width : Nat} {σ : Type _}
     evaluator would not state HOL's quantified theorem over `evaluate`; the
     exact Assign/nested-Seq evaluator and theorem port are tracked by
     `flapjack-4ac.5.82`, dependent on exact Crep carriers
-    `flapjack-pxn.18.3.5.8.8`. -/
+    `flapjack-pxn.18.3.5.8.8`.
+
+    Source-reviewed disposition for HOL
+    `evaluate_nested_decs_load_globals` (`pan_to_crepProofScript.sml:4139-4176`):
+    HOL implicitly universally quantifies `s`, `rv`, `rvs`, `vs`, and `p`; its
+    premises are `globals_lookup s rv = SOME rvs`, the shape-size bound 32,
+    distinct `vs`, and the exact length/shape-size equality. Its conclusion is
+    the `evaluate` equation for generated `load_globals` nested in `nested_decs`,
+    including the let-bound `FOLDL res_var` restoration from original locals.
+    This evaluator instead runs `CrepClockProg` over production `CrepExp` and
+    `CrepHolState`; it cannot state that equation or those exact premises. The
+    production `globalsLookup` also uses String-backed `PanValue` and
+    `CrepRuntimeState`. The theorem remains untagged until a full exact
+    `CrepProgHOL`/`CrepSemHOLState` evaluator and exact globals lookup are
+    available; the faithful replacement is `flapjack-4ac.5.60.1`, gated on
+    `flapjack-4ac.5.82` and `flapjack-pxn.18.3.5.8.8`. -/
 def evalCrepClockProg [NeZero width] {σ : Type _}
   : CrepClockProg width → CrepHolState (BitVec width) σ →
     Option (CrepResultHOL (BitVec width) FfiFinalEvent) ×

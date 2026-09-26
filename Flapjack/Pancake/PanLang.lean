@@ -18,6 +18,13 @@ abbrev FunName := String
 abbrev ExceptionId := String
 abbrev DeclarationName := String
 
+/-- Exact port of HOL `panLang$index` (`cakeml/pancake/panLangScript.sml:33`):
+    `Type index = ``:num```.  Lean's exact numeral type is `Nat`, so this alias
+    is the source-alias counterpart with no payload, side condition, or
+    representation difference. -/
+@[hol "cakeml/pancake/panLangScript.sml" "index"]
+abbrev Index := Nat
+
 /- FLAPJACK-SPECIFIC (not an exact HOL port): the `Named` field carrier differs.
 HOL `panLangScript.sml:21` aliases `stcname = ``:mlstring``` and the datatype is
 `shape = One | Comb (shape list) | Named stcname`, whereas Lean aliases

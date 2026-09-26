@@ -592,7 +592,20 @@ def panCompileTap [CakeDisplayWord α]
     `globalCompileTopCake` result at the global pass boundary.  The remaining
     metadata is retained from `globalCompileTop` for callers that inspect the
     intermediate pipeline record; the declarations sent into Crep are the
-    direct output of Cake's tagged `compile_top`. -/
+    direct output of Cake's tagged `compile_top`.
+
+    The production `compile_prog` call below remains on the String-backed
+    implementation. `compileProgTopHOLOfExact` is currently only a carrier
+    adapter: it decodes `DeclHOL` back into production declarations before
+    calling that same source-shaped implementation, and the reverse codec is
+    lossy for names outside `NameRanged`. `parseTopDecs_declByteRanged` proves
+    the parser result is in range, but that proof is not yet propagated through
+    move-start, simplification, struct compilation, and `globalCompileTopCake`.
+    Until that pass invariant is proved, routing this general pipeline API
+    through the adapter would silently change results for arbitrary production
+    declarations. The missing global-pass invariant is tracked by
+    `flapjack-pxn.18.3.5.8.7.1.2.1`; the faithful exact `compile_prog` port is
+    tracked by `flapjack-pxn.18.3.5.8.13`. Neither is claimed complete here. -/
 def compileFlapjackEntryCake {width : Nat} [NeZero width]
     [BEq (BitVec width)] [OfNat (BitVec width) 0]
     [OfNat (BitVec width) 1] [Add (BitVec width)] [Mul (BitVec width)]

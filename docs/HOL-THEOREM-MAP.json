@@ -9781,16 +9781,16 @@
     "hol_name": "every_var_imm_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarImm",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-5ldn): clause-for-clause exact vs wordLangScript.sml:93-96; HOL `every_var_imm P (Reg r) = P r` and `every_var_imm P _ = T` are Lean `everyVarImm P (.reg num) = P num` and `everyVarImm P _ = true` over the faithful WordRegImm (BitVec width) carrier (asm$reg_imm). Only OH Bool coincidence vs HOL T."
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-ds8 (bead flapjack-wvru corrective): DEMOTED from reviewed_exact to pending_statement_review per coordinator review BLOCKER. HOL wordLangScript.sml:93-96 is about a nonzero-dimensional word type, but the Lean everyVarImm is generic over width with no [NeZero width], so the width=0 instance is not an exact HOL carrier. Needs a NeZero-width-gated statement or an explicit width-side condition before promotion."
   },
   {
     "hol_path": "cakeml/compiler/backend/wordLangScript.sml",
     "hol_name": "every_var_inst_def",
     "lean_path": "Flapjack/Pancake/WordLang.lean",
     "lean_name": "everyVarInst",
-    "statement_status": "reviewed_exact",
-    "reviewer": "flapjack-ds8 (bead flapjack-5ldn): clause-for-clause exact vs wordLangScript.sml:98-125 over the faithful WordLangInst (BitVec width) carrier (asm$inst): Const/Arith Binop/Shift/Div/AddCarry/AddOverflow/SubOverflow/LongMul/LongDiv/Mem Load/Store/Load32/Store32/Load8/Store8/FP FPLess/FPLessEqual/FPEqual/FPMovToReg/FPMovFromReg plus the catch-all, with dimindex(:'a)=64 rendered as width=64 and HOL conjunction/NF as Lean &&/!. No extra hypotheses."
+    "statement_status": "pending_statement_review",
+    "reviewer": "flapjack-ds8 (bead flapjack-wvru corrective): DEMOTED from reviewed_exact to pending_statement_review per coordinator review BLOCKER. HOL wordLangScript.sml:98-125 concerns a nonzero-dimensional word type; the Lean everyVarInst is generic over width with no [NeZero width], so width=0 is not an exact HOL carrier. Needs a NeZero-width-gated statement before promotion."
   },
   {
     "hol_path": "cakeml/pancake/semantics/panSemScript.sml",

@@ -29,6 +29,19 @@ inductive SemanticsRunResHOL (α : Type u) where
   | Incomplete
   deriving DecidableEq, Repr
 
+/-! Source review for HOL `eval_swap_memory`
+(`panPropsScript.sml:1734-1742`): the exact theorem quantifies `s`, `exp`, `v`,
+and an arbitrary replacement memory `mry`; it assumes successful `eval s exp`
+and equality of the two memories at every address in `s.memaddrs`, then proves
+the same successful result after replacing memory. No tag is claimed here:
+`PanSemStateExact` admits unrestricted function-backed maps, while the exact
+finite-support state and its canonical map witness are declared in
+`PanSem/StateExactFiniteMap.lean`. The finite-map qualifier requires the owner
+and witness in the theorem's module, so importing that carrier here is not
+enough and duplicating the full state is not acceptable. The faithful port is
+tracked by `flapjack-4ac.4.100.1`, dependent on the finite-map carrier work
+`flapjack-pxn.18.3.7.1.3.1.1.2`. -/
+
 /-! Cake's local `dropWhile_eq_cons_IMP`
 (`cakeml/pancake/semantics/panPropsScript.sml:74-86`) says that when
 `dropWhile P xs` yields `y :: ys`, there is an in-bounds index `n` at which

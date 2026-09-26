@@ -11896,5 +11896,45 @@
     "lean_name": "panSimpDeclsHOL",
     "statement_status": "reviewed_exact",
     "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8.1): HOL pan_simpScript.sml:74-81 compile_prog prog = MAP (lambda decl. case decl of Function fi => Function (fi with body := compile fi.body) | _ => decl) prog. Lean panSimpDeclsHOL maps DeclHOL.function declarations with body := panSimpCompileHOL body and leaves all other declarations unchanged, exact clause-for-clause over the exact DeclHOL/FunDeclHOL carrier (record update on the body field)."
+  },
+{
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+  "hol_name": "exp_ids_ret_to_tail_eq",
+  "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+  "lean_name": "expIdsHOL_retToTailHOL_eq",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): exact port of pan_simpProofScript.sml:13 `!p. exp_ids (ret_to_tail p) = exp_ids p` over the exact ProgHOL/mlstring carriers and the tagged retToTailHOL/expIdsHOL definitions. The prior production String-keyed expIdsRetToTailEq analogue remains untagged (documented_mismatch and INFO_MISMATCH)."
+  },
+{
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+  "hol_name": "exp_ids_seq_assoc_eq",
+  "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+  "lean_name": "expIdsHOL_seqAssocHOL_eq",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): exact port of pan_simpProofScript.sml:25 `!p q. exp_ids (seq_assoc p q) = exp_ids p ++ exp_ids q` over exact ProgHOL/mlstring and tagged seqAssocHOL/expIdsHOL. The production seqAssoc analogue remains untagged."
+  },
+{
+    "hol_path": "cakeml/pancake/proofs/pan_simpProofScript.sml",
+  "hol_name": "exp_ids_compile_eq",
+  "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+  "lean_name": "expIdsHOL_panSimpCompileHOL_eq",
+  "statement_status": "reviewed_exact",
+  "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.8): exact port of pan_simpProofScript.sml:34 `!p. exp_ids (compile p) = exp_ids p` over exact ProgHOL/mlstring and tagged panSimpCompileHOL. Derived from the exact ret_to_tail/seq_assoc ports. The production panSimpProg analogue remains untagged."
+  },
+{
+    "hol_path": null,
+  "hol_name": null,
+  "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+  "lean_name": "expIdsHOL_smartSeqHOL",
+  "statement_status": "no_hol_reference_pending_classification",
+  "reviewer": "Lean-only support lemma for the exact pan_simp ports: `expIdsHOL` distributes over the exact smartSeqHOL. No direct HOL declaration; used to prove the exact exp_ids_seq_assoc_eq port (bead flapjack-4ac.8)."
+  },
+{
+    "hol_path": null,
+  "hol_name": null,
+  "lean_path": "Flapjack/Pancake/Proofs/PanSimp.lean",
+  "lean_name": "expIdsHOL_seqCallRetHOL",
+  "statement_status": "no_hol_reference_pending_classification",
+  "reviewer": "Lean-only support lemma for the exact pan_simp ports: the exact seqCallRetHOL rewrite preserves expIdsHOL. No direct HOL declaration; used to prove the exact exp_ids_ret_to_tail_eq port (bead flapjack-4ac.8)."
   }
 ]

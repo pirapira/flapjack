@@ -2366,4 +2366,233 @@ theorem firstCompileProgAllDistinctPanSimp (declarations : List (Decl α))
     ((functions (panSimpDecls declarations)).map (fun entry => entry.1)).Nodup :=
   functions_panSimpDecls_names_nodup declarations hnames
 
+open Flapjack.Pancake.PanLang
+
+/-! ## Exact `pan_simpProofScript.sml` syntactic ports (bead flapjack-4ac.8)
+
+The declarations below are stated over the exact `ProgHOL`/`MlS` carriers and
+the exact `smartSeqHOL`/`seqCallRetHOL`/`seqAssocHOL`/`retToTailHOL`/
+`panSimpCompileHOL`/`panSimpDeclsHOL` transformations from
+`Flapjack/Pancake/PanSimp.lean`, matching the HOL scripts' `panLang$exp_ids`
+over `mlstring` identifiers rather than the production String-keyed helpers. -/
+
+/-- Support lemma: the exact `seqCallRetHOL` rewrite preserves `expIdsHOL`.
+    Both the `AssignCall`/`Return` shape and the resulting `TailCall` carry no
+    exception identifiers, so this holds definitionally. -/
+theorem expIdsHOL_seqCallRetHOL {width : Nat} [NeZero width]
+    (program : ProgHOL width) :
+    Flapjack.Pancake.PanLang.expIdsHOL (seqCallRetHOL program) =
+      Flapjack.Pancake.PanLang.expIdsHOL program := by
+  unfold seqCallRetHOL
+  split
+  · split <;> simp [Flapjack.Pancake.PanLang.expIdsHOL]
+  · rfl
+
+/-- Exact HOL `pan_simpProof$exp_ids_ret_to_tail_eq`
+(`pan_simpProofScript.sml:13`): `!p. exp_ids (ret_to_tail p) = exp_ids p`. -/
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_ret_to_tail_eq"]
+theorem expIdsHOL_retToTailHOL_eq {width : Nat} [NeZero width]
+    (program : ProgHOL width) :
+    Flapjack.Pancake.PanLang.expIdsHOL (retToTailHOL program) =
+      Flapjack.Pancake.PanLang.expIdsHOL program := by
+  let rec go : (program : ProgHOL width) →
+      Flapjack.Pancake.PanLang.expIdsHOL (retToTailHOL program) =
+        Flapjack.Pancake.PanLang.expIdsHOL program
+    | .skip => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .dec name shape value body => by
+        simp only [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go body]
+    | .seq first second => by
+        simp only [retToTailHOL]
+        rw [expIdsHOL_seqCallRetHOL]
+        simp only [Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go first, go second]
+    | .ite condition thenBranch elseBranch => by
+        simp only [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go thenBranch, go elseBranch]
+    | .while condition body => by
+        simp only [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go body]
+    | .call info function arguments => by
+        cases info with
+        | none =>
+            simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+        | some info =>
+            cases info with
+            | mk returns handlerInfo =>
+                cases handlerInfo with
+                | none =>
+                    simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+                | some handler =>
+                    cases handler with
+                    | mk exception handlerInfo =>
+                        cases handlerInfo with
+                        | mk handlerVar handlerProgram =>
+                            simp only [retToTailHOL]
+                            simp only [Flapjack.Pancake.PanLang.expIdsHOL]
+                            rw [go handlerProgram]
+    | .decCall name shape function arguments body => by
+        simp only [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go body]
+    | .annot tag text => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .assign kind name value => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .primitive name operator args => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .store address value => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .store32 address value => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .storeByte address value => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .break => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .continue => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .extCall function configuration configurationLength array arrayLength => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .raise exception value => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .return value => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .shMemLoad size kind name address => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .shMemStore size address value => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .tick => by
+        simp [retToTailHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go program
+
+/-- Support lemma: `expIdsHOL` distributes over the exact `smartSeqHOL`. -/
+theorem expIdsHOL_smartSeqHOL {width : Nat} [NeZero width]
+    (pre program : ProgHOL width) :
+    Flapjack.Pancake.PanLang.expIdsHOL (smartSeqHOL pre program) =
+      Flapjack.Pancake.PanLang.expIdsHOL pre ++
+        Flapjack.Pancake.PanLang.expIdsHOL program := by
+  cases pre <;> simp [smartSeqHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+
+/-- Exact HOL `pan_simpProof$exp_ids_seq_assoc_eq`
+(`pan_simpProofScript.sml:25`): `!p q. exp_ids (seq_assoc p q) = exp_ids p ++ exp_ids q`. -/
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_seq_assoc_eq"]
+theorem expIdsHOL_seqAssocHOL_eq {width : Nat} [NeZero width]
+    (pre program : ProgHOL width) :
+    Flapjack.Pancake.PanLang.expIdsHOL (seqAssocHOL pre program) =
+      Flapjack.Pancake.PanLang.expIdsHOL pre ++
+        Flapjack.Pancake.PanLang.expIdsHOL program := by
+  let rec go (pre : ProgHOL width) : (program : ProgHOL width) →
+      Flapjack.Pancake.PanLang.expIdsHOL (seqAssocHOL pre program) =
+        Flapjack.Pancake.PanLang.expIdsHOL pre ++
+          Flapjack.Pancake.PanLang.expIdsHOL program
+    | .skip => by
+        simp [seqAssocHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .dec name shape value body => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+        simp only [Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go .skip body]
+        simp [Flapjack.Pancake.PanLang.expIdsHOL]
+    | .seq first second => by
+        simp only [seqAssocHOL]
+        rw [go (seqAssocHOL pre first) second, go pre first]
+        simp [Flapjack.Pancake.PanLang.expIdsHOL, List.append_assoc]
+    | .ite condition thenBranch elseBranch => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+        simp only [Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go .skip thenBranch, go .skip elseBranch]
+        simp [Flapjack.Pancake.PanLang.expIdsHOL]
+    | .while condition body => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+        simp only [Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go .skip body]
+        simp [Flapjack.Pancake.PanLang.expIdsHOL]
+    | .call info function arguments => by
+        cases info with
+        | none =>
+            simp [seqAssocHOL, Flapjack.Pancake.PanLang.expIdsHOL,
+              expIdsHOL_smartSeqHOL]
+        | some info =>
+            cases info with
+            | mk returns handlerInfo =>
+                cases handlerInfo with
+                | none =>
+                    simp [seqAssocHOL, Flapjack.Pancake.PanLang.expIdsHOL,
+                      expIdsHOL_smartSeqHOL]
+                | some handler =>
+                    cases handler with
+                    | mk exception handlerInfo =>
+                        cases handlerInfo with
+                        | mk handlerVar handlerProgram =>
+                            simp only [seqAssocHOL]
+                            rw [expIdsHOL_smartSeqHOL]
+                            simp only [Flapjack.Pancake.PanLang.expIdsHOL]
+                            rw [go .skip handlerProgram]
+                            simp [Flapjack.Pancake.PanLang.expIdsHOL]
+    | .decCall name shape function arguments body => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+        simp only [Flapjack.Pancake.PanLang.expIdsHOL]
+        rw [go .skip body]
+        simp [Flapjack.Pancake.PanLang.expIdsHOL]
+    | .annot tag text => by
+        simp [seqAssocHOL, Flapjack.Pancake.PanLang.expIdsHOL]
+    | .assign kind name value => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .primitive name operator args => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .store address value => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .store32 address value => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .storeByte address value => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .break => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .continue => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .extCall function configuration configurationLength array arrayLength => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .raise exception value => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .return value => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .shMemLoad size kind name address => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .shMemStore size address value => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    | .tick => by
+        simp only [seqAssocHOL]
+        rw [expIdsHOL_smartSeqHOL]
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+  exact go pre program
+
+/-- Exact HOL `pan_simpProof$exp_ids_compile_eq`
+(`pan_simpProofScript.sml:34`): `!p. exp_ids (compile p) = exp_ids p`. -/
+@[hol "cakeml/pancake/proofs/pan_simpProofScript.sml" "exp_ids_compile_eq"]
+theorem expIdsHOL_panSimpCompileHOL_eq {width : Nat} [NeZero width]
+    (program : ProgHOL width) :
+    Flapjack.Pancake.PanLang.expIdsHOL (panSimpCompileHOL program) =
+      Flapjack.Pancake.PanLang.expIdsHOL program := by
+  simp only [panSimpCompileHOL]
+  rw [expIdsHOL_retToTailHOL_eq, expIdsHOL_seqAssocHOL_eq]
+  simp [Flapjack.Pancake.PanLang.expIdsHOL]
+
 end Flapjack

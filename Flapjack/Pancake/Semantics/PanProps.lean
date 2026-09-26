@@ -224,9 +224,9 @@ end
     proof; the recursive program evaluator still has an assembly marker and is
     not assembled over that finite-map carrier. Consequently neither a theorem
     over `evalHOLExact` nor one over the partial recursive dispatcher has the
-    required HOL statement/carrier. This prerequisite and the dependent
-    `evaluate_shape_invariant_ret_inst` port remain open in beads
-    `flapjack-4ac.4.67` and `flapjack-4ac.5.83` respectively. -/
+    required HOL statement/carrier. Inventory bead `flapjack-4ac.4.67` is closed
+    by this source-reviewed disposition; faithful theorem path bead
+    `flapjack-4ac.5.83` remains open. -/
 
 /-- Untagged support: the exact value-level well-formedness predicate implies
     that the exact `shape_of` image is well-formed (`is_wf_shape_of_v`

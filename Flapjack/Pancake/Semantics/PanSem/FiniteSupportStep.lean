@@ -30,6 +30,22 @@ theorem PanSemExactEvalContext.withState_state {width : Nat} {σ : Type} [NeZero
     (hshared : state.shMemaddrs = context.state.shMemaddrs) :
     (context.withState state hmem hshared).state = state := rfl
 
+/-- An exact evaluation context is determined by its state; the two
+    `DecidablePred` fields are proof-irrelevant for the respective predicates.
+    Lets proofs compare `withState` call sites without unfolding their proof
+    terms. -/
+theorem PanSemExactEvalContext.ext {width : Nat} {σ : Type} [NeZero width]
+    {c1 c2 : PanSemExactEvalContext width σ} (h : c1.state = c2.state) : c1 = c2 := by
+  cases c1 with
+  | mk s1 m1 sh1 =>
+  cases c2 with
+  | mk s2 m2 sh2 =>
+  dsimp only at h
+  subst h
+  congr
+  · exact Subsingleton.elim _ _
+  · exact Subsingleton.elim _ _
+
 instance {width : Nat} {σ : Type} [NeZero width] (context : PanSemExactEvalContext width σ) :
     DecidablePred context.state.memaddrs := context.memaddrsDecidable
 

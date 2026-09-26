@@ -42,6 +42,7 @@ import Flapjack.Test.SourceSemanticsOps
 import Flapjack.Test.PanToCrepExceptionRelation
 import Flapjack.Test.PanToCrepRelationsParity
 import Flapjack.Test.PanToCrepCodeRelParity
+import Flapjack.Test.PanToCrepContextExactParity
 import Flapjack.Test.PanCommonParity
 import Flapjack.Test.SemanticsPropsParity
 /- These legacy Crep-to-Loop theorem fixtures still assume identity variable

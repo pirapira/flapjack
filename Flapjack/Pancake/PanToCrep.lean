@@ -26,8 +26,11 @@ structure CompileContext (α : Type u) where
   bytesInWord : α
   deriving Repr
 
-/-! HOL's `context` record in `pan_to_crepScript.sml` uses finite maps, not
-    `InfoMap` lists. This context preserves that representation directly. -/
+/-! This is a Flapjack-specific context over the production `String` and
+    `Shape` carriers. It is not HOL's `context` datatype: HOL uses MlString
+    keys, `ShapeHOL` values, a word-indexed exception map, and finite-support
+    maps. The exact record carrier is in `PanToCrep/ContextExact.lean` under
+    bead `flapjack-4ac.2.1.1`; this production structure remains untagged. -/
 structure PanToCrepHOLContext (α : Type) where
   vars : FiniteMap VarName (Shape × List Nat)
   funcs : FiniteMap FunName (List (VarName × Shape) × Shape)
@@ -52,8 +55,9 @@ structure PanToCrepHOLContext (α : Type) where
     value carrier or the changed `α`/`'a word` quantified eids type, and no
     `NameRanged` byte witness applies because this constructor produces a
     context, not a name. The exact MlString/`ShapeHOL`/`BitVec width` context
-    carrier replacement is tracked by `flapjack-pxn.18.3.5.8.13` (under
-    `flapjack-pxn.18.3.5.8`, parent `flapjack-pxn.18.3.5.7.2`). -/
+    carrier replacement is tracked by `flapjack-4ac.2.1.1`; the exact
+    `compile_def` consumer is separately tracked by
+    `flapjack-pxn.18.3.5.8.13`. -/
 def panToCrepMkCtxtHOL (vars : FiniteMap VarName (Shape × List Nat))
     (funcs : FiniteMap FunName (List (VarName × Shape) × Shape))
     (vmax : Nat) (eids : FiniteMap ExceptionId α) : PanToCrepHOLContext α :=

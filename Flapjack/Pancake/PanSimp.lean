@@ -1,4 +1,6 @@
 import Flapjack.Pancake.PanLang
+import Flapjack.Pancake.PanLang.Prog
+import Flapjack.Pancake.PanLang.Decl
 
 /-!
 The `pan_simp` pass from CakeML's Pancake development.
@@ -11,6 +13,116 @@ constructor is needed here.
 -/
 
 namespace Flapjack
+
+open Flapjack.Pancake.PanLang
+
+/-! ## Exact HOL `pan_simpScript.sml` ports
+
+The declarations below are the exact word-indexed renderings of
+`cakeml/pancake/pan_simpScript.sml` over the reviewed `ProgHOL`/`DeclHOL`
+carriers (`MlS` identifiers, `ShapeHOL` shapes, `ExpHOL` expressions).  HOL
+`SmartSeq` is written with an equality test (`if p = Skip`); over a datatype
+with decidable equality the pattern-match rendering below is the same
+function, clause for clause.  `TailCall trgt args` is `Call NONE trgt args`
+and `AssignCall (Local,rv) NONE` is `Call (SOME (SOME (Local,rv), NONE))`. -/
+
+/-- Exact port of HOL `pan_simp$SmartSeq_def` (`pan_simpScript.sml:13`):
+`SmartSeq p q = if p = Skip then q else Seq p q`. -/
+@[hol "cakeml/pancake/pan_simpScript.sml" "SmartSeq_def"]
+def smartSeqHOL {width : Nat} [NeZero width] :
+    ProgHOL width → ProgHOL width → ProgHOL width
+  | .skip, program => program
+  | pre, program => .seq pre program
+
+/-- Exact port of HOL `pan_simp$seq_call_ret_def`
+(`pan_simpScript.sml:42-49`): recognize `Seq (AssignCall (Local,rv1) NONE
+trgt args) (Return (Var Local rv2))` and, when `rv1 = rv2`, rewrite it to the
+tail call `TailCall trgt args`. -/
+@[hol "cakeml/pancake/pan_simpScript.sml" "seq_call_ret_def"]
+def seqCallRetHOL {width : Nat} [NeZero width] : ProgHOL width → ProgHOL width
+  | .seq
+      (.call (some (some (.local, returnName), none)) function arguments)
+      (.return (.var .local returnedName)) =>
+      if returnName = returnedName then
+        .call none function arguments
+      else
+        .seq
+          (.call (some (some (.local, returnName), none)) function arguments)
+          (.return (.var .local returnedName))
+  | program => program
+
+/-- Exact port of HOL `pan_simp$seq_assoc_def` (`pan_simpScript.sml:18-40`):
+right-associate sequences, threading the pending prefix `pre` through the
+pass. -/
+@[hol "cakeml/pancake/pan_simpScript.sml" "seq_assoc_def"]
+def seqAssocHOL {width : Nat} [NeZero width] (pre : ProgHOL width) :
+    ProgHOL width → ProgHOL width
+  | .skip => pre
+  | .dec name shape value body =>
+      smartSeqHOL pre (.dec name shape value (seqAssocHOL .skip body))
+  | .seq first second => seqAssocHOL (seqAssocHOL pre first) second
+  | .ite condition thenBranch elseBranch =>
+      smartSeqHOL pre (.ite condition (seqAssocHOL .skip thenBranch)
+        (seqAssocHOL .skip elseBranch))
+  | .while condition body =>
+      smartSeqHOL pre (.while condition (seqAssocHOL .skip body))
+  | .call info function arguments =>
+      let info := match info with
+        | none => none
+        | some (returns, none) => some (returns, none)
+        | some (returns, some (exception, handlerVar, handler)) =>
+            some (returns, some (exception, handlerVar, seqAssocHOL .skip handler))
+      smartSeqHOL pre (.call info function arguments)
+  | .decCall name shape function arguments body =>
+      smartSeqHOL pre (.decCall name shape function arguments (seqAssocHOL .skip body))
+  | .annot _ _ => pre
+  | program => smartSeqHOL pre program
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+/-- Exact port of HOL `pan_simp$ret_to_tail_def` (`pan_simpScript.sml:50-66`):
+rewrite the `AssignCall`/`Return` tail-call shape throughout the program. -/
+@[hol "cakeml/pancake/pan_simpScript.sml" "ret_to_tail_def"]
+def retToTailHOL {width : Nat} [NeZero width] : ProgHOL width → ProgHOL width
+  | .skip => .skip
+  | .dec name shape value body => .dec name shape value (retToTailHOL body)
+  | .seq first second =>
+      seqCallRetHOL (.seq (retToTailHOL first) (retToTailHOL second))
+  | .ite condition thenBranch elseBranch =>
+      .ite condition (retToTailHOL thenBranch) (retToTailHOL elseBranch)
+  | .while condition body => .while condition (retToTailHOL body)
+  | .call info function arguments =>
+      let info := match info with
+        | none => none
+        | some (returns, none) => some (returns, none)
+        | some (returns, some (exception, handlerVar, handler)) =>
+            some (returns, some (exception, handlerVar, retToTailHOL handler))
+      .call info function arguments
+  | .decCall name shape function arguments body =>
+      .decCall name shape function arguments (retToTailHOL body)
+  | program => program
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+/-- Exact port of HOL `pan_simp$compile_def` (`pan_simpScript.sml:68-72`):
+`compile p = ret_to_tail (seq_assoc Skip p)`. -/
+@[hol "cakeml/pancake/pan_simpScript.sml" "compile_def"]
+def panSimpCompileHOL {width : Nat} [NeZero width] (program : ProgHOL width) :
+    ProgHOL width :=
+  retToTailHOL (seqAssocHOL .skip program)
+
+/-- Exact port of HOL `pan_simp$compile_prog_def` (`pan_simpScript.sml:74-81`):
+compile the body of every `Function` declaration and leave all other
+declarations unchanged. -/
+@[hol "cakeml/pancake/pan_simpScript.sml" "compile_prog_def"]
+def panSimpDeclsHOL {width : Nat} [NeZero width] :
+    List (DeclHOL width) → List (DeclHOL width)
+  | [] => []
+  | .function declaration :: declarations =>
+      .function { declaration with body := panSimpCompileHOL declaration.body } ::
+        panSimpDeclsHOL declarations
+  | declaration :: declarations => declaration :: panSimpDeclsHOL declarations
+termination_by declarations => sizeOf declarations
 
 def smartSeq : Prog α → Prog α → Prog α
   | .skip, program => program

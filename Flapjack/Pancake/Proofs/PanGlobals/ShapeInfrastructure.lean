@@ -91,16 +91,21 @@ theorem globalDeclsFilter_isException_all_shapes (structs : StructContext)
   | exnDecl exception shape => simp [panDeclShapesWellFormed]
   | name struct fields => simp [globalDeclIsException] at hpred
 
-/-- Exact-shaped port of Cake's `evaluate_decls_functions_wf`
+/-- Flapjack-only infrastructure analogue of Cake's `evaluate_decls_functions_wf`
     (`cakeml/pancake/proofs/pan_globalsProofScript.sml:2367`): a successful
     declaration evaluation only installs function declarations whose parameter
     and return shapes are well formed in the source struct context. The
     admissibility premise `panSemCompileTopAdmissible` is the constructor form
-    of HOL's `EVERY (\d. is_function d ∨ is_decl d ∨ is_exn_decl d) code`; the
-    faithful `evaluate_decls` port (`Flapjack.Pancake.Semantics.PanSem`) checks
-    the function shapes before installing each entry. This is the single tagged
-    copy of the port and the one the global-pass proof uses. -/
-@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "evaluate_decls_functions_wf"]
+    of HOL's `EVERY (\d. is_function d ∨ is_decl d ∨ is_exn_decl d) code`.
+
+    Not an exact HOL port: the HOL declaration is `[local]` (not exported by
+    `pan_globalsProof`) and is stated over the exact `panSem$evaluate_decls`
+    together with the exact `panLang$decl`/shape carriers, whereas this Lean
+    theorem reads the production `PanSemDeclarationState`/`Decl`/`isWfShape`
+    String/Shape carriers. The `@[hol]` tag was withdrawn (bead
+    `flapjack-4ac.7`); the public consequence `evaluate_decls_functions` is the
+    exact port and is integrated as
+    `evaluateDeclsHOLFinite_functions`. -/
 theorem evaluateDeclsFunctionsWf
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

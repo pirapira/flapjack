@@ -321,21 +321,57 @@ DEFINITION_RE = re.compile(
     r"(?:def|abbrev|opaque|theorem|lemma)\s+([^\s:({\[]+)"
 )
 DOCUMENTED_MISMATCHES = {
-    ("Flapjack/Pancake/Semantics/PanProps/EvalInvariant.lean", "evaluateDeclsNamesHOLFinite"): (
-        "cakeml/pancake/semantics/panPropsScript.sml",
-        "evaluate_decls_names",
-        "flapjack-ds8 (bead flapjack-4ac.6 audit, coordinator HOLD 2026-09-26T16:13Z): the "
-        "theorem is stated over the PanProps duplicate evaluator evaluateDeclsPanPropsHOLFinite, "
-        "not yet kernel-bridged to the canonical tagged PanSem evaluator. The HOL tag was "
-        "withdrawn; DS10 owns the canonical tagged port on fleet-deepseek-v41-ten.",
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "collectPanValueStructs_panSimpDecls"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "decs_stcnames_compile_prog",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Prog/Decl carriers; "
+        "HOL states it over the exact mlstring-keyed panLang syntax. Tag withdrawn; exact port "
+        "tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
     ),
-    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_names"): (
-        "cakeml/pancake/semantics/panPropsScript.sml",
-        "evaluate_decls_names",
-        "flapjack-ds10 (bead flapjack-4ac.4.87, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
-        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
-        "PanProps counterpart with a same-module carrier/witness and a kernel codec to the canonical "
-        "tagged PanSemStateFiniteExact.evaluateDeclsHOLFinite. Tracked by flapjack-lqws."
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsRetToTailEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "exp_ids_ret_to_tail_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Prog carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsSeqAssocEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "exp_ids_seq_assoc_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Prog carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsCompileEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "exp_ids_compile_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Prog carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "sizeOfEidsPanSimpDeclsEq"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "size_of_eids_compile_eq",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Decl carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "functionsCompileProg"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "functions_compile_prog",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Decl carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanSimp.lean", "firstCompileProgAllDistinctPanSimp"): (
+        "cakeml/pancake/proofs/pan_simpProofScript.sml",
+        "first_compile_prog_all_distinct",
+        "flapjack-ds8 (bead flapjack-4ac.8): production String-keyed Decl carriers; HOL uses exact "
+        "mlstring panLang. Tag withdrawn; exact port tracked by flapjack-4ac.8 (blocked by flapjack-4ac.8.1).",
+    ),
+    ("Flapjack/Pancake/Proofs/PanGlobals/ShapeInfrastructure.lean", "evaluateDeclsFunctionsWf"): (
+        "cakeml/pancake/proofs/pan_globalsProofScript.sml",
+        "evaluate_decls_functions_wf",
+        "flapjack-ds8 (bead flapjack-4ac.7): HOL declares evaluate_decls_functions_wf[local] "
+        "over the exact panSem evaluate_decls and exact panLang decl/shape carriers; it is not "
+        "exported, and the Lean analogue reads the production PanSemDeclarationState/Decl/isWfShape "
+        "String/Shape carriers. The @[hol] tag was withdrawn; the public consequence "
+        "evaluate_decls_functions is the exact port (evaluateDeclsHOLFinite_functions)."
     ),
     ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_functions"): (
         "cakeml/pancake/semantics/panPropsScript.sml",
@@ -344,35 +380,6 @@ DOCUMENTED_MISMATCHES = {
         "panProps-sourced theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending "
         "relocation to the PanProps counterpart with a kernel codec to the canonical tagged evaluator. "
         "Tracked by flapjack-lqws."
-    ),
-    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evalHOLFinite_upd_clock_eq"): (
-        "cakeml/pancake/semantics/panPropsScript.sml",
-        "eval_upd_clock_eq",
-        "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
-        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
-        "PanProps counterpart. Tracked by flapjack-lqws."
-    ),
-    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evalHOLFinite_upd_code_eq"): (
-        "cakeml/pancake/semantics/panPropsScript.sml",
-        "eval_upd_code_eq",
-        "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
-        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
-        "PanProps counterpart. Tracked by flapjack-lqws."
-    ),
-    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evalHOLFinite_upd_eshapes_eq"): (
-        "cakeml/pancake/semantics/panPropsScript.sml",
-        "eval_upd_eshapes_eq",
-        "flapjack-ds10 (bead flapjack-wci6, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
-        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
-        "PanProps counterpart. Tracked by flapjack-lqws."
-    ),
-    ("Flapjack/Pancake/Semantics/PanSem/StateExactFiniteMap.lean", "evaluateDeclsHOLFinite_declCommute"): (
-        "cakeml/pancake/semantics/panPropsScript.sml",
-        "evaluate_decl_commute",
-        "flapjack-ds10 (bead flapjack-4ac.4.79, coordinator HOLD 2026-09-26T16:46Z): a panProps-sourced "
-        "theorem tagged in the PanSem module; the @[hol] tag was withdrawn pending relocation to the "
-        "PanProps counterpart with a kernel codec to the canonical tagged evaluator. Tracked by "
-        "flapjack-lqws."
     ),
     ("Flapjack/Pancake/Semantics/CrepSem/Eval.lean", "evalCrepHolExp"): (
         "cakeml/pancake/proofs/pan_to_crepProofScript.sml",
@@ -1781,6 +1788,18 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         ("Flapjack/Compiler/Backend/StackNames.lean", "map_fst_compile"),
         ("Flapjack/Pancake/PanStructs.lean", "afindi"),
         ("Flapjack/Misc/Sptree.lean", "NumSet"),
+        ("Flapjack/Pancake/Proofs/PanSimp.lean", "mapSndFEq"),
+        ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsHOL_retToTailHOL_eq"),
+        ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsHOL_seqAssocHOL_eq"),
+        ("Flapjack/Pancake/Proofs/PanSimp.lean", "expIdsHOL_panSimpCompileHOL_eq"),
+        ("Flapjack/Pancake/Proofs/PanSimp.lean", "functionsHOL_panSimpDeclsHOL_eq"),
+        ("Flapjack/Pancake/Proofs/PanSimp.lean", "firstCompileProgAllDistinctHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "smartSeqHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "seqCallRetHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "seqAssocHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "retToTailHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "panSimpCompileHOL"),
+        ("Flapjack/Pancake/PanSimp.lean", "panSimpDeclsHOL"),
     }
     for key in reviewed_exact:
         # A source comparison cannot claim an exact HOL port after its tag is

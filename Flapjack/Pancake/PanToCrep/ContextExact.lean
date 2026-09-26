@@ -191,4 +191,52 @@ theorem holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL
     ((getEidsFromDeclsHOL decls : HolFiniteMapExact MlS (BitVec width))).lookup key =
       Flapjack.FLOOKUP (Flapjack.alistToFmap (getEidsEntriesHOL decls)) key := rfl
 
+/-- Flapjack untagged: the HOL `MAP3 (λx y z. (x,y,z)) fnames params returns`
+    association list of `make_funcs`, i.e. `(name, (params, return))` for each
+    entry of `functions prog`. -/
+def makeFuncsEntriesHOL {width : Nat} [NeZero width]
+    (prog : List (MlS × List (MlS × ShapeHOL) ×
+      Flapjack.Pancake.PanLang.ProgHOL width × ShapeHOL)) :
+    List (MlS × (List (MlS × ShapeHOL) × ShapeHOL)) :=
+  prog.map (fun entry => (entry.1, (entry.2.1, entry.2.2.2)))
+
+/-- Exact port of HOL `pan_to_crep$make_funcs`
+    (`cakeml/pancake/pan_to_crepScript.sml:366-374`):
+    `make_funcs prog = let fnames = MAP FST prog; params = MAP (FST o SND) prog;
+    returns = MAP (SND o SND o SND) prog; fs = MAP3 (λx y z. (x,y,z)) fnames
+    params returns in alist_to_fmap fs`. The input is the output of the tagged
+    `functionsHOL`, so each entry is `(name, params, body, return)`; the result
+    carrier is the canonical finite-support `HolFiniteMapExact MlS
+    (List (MlS × ShapeHOL) × ShapeHOL)` whose `lookup` is the HOL-shaped
+    right-fold association-list rendering `alistToFmap` (HOL `alist_to_fmap`).
+    The standalone `fmap_as_finite_support_result` qualifier records only that
+    finite-support representation; the quantifier, input carrier, and result
+    values match HOL, and the same-module witness below states the unconditional
+    lookup-level correspondence. -/
+@[hol "cakeml/pancake/pan_to_crepScript.sml" "make_funcs_def"
+  (fmap_as_finite_support_result)]
+def makeFuncsExactHOL {width : Nat} [NeZero width]
+    (prog : List (MlS × List (MlS × ShapeHOL) ×
+      Flapjack.Pancake.PanLang.ProgHOL width × ShapeHOL)) :
+    HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ShapeHOL) where
+  lookup := Flapjack.alistToFmap (makeFuncsEntriesHOL prog)
+  finiteSupport := by
+    refine ⟨(makeFuncsEntriesHOL prog).map Prod.fst, ?_⟩
+    intro key hkey
+    obtain ⟨value, hvalue⟩ := Option.ne_none_iff_exists'.mp hkey
+    obtain ⟨entry, hentry, hkeyeq, -⟩ :=
+      Flapjack.flookupAlistToFmap_mem (makeFuncsEntriesHOL prog) key value hvalue
+    exact List.mem_map.mpr ⟨entry, hentry, hkeyeq⟩
+
+/-- Canonical standalone finite-map witness for `makeFuncsExactHOL`: its `lookup` is
+    exactly the HOL-shaped raw association-list map rendering `alistToFmap`
+    (HOL `alist_to_fmap`), with no premises and no dependence on the canonical
+    `HolFiniteMapExact` wrapper. -/
+theorem holFmapAsFiniteSupportResultWitness_makeFuncsExactHOL
+    {width : Nat} [NeZero width]
+    (prog : List (MlS × List (MlS × ShapeHOL) ×
+      Flapjack.Pancake.PanLang.ProgHOL width × ShapeHOL)) (key : MlS) :
+    ((makeFuncsExactHOL prog : HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ShapeHOL))).lookup key =
+      Flapjack.FLOOKUP (Flapjack.alistToFmap (makeFuncsEntriesHOL prog)) key := rfl
+
 end Flapjack

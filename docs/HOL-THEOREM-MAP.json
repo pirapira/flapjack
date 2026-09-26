@@ -11808,5 +11808,14 @@
     "statement_status": "reviewed_fmap_as_finite_support_result",
     "fmap_as_finite_support_result": true,
     "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.2.16): HOL pan_to_crepScript.sml:356-364 defines get_eids_from_decls decls = let eids = MAP FST (exceptions decls); ns = GENLIST (fun x => (n2w x):'a word) (LENGTH eids); es = MAP2 (fun x y => (x,y)) eids ns in alist_to_fmap es, where alist_to_fmap is the right fold FOLDR FUPDATE FEMPTY (first entry wins on a duplicate key). Lean quantifies the same word-indexed decl list over the exact DeclHOL carrier and returns the reviewed canonical finite-support map HolFiniteMapExact MlS (BitVec width), with lookup exactly Flapjack.alistToFmap (getEidsEntriesHOL decls) where getEidsEntriesHOL is the literal MAP FST/zip-GENLIST rendering of HOL's let-bound es and Flapjack.alistToFmap is the untagged alist_to_fmap right fold. exceptions is the tagged exceptionsHOL port; n2w is BitVec.ofNat width. The standalone-result qualifier records only that MlS/BitVec-keyed fmap representation; the same-module witness holFmapAsFiniteSupportResultWitness_getEidsFromDeclsHOL states the unconditional lookup-level equation against the raw alistToFmap operation. No extra hypotheses or side conditions."
+  },
+  {
+    "hol_path": "cakeml/pancake/pan_to_crepScript.sml",
+    "hol_name": "make_funcs_def",
+    "lean_path": "Flapjack/Pancake/PanToCrep/ContextExact.lean",
+    "lean_name": "makeFuncsExactHOL",
+    "statement_status": "reviewed_fmap_as_finite_support_result",
+    "fmap_as_finite_support_result": true,
+    "reviewer": "flapjack-ds8 (source comparison; bead flapjack-4ac.2.17): HOL pan_to_crepScript.sml:366-374 defines make_funcs prog = let fnames = MAP FST prog; params = MAP (FST o SND) prog; returns = MAP (SND o SND o SND) prog; fs = MAP3 (fun x y z => (x,y,z)) fnames params returns in alist_to_fmap fs, where alist_to_fmap is the right fold FOLDR FUPDATE FEMPTY (first entry wins on a duplicate key). Lean quantifies the same program list (the output of the tagged functionsHOL, entries (name, params, body, return)) and returns the reviewed canonical finite-support map HolFiniteMapExact MlS (List (MlS × ShapeHOL) × ShapeHOL), with lookup exactly Flapjack.alistToFmap (makeFuncsEntriesHOL prog) where makeFuncsEntriesHOL is the literal MAP3 rendering of HOL's let-bound fs and Flapjack.alistToFmap is the untagged alist_to_fmap right fold. The standalone-result qualifier records only that MlS-keyed fmap representation; the same-module witness holFmapAsFiniteSupportResultWitness_makeFuncsExactHOL states the unconditional lookup-level equation against the raw alistToFmap operation. No extra hypotheses or side conditions."
   }
 ]

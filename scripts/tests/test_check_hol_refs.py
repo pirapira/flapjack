@@ -2444,6 +2444,55 @@ class WordsAsTypeIndexedBitvecQualifierTest(unittest.TestCase):
         text = self.PREDICATE + " ∧ (∀ (operation : HolArith other), True)"
         self.assertTrue(self.ERRORS(text, "wordPredicate", module, str(root), lines))
 
+    PREDICATE_USER = """theorem keep {width : Nat} [NeZero width] (data : Knowledge)
+    (h : wfData width data) : wfData width data := h"""
+
+    def predicate_user_errors(self, text, extra_lines=()):
+        root = Path(__file__).resolve().parents[2]
+        module = "Flapjack/Compiler/Backend/WordCse/Proofs/SemanticInvariant.lean"
+        lines = (root / module).read_text().splitlines() + list(extra_lines)
+        return self.ERRORS(text, "keep", module, str(root), lines)
+
+    def test_accepts_theorem_over_reviewed_internal_word_predicate(self):
+        self.assertEqual(self.predicate_user_errors(self.PREDICATE_USER), [])
+        equation = """theorem keep {width : Nat} [NeZero width] :
+    ∀ (rs : List Nat) (data : Knowledge), wfData width data → wfData width data
+  | [], _, h => h
+  | _ :: _, _, h => h"""
+        self.assertEqual(self.predicate_user_errors(equation), [])
+
+    def test_predicate_route_requires_own_positive_width(self):
+        for mutation in [self.PREDICATE_USER.replace(" [NeZero width]", ""),
+                         self.PREDICATE_USER.replace("[NeZero width]", "[NeZero other]"),
+                         self.PREDICATE_USER.replace("{width : Nat}", "{width : Int}"),
+                         self.PREDICATE_USER.replace(": wfData width data", ": wfData 64 data"),
+                         self.PREDICATE_USER.replace(": wfData width data", ": wfData (0) data"),
+                         self.PREDICATE_USER.replace(": wfData width data", ": wfData other data")]:
+            with self.subTest(mutation=mutation):
+                self.assertTrue(self.predicate_user_errors(mutation))
+
+    def test_predicate_route_rejects_discarded_or_unapplied_uses(self):
+        premise_only = """theorem keep {width : Nat} [NeZero width] (data : Knowledge)
+    (h : wfData width data) : True := trivial"""
+        unapplied = """theorem keep {width : Nat} [NeZero width] (data : Knowledge)
+    (f : Nat → Knowledge → Prop) (e : f = wfData) : wfData width data := sorry"""
+        anonymous = premise_only.replace("(h : wfData", "(_h : wfData").replace(
+            ": True := trivial", ": sptLookup 0 data.toCanonical = none := sorry")
+        for text in [premise_only, unapplied, anonymous]:
+            with self.subTest(text=text):
+                self.assertTrue(self.predicate_user_errors(text))
+
+    def test_predicate_route_accepts_named_premise_of_nontrivial_statement(self):
+        text = """theorem keep {width : Nat} [NeZero width] (data : Knowledge) (x : Nat)
+    (h : wfData width data) : sptLookup x data.toCanonical = none ∨ True := sorry"""
+        self.assertEqual(self.predicate_user_errors(text), [])
+
+    def test_predicate_route_rejects_untagged_or_shadowed_predicates(self):
+        fake = self.PREDICATE_USER.replace("wfData", "fakePredicate")
+        self.assertTrue(self.predicate_user_errors(fake))
+        shadow = ["def wfData (width : Nat) [NeZero width] (data : Knowledge) : Prop := True"]
+        self.assertTrue(self.predicate_user_errors(self.PREDICATE_USER, shadow))
+
     GOOD = (
         "@[hol \"cakeml/pancake/semantics/crepSemScript.sml\" \"evaluate_def\" 240",
         "  (fmap_as_finite_support := [locals, globals, code])",

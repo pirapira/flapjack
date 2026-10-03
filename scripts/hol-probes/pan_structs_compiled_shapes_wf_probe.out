@@ -1,0 +1,3 @@
+is_wf_shape_compile_shape_statement=∀str_ctxt. (∀sh_ctxt sh. is_wf_shape str_ctxt (compile_shape sh_ctxt sh)) ∧ ∀sh_ctxt shs. EVERY (is_wf_shape str_ctxt) (compile_shapes sh_ctxt shs)
+is_wf_shape_compile_shape_proved=T
+is_wf_shape_compile_shape_types=str_ctxt::(mlstring # α) list;sh_ctxt::(mlstring # (mlstring # shape) list) list;sh::shape;sh_ctxt::(mlstring # (mlstring # shape) list) list;shs::shape list

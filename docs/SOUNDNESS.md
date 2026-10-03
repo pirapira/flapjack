@@ -41,6 +41,12 @@ Lean definitions in their statements. Those definitions, statements, and their
 implications must be evaluated independently of the HOL artifacts; HOL's
 assurance does not automatically transfer to Flapjack.
 
+The translation of HOL's choice operators is also an external assumption.
+`holOptionSome` and `buildLprefixLub` use Lean's classical choice; in particular,
+no cross-language agreement is established for choices on non-chain prefix
+families. These already-present definitions do not add a new Lean trust root,
+but kernel-checked wrapper theorems do not resolve this translation assumption.
+
 ## Explicit limitations
 
 The following are open review or verification obligations:

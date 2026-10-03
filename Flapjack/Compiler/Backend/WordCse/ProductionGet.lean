@@ -7,8 +7,10 @@ open Flapjack RiscV
 
 /-- Clause extraction for the full original Get equation (source545-556).
 Flapjack assembly infrastructure, with no standalone HOL declaration: the
-full recursive word_cse definition and its correctness remain open. All four
-original branches retain the complete native program and store carriers. -/
+tagged recursive `wordCse` (`Transform.lean`) uses it as its `Get` clause.
+All four original branches retain the complete native program and store
+carriers. Semantic correctness (`word_cseProof` `comp_correct`) is not part of
+this module. -/
 def getClause {width : Nat} [NeZero width] (data : Knowledge)
     (destination : Nat) (store : WordStoreHOL) :
     Knowledge × WordLangProgHOL (BitVec width) :=

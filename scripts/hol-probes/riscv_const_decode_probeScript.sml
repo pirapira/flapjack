@@ -1,0 +1,33 @@
+load "preamble"; load "riscvTheory";
+open HolKernel Parse bossLib preamble riscvTheory;
+val _ = computeLib.add_funs [Encode_def, Itype_def, Rtype_def, opc_def, Decode_def, boolify32_def];
+val _ = Globals.linewidth := 1000000;
+val _ = Globals.show_types := true;
+(* Finite boundary oracles supplement unrestricted Lean proofs and source review. *)
+fun out label tm = (print(label ^ "="); print_term(rhs(concl(EVAL tm))); print "\n");
+fun replay label tm =
+  (print (label ^ "="); print_term tm; print "\n");
+val _ = out "ori_decode_zero" ``Decode (Encode (ArithI (ORI (0w,0w,0w)))) = ArithI (ORI (0w,0w,0w))``;
+val _ = out "ori_decode_all_ones" ``Decode (Encode (ArithI (ORI (31w,31w,4095w)))) = ArithI (ORI (31w,31w,4095w))``;
+val _ = out "ori_decode_sign_bit" ``Decode (Encode (ArithI (ORI (1w,0w,2048w)))) = ArithI (ORI (1w,0w,2048w))``;
+val _ = out "ori_decode_positive_max" ``Decode (Encode (ArithI (ORI (0w,31w,2047w)))) = ArithI (ORI (0w,31w,2047w))``;
+val _ = out "xori_decode_zero" ``Decode (Encode (ArithI (XORI (0w,0w,0w)))) = ArithI (XORI (0w,0w,0w))``;
+val _ = out "xori_decode_all_ones" ``Decode (Encode (ArithI (XORI (31w,31w,4095w)))) = ArithI (XORI (31w,31w,4095w))``;
+val _ = out "xori_decode_sign_bit" ``Decode (Encode (ArithI (XORI (1w,0w,2048w)))) = ArithI (XORI (1w,0w,2048w))``;
+val _ = out "xori_decode_positive_max" ``Decode (Encode (ArithI (XORI (0w,31w,2047w)))) = ArithI (XORI (0w,31w,2047w))``;
+val _ = out "slli_decode_zero" ``Decode (Encode (Shift (SLLI (0w,0w,0w)))) = Shift (SLLI (0w,0w,0w))``;
+val _ = out "slli_decode_all_ones" ``Decode (Encode (Shift (SLLI (31w,31w,63w)))) = Shift (SLLI (31w,31w,63w))``;
+val _ = out "slli_decode_sign_bit" ``Decode (Encode (Shift (SLLI (1w,0w,32w)))) = Shift (SLLI (1w,0w,32w))``;
+val _ = out "slli_decode_positive_max" ``Decode (Encode (Shift (SLLI (0w,31w,31w)))) = Shift (SLLI (0w,31w,31w))``;
+val _ = out "or_decode_zero" ``Decode (Encode (ArithR (OR (0w,0w,0w)))) = ArithR (OR (0w,0w,0w))``;
+val _ = out "or_decode_all_ones" ``Decode (Encode (ArithR (OR (31w,31w,31w)))) = ArithR (OR (31w,31w,31w))``;
+val _ = out "or_decode_sign_bit" ``Decode (Encode (ArithR (OR (1w,0w,16w)))) = ArithR (OR (1w,0w,16w))``;
+val _ = out "or_decode_positive_max" ``Decode (Encode (ArithR (OR (0w,31w,15w)))) = ArithR (OR (0w,31w,15w))``;
+val _ = out "xor_decode_zero" ``Decode (Encode (ArithR (XOR (0w,0w,0w)))) = ArithR (XOR (0w,0w,0w))``;
+val _ = out "xor_decode_all_ones" ``Decode (Encode (ArithR (XOR (31w,31w,31w)))) = ArithR (XOR (31w,31w,31w))``;
+val _ = out "xor_decode_sign_bit" ``Decode (Encode (ArithR (XOR (1w,0w,16w)))) = ArithR (XOR (1w,0w,16w))``;
+val _ = out "xor_decode_positive_max" ``Decode (Encode (ArithR (XOR (0w,31w,15w)))) = ArithR (XOR (0w,31w,15w))``;
+val _ = (print "const_decode_source_clause="; print "HOL riscvScript.sml Encode_def / Decode_def with Itype_def/Rtype_def (ORI,XORI,SLLI,OR,XOR); local compositions, no named source theorem."; print "\n");
+val _ = replay "const_decode_replay" ``(!(rd:word5) (rs1:word5) (imm:word12). Decode (Encode (ArithI (ORI (rd,rs1,imm)))) = ArithI (ORI (rd,rs1,imm))) /\ (!(rd:word5) (rs1:word5) (imm:word12). Decode (Encode (ArithI (XORI (rd,rs1,imm)))) = ArithI (XORI (rd,rs1,imm))) /\ (!(rd:word5) (rs1:word5) (sh:word6). Decode (Encode (Shift (SLLI (rd,rs1,sh)))) = Shift (SLLI (rd,rs1,sh))) /\ (!(rd:word5) (rs1:word5) (rs2:word5). Decode (Encode (ArithR (OR (rd,rs1,rs2)))) = ArithR (OR (rd,rs1,rs2))) /\ (!(rd:word5) (rs1:word5) (rs2:word5). Decode (Encode (ArithR (XOR (rd,rs1,rs2)))) = ArithR (XOR (rd,rs1,rs2)))``;
+val _ = print ("const_decode_carriers=" ^ String.concatWith ", " (map (fn (n, t) => n ^ " : " ^ type_to_string t) [("Encode", type_of ``Encode``), ("Decode", type_of ``Decode``), ("rd", type_of ``(ARB:word5)``), ("imm", type_of ``(ARB:word12)``), ("sh", type_of ``(ARB:word6)``)]) ^ "\n");
+val _ = OS.Process.exit OS.Process.success;

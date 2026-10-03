@@ -3757,6 +3757,161 @@ def predicate_quantified_carrier_scope(signature: str, body: str) -> str:
     return "\n".join(carrier_types)
 
 
+WORD_PREDICATE_HEADER_RE = re.compile(
+    r"^\s*def\s+([A-Za-z_][A-Za-z0-9_']*)\s*\(\s*([A-Za-z_][A-Za-z0-9_']*)\s*:\s*Nat\s*\)"
+    r"\s*\[\s*NeZero\s+\2\s*\]"
+)
+
+
+def _module_word_predicates(lines: tuple[str, ...], module: str, root: str) -> list[str]:
+    """Names of reviewed internally-word Prop predicates declared in a module.
+
+    A predicate qualifies only when it carries `@[hol ...]` with
+    `words_as_type_indexed_bitvec`, has the width-first `(w : Nat) [NeZero w]`
+    header, and passes the plain-Prop internal quantifier route of
+    docs/HOL-WORD-PREDICATES.md (checked with the full qualifier check).
+    """
+    found: list[str] = []
+    for site in hol_attribute_sites(list(lines)):
+        if not site[11]:
+            continue
+        source = strip_lean_comments(tagged_declaration_source(list(lines), site[0]))
+        start = re.search(r"(?:^|\s)def\s", source)
+        if start is None:
+            continue
+        declaration = source[start.start():].lstrip()
+        if ":=" not in declaration:
+            continue
+        signature, body = declaration.split(":=", 1)
+        header = WORD_PREDICATE_HEADER_RE.match(signature)
+        if header is None or not predicate_quantified_carrier_scope(signature, body):
+            continue
+        if words_as_type_indexed_bitvec_errors(source, header.group(1), module, root, list(lines)):
+            continue
+        found.append(header.group(1))
+    return found
+
+
+@lru_cache(maxsize=None)
+def reviewed_word_predicates(module: str, root: str) -> dict[str, tuple[str, ...]]:
+    """Reviewed internally-word predicates visible from a module.
+
+    The result maps each predicate name to the modules declaring it, so a
+    same-named predicate in two modules is reported as ambiguous.
+    """
+    root_path = Path(root)
+    current = _lean_file_info(module_source_file(module, root_path))
+    if current is None:
+        return {}
+    result: dict[str, list[str]] = {}
+    for name in _module_word_predicates(tuple(current.lines), module, root):
+        result.setdefault(name, []).append(module)
+    pending = list(current.imports)
+    visited: set[str] = set()
+    while pending:
+        imported = pending.pop()
+        if imported in visited:
+            continue
+        visited.add(imported)
+        info = _lean_file_info(root_path / (imported.replace(".", "/") + ".lean"))
+        if info is None:
+            continue
+        for name in _imported_module_word_predicates(imported, root):
+            result.setdefault(name, []).append(imported)
+        pending.extend(info.imports)
+    return {name: tuple(owners) for name, owners in result.items()}
+
+
+@lru_cache(maxsize=None)
+def _imported_module_word_predicates(module: str, root: str) -> tuple[str, ...]:
+    """Per-module cache of `_module_word_predicates` for an imported module."""
+    info = _lean_file_info(Path(root) / (module.replace(".", "/") + ".lean"))
+    if info is None:
+        return ()
+    if not any("words_as_type_indexed_bitvec" in line for line in info.lines):
+        return ()
+    return tuple(_module_word_predicates(tuple(info.lines), module, root))
+
+
+def _signature_conclusion(signature: str) -> str:
+    """Text after the last top-level `:` of a declaration signature."""
+    depth = 0
+    last = -1
+    for index, char in enumerate(signature):
+        if char in "([{⟨":
+            depth += 1
+        elif char in ")]}⟩":
+            depth -= 1
+        elif char == ":" and depth == 0:
+            last = index
+    return signature[last + 1:] if last >= 0 else ""
+
+
+def word_predicate_application_errors(
+    signature: str, module: str, root: str, lines: list[str]
+) -> tuple[bool, list[str]]:
+    """Accept a signature that applies a reviewed internally-word predicate.
+
+    The predicate's words are internal to it (HOL `wf_data (:'a)`), so a
+    theorem stated over it carries no word value of its own. The route
+    applies only when every use of each referenced predicate is an
+    application to an identifier bound in this signature as a `Nat` width
+    with its own `[NeZero]` instance, at least one such application occurs in
+    the conclusion, the predicate resolves to exactly one reviewed owner and
+    no local declaration shadows it. See docs/HOL-WORD-PREDICATES.md.
+    """
+    # Equation-compiled theorems have no `:=`; their match arms are not part
+    # of the statement.
+    signature = re.split(r"\n\s*\|", signature, maxsplit=1)[0]
+    predicates = reviewed_word_predicates(module, root)
+    used = [name for name in predicates if identifier_token_occurs(signature, name)]
+    if not used:
+        return False, []
+    errors: list[str] = []
+    local_text = "\n".join(strip_lean_comments("\n".join(lines)).splitlines())
+    conclusion = _signature_conclusion(signature)
+    in_conclusion = False
+    for name in used:
+        owners = predicates[name]
+        local_defs = len(re.findall(
+            r"^\s*(?:private\s+|protected\s+|noncomputable\s+)*(?:def|abbrev|theorem|structure|inductive)\s+"
+            + re.escape(name) + r"\b", local_text, re.M))
+        local_reviewed = sum(1 for owner in owners if owner == module)
+        if len(owners) != 1 or local_defs != local_reviewed:
+            errors.append(f"words_as_type_indexed_bitvec predicate `{name}` must resolve to "
+                          "a single reviewed internally-word predicate (no local shadow)")
+            continue
+        token = r"(?<![A-Za-z0-9_'.])" + re.escape(name) + r"(?![A-Za-z0-9_'])"
+        uses = len(re.findall(token, signature))
+        application = token + r"\s+(\(?[A-Za-z_][A-Za-z0-9_']*\)?|\(?\d+\)?)"
+        widths = re.findall(application, signature)
+        if len(widths) != uses:
+            errors.append(f"words_as_type_indexed_bitvec predicate `{name}` must be applied "
+                          "to its width at every use")
+        binders = {match.group(1) for match in NAT_WIDTH_BINDER_RE.finditer(signature)}
+        for width in widths:
+            bare = width.strip("()")
+            if bare.isdigit() or bare not in binders:
+                errors.append(f"words_as_type_indexed_bitvec predicate `{name}` must be applied "
+                              "to the signature's own Nat width, not a fixed or unbound dimension")
+            else:
+                errors.extend(word_dimension_errors(signature + "\nBitVec " + bare))
+        if re.search(application, conclusion):
+            in_conclusion = True
+        # A premise use counts only under a named hypothesis binder; an
+        # anonymous `(_ : P width x)` binder is a discarded use.
+        for binder in re.finditer(r"[({]\s*([^\s:(){}]+)\s*:\s*([^(){}]*(?:\([^(){}]*\)[^(){}]*)*)[)}]",
+                                  signature):
+            if re.search(application, binder.group(2)) and not binder.group(1).startswith("_"):
+                in_conclusion = in_conclusion or bool(conclusion.strip() and
+                                                      conclusion.strip() != "True")
+    if not in_conclusion:
+        errors.append("words_as_type_indexed_bitvec predicate route requires an application "
+                      "of the reviewed predicate in the conclusion or a named premise of a "
+                      "non-trivial statement")
+    return not errors, errors
+
+
 def words_as_type_indexed_bitvec_errors(
     declaration_text: str,
     declaration: str,
@@ -3888,6 +4043,16 @@ def words_as_type_indexed_bitvec_errors(
                  and gc_function_predicate_signature(
                      tagged_declaration_source(lines, site[0]), declaration)]
         carrier_ok = bool(len(sites) == 1 and reviewed_gc_function_alias(module, root))
+    pending_predicate_errors: list[str] = []
+    # A theorem stated over a reviewed internally-word predicate (HOL
+    # `wf_data (:'a)`) inherits that predicate's word scope, under the narrow
+    # application rules of `word_predicate_application_errors`.
+    if (not has_direct_word and not carrier_ok and not predicate_scope
+            and module and root and lines is not None
+            and not re.search(r"\babbrev\s", signature)):
+        predicate_ok, pending_predicate_errors = word_predicate_application_errors(
+            signature, module, root, lines)
+        carrier_ok = predicate_ok
     if identifier_token_occurs(signature, "HolProg") and not carrier_ok:
         errors.append("words_as_type_indexed_bitvec requires the source-resolved canonical "
                       "HolProg alias, its unique word payload owners and each positive width")
@@ -4120,6 +4285,8 @@ def words_as_type_indexed_bitvec_errors(
 
     if not has_direct_word:
         if not carrier_ok:
+            # Reported only when no other carrier route qualifies.
+            errors.extend(pending_predicate_errors)
             errors.append(
                 "words_as_type_indexed_bitvec must name the Lean positive-width word "
                 "carrier `BitVec` that translates HOL `'a word`, or name a reviewed "

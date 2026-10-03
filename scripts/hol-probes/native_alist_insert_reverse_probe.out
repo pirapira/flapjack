@@ -1,0 +1,3 @@
+alistInsertReverse_typed=∀(xs :num list) (ys :α list) (s :α sptree$num_map). ALL_DISTINCT xs ∧ LENGTH xs = LENGTH ys ⇒ alist_insert (REVERSE xs) (REVERSE ys) s = alist_insert xs ys s
+alistInsertReverse_proved=T
+alistInsertReverse_hypotheses=0

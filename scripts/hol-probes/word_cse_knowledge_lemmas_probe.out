@@ -1,0 +1,17 @@
+firstRegOfArith_canonicalArith_statement=∀data a. firstRegOfArith (canonicalArith data a) = firstRegOfArith a
+firstRegOfArith_canonicalArith_hypotheses=0
+lookup_listCmp_empty_statement=lookup listCmp k empty = NONE
+lookup_listCmp_empty_hypotheses=0
+invariant_listCmp_empty_statement=invariant listCmp empty
+invariant_listCmp_empty_hypotheses=0
+lookup_insert_listCmp_statement=∀k i v m. invariant listCmp m ⇒ invariant listCmp (insert listCmp i v m) ∧ lookup listCmp k (insert listCmp i v m) = if k = i then SOME v else lookup listCmp k m
+lookup_insert_listCmp_hypotheses=0
+register_read_simps_statement=(register_read data r).instrs_mem = data.instrs_mem ∧ (register_read data r).to_latest = data.to_latest ∧ (register_read data r).gets_mem = data.gets_mem ∧ (register_read data r).loads_mem = data.loads_mem
+register_read_simps_hypotheses=0
+register_reads_simps_statement=∀rs data. (register_reads data rs).instrs_mem = data.instrs_mem ∧ (register_reads data rs).to_latest = data.to_latest ∧ (register_reads data rs).gets_mem = data.gets_mem ∧ (register_reads data rs).loads_mem = data.loads_mem
+register_reads_simps_hypotheses=0
+lookup_register_read_statement=lookup x (register_read data r).to_canonical = if x = r ∧ ¬EVEN r ∧ lookup r data.to_canonical = NONE then SOME r else lookup x data.to_canonical
+lookup_register_read_hypotheses=0
+lookup_register_reads_statement=∀rs data x. lookup x (register_reads data rs).to_canonical = if MEM x rs ∧ ¬EVEN x ∧ lookup x data.to_canonical = NONE then SOME x else lookup x data.to_canonical
+lookup_register_reads_hypotheses=0
+lookup_insert_listCmp_typed=∀(k :num list) (i :num list) (v :α) (m :(num list, α) balanced_map). invariant listCmp m ⇒ invariant listCmp (insert listCmp i v m :(num list, α) balanced_map) ∧ (lookup listCmp k (insert listCmp i v m :(num list, α) balanced_map) :α option) = if k = i then SOME v else (lookup listCmp k m :α option)

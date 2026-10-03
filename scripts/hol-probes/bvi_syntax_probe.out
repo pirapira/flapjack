@@ -1,0 +1,74 @@
+exp_case_def=(∀(a :num) (f :num -> α) (f1 :exp -> exp -> exp -> α)
+     (f2 :exp list -> exp -> α) (f3 :exp -> α) (f4 :exp -> α)
+     (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (Var a :exp) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) = f a) ∧
+(∀(a0 :exp) (a1 :exp) (a2 :exp) (f :num -> α) (f1 :exp -> exp -> exp -> α)
+     (f2 :exp list -> exp -> α) (f3 :exp -> α) (f4 :exp -> α)
+     (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (If a0 a1 a2 :exp) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) =
+   f1 a0 a1 a2) ∧
+(∀(a0 :exp list) (a1 :exp) (f :num -> α) (f1 :exp -> exp -> exp -> α)
+     (f2 :exp list -> exp -> α) (f3 :exp -> α) (f4 :exp -> α)
+     (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (Let a0 a1 :exp) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) = f2 a0 a1) ∧
+(∀(a :exp) (f :num -> α) (f1 :exp -> exp -> exp -> α)
+     (f2 :exp list -> exp -> α) (f3 :exp -> α) (f4 :exp -> α)
+     (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (Raise a :exp) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) = f3 a) ∧
+(∀(a :exp) (f :num -> α) (f1 :exp -> exp -> exp -> α)
+     (f2 :exp list -> exp -> α) (f3 :exp -> α) (f4 :exp -> α)
+     (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (Tick a :exp) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) = f4 a) ∧
+(∀(a0 :num) (a1 :num option) (a2 :exp list) (a3 :exp option) (f :num -> α)
+     (f1 :exp -> exp -> exp -> α) (f2 :exp list -> exp -> α) (f3 :exp -> α)
+     (f4 :exp -> α) (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (Call a0 a1 a2 a3 :exp) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) =
+   f5 a0 a1 a2 a3) ∧
+(∀(a0 :num) (a1 :num) (f :num -> α) (f1 :exp -> exp -> exp -> α)
+     (f2 :exp list -> exp -> α) (f3 :exp -> α) (f4 :exp -> α)
+     (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (Force a0 a1 :exp) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) = f6 a0 a1) ∧
+(∀(a0 :op) (a1 :exp list) (f :num -> α) (f1 :exp -> exp -> exp -> α)
+     (f2 :exp list -> exp -> α) (f3 :exp -> α) (f4 :exp -> α)
+     (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (Op a0 a1 :exp) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) = f7 a0 a1) ∧
+(∀(a0 :num) (a1 :num) (a2 :num) (a3 :exp list) (a4 :exp) (f :num -> α)
+     (f1 :exp -> exp -> exp -> α) (f2 :exp list -> exp -> α) (f3 :exp -> α)
+     (f4 :exp -> α) (f5 :num -> num option -> exp list -> exp option -> α)
+     (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+     (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+   (exp_CASE (LetCall a0 a1 a2 a3 a4) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) =
+   f8 a0 a1 a2 a3 a4) ∧
+∀(a :exp list) (f :num -> α) (f1 :exp -> exp -> exp -> α)
+    (f2 :exp list -> exp -> α) (f3 :exp -> α) (f4 :exp -> α)
+    (f5 :num -> num option -> exp list -> exp option -> α)
+    (f6 :num -> num -> α) (f7 :op -> exp list -> α)
+    (f8 :num -> num -> num -> exp list -> exp -> α) (f9 :exp list -> α).
+  (exp_CASE (Return a) f f1 f2 f3 f4 f5 f6 f7 f8 f9 :α) = f9 a
+exp_nchotomy=∀(ee :exp).
+  (∃(n :num). ee = (Var n :exp)) ∨
+  (∃(e :exp) (e0 :exp) (e1 :exp). ee = (If e e0 e1 :exp)) ∨
+  (∃(l :exp list) (e :exp). ee = (Let l e :exp)) ∨
+  (∃(e :exp). ee = (Raise e :exp)) ∨ (∃(e :exp). ee = (Tick e :exp)) ∨
+  (∃(n :num) (o0 :num option) (l :exp list) ($o :exp option).
+     ee = (Call n o0 l $o :exp)) ∨
+  (∃(n :num) (n0 :num). ee = (Force n n0 :exp)) ∨
+  (∃(o' :op) (l :exp list). ee = (Op o' l :exp)) ∨
+  (∃(n1 :num) (n0 :num) (n :num) (l :exp list) (e :exp).
+     ee = LetCall n1 n0 n l e) ∨ ∃(l :exp list). ee = Return l

@@ -11,6 +11,14 @@ context records the structure declarations and the source-level local/global
 shapes needed to resolve field projections. Malformed names deliberately use
 the same defensive defaults as the HOL pass (`One`, index zero, or an empty
 field list); the static checker is responsible for rejecting such programs.
+
+The generic production carriers in this module remain distinct from the native
+MlString/ShapeHOL compiler in the `PanStructs` submodules. The latter has the
+full program/declaration correctness proofs and observational/top-level
+semantics results in `Pancake/Proofs/PanStructs/{CompileCorrectExact,
+CompileDeclsCorrectExact,SemanticsEq,CompileTopSemanticsDeclsExact}.lean`.
+Those source results do not certify every generic production helper or the
+executed pipeline; their local carrier notes and routing obligations remain.
 -/
 
 namespace Flapjack

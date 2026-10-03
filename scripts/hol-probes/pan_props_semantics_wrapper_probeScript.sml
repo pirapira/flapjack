@@ -1,0 +1,11 @@
+load "preamble";
+load "panPropsTheory";
+open HolKernel Parse bossLib preamble panPropsTheory;
+val _ = Globals.linewidth := 1000000;
+val full = GEN_ALL semantics_wrapper_def;
+val _ = if null(hyp full) andalso null(free_vars(concl full)) then () else raise Fail "open definition";
+val _ = print "semantics_wrapper_def_statement=";
+val _ = print_term(concl full);
+val _ = print "\n";
+val _ = print("semantics_wrapper_def_proved=" ^ term_to_string(rhs(concl(EQT_INTRO full))) ^ "\n");
+val _ = print("semantics_wrapper_def_types=" ^ String.concatWith ";" (map (fn t => term_to_string t ^ ":" ^ type_to_string(type_of t)) (fst(strip_forall(concl full)))) ^ "\n");

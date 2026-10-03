@@ -1,0 +1,4 @@
+wMoveAux_statement=∀xs x s kf. evaluate (wMoveAux [] kf,s) = (NONE,s) ∧ evaluate (wMoveAux (x::xs) kf,s) = evaluate (Seq (wMoveSingle x kf) (wMoveAux xs kf),s)
+wMoveAux_proved=T
+wMoveAux_hypotheses=0
+wMoveAux_typed=∀(xs :((num + num) # (num + num)) list) (x :(num + num) # (num + num)) (s :(α, β, γ) stackSem$state) (kf :num # num # num). (evaluate ((wMoveAux ([] :((num + num) # (num + num)) list) kf :α stackLang$prog),s) :α stackSem$result option # (α, β, γ) stackSem$state) = ((NONE :α stackSem$result option),s) ∧ (evaluate ((wMoveAux (x::xs) kf :α stackLang$prog),s) :α stackSem$result option # (α, β, γ) stackSem$state) = (evaluate (Seq (wMoveSingle x kf :α stackLang$prog) (wMoveAux xs kf :α stackLang$prog),s) :α stackSem$result option # (α, β, γ) stackSem$state)

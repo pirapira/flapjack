@@ -27,6 +27,52 @@ val _ = print_eval "beta" ``2``;
 
 
 class ProbeRowCheckerTest(unittest.TestCase):
+    def _typed_rows(self, name="stack_rawcall_conventions_probe.out"):
+        statements, signatures = ROWS.TYPED_CAPTURE_CONTRACTS[name]
+        return [(label, "∀(p :α prog). P p") for label in statements] + [
+            (label, ":α prog -> bool") for label in signatures]
+
+    def test_full_typed_capture_contract_accepts_visible_types(self):
+        name = "stack_rawcall_conventions_probe.out"
+        script = 'val _ = show_types := true;\nfun emit x = print_term x;'
+        self.assertEqual(ROWS.check_typed_capture(name, script, self._typed_rows(name)), [])
+
+    def test_full_typed_capture_requires_enabled_printer(self):
+        name = "stack_rawcall_conventions_probe.out"
+        self.assertTrue(ROWS.check_typed_capture(name, 'fun emit x = print_term x;', self._typed_rows()))
+        self.assertTrue(ROWS.check_typed_capture(name,
+            'val _ = show_types := true; val _ = show_types := false;', self._typed_rows()))
+
+    def test_full_typed_capture_rejects_comment_and_string_spoofs(self):
+        name = "stack_rawcall_conventions_probe.out"
+        script = '(* outer (* val _ = show_types := true; *) *)\nval s = "show_types := true";'
+        self.assertTrue(ROWS.check_typed_capture(name, script, self._typed_rows()))
+
+    def test_full_typed_capture_rejects_late_enable(self):
+        script = 'fun emit x = print_term x;\nval _ = show_types := true;'
+        self.assertTrue(ROWS.check_typed_capture(
+            "stack_rawcall_conventions_probe.out", script, self._typed_rows()))
+
+    def test_full_typed_capture_rejects_untyped_or_removed_statement(self):
+        name = "stack_rawcall_conventions_probe.out"
+        script = 'val _ = show_types := true;'
+        rows = self._typed_rows()
+        self.assertTrue(ROWS.check_typed_capture(name, script, rows[1:]))
+        rows[0] = (rows[0][0], "P p")
+        self.assertTrue(ROWS.check_typed_capture(name, script, rows))
+
+    def test_full_typed_capture_requires_original_definition_signatures(self):
+        name = "stack_to_lab_full_make_init_probe.out"
+        script = 'val _ = show_types := true;'
+        rows = self._typed_rows(name)
+        self.assertEqual(ROWS.check_typed_capture(name, script, rows), [])
+        self.assertTrue(ROWS.check_typed_capture(name, script, rows[:-1]))
+        rows[-1] = (rows[-1][0], "not an inferred type")
+        self.assertTrue(ROWS.check_typed_capture(name, script, rows))
+
+    def test_unrelated_probe_has_no_added_type_contract(self):
+        self.assertEqual(ROWS.check_typed_capture("demo_probe.out", "", [("alpha", "1")]), [])
+
     def test_registration_paths_required(self):
         valid = ('run_probe demo_probeScript.sml demo_probe.out alpha beta '
                  '"$cake_dir/demoScript.sml" "$cake_dir/compiler/backend"\n')

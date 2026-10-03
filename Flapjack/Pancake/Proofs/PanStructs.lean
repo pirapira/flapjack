@@ -6,10 +6,14 @@ import Flapjack.Pancake.Proofs.PanStructs.CompileShapeExact
 /-!
 Proof lemmas for CakeML Pancake's `pan_structs` theory.
 
-The `afindi` results below are ports of declarations from
-`cakeml/pancake/proofs/pan_structsProofScript.sml`. Helpers whose Lean
-statements use different equality or indexing APIs are kept untagged and their
-translation limits are documented at the declarations.
+The local notes distinguish tagged source ports from untagged helpers over
+production carriers and different equality or indexing APIs. The full native
+program and declaration proofs are assembled in `CompileCorrectExact.lean`
+and `CompileDeclsCorrectExact.lean`; `SemanticsEq.lean` and
+`CompileTopSemanticsDeclsExact.lean` prove the original observational and
+initial declaration semantics results. Those statements use the reviewed
+exact compiler/evaluator carriers. They do not establish production routing
+for the legacy helpers below or final Pancake-to-RISC-V correctness.
 -/
 
 namespace Flapjack

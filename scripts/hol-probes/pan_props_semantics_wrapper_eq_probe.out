@@ -1,0 +1,3 @@
+semantics_wrapper_eq_statement=∀concf absf. semantics_wrapper absf ≠ Fail ⇒ (∀k r ev. absf k = (r,ev) ∧ r ≠ RunError ⇒ ∃k'. concf (k + k') = (r,ev)) ⇒ (∀k k' r ev. concf k = (r,ev) ⇒ r ≠ Incomplete ⇒ concf (k + k') = (r,ev)) ⇒ (∀k k' r ev. absf k = (r,ev) ⇒ r ≠ Incomplete ⇒ absf (k + k') = (r,ev)) ⇒ (∀k k' ev. absf (k + k') = (Incomplete,ev) ⇒ ∃r' ev'. absf k = (r',ev') ∧ ev' ≼ ev) ⇒ (∀k k' ev. concf (k + k') = (Incomplete,ev) ⇒ ∃r' ev'. concf k = (r',ev') ∧ ev' ≼ ev) ⇒ semantics_wrapper concf = semantics_wrapper absf
+semantics_wrapper_eq_proved=T
+semantics_wrapper_eq_types=concf::num -> outcome semantics_run_res # io_event list;absf::num -> outcome semantics_run_res # io_event list

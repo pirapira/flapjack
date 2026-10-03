@@ -1,0 +1,25 @@
+data_inv_merge_l_statement=∀d1 d2 s. wf_data (:α) d1 ∧ wf_data (:α) d2 ∧ sem_inv d1 s ⇒ data_inv (merge_data d1 d2) s
+data_inv_merge_l_hypotheses=0
+data_inv_merge_r_statement=∀d1 d2 s. wf_data (:α) d1 ∧ wf_data (:α) d2 ∧ sem_inv d2 s ⇒ data_inv (merge_data d1 d2) s
+data_inv_merge_r_hypotheses=0
+data_inv_insert_to_canonical_statement=∀data s x y. data_inv data s ∧ lookup x data.to_canonical = NONE ∧ lookup y (insert x y data.to_canonical) = SOME y ∧ ODD x ∧ ODD y ∧ get_var x s = get_var y s ⇒ data_inv (data with to_canonical := insert x y data.to_canonical) s
+data_inv_insert_to_canonical_hypotheses=0
+data_inv_insert_to_latest_statement=∀data s x y. data_inv data s ∧ x ∈ domain data.to_canonical ∧ y ∈ domain data.to_canonical ∧ get_var x s = get_var y s ⇒ data_inv (data with to_latest := insert x y data.to_latest) s
+data_inv_insert_to_latest_hypotheses=0
+data_inv_set_store_statement=∀data s x w. data_inv data s ∧ x ≠ CurrHeap ∧ ALOOKUP data.gets_mem x = NONE ⇒ data_inv data (set_store x w s)
+data_inv_set_store_hypotheses=0
+empty_data_loads_wipe_statement=empty_data with loads_mem := empty = empty_data
+empty_data_loads_wipe_hypotheses=0
+lookup_empty_data_statement=lookup r empty_data.to_canonical = NONE
+lookup_empty_data_hypotheses=0
+data_inv_register_read_statement=∀data s r. data_inv data s ⇒ data_inv (register_read data r) s
+data_inv_register_read_hypotheses=0
+data_inv_register_reads_statement=∀rs data s. data_inv data s ⇒ data_inv (register_reads data rs) s
+data_inv_register_reads_hypotheses=0
+data_inv_set_fp_var_statement=∀data v x s. data_inv data (set_fp_var v x s) ⇔ data_inv data s
+data_inv_set_fp_var_hypotheses=0
+data_inv_set_vars_statement=∀xs ys data s. EVERY (λx. lookup x data.to_canonical = NONE) xs ⇒ (data_inv data (set_vars xs ys s) ⇔ data_inv data s)
+data_inv_set_vars_hypotheses=0
+evaluate_Move1_statement=∀pri r k w s. get_var k s = SOME w ⇒ evaluate (Move pri [(r,k)],s) = (NONE,set_var r w s)
+evaluate_Move1_hypotheses=0
+data_inv_set_store_typed=∀(data :knowledge) (s :(α, γ, 'ffi) state) (x :store_name) (w :α word_loc). data_inv data s ∧ x ≠ CurrHeap ∧ ALOOKUP data.gets_mem x = (NONE :num option) ⇒ data_inv data (set_store x w s)

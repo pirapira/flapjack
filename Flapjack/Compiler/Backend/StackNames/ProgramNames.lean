@@ -70,20 +70,21 @@ theorem progCompHOL_eq_lookupHelper {width : Nat} [NeZero width]
 
 @[hol "cakeml/compiler/backend/stack_namesScript.sml" "prog_comp_def"
   (words_as_type_indexed_bitvec)]
-def progCompEntryHOL {width : Nat} [NeZero width] (names : Flapjack.Spt Nat)
-    (entry : Nat × HolProg width) : Nat × HolProg width :=
+def progCompEntryHOL {width : Nat} [NeZero width] {Name : Type} (names : Flapjack.Spt Nat)
+    (entry : Name × HolProg width) : Name × HolProg width :=
   (entry.1, progCompHOL names entry.2)
 
+/-- HOL's section names are an arbitrary type `'a`; executed callers use `Nat`. -/
 @[hol "cakeml/compiler/backend/stack_namesScript.sml" "compile_def"
   (words_as_type_indexed_bitvec)]
-def compileHOL {width : Nat} [NeZero width] (names : Flapjack.Spt Nat)
-    (program : List (Nat × HolProg width)) : List (Nat × HolProg width) :=
+def compileHOL {width : Nat} [NeZero width] {Name : Type} (names : Flapjack.Spt Nat)
+    (program : List (Name × HolProg width)) : List (Name × HolProg width) :=
   program.map (progCompEntryHOL names)
 
 @[hol "cakeml/compiler/backend/proofs/stack_namesProofScript.sml" "MAP_FST_compile"
   (words_as_type_indexed_bitvec)]
-theorem map_fst_compileHOL {width : Nat} [NeZero width] (names : Flapjack.Spt Nat)
-    (program : List (Nat × HolProg width)) :
+theorem map_fst_compileHOL {width : Nat} [NeZero width] {Name : Type} (names : Flapjack.Spt Nat)
+    (program : List (Name × HolProg width)) :
     (compileHOL names program).map Prod.fst = program.map Prod.fst := by
   simp [compileHOL, progCompEntryHOL, List.map_map]
 

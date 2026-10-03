@@ -1,0 +1,16 @@
+load "bossLib"; load "preamble"; load "backendTheory";
+open bossLib HolKernel Parse preamble backendTheory;
+val _ = show_types := true;
+fun emit label th = (print (label ^ "="); print_term (concl th); print "\n");
+val _ = print "from_lab_type=";
+val _ = print (type_to_string (type_of ``backend$from_lab``));
+val _ = print "\n";
+val _ = emit "from_lab_def_typed" (DB.fetch "backend" "from_lab_def");
+val _ = print "from_stack_type=";
+val _ = print (type_to_string (type_of ``backend$from_stack``));
+val _ = print "\n";
+val _ = emit "from_stack_def_typed" (DB.fetch "backend" "from_stack_def");
+val _ = print "from_word_type=";
+val _ = print (type_to_string (type_of ``backend$from_word``));
+val _ = print "\n";
+val _ = emit "from_word_def_typed" (DB.fetch "backend" "from_word_def");

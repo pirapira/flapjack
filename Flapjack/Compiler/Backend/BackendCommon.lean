@@ -25,6 +25,11 @@ def stackNumStubs : Nat := 5
 @[hol "cakeml/compiler/backend/backend_commonScript.sml" "word_num_stubs_def"]
 def wordNumStubs : Nat := stackNumStubs + 1 + 1
 
+/-- HOL `backend_common$data_num_stubs = word_num_stubs + 32 + 23`
+(general and bignum stubs). -/
+@[hol "cakeml/compiler/backend/backend_commonScript.sml" "data_num_stubs_def"]
+def dataNumStubs : Nat := wordNumStubs + 32 + 23
+
 /-- HOL `backend_common$word_shift`: the shift amount is 2 for 32-bit words and
     3 otherwise. HOL uses `dimindex (:'a)` only through its numeric size and has
     no word-valued carrier, so Lean binds the word width explicitly. -/

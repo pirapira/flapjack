@@ -30,6 +30,10 @@ overall state/result construction is not an exact port of HOL's
 -- needs no caller-supplied chain hypothesis.  That proof does not establish
 -- that `PanLprefixLub` is HOL's `build_lprefix_lub`; the state and LUB carrier
 -- gaps remain, so no `@[hol]` tag is attached.
+-- The tagged original definitions already exist on the canonical finite-map
+-- state in the sibling `Semantics.lean`. Their HolBehaviour result is distinct
+-- from this legacy witness-carrying behaviour; no bridge between those
+-- observational carriers or production evaluator is claimed here.
 -/
 
 namespace Flapjack

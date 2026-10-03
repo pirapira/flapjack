@@ -107,7 +107,14 @@ Source comparison against the original Call clause7924–10048 and complete
 motive5719–5751 preserves every quantifier and conclusion. Canonical five
 finite-map fields and positive type-indexed words are the carrier translations;
 inherited evaluator real-carrier assurance limits apply. No target run or
-postrelation is assumed. -/
+postrelation is assumed.
+
+CallReturningFull.compCorrectCallReturning is the separately reviewed SOME
+return-descriptor specialization with three literal returning IHs. This entry
+point keeps arbitrary return descriptors and all four original IHs, including
+the guarded tail-body IH. Their returning branches reuse the same checked
+handler-case proofs; retaining both entry points does not assert two independent
+pass-correctness proofs or weaken this full Call constructor statement. -/
 @[hol "cakeml/compiler/backend/proofs/word_to_stackProofScript.sml" "comp_correct" 5756
   (fmap_as_finite_support_relation := [WordSemStateFiniteExact.fpRegs,
     WordSemStateFiniteExact.store, StackSemStateFiniteExact.regs,

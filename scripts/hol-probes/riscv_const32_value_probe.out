@@ -1,0 +1,15 @@
+const32_value_zero=T
+const32_value_low_positive_max=T
+const32_value_low_sign_bit=T
+const32_value_low_all_ones=T
+const32_value_high_one=T
+const32_value_positive_sign_boundary=T
+const32_value_positive_max=T
+const32_value_negative_min=T
+const32_value_negative_min_low_sign=T
+const32_value_negative_low_positive=T
+const32_value_negative_low_sign=T
+const32_value_all_ones=T
+const32_value_source_clause=HOL cakeml/compiler/encoders/riscv/riscv_targetScript.sml riscv_const32_def (l.77) and riscv_ast_def Const branch (l.96); value formula stated for arbitrary c, both branches.
+const32_value_replay=∀(c :word32). (if ((c ' (11 :num)) :bool) then (sw2sw ((¬(((31 :num) >< (12 :num)) c :word20) @@ (0w :word12)) :word32) :word64) ⊕ (sw2sw (((11 :num) >< (0 :num)) c :word12) :word64) else (sw2sw (((((31 :num) >< (12 :num)) c :word20) @@ (0w :word12)) :word32) :word64) + (sw2sw (((11 :num) >< (0 :num)) c :word12) :word64)) = (sw2sw c :word64)
+const32_value_carriers=c : :word32, result : :word64

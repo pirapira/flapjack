@@ -1,0 +1,11 @@
+load "word_cseProofTheory";
+open HolKernel Parse bossLib word_cseTheory word_cseProofTheory;
+val _ = Globals.linewidth := 1000000;
+val _ = (print "word_cseInst_type="; print_type (type_of ``word_cseInst``); print "\n");
+val _ = (print "word_cse_type="; print_type (type_of ``word_cse``); print "\n");
+val _ = (print "word_common_subexp_elim_type="; print_type (type_of ``word_common_subexp_elim``); print "\n");
+val _ = (print "word_cseInst_def_statement="; print_term (concl word_cseInst_def));
+val _ = (print "word_cse_def_clauses="; print (Int.toString (length (boolSyntax.strip_conj (concl word_cse_def)))); print "\n");
+val _ = (print "word_common_subexp_elim_def_statement="; print_term (concl word_common_subexp_elim_def));
+val _ = (print "word_cse_wf_data_statement="; print_term (concl word_cse_wf_data));
+val _ = print("word_cse_wf_data_hypotheses=" ^ Int.toString(length(hyp word_cse_wf_data)) ^ "\n");

@@ -30,45 +30,24 @@ inductive SemanticsRunResHOL (α : Type u) where
   | Incomplete
   deriving DecidableEq, Repr
 
-/-! Source review for the unported HOL `semantics_wrapper_def`
-(`panPropsScript.sml:1824-1829`): the divergence branch applies
-`LUB`/`build_lprefix_lub` to the set
-`IMAGE (fromList ∘ SND ∘ f) UNIV` without a chain premise. The HOL helper
-`build_lprefix_lub` is defined by `LUNFOLD` of `build_lprefix_lub_f`; each
-unfold step uses `lprefix_chain_nth`, whose `some` selects an element when
-one exists. Its theorem `build_lprefix_lub_thm` establishes the least-upper-
-bound property only when the family is an `lprefix_chain`. Thus the arbitrary
-function accepted by the definition includes non-chain families, for which
-the selected conflicting event at an index is not characterized by that
-theorem. The existing Lean `LoopLprefixLub`/`buildLoopLprefixLub` instead
-requires a chain proof and chooses an indexed event using Lean's classical
-choice; it gives no translation of HOL's unconstrained selection on
-non-chains. This is a carrier/choice mismatch in the definition's behavior,
-not merely a missing proof premise. No `@[hol]` tag is appropriate until a
-reviewed Lean representation of the generic lazy-list LUB and its HOL choice
-boundary is available. The current `LoopLList := Nat → Option α` observation
-carrier also admits holes, whereas HOL `llist` values are prefix-shaped; the
-repository has no reviewed qualifier/witness for translating HOL `llist` to
-this carrier. Both the choice boundary and carrier translation are tracked by
-`flapjack-4ac.4.105.2`; the dependent wrapper port is
-`flapjack-4ac.4.105.1`.
+/-! Source review for HOL `semantics_wrapper_def`
+(`panPropsScript.sml:1824-1829`): its full generic port is
+`PanProps/SemanticsWrapper.lean`'s `panPropsSemanticsWrapper`, using the original
+`SemanticsRunResHOL` datatype, arbitrary clock-indexed functions, the reviewed
+`holOptionSome`, and the chain-free `HolLList.buildLprefixLub`. The original
+`IMAGE (fromList ∘ SND ∘ f) UNIV` becomes the same image predicate. No chain
+proof or caller-supplied LUB is added. The former carrier blocker
+`flapjack-4ac.4.105.2` was resolved by source review of the prefix-shaped
+`HolLList` subtype and the full generic LUNFOLD/choice formula.
 
-The direct HOL probe in `scripts/hol-probes/loop_sem_lprefix_lub_probe.out`
-sharpens the choice boundary: the empty family reduces to `NONE`; singleton
-and prefix-chain inputs expose their forced heads, while the tail remains a
-`LUNFOLD` expression containing `build_lprefix_lub_f`; for conflicting
-families, EVAL leaves the selected event under the same opaque choice
-expression. Thus the probe cannot provide a deterministic event value to
-translate for a non-chain family. `build_lprefix_lub_thm` only proves the
-least-upper-bound property when the input family satisfies `lprefix_chain`.
-Since `semantics_wrapper_def` accepts arbitrary `f` and does not supply that
-premise, a Lean `Classical.choose` result cannot be claimed equal to HOL's
-independently selected result. A relational choice model could describe the
-possible outputs, but it would change the deterministic result carrier and
-would not be an exact executable definition. Keep the generic wrapper
-untagged and its faithful port open until a source-reviewed HOL `llist` and
-choice correspondence is available; the existing chain-specific
-`buildLoopLprefixLub` remains limited to its explicit chain contract. -/
+The earlier hook API and chain-specific `buildLoopLprefixLub` remain limited
+to their own explicit contracts. Direct HOL empty/singleton/chain/conflicting
+probes expose forced selections and leave unspecified conflicting choices
+opaque. HOL Hilbert choice and Lean classical choice have the same reviewed
+formula; equality of their unspecified selections is outside the stated
+HOL-to-Lean trust boundary, rather than a missing premise of this wrapper.
+The wrapper's own local docstring records this limitation. Full wrapper
+equality and PanSem wrapper correspondence are separate theorem ports. -/
 
 /-! Source review for HOL `semantics_wrapper_eq`
 (`panPropsScript.sml:1831-1929`): the theorem is generic in arbitrary abstract
@@ -80,14 +59,16 @@ the same stability for abstract observations; and, separately for abstract
 and concrete observations, if the result at `k + k'` is `(Incomplete, ev)`,
 there are `r'` and `ev'` with the result at `k` equal to `(r', ev')` and
 `IS_PREFIX ev ev'`. These premises imply equality of the two
-`semantics_wrapper` results. The closest Flapjack API,
+`semantics_wrapper` results. The older hook API,
 `PanObservationalSemantics.panSemantics`, specializes the functions to a
 `PanSemanticsHooks` evaluator over `Option PanValueFfiClockResult`, and takes a
 caller-supplied prefix chain/LUB. It has neither the arbitrary result carrier
 nor the generic wrapper equality statement, so it is not a port and receives
-no HOL tag. The faithful theorem port is tracked by
-`flapjack-4ac.4.106.1`, depending on the exact wrapper/LUB carrier work in
-`flapjack-4ac.4.105.1`. -/
+no HOL tag. The faithful theorem is provided by
+`PanProps/SemanticsWrapperEquality.lean`'s `panPropsSemanticsWrapper_eq` over
+`panPropsSemanticsWrapper`, retaining all six premises and deriving both
+prefix chains internally. The separately tracked evaluator-wrapper theorem
+must supply the source-specific connection to PanSem observations. -/
 
 /-! Source review for HOL `semantics_decls_has_main`
 (`panPropsScript.sml:1611-1626`): this theorem has the same source premise and
@@ -112,14 +93,16 @@ composition, and wrapper/LUB semantics ports (`flapjack-4ac.3.45`, `.3.53`,
 `evaluate (TailCall start [], s with clock := k)`, mapping `TimeOut` to
 `Incomplete`, `FinalFFI e` to `CompleteResult (FFI_outcome e)`, `Return _` to
 `CompleteResult Success`, and every other result to `RunError`; the event
-component is `s.ffi.io_events`. The closest Flapjack definition,
+component is `s.ffi.io_events`. The older hook definition,
 `PanObservationalSemantics.panSemantics`, instead takes arbitrary
 `PanSemanticsHooks`, uses `PanValueFfiClockResult`/`FfiState` carriers, and
 requires a caller-provided event-prefix chain/LUB. It does not state the HOL
-equality and receives no tag. The faithful theorem port is tracked by
-`flapjack-4ac.4.107.1`, depending on exact `semantics_wrapper_def` carrier work
-in `flapjack-4ac.4.105.1` and the exact PanSem semantics port
-`flapjack-4ac.3.52.2`. -/
+equality and receives no tag. The faithful theorem is provided by
+`PanProps/PanSemIsWrapper.lean`'s `panPropsPanSemIsWrapper` over the accepted exact
+semantics and generic wrapper definitions. Its canonical maps/positive words
+translation and complete no-premise result are recorded beside the theorem.
+The underlying exact PanSem semantics port is
+`flapjack-pxn.18.4.3.77.17.1`. -/
 
 /-! Source review for HOL `io_events_eq_imp_ffi_eq`
 (`panPropsScript.sml:974-1019`): its quantified variables are `p`, `s`, `res`,

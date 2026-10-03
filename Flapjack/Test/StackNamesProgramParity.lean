@@ -32,4 +32,7 @@ example : progCompHOL names (.tick : HolProg 8) = .tick := by
   rfl
 example : compileHOL names ([(8,.halt 3),(9,.ret 4)] : List (Nat × HolProg 8)) = [(8,.halt 7),(9,.ret 4)] := by
   simp [compileHOL, progCompEntryHOL, progCompHOL, findNameSpt, names, Flapjack.sptInsert, Flapjack.sptLookup]
+-- HOL's section names are polymorphic (stack_names_carrier_probe compile_string_names).
+example : compileHOL names ([("a",.halt 3),("b",.ret 4)] : List (String × HolProg 8)) = [("a",.halt 7),("b",.ret 4)] := by
+  simp [compileHOL, progCompEntryHOL, progCompHOL, findNameSpt, names, Flapjack.sptInsert, Flapjack.sptLookup]
 end Flapjack.Test.StackNamesProgramParity

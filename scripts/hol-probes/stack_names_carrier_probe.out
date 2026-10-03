@@ -1,0 +1,7 @@
+prog_comp_def_statement=∀f n p. prog_comp f (n,p) = (n,comp f p)
+prog_comp_def_statement_typed=∀(f :num sptree$num_map) (n :α) (p :β prog). prog_comp f (n,p) = (n,comp f p)
+prog_comp_def_statement_types=(f :num sptree$num_map)::num sptree$num_map;(n :α)::α;(p :β prog)::β prog;
+compile_def_statement=∀f prog. compile f prog = MAP (prog_comp f) prog
+compile_def_statement_typed=∀(f :num sptree$num_map) (prog :(α # β prog) list). compile f prog = MAP (prog_comp f :α # β prog -> α # β prog) prog
+compile_def_statement_types=(f :num sptree$num_map)::num sptree$num_map;(prog :(α # β prog) list)::(α # β prog) list;
+compile_string_names=[("a",Halt 7); ("b",Return 4)]

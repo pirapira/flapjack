@@ -1,0 +1,1 @@
+stack_remove_lab_pres_statement=∀(jump :bool) (off :α word # α word) (k :num) (p :α stackLang$prog). extract_labels p = extract_labels (comp jump off k p :α stackLang$prog)

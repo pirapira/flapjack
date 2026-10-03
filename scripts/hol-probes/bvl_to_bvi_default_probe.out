@@ -1,0 +1,17 @@
+bvl_num_stubs_def=bvl_num_stubs = data_num_stubs + (9 :num) + (1 :num)
+bvl_to_bvi_namespaces_def=bvl_to_bvi_namespaces = (4 :num)
+bvl_num_stub_MOD=bvl_num_stubs MOD bvl_to_bvi_namespaces = (0 :num)
+bvl_num_stub_MOD_hypotheses=0
+default_config_def=default_config =
+<|inline_size_limit := (10 :num); exp_cut := (1000 :num);
+  split_main_at_seq := T; next_name1 := bvl_num_stubs + (1 :num);
+  next_name2 := bvl_num_stubs + (2 :num);
+  next_name3 := bvl_num_stubs + (3 :num); do_tailrec := T; do_tmc := T;
+  inlines := (LN :(num # exp) sptree$num_map);
+  bvi_inlines := (LN :(num # bvi$exp) sptree$num_map)|>
+default_config_type=:config
+bvl_stub_count_value=bvl_num_stubs = (72 :num)
+bvl_namespace_count_value=bvl_to_bvi_namespaces = (4 :num)
+default_next_name1=default_config.next_name1 = (73 :num)
+default_next_name2=default_config.next_name2 = (74 :num)
+default_next_name3=default_config.next_name3 = (75 :num)

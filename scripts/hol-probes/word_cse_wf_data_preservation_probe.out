@@ -1,0 +1,27 @@
+wf_data_empty_statement=wf_data (:α) empty_data
+wf_data_empty_hypotheses=0
+wf_data_loads_wipe_statement=∀data. wf_data (:α) data ⇒ wf_data (:α) (data with loads_mem := empty)
+wf_data_loads_wipe_hypotheses=0
+wf_data_invalidate_statement=∀data r. wf_data (:α) data ⇒ wf_data (:α) (invalidate_data data r)
+wf_data_invalidate_hypotheses=0
+wf_data_invalidate_regs_statement=∀rs data. wf_data (:α) data ⇒ wf_data (:α) (invalidate_regs data rs)
+wf_data_invalidate_regs_hypotheses=0
+wf_data_insert_to_canonical_statement=∀data x y. wf_data (:α) data ∧ lookup x data.to_canonical = NONE ∧ lookup y (insert x y data.to_canonical) = SOME y ∧ ODD x ∧ ODD y ⇒ wf_data (:α) (data with to_canonical := insert x y data.to_canonical)
+wf_data_insert_to_canonical_hypotheses=0
+wf_data_insert_to_latest_statement=∀data x y. wf_data (:α) data ∧ x ∈ domain data.to_canonical ∧ y ∈ domain data.to_canonical ⇒ wf_data (:α) (data with to_latest := insert x y data.to_latest)
+wf_data_insert_to_latest_hypotheses=0
+wf_data_register_read_statement=∀data r. wf_data (:α) data ⇒ wf_data (:α) (register_read data r)
+wf_data_register_read_hypotheses=0
+wf_data_register_reads_statement=∀rs data. wf_data (:α) data ⇒ wf_data (:α) (register_reads data rs)
+wf_data_register_reads_hypotheses=0
+wf_add_to_data_aux_statement=∀data r i p data' p'. wf_data (:α) data ∧ lookup r data.to_canonical = NONE ∧ add_to_data_aux data r i p = (data',p') ∧ (¬EVEN r ⇒ wf_data (:α) (data with <|instrs_mem := insert listCmp i r (data with to_canonical := insert r r data.to_canonical).instrs_mem; to_canonical := insert r r data.to_canonical|>)) ⇒ wf_data (:α) data'
+wf_add_to_data_aux_hypotheses=0
+wf_add_to_data_const_statement=∀data r w data' p'. wf_data (:α) data ∧ lookup r data.to_canonical = NONE ∧ ¬EVEN r ∧ add_to_data_const data r w = (data',p') ⇒ wf_data (:α) data'
+wf_add_to_data_const_hypotheses=0
+wf_add_to_load_aux_statement=∀data r i p data' p'. wf_data (:α) data ∧ lookup r data.to_canonical = NONE ∧ add_to_load_aux data r i p = (data',p') ∧ (¬EVEN r ⇒ wf_data (:α) (data with <|loads_mem := insert listCmp i r (data with to_canonical := insert r r data.to_canonical).loads_mem; to_canonical := insert r r data.to_canonical|>)) ⇒ wf_data (:α) data'
+wf_add_to_load_aux_hypotheses=0
+wf_data_merge_statement=∀d1 d2. wf_data (:α) d1 ∧ wf_data (:α) d2 ⇒ wf_data (:α) (merge_data d1 d2)
+wf_data_merge_hypotheses=0
+wf_canonicalMoveRegs_statement=∀data rs. wf_data (:α) data ⇒ wf_data (:α) (canonicalMoveRegs data rs)
+wf_canonicalMoveRegs_hypotheses=0
+wf_add_to_data_aux_typed=∀(data :knowledge) (r :num) (i :num list) (p :α prog) (data' :knowledge) (p' :α prog). wf_data (:α) data ∧ (lookup r data.to_canonical :num option) = (NONE :num option) ∧ add_to_data_aux data r i p = (data',p') ∧ (¬EVEN r ⇒ wf_data (:α) (data with <|instrs_mem := (insert listCmp i r (data with to_canonical := (insert r r data.to_canonical :num sptree$num_map)).instrs_mem :(num list, num) balanced_map); to_canonical := (insert r r data.to_canonical :num sptree$num_map)|>)) ⇒ wf_data (:α) data'

@@ -1,0 +1,3 @@
+compile_top_semantics_decls_statement=∀start s code. semantics_decls s start code ≠ Fail ∧ s.locals = FEMPTY ∧ s.code = FEMPTY ∧ s.globals = FEMPTY ⇒ semantics_decls s start code = semantics_decls (s with eshapes := FMAP_MAP2 (λ(eid,sh). compile_shape (get_names <|structs := []|> code).structs sh) s.eshapes) start (compile_top code)
+compile_top_semantics_decls_proved=T
+compile_top_semantics_decls_types=start::mlstring;s::(α, β) state;code::α decl list

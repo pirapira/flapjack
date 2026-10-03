@@ -1,0 +1,6 @@
+reg_bound_comp_statement=∀(i :num sptree$num_map) (p :α prog). (reg_bound (comp i p :α prog) (s :num) ⇔ reg_bound p s) ∧ (reg_bound (comp_top i p) s ⇔ reg_bound p s)
+stack_rawcall_reg_bound_statement=EVERY (λ(p :α prog). reg_bound p (sp :num)) (MAP (SND :num # α prog -> α prog) (compile (prog1 :(num # α prog) list) :(num # α prog) list)) ⇔ EVERY (λ(p :α prog). reg_bound p sp) (MAP (SND :num # α prog -> α prog) prog1)
+call_args_comp_statement=∀(i :num sptree$num_map) (p :α prog). (call_args (comp i p :α prog) (r1 :num) (r2 :num) (r3 :num) (r4 :num) (r5 :num) ⇔ call_args p r1 r2 r3 r4 r5) ∧ (call_args (comp_top i p) r1 r2 r3 r4 r5 ⇔ call_args p r1 r2 r3 r4 r5)
+stack_alloc_call_args_statement=EVERY (λ(p :α prog). call_args p (1 :num) (2 :num) (3 :num) (4 :num) (0 :num)) (MAP (SND :num # α prog -> α prog) (compile (prog1 :(num # α prog) list) :(num # α prog) list)) ⇔ EVERY (λ(p :α prog). call_args p (1 :num) (2 :num) (3 :num) (4 :num) (0 :num)) (MAP (SND :num # α prog -> α prog) prog1)
+MAP_FST_compile_statement=MAP (FST :num # α prog -> num) (compile (code :(num # α prog) list) :(num # α prog) list) = MAP (FST :num # α prog -> num) code
+call_arg_comp_statement=∀(i :num sptree$num_map) (p :α prog). (alloc_arg (comp i p :α prog) ⇔ alloc_arg p) ∧ (alloc_arg (comp_top i p) ⇔ alloc_arg p)

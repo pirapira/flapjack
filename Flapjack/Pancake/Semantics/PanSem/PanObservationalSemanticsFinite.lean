@@ -4,6 +4,12 @@ import Flapjack.Pancake.Semantics.PanSem.PanObservationalSemantics
 /-!
 Finite-map-carrier clock observations for `panSem$semantics_def`.
 
+This module supplies clock-indexed observations on the canonical finite-map
+state while retaining the legacy witness-carrying behaviour API. The tagged
+full original `semantics` and `semanticsDecls` definitions, with HolBehaviour
+results, are in the sibling `Semantics.lean`. This support API does not itself
+identify those result carriers or establish the executed production route.
+
 The main observational construction currently uses the broad exact state whose
 map fields are unrestricted functions. This module exposes the same clocked
 entry call over `PanSemStateFiniteExact` and proves its projection to that

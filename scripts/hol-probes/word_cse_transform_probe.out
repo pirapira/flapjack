@@ -1,0 +1,8 @@
+word_cseInst_type=:knowledge -> α inst -> knowledge # α prog
+word_cse_type=:knowledge -> α prog -> knowledge # α prog
+word_common_subexp_elim_type=:α prog -> α prog
+word_cseInst_def_statement=word_cseInst data Skip = (data,Inst Skip) ∧ word_cseInst data (Const r w) = (let data = invalidate_data data r in if EVEN r then (data,Inst (Const r w)) else add_to_data_const data r w) ∧ word_cseInst data (Arith a') = (let r = firstRegOfArith a'; data = invalidate_regs data (arithWrites a'); a'' = canonicalArith data a'; rds = arithReads a'' in if can_mem_arith a'' ∧ ¬MEM r rds then add_to_data (register_reads data rds) r (Arith a'') (Arith a') else (data,Inst (Arith a'))) ∧ word_cseInst data (Mem op r (Addr a ofs)) = (if is_store op then (data with loads_mem := empty,Inst (Mem op r (Addr a ofs))) else (let data = invalidate_data data r in if EVEN r ∨ EVEN a ∨ a = r then (data,Inst (Mem op r (Addr a ofs))) else (let a'' = canonicalRegs' r data a in add_to_load_aux (register_read data a'') r (loadToNumList op a'' ofs) (Inst (Mem op r (Addr a ofs)))))) ∧ word_cseInst data (FP fp) = (invalidate_regs data (fpWrites fp),Inst (FP fp))
+word_cse_def_clauses=26
+word_common_subexp_elim_def_statement=∀prog. word_common_subexp_elim prog = (let (_0,new_prog) = word_cse empty_data prog in new_prog)
+word_cse_wf_data_statement=∀p data. wf_data (:α) data ⇒ wf_data (:α) (FST (word_cse data p))
+word_cse_wf_data_hypotheses=0

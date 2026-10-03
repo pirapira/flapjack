@@ -1,0 +1,12 @@
+const_run_small_zero=T
+const_run_small_positive=T
+const_run_small_negative=T
+const_run_small_all_ones=T
+const_run_medium_positive=T
+const_run_medium_positive_max=T
+const_run_medium_negative=T
+const_run_medium_negative_low11=T
+const_run_wide_or=T
+const_run_wide_or_high11=T
+const_run_wide_xor=T
+const_run_wide_xor_low11_high11=T

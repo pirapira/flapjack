@@ -1,0 +1,4 @@
+good_code_def_statement=∀(sp :num) (code :(num # α prog) list). (good_code sp code :bool) ⇔ ALL_DISTINCT (MAP (FST :num # α prog -> num) code) ∧ EVERY (λ((k :num),(prog :α prog)). stack_num_stubs ≤ k ∧ alloc_arg prog) code ∧ EVERY (λ(p :α prog). call_args p (1 :num) (2 :num) (3 :num) (4 :num) (0 :num)) (MAP (SND :num # α prog -> α prog) code) ∧ EVERY (λ(p :α prog). reg_bound p sp) (MAP (SND :num # α prog -> α prog) code) ∧ EVERY (λ((n :num),(p :α prog)). EVERY (λ((l1 :num),(l2 :num)). l1 = n ∧ l2 ≠ (0 :num) ∧ l2 ≠ (1 :num)) (extract_labels p) ∧ ALL_DISTINCT (extract_labels p)) code
+contain_def_statement=∀(b :bool). contain b ⇔ Abbrev b
+good_code_type=:num -> (num # α prog) list -> bool
+contain_type=:bool -> bool

@@ -1,0 +1,41 @@
+from_lab_type=:α asm_config ->
+config ->
+mlstring sptree$num_map ->
+α sec list -> β -> (word8 list # β # config) option
+from_lab_def_typed=∀(asm_conf :β asm_config) (c :config) (names :mlstring sptree$num_map)
+    (p :β sec list) (bm :α).
+  from_lab asm_conf c names p bm =
+  attach_bitmaps names c bm
+    (compile asm_conf c.lab_conf p :
+     (word8 list # lab_to_target$config) option)
+from_stack_type=:α asm_config ->
+config ->
+mlstring sptree$num_map ->
+(num # α stackLang$prog) list -> β -> (word8 list # β # config) option
+from_stack_def_typed=∀(asm_conf :α asm_config) (c :config) (names :mlstring sptree$num_map)
+    (p :(num # α stackLang$prog) list) (bm :β).
+  from_stack asm_conf c names p bm =
+  (let
+     (p :α sec list) =
+       (compile c.stack_conf c.data_conf
+          ((2 :num) * max_heap_limit (:α) c.data_conf − (1 :num))
+          (asm_conf.reg_count − (LENGTH asm_conf.avoid_regs + (3 :num)))
+          asm_conf.addr_offset p :α sec list)
+   in
+     from_lab asm_conf c names p bm)
+from_word_type=:α asm_config ->
+config ->
+mlstring sptree$num_map ->
+(num # num # α prog) list -> (word8 list # α word list # config) option
+from_word_def_typed=∀(asm_conf :α asm_config) (c :config) (names :mlstring sptree$num_map)
+    (p :(num # num # α prog) list).
+  from_word asm_conf c names p =
+  (let
+     ((bm :α word list),(c' :word_to_stack$config),(fs :num list),
+        (p :(num # α stackLang$prog) list)) =
+       (compile asm_conf c.stack_conf.perf_calls p :
+        α word list #
+        word_to_stack$config # num list # (num # α stackLang$prog) list);
+     (c :config) = c with word_conf := c'
+   in
+     from_stack asm_conf c names p bm)

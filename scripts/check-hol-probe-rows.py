@@ -32,6 +32,10 @@ The checker has three independent, deterministic parts.
    must supply a source path and, optionally, a working directory after their
    labels. A dangling continuation must not absorb another registration.
 
+The named PR1212 stack capture contracts additionally require enabled HOL
+type printing, visible statement annotations and the required definition
+signatures. Those checks establish capture syntax/coverage only.
+
 This gate does not evaluate HOL. The probe scripts and ``.out`` files are
 committed artifacts, so the checker compares them against each other and
 against the lock; it does not prove that the captured values are correct. The
@@ -120,6 +124,116 @@ PARTIAL_OUT: dict[str, tuple[frozenset[str], str]] = {
         "final `_done` status marker is not a captured data row",
     ),
 }
+
+
+
+# PR1212 stack source-review evidence: preserve visible inferred carriers and
+# the independently captured signatures of definition-level entry points.
+# These are syntax/coverage checks, not HOL-to-Lean equivalence checks.
+TYPED_CAPTURE_CONTRACTS = {
+    'stack_rawcall_conventions_probe.out': (
+        ('reg_bound_comp_statement', 'stack_rawcall_reg_bound_statement', 'call_args_comp_statement', 'stack_alloc_call_args_statement', 'MAP_FST_compile_statement', 'call_arg_comp_statement'),
+        ()),
+    'stack_rawcall_extract_labels_comp_probe.out': (
+        ('extract_labels_comp_statement',),
+        ()),
+    'stack_remove_call_args_probe.out': (
+        ('stack_remove_call_args_statement',),
+        ()),
+    'stack_remove_lab_pres_probe.out': (
+        ('stack_remove_lab_pres_statement',),
+        ()),
+    'stack_to_lab_compile_probe.out': (
+        ('is_gen_gc_def_statement', 'config_accessors_statement', 'compile_def_statement', 'compile_no_stubs_def_statement', 'data_num_stubs_def_statement', 'AllocGlobal_location_def_statement', 'CopyGlobals_location_def_statement', 'InitGlobals_location_def_statement'),
+        ('is_gen_gc_type', 'compile_type', 'compile_no_stubs_type')),
+    'stack_to_lab_full_make_init_probe.out': (
+        ('full_make_init_def_statement', 'full_make_init_buffer_statement', 'full_make_init_ffi_statement', 'full_make_init_compile_statement'),
+        ('full_make_init_type',)),
+    'stack_to_lab_full_make_init_semantics_probe.out': (
+        ('full_make_init_semantics_3365_statement', 'full_make_init_semantics_3617_statement'),
+        ()),
+    'stack_to_lab_good_code_probe.out': (
+        ('good_code_def_statement', 'contain_def_statement'),
+        ('good_code_type', 'contain_type')),
+    'stack_to_lab_compile_lab_pres_probe.out': (
+        ('MAP_FST_compile_compile_statement', 'next_lab_non_zero_3211_statement', 'MAP_prog_to_section_FST_3272_statement', 'extract_label_store_list_code_statement', 'stack_to_lab_compile_lab_pres_statement'),
+        ()),
+}
+
+
+def sml_code_without_comments_or_strings(text: str) -> str:
+    """Mask nested SML comments and strings; retain code offsets/newlines."""
+    code = list(text)
+    depth = 0
+    string = False
+    i = 0
+    while i < len(text):
+        if depth:
+            if text.startswith("(*", i):
+                depth += 1
+                code[i:i + 2] = "  "
+                i += 2
+                continue
+            if text.startswith("*)", i):
+                depth -= 1
+                code[i:i + 2] = "  "
+                i += 2
+                continue
+        elif string:
+            if text[i] == "\\" and i + 1 < len(text):
+                code[i:i + 2] = "  "
+                i += 2
+                continue
+            if text[i] == '"':
+                string = False
+        elif text.startswith("(*", i):
+            depth = 1
+            code[i:i + 2] = "  "
+            i += 2
+            continue
+        elif text[i] == '"':
+            string = True
+        else:
+            i += 1
+            continue
+        if text[i] != "\n":
+            code[i] = " "
+        i += 1
+    return "".join(code)
+
+
+def check_typed_capture(name: str, script_text: str,
+                        rows: list[tuple[str, str]]) -> list[str]:
+    contract = TYPED_CAPTURE_CONTRACTS.get(name)
+    if contract is None:
+        return []
+    errors = []
+    code = sml_code_without_comments_or_strings(script_text)
+    settings = re.findall(r"\bshow_types\s*:=\s*(true|false)\b", code)
+    if not settings or any(setting != "true" for setting in settings):
+        errors.append(f"{name}: full typed capture requires show_types := true "
+                      "and must not disable it")
+    enabled = re.search(r"\bshow_types\s*:=\s*true\b", code)
+    printer = re.search(r"\bprint_term\b", code)
+    if enabled is not None and printer is not None and enabled.start() > printer.start():
+        errors.append(f"{name}: enable type printing before the statement printer")
+    values = dict(rows)
+    for label in contract[0]:
+        if label not in values:
+            errors.append(f"{name}: missing full typed original statement {label}")
+    for label in contract[1]:
+        if label not in values:
+            errors.append(f"{name}: missing full original function type {label}")
+        elif not values[label].startswith(":"):
+            errors.append(f"{name}: {label} is not an original inferred type")
+    # Full statements with variables must contain printed carrier annotations.
+    # Closed constant equations in the compile probe have independent function
+    # signatures or fixed numeral carriers; no arbitrary binder is hidden there.
+    for label, value in rows:
+        if label.endswith("_statement") and name != "stack_to_lab_compile_probe.out":
+            if ":" not in value:
+                errors.append(f"{name}: {label} lacks visible carrier annotations")
+    return errors
 
 
 def read_text(path: Path) -> str:
@@ -245,7 +359,9 @@ def check_structural(probes_dir: Path) -> list[str]:
         if duplicates:
             errors.append(f"{name}: duplicate label(s) {duplicates}")
 
-        script_labels, _printers = script_printed_labels(read_text(script))
+        script_text = read_text(script)
+        errors.extend(check_typed_capture(name, script_text, rows))
+        script_labels, _printers = script_printed_labels(script_text)
         if not script_labels:
             errors.append(
                 f"{name}: probe script has no statically detectable printed "

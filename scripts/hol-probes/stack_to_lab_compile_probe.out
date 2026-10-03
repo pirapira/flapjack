@@ -1,0 +1,11 @@
+is_gen_gc_def_statement=(is_gen_gc (Generational (l :num list)) ⇔ T) ∧ (is_gen_gc None ⇔ F) ∧ (is_gen_gc Simple ⇔ F)
+config_accessors_statement=(∀(s :num sptree$num_map) (b :bool) (b0 :bool). (config s b b0 :config).reg_names = s) ∧ (∀(s :num sptree$num_map) (b :bool) (b0 :bool). (config s b b0 :config).jump ⇔ b) ∧ ∀(s :num sptree$num_map) (b :bool) (b0 :bool). (config s b b0 :config).perf_calls ⇔ b0
+compile_def_statement=∀(stack_conf :config) (data_conf :data_to_word$config) (max_heap :num) (sp :num) (offset :α word # α word) (prog :(num # α stackLang$prog) list). (compile stack_conf data_conf max_heap sp offset prog :α sec list) = (let (prog :(num # α stackLang$prog) list) = (compile prog :(num # α stackLang$prog) list); (prog :(num # α stackLang$prog) list) = (compile data_conf prog :(num # α stackLang$prog) list); (prog :(num # α stackLang$prog) list) = (compile stack_conf.jump offset (is_gen_gc data_conf.gc_kind) max_heap sp InitGlobals_location prog :(num # α stackLang$prog) list); (prog :(num # α stackLang$prog) list) = (compile stack_conf.reg_names prog :(num # α stackLang$prog) list) in MAP (prog_to_section :num # α stackLang$prog -> α sec) prog)
+compile_no_stubs_def_statement=∀(f :num sptree$num_map) (jump :bool) (offset :α word # α word) (sp :num) (prog :(num # α stackLang$prog) list). compile_no_stubs f jump offset sp prog = MAP (prog_to_section :num # α stackLang$prog -> α sec) (compile f (MAP (prog_comp jump offset sp :num # α stackLang$prog -> num # α stackLang$prog) (MAP (prog_comp :num # α stackLang$prog -> num # α stackLang$prog) prog)) :(num # α stackLang$prog) list)
+data_num_stubs_def_statement=data_num_stubs = word_num_stubs + (32 :num) + (23 :num)
+AllocGlobal_location_def_statement=AllocGlobal_location = data_num_stubs
+CopyGlobals_location_def_statement=CopyGlobals_location = AllocGlobal_location + (1 :num)
+InitGlobals_location_def_statement=InitGlobals_location = CopyGlobals_location + (1 :num)
+is_gen_gc_type=:gc_kind -> bool
+compile_type=:config -> data_to_word$config -> num -> num -> α word # α word -> (num # α stackLang$prog) list -> α sec list
+compile_no_stubs_type=:num sptree$num_map -> bool -> α word # α word -> num -> (num # α stackLang$prog) list -> α sec list

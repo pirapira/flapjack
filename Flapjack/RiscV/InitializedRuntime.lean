@@ -4,6 +4,10 @@ import Flapjack.Compiler.Backend.WordToStack.NativeStubs
 import Flapjack.RiscV.Lab
 import Flapjack.Compiler.Backend.StackToLab.RuntimeLabels
 import Flapjack.Compiler.Backend.DataToWord.MaxHeapLimit
+import Flapjack.Compiler.Backend.LabFilter
+import Flapjack.Compiler.Backend.LabToTarget.Encoding
+import Flapjack.Compiler.Backend.LabToTarget.Labels
+import Flapjack.Compiler.Encoders.RiscV.Target
 
 /-! Executed runtime initialization infrastructure, with no standalone HOL
 original. This uses the reviewed whole StackRemove/native naming/section
@@ -88,6 +92,38 @@ theorem initializedRuntimeLab_recover {width : Nat} [NeZero width]
       exact Flapjack.Compiler.Backend.StackToLab.InitializedProduction.compileNative_recover
         _ _ _ _ _ _ _ _ _ lowered
 
+/-- Executable label-index adapter, with no HOL original. The reviewed native
+label computation decides duplicate-label and duplicate-section precedence;
+the tree enumeration only materializes the existing executable lookup index.
+Unsupported legacy-only lines fail at the native codec boundary. -/
+def initializedRuntimeLabelIndex? [NeZero width]
+    (program : LabProgram (Word width)) : Option LabLabelIndex := do
+  let native ← Flapjack.Compiler.Backend.StackToLab.ExecutedCodec.programFromExecuted? program
+  let labels := Flapjack.Compiler.Backend.LabToTarget.computeLabelsAlt 0 native .ln
+  let entries := (Flapjack.sptToAList labels).flatMap fun (sectionId, sectionLabels) =>
+    (Flapjack.sptToAList sectionLabels).map fun (label, position) =>
+      (sectionId, label, position)
+  pure (labLabelIndexOf entries)
+
+/-- Actual RV64 initial encoding uses the complete reviewed source encoder and
+`filterSkip` followed by `encSecList`, retaining offset-zero encodings and the
+resulting source lengths. Relocation can make those stored bytes stale; executed
+consumers ignore them and re-encode at the actual offset. Other
+word widths retain the existing non-RV64 infrastructure; no source RV64 encoder
+or cross-language equivalence is asserted for that path. This adapter has no
+standalone HOL original. -/
+def initializedRuntimeInitialStoredProgram? [NeZero width]
+    (program : LabProgram (Word width)) : Option (LabProgram (Word width)) := do
+  if sameWidth : width = 64 then
+    let native ← Flapjack.Compiler.Backend.StackToLab.ExecutedCodec.programFromExecuted? program
+    let encoder := fun instruction : Flapjack.Compiler.Encoders.Asm.HolAsm width =>
+      Flapjack.Compiler.Encoders.RiscV.Target.riscvEnc (sameWidth ▸ instruction)
+    Flapjack.Compiler.Backend.StackToLab.ExecutedCodec.programToExecuted?
+      (Flapjack.Compiler.Backend.LabToTarget.encSecList encoder
+        (Flapjack.Compiler.Backend.LabFilter.filterSkip native))
+  else
+    pure (labInitialStoredProgram program)
+
 /-- Stored-length convergence over the complete actual program. Exhausting the
 relocation budget fails, matching HOL `remove_labels_loop`; an unconverged
 program must never reach instruction lowering. -/
@@ -96,10 +132,10 @@ def initializedRuntimeEncodeStable [NeZero width] (fuel : Nat)
     Option (LabProgram (Word width)) :=
   match fuel with
   | 0 => none
-  | fuel + 1 =>
-      let labels := labLabelIndexOf (labCollectStoredProgramLabels 0 program)
+  | fuel + 1 => do
+      let labels ← initializedRuntimeLabelIndex? program
       let next := labEncodeStoredProgram context labels 0 0 haltPc program
-      if labStoredLineLengths next == labStoredLineLengths program then some next
+      if labStoredLineLengths next == labStoredLineLengths program then pure next
       else initializedRuntimeEncodeStable fuel context haltPc next
 
 /-- Both relocation sweeps retain original maximum observed instruction slots;
@@ -107,11 +143,11 @@ all entry/GC/raise/store/source labels come from the generated program. -/
 def compileLabProgramLinkedWithNativeInitialization [NeZero width]
     (context : WordFfiContext) (program : LabProgram (Word width)) :
     Option (List (Nat × Word width × List (Instruction width))) := do
-  let initial := labInitialStoredProgram program
+  let initial ← initializedRuntimeInitialStoredProgram? program
   let encoded ← initializedRuntimeEncodeStable 8 context (labStoredProgramLength initial) initial
   let relabelled := labUpdateStoredLabelLengths 0 encoded
   let final ← initializedRuntimeEncodeStable 8 context (labStoredProgramLength relabelled) relabelled
-  let labels := labLabelIndexOf (labCollectStoredProgramLabels 0 final)
+  let labels ← initializedRuntimeLabelIndex? final
   compileLabProgramLinkedWithStoredLengthsAux context labels 0 0
     (labStoredProgramLength final) final
 

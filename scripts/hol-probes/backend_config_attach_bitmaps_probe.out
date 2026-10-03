@@ -1,0 +1,33 @@
+config_component_equality_typed=∀(c1 :config) (c2 :config).
+  c1 = c2 ⇔
+  c1.source_conf = c2.source_conf ∧ c1.clos_conf = c2.clos_conf ∧
+  c1.bvl_conf = c2.bvl_conf ∧ c1.data_conf = c2.data_conf ∧
+  c1.word_to_word_conf = c2.word_to_word_conf ∧ c1.word_conf = c2.word_conf ∧
+  c1.stack_conf = c2.stack_conf ∧ c1.lab_conf = c2.lab_conf ∧
+  c1.symbols = c2.symbols ∧ c1.tap_conf = c2.tap_conf ∧
+  c1.exported = c2.exported
+source_conf_type=:config -> source_to_flat$config
+clos_conf_type=:config -> clos_to_bvl$config
+bvl_conf_type=:config -> bvl_to_bvi$config
+data_conf_type=:config -> data_to_word$config
+word_to_word_conf_type=:config -> word_to_word$config
+word_conf_type=:config -> word_to_stack$config
+stack_conf_type=:config -> stack_to_lab$config
+lab_conf_type=:config -> lab_to_target$config
+symbols_type=:config -> (mlstring # num # num) list
+tap_conf_type=:config -> tap_config
+exported_type=:config -> mlstring list
+attach_bitmaps_type=:mlstring sptree$num_map ->
+config -> α -> (β # lab_to_target$config) option -> (β # α # config) option
+attach_bitmaps_def_typed=attach_bitmaps (names :mlstring sptree$num_map) (c :config) (bm :β)
+  (SOME ((bytes :α),(c' :lab_to_target$config))) =
+SOME
+  (bytes,bm,
+   c with
+   <|lab_conf := c';
+     symbols :=
+       MAP
+         (λ((n :num),(p :num),(l :num)). (lookup_any n names «NOTFOUND»,p,l))
+         c'.sec_pos_len|>) ∧
+attach_bitmaps names c bm (NONE :(α # lab_to_target$config) option) =
+(NONE :(α # β # config) option)

@@ -1,0 +1,17 @@
+canonicalArith_correct_statement=∀data s a. data_inv data s ⇒ inst (Arith (canonicalArith data a)) s = inst (Arith a) s
+canonicalArith_correct_hypotheses=0
+data_inv_locals_statement=∀s. s with locals := s.locals = s
+data_inv_locals_hypotheses=0
+wf_data_untracked_statement=∀data n. wf_data (:α) data ∧ lookup n data.to_canonical = NONE ⇒ (∀r v. lookup r data.to_canonical = SOME v ⇒ r ≠ n ∧ v ≠ n) ∧ (∀r v. lookup r data.to_latest = SOME v ⇒ r ≠ n ∧ v ≠ n) ∧ (∀k v. lookup listCmp k data.instrs_mem = SOME v ⇒ v ≠ n) ∧ (∀a v. lookup listCmp (instToNumList (Arith a)) data.instrs_mem = SOME v ⇒ ¬MEM n (arithReads a) ∧ can_mem_arith a) ∧ (∀op src v. lookup listCmp (OpCurrHeapToNumList op src) data.instrs_mem = SOME v ⇒ src ≠ n) ∧ (∀x v. ALOOKUP data.gets_mem x = SOME v ⇒ v ≠ n) ∧ (∀k v. lookup listCmp k data.loads_mem = SOME v ⇒ v ≠ n) ∧ ∀op a ofs v. lookup listCmp (loadToNumList op a ofs) data.loads_mem = SOME v ⇒ a ≠ n
+wf_data_untracked_hypotheses=0
+data_inv_set_var_statement=∀data s n v. lookup n data.to_canonical = NONE ⇒ (data_inv data (set_var n v s) ⇔ data_inv data s)
+data_inv_set_var_hypotheses=0
+data_inv_unset_var_statement=∀data s n. lookup n data.to_canonical = NONE ⇒ (data_inv data (unset_var n s) ⇔ data_inv data s)
+data_inv_unset_var_hypotheses=0
+not_seen_data_inv_alist_insert_statement=∀data s l r v. lookup r data.to_canonical = NONE ⇒ data_inv data (s with locals := l) ⇒ data_inv data (s with locals := insert r v l)
+not_seen_data_inv_alist_insert_hypotheses=0
+data_inv_memory_statement=∀data s m. data_inv data s ⇒ data_inv (data with loads_mem := empty) (s with memory := m)
+data_inv_memory_hypotheses=0
+data_inv_state_agree_statement=∀data s1 s2. data_inv data s1 ∧ s2.locals = s1.locals ∧ s2.store = s1.store ∧ s2.memory = s1.memory ∧ s2.mdomain = s1.mdomain ∧ (s2.be ⇔ s1.be) ⇒ data_inv data s2
+data_inv_state_agree_hypotheses=0
+data_inv_state_agree_typed=∀(data :knowledge) (s1 :(α, γ, 'ffi) state) (s2 :(α, γ, 'ffi) state). data_inv data s1 ∧ s2.locals = s1.locals ∧ s2.store = s1.store ∧ s2.memory = s1.memory ∧ s2.mdomain = s1.mdomain ∧ (s2.be ⇔ s1.be) ⇒ data_inv data s2

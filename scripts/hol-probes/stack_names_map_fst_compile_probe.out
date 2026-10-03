@@ -1,0 +1,3 @@
+MAP_FST_compile_statement=MAP FST (compile f c) = MAP FST c
+MAP_FST_compile_statement_typed=MAP (FST :α # β stackLang$prog -> α) (compile (f :num sptree$num_map) (c :(α # β stackLang$prog) list)) = MAP (FST :α # β stackLang$prog -> α) c
+MAP_FST_compile_statement_types=(c :(α # β stackLang$prog) list)::(α # β stackLang$prog) list;(f :num sptree$num_map)::num sptree$num_map;

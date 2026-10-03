@@ -1,0 +1,11 @@
+lui_decode_zero=T
+lui_decode_all_ones=T
+lui_decode_sign_bit=T
+lui_decode_positive_max=T
+auipc_decode_zero=T
+auipc_decode_all_ones=T
+auipc_decode_sign_bit=T
+auipc_decode_positive_max=T
+upper_decode_source_clause=HOL riscvScript.sml Encode_def / Decode_def with Utype_def (LUI,AUIPC); local compositions, no named source theorem.
+upper_decode_replay=(∀(rd :word5) (imm :word20). Decode (Encode (ArithI (LUI (rd,imm)))) = ArithI (LUI (rd,imm))) ∧ ∀(rd :word5) (imm :word20). Decode (Encode (ArithI (AUIPC (rd,imm)))) = ArithI (AUIPC (rd,imm))
+upper_decode_carriers=Encode : :instruction -> word32, Decode : :word32 -> instruction, rd : :word5, imm : :word20

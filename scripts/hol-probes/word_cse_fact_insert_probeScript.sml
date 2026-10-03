@@ -1,0 +1,18 @@
+load "word_cseProofTheory";
+open HolKernel Parse bossLib word_cseProofTheory;
+val _ = Globals.linewidth := 1000000;
+val _ = (print "add_to_data_aux_correct_statement="; print_term(concl add_to_data_aux_correct));
+val _ = print("add_to_data_aux_correct_hypotheses=" ^ Int.toString(length(hyp add_to_data_aux_correct)) ^ "\n");
+val _ = (print "add_to_data_const_correct_statement="; print_term(concl add_to_data_const_correct));
+val _ = print("add_to_data_const_correct_hypotheses=" ^ Int.toString(length(hyp add_to_data_const_correct)) ^ "\n");
+val _ = (print "add_to_data_LocValue_correct_statement="; print_term(concl add_to_data_LocValue_correct));
+val _ = print("add_to_data_LocValue_correct_hypotheses=" ^ Int.toString(length(hyp add_to_data_LocValue_correct)) ^ "\n");
+val _ = (print "add_to_data_OpCurrHeap_correct_statement="; print_term(concl add_to_data_OpCurrHeap_correct));
+val _ = print("add_to_data_OpCurrHeap_correct_hypotheses=" ^ Int.toString(length(hyp add_to_data_OpCurrHeap_correct)) ^ "\n");
+val _ = (print "add_to_data_Arith_correct_statement="; print_term(concl add_to_data_Arith_correct));
+val _ = print("add_to_data_Arith_correct_hypotheses=" ^ Int.toString(length(hyp add_to_data_Arith_correct)) ^ "\n");
+val _ = (print "add_to_load_aux_correct_statement="; print_term(concl add_to_load_aux_correct));
+val _ = print("add_to_load_aux_correct_hypotheses=" ^ Int.toString(length(hyp add_to_load_aux_correct)) ^ "\n");
+val _ = (print "add_to_load_correct_statement="; print_term(concl add_to_load_correct));
+val _ = print("add_to_load_correct_hypotheses=" ^ Int.toString(length(hyp add_to_load_correct)) ^ "\n");
+val _ = (print "add_to_data_Arith_correct_typed="; Lib.with_flag (Globals.show_types, true) print_term (concl add_to_data_Arith_correct));

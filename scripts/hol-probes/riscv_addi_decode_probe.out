@@ -2,3 +2,6 @@ addi_decode_zero=T
 addi_decode_all_ones=T
 addi_decode_sign_bit=T
 addi_decode_positive_max=T
+addi_decode_source_clause=HOL riscvScript.sml Encode_def / Decode_def with Itype_def (ADDI); local composition, no named source theorem.
+addi_decode_replay=∀(rd :word5) (rs1 :word5) (imm :word12). Decode (Encode (ArithI (ADDI (rd,rs1,imm)))) = ArithI (ADDI (rd,rs1,imm))
+addi_decode_carriers=Encode : :instruction -> word32, Decode : :word32 -> instruction, rd : :word5, rs1 : :word5, imm : :word12

@@ -1,0 +1,3 @@
+pan_sem_is_wrapper_statement=∀start s. semantics s start = (let prog = TailCall start [] in semantics_wrapper (((λres. case res of NONE => RunError | SOME Error => RunError | SOME TimeOut => Incomplete | SOME Break => RunError | SOME Continue => RunError | SOME (Return v6) => CompleteResult Success | SOME (Exception v7 v8) => RunError | SOME (FinalFFI e) => CompleteResult (FFI_outcome e)) ## (λs. s.ffi.io_events)) ∘ (λk. evaluate (prog,s with clock := k))))
+pan_sem_is_wrapper_proved=T
+pan_sem_is_wrapper_types=start::mlstring;s::(α, β) state

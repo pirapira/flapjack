@@ -11,7 +11,8 @@ def destVar {width : Nat} [NeZero width] : WordLangExpHOL (BitVec width) → Opt
 
 /-- Full original Set clause extraction (source557-573). This is untagged
 Flapjack assembly infrastructure: HOL has no standalone Set-clause declaration.
-The full recursive word_cse port and its semantic correctness remain open. -/
+The tagged recursive `wordCse` (`Transform.lean`) uses it as its `Set` clause;
+semantic correctness (`word_cseProof` `comp_correct`) is not part of this module. -/
 def setClause {width : Nat} [NeZero width] (data : Knowledge)
     (store : WordStoreHOL) (expression : WordLangExpHOL (BitVec width)) :
     Knowledge × WordLangProgHOL (BitVec width) :=

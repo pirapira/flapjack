@@ -1,0 +1,3 @@
+semantics_wrapper_def_statement=∀f. semantics_wrapper f = if ∃k v. f k = (RunError,v) then Fail else case some res. ∃k r ev. f k = (CompleteResult r,ev) ∧ res = Terminate r ev of NONE => Diverge (LUB (IMAGE (fromList ∘ SND ∘ f) 𝕌(:num))) | SOME res => res
+semantics_wrapper_def_proved=T
+semantics_wrapper_def_types=f::num -> outcome semantics_run_res # io_event list

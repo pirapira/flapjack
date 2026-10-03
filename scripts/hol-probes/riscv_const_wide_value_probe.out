@@ -1,0 +1,15 @@
+const_wide_value_zero=T
+const_wide_value_low_positive_max=T
+const_wide_value_low_sign_bit=T
+const_wide_value_low_all_ones=T
+const_wide_value_high_one=T
+const_wide_value_high_one_low_sign=T
+const_wide_value_positive_max=T
+const_wide_value_negative_min=T
+const_wide_value_negative_min_low_sign=T
+const_wide_value_negative_high_low_positive=T
+const_wide_value_negative_high_low_sign=T
+const_wide_value_all_ones=T
+const_wide_value_source_clause=HOL cakeml/compiler/encoders/riscv/riscv_targetScript.sml riscv_ast_def Const wide branches (l.104-114); value formula stated for arbitrary c, both branches.
+const_wide_value_replay=∀(c :word64). (if ((c ' (31 :num)) :bool) then (sw2sw (¬(((63 :num) >< (32 :num)) c :word32)) :word64) ≪ (32 :num) ⊕ (sw2sw (((31 :num) >< (0 :num)) c :word32) :word64) else (sw2sw (((63 :num) >< (32 :num)) c :word32) :word64) ≪ (32 :num) ‖ (sw2sw (((31 :num) >< (0 :num)) c :word32) :word64)) = c
+const_wide_value_carriers=c : :word64, result : :word64

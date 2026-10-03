@@ -59,4 +59,24 @@ compiler simulation or a proof that every upstream program is supported. -/
 #guard (initializedRuntimeLab? (width := 64) false (-2048, 2047) 23 3 32
   [(3, .ffi "Ā" 0 0 0 0 0)]).isNone
 
+/-! The executed native label adapter follows source duplicate precedence and
+retains zero-label section starts. Initial bytes come from the source encoder,
+including symbolic instructions encoded at zero before relocation. -/
+private def duplicateLabels : LabProgram (Word 64) :=
+  [{ name := 3, lines := [.label 3 7 4, .label 3 7 4, .label 3 0 4] }]
+#guard (initializedRuntimeLabelIndex? duplicateLabels).bind
+  (labLookupProgramPosition 3 7) == some 8
+#guard (initializedRuntimeLabelIndex? duplicateLabels).bind
+  (labLookupProgramPosition 3 0) == some 0
+#guard (initializedRuntimeLabelIndex? (duplicateLabels ++
+  [{ name := 3, lines := [.label 3 7 4] }])).bind
+    (labLookupProgramPosition 3 7) == some 16
+#guard (initializedRuntimeInitialStoredProgram? (width := 64)
+  [{ name := 3, lines := [.label 3 7 37, .labAsm (.jump ⟨3, 7⟩) [] 99] }]).map
+    labStoredLineLengths == some [4, 4]
+#guard (initializedRuntimeInitialStoredProgram? (width := 64)
+  [{ name := 3, lines := [.labAsm (.return 0) [] 0] }]).isNone
+#guard (initializedRuntimeLabelIndex? (width := 64)
+  [{ name := 3, lines := [.labAsm (.return 0) [] 0] }]).isNone
+
 end Flapjack.Test.LabInitialLabelSlots

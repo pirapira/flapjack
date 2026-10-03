@@ -1,0 +1,1 @@
+extract_labels_comp_statement=∀(i :num sptree$num_map) (p :α prog). extract_labels (comp i p :α prog) = extract_labels p ∧ extract_labels (comp_top i p) = extract_labels p

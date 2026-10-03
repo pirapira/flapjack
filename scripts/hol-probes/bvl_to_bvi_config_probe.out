@@ -1,0 +1,18 @@
+config_component_equality=∀(c1 :config) (c2 :config).
+  c1 = c2 ⇔
+  c1.inline_size_limit = c2.inline_size_limit ∧ c1.exp_cut = c2.exp_cut ∧
+  (c1.split_main_at_seq ⇔ c2.split_main_at_seq) ∧
+  c1.next_name1 = c2.next_name1 ∧ c1.next_name2 = c2.next_name2 ∧
+  c1.next_name3 = c2.next_name3 ∧ (c1.do_tailrec ⇔ c2.do_tailrec) ∧
+  (c1.do_tmc ⇔ c2.do_tmc) ∧ c1.inlines = c2.inlines ∧
+  c1.bvi_inlines = c2.bvi_inlines
+inline_size_limit_type=:config -> num
+exp_cut_type=:config -> num
+split_main_at_seq_type=:config -> bool
+next_name1_type=:config -> num
+next_name2_type=:config -> num
+next_name3_type=:config -> num
+do_tailrec_type=:config -> bool
+do_tmc_type=:config -> bool
+inlines_type=:config -> (num # exp) sptree$num_map
+bvi_inlines_type=:config -> (num # bvi$exp) sptree$num_map

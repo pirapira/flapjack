@@ -1,0 +1,23 @@
+ori_decode_zero=T
+ori_decode_all_ones=T
+ori_decode_sign_bit=T
+ori_decode_positive_max=T
+xori_decode_zero=T
+xori_decode_all_ones=T
+xori_decode_sign_bit=T
+xori_decode_positive_max=T
+slli_decode_zero=T
+slli_decode_all_ones=T
+slli_decode_sign_bit=T
+slli_decode_positive_max=T
+or_decode_zero=T
+or_decode_all_ones=T
+or_decode_sign_bit=T
+or_decode_positive_max=T
+xor_decode_zero=T
+xor_decode_all_ones=T
+xor_decode_sign_bit=T
+xor_decode_positive_max=T
+const_decode_source_clause=HOL riscvScript.sml Encode_def / Decode_def with Itype_def/Rtype_def (ORI,XORI,SLLI,OR,XOR); local compositions, no named source theorem.
+const_decode_replay=(∀(rd :word5) (rs1 :word5) (imm :word12). Decode (Encode (ArithI (ORI (rd,rs1,imm)))) = ArithI (ORI (rd,rs1,imm))) ∧ (∀(rd :word5) (rs1 :word5) (imm :word12). Decode (Encode (ArithI (XORI (rd,rs1,imm)))) = ArithI (XORI (rd,rs1,imm))) ∧ (∀(rd :word5) (rs1 :word5) (sh :word6). Decode (Encode (Shift (SLLI (rd,rs1,sh)))) = Shift (SLLI (rd,rs1,sh))) ∧ (∀(rd :word5) (rs1 :word5) (rs2 :word5). Decode (Encode (ArithR (OR (rd,rs1,rs2)))) = ArithR (OR (rd,rs1,rs2))) ∧ ∀(rd :word5) (rs1 :word5) (rs2 :word5). Decode (Encode (ArithR (XOR (rd,rs1,rs2)))) = ArithR (XOR (rd,rs1,rs2))
+const_decode_carriers=Encode : :instruction -> word32, Decode : :word32 -> instruction, rd : :word5, imm : :word12, sh : :word6

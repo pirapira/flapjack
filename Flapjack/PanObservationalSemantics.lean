@@ -20,12 +20,17 @@ without introducing a second divergent LUB proof.
 -- hook and a caller-provided proof of the event-prefix chain, whereas HOL
 -- quantifies the source state and start name, runs its total `evaluate` at
 -- every clock, and constructs the divergence LUB from those executions.
--- `panSemRunEntryCake` in `PanSem/EntryState.lean` now composes the
--- exact `decs_stcnames` prepass, production `evaluate_decls`, and one clocked
--- entry run. It is not the full HOL observation wrapper: the generic
--- clock-indexed result choice and divergence LUB remain unported on this
--- carrier. The faithful full composition remains tracked by
--- `flapjack-pxn.18.4.3.77.17` (blocked by `.77.2`).
+-- `panSemRunEntryCake` in `PanSem/EntryState.lean` composes the exact
+-- `decs_stcnames` prepass, production `evaluate_decls`, and one clocked entry
+-- run. The legacy hook/result carrier here does not execute the full canonical
+-- observation wrapper. The original wrappers themselves are already tagged
+-- in `Pancake/Semantics/PanSem/Semantics.lean` as
+-- `PanSemStateFiniteExact.semantics` and `semanticsDecls`, with the reviewed
+-- finite-map/word carriers and HOL-shaped lazy-list result. The generic
+-- PanProps wrapper equality and faithful evaluator-wrapper correspondence
+-- are supplied by `SemanticsWrapperEquality.lean` and `PanSemIsWrapper.lean`.
+-- These source ports do not establish the separate production-carrier bridge
+-- or the final compiler correctness theorem.
 -/
 
 namespace Flapjack

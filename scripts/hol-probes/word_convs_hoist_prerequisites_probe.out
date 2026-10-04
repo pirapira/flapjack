@@ -1,0 +1,9 @@
+hoistPrerequisite1_typed=∀(p2 :α prog) (p1 :α prog) (cs :α word sptree$num_map). const_fp_loop (Seq p1 p2) cs = (let ((p1' :α prog),(cs' :α word sptree$num_map)) = const_fp_loop p1 cs; ((p2' :α prog),(cs'' :α word sptree$num_map)) = const_fp_loop p2 cs' in (Seq p1' p2',cs''))
+hoistPrerequisite1_proved=T
+hoistPrerequisite1_hypotheses=0
+hoistPrerequisite2_typed=∀(rhs :α reg_imm) (p2 :α prog) (lhs :num) (cs2 :α word sptree$num_map) (cs :α word sptree$num_map) (cmp :cmp). const_fp_loop (If cmp lhs rhs (Raise (1 :num) :α prog) (Raise (2 :num) :α prog) :α prog) cs = (p2,cs2) ⇒ dest_Raise_num p2 = (1 :num) ∧ (∀(br1 :α prog) (br2 :α prog). const_fp_loop (If cmp lhs rhs br1 br2 :α prog) cs = const_fp_loop br1 cs) ∨ dest_Raise_num p2 = (2 :num) ∧ (∀(br1 :α prog) (br2 :α prog). const_fp_loop (If cmp lhs rhs br1 br2 :α prog) cs = const_fp_loop br2 cs) ∨ dest_Raise_num p2 = (0 :num)
+hoistPrerequisite2_proved=T
+hoistPrerequisite2_hypotheses=0
+hoistPrerequisite3_typed=∀(x2 :α prog) (g5 :α prog) (g4 :α prog) (g3 :α reg_imm) (g2 :num) (g1 :cmp). dest_If x2 = SOME (g1,g2,g3,g4,g5) ⇔ x2 = (If g1 g2 g3 g4 g5 :α prog)
+hoistPrerequisite3_proved=T
+hoistPrerequisite3_hypotheses=0

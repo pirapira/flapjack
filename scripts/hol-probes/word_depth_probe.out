@@ -1,0 +1,26 @@
+max_depth_type=:num sptree$num_map -> call_tree -> num option
+max_depth_def_typed=(∀(frame_sizes :num sptree$num_map).
+   max_depth frame_sizes Leaf = SOME (0 :num)) ∧
+(∀(frame_sizes :num sptree$num_map).
+   max_depth frame_sizes Unknown = (NONE :num option)) ∧
+(∀(frame_sizes :num sptree$num_map) (n :num) (t :call_tree).
+   max_depth frame_sizes (Const n t :call_tree) =
+   OPTION_MAP ($+ n) (max_depth frame_sizes t)) ∧
+(∀(frame_sizes :num sptree$num_map) (t1 :call_tree) (t2 :call_tree).
+   max_depth frame_sizes (Branch t1 t2) =
+   OPTION_MAP2 MAX (max_depth frame_sizes t1) (max_depth frame_sizes t2)) ∧
+∀(frame_sizes :num sptree$num_map) (n :num) (t :call_tree).
+  max_depth frame_sizes (Call n t :call_tree) =
+  OPTION_MAP2 $+ (lookup n frame_sizes) (max_depth frame_sizes t)
+leaf=SOME (0 :num)
+unknown=(NONE :num option)
+const_leaf=SOME (5 :num)
+nested_const=SOME (7 :num)
+branch_max=SOME (5 :num)
+branch_unknown=(NONE :num option)
+call_hit=SOME (10 :num)
+call_miss=(NONE :num option)
+call_hit_nested=SOME (14 :num)
+deep_calls=SOME (33 :num)
+branch_call=SOME (10 :num)
+unknown_deep=(NONE :num option)

@@ -1,0 +1,6 @@
+extract_labels_const_fp_loop_typed=∀(p :α prog) (cs :α word sptree$num_map) (p1 :α prog) (cs1 :α word sptree$num_map). const_fp_loop p cs = (p1,cs1) ⇒ labels_rel (extract_labels p) (extract_labels p1)
+extract_labels_const_fp_loop_proved=T
+extract_labels_const_fp_loop_hypotheses=0
+extract_labels_const_fp_typed=∀(p :α prog). labels_rel (extract_labels p) (extract_labels (const_fp p))
+extract_labels_const_fp_proved=T
+extract_labels_const_fp_hypotheses=0

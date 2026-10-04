@@ -3901,6 +3901,33 @@ class FmapResultObservationQualifiedTest(unittest.TestCase):
         self.assertTrue(any("shadowed" in error for error in errors))
 
 
+class MutualScopedProducerResolutionTest(unittest.TestCase):
+    """A `mutual`/`section` bare `end` must not close the enclosing namespace."""
+
+    def test_namespace_prefix_tracks_mutual_section_and_end(self):
+        prefix = CHECKER["lean_namespace_prefix"]
+        self.assertEqual("Flapjack.Foo", prefix(
+            ["namespace Flapjack", "namespace Foo", "mutual", "def a := 1",
+             "end", "def b := 2", "end Foo", "end Flapjack"], 6))
+        self.assertEqual("Flapjack", prefix(
+            ["namespace Flapjack", "section S", "theorem t : True := by trivial",
+             "end", "def d := 0", "end Flapjack"], 4))
+        self.assertEqual("", prefix(
+            ["namespace Flapjack", "end Flapjack", "def c := 0"], 3))
+        self.assertEqual("", prefix(
+            ["namespace A", "mutual", "section S", "end", "end", "end A",
+             "def c := 0"], 7))
+
+    def test_qualified_producer_after_mutual_resolves(self):
+        root, records = FmapResultObservationTest().fixture()
+        producer = "Flapjack.crepToLoopMakeFuncsExactHOL"
+        errors = CHECKER["fmap_result_observation_errors"](
+            ["import Flapjack.Pancake.CrepToLoop.ContextExact"], "Fixture",
+            f"theorem observer : ({producer} prog).lookup key ≠ none → True",
+            (producer,), records, root)
+        self.assertEqual([], errors)
+
+
 class FmapResultObservationAmbiguityTest(unittest.TestCase):
     def test_unqualified_imported_shadow_rejected(self):
         root, records = FmapResultObservationTest().fixture()
@@ -3975,6 +4002,53 @@ class NoRetCorrectFmapRegressionTest(unittest.TestCase):
                           "StackSemStateFiniteExact.store"])
         self.assertTrue(row["words_as_type_indexed_bitvec"])
         self.assertTrue(row["inherits_reals_as_rational_cuts"])
+
+
+class L3RiscvStepNopDeclarationsTest(unittest.TestCase):
+    """`class_rd0` companions are registered narrowly for the reviewed script."""
+
+    def test_generated_names_from_factory_bindings(self):
+        source = "\n".join([
+            "val arithi = class_rd0 `(rd, rs1, imm)`",
+            "val ADDI  = arithi [] \"ADDI\"",
+            "val ADD   = arithr [] \"ADD\"",
+            "val JAL   = class_rd0 `(rd, imm)` [] \"JAL\"",
+            "val load = class_rd0 `(rd, rs1, offs)`",
+            "val LD    = load [[``^archbase <> 0w``, aligned_d]] \"LD\"",
+            "val cbranch = class `(rs1, rs2, offs)` []",
+            "val BEQ  = cbranch \"BEQ\"",
+        ])
+        found = dict(CHECKER["l3_riscv_step_nop_declarations"](source))
+        self.assertEqual(set(found), {"ADDI_NOP", "ADD_NOP", "JAL_NOP", "LD_NOP"})
+        self.assertEqual(found["ADDI_NOP"], 2)
+        self.assertEqual(found["JAL_NOP"], 4)
+        self.assertEqual(found["LD_NOP"], 6)
+
+    def test_real_script_names_resolve(self):
+        path = Path(CHECKER["ROOT"]) / CHECKER["L3_RISCV_STEP_SCRIPT"]
+        if not path.exists():
+            self.skipTest("pinned HOL submodule not initialized")
+        cache = {}
+        for name in ("ADD_NOP", "SUB_NOP", "AND_NOP", "OR_NOP", "XOR_NOP",
+                     "ADDI_NOP", "ANDI_NOP", "ORI_NOP", "XORI_NOP",
+                     "LUI_NOP", "AUIPC_NOP"):
+            self.assertIsNone(REF_ERROR(path, name, None, cache), name)
+
+    def test_unrelated_name_not_generated(self):
+        found = dict(CHECKER["l3_riscv_step_nop_declarations"](
+            "val BEQ = cbranch \"BEQ\"\nval SW = store [] \"SW\""))
+        self.assertEqual(found, {})
+
+    def test_generated_name_follows_instruction_string_not_binder(self):
+        source = "\n".join([
+            "val FAKE = arithi [] \"ADD\"",
+            "val arithr = class_rd0 `(rd, rs1, rs2)`",
+            "val MISPICK = arithr [] \"OR\"",
+        ])
+        found = dict(CHECKER["l3_riscv_step_nop_declarations"](source))
+        self.assertEqual(set(found), {"ADD_NOP", "OR_NOP"})
+        self.assertNotIn("FAKE_NOP", found)
+        self.assertNotIn("MISPICK_NOP", found)
 
 
 if __name__ == "__main__":

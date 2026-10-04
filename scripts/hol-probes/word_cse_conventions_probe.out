@@ -1,0 +1,15 @@
+word_cse_full_inst_ok_less_statement=∀p data c data' q. full_inst_ok_less c p ∧ word_cse data p = (data',q) ⇒ full_inst_ok_less c q
+word_cse_full_inst_ok_less_hypotheses=0
+word_cse_pre_alloc_conventions_statement=∀p data data' q. pre_alloc_conventions p ∧ word_cse data p = (data',q) ⇒ pre_alloc_conventions q
+word_cse_pre_alloc_conventions_hypotheses=0
+word_cse_every_inst_distinct_tar_reg_statement=∀p data data' q. every_inst distinct_tar_reg p ∧ word_cse data p = (data',q) ⇒ every_inst distinct_tar_reg q
+word_cse_every_inst_distinct_tar_reg_hypotheses=0
+word_cse_every_inst_two_reg_statement=∀p data data' q. every_inst two_reg_inst p ∧ word_cse data p = (data',q) ⇒ every_inst two_reg_inst q
+word_cse_every_inst_two_reg_hypotheses=0
+every_inst_distinct_tar_reg_word_common_subexp_elim_statement=every_inst distinct_tar_reg p ⇒ every_inst distinct_tar_reg (word_common_subexp_elim p)
+every_inst_distinct_tar_reg_word_common_subexp_elim_hypotheses=0
+pre_alloc_conventions_word_common_subexp_elim_statement=pre_alloc_conventions p ⇒ pre_alloc_conventions (word_common_subexp_elim p)
+pre_alloc_conventions_word_common_subexp_elim_hypotheses=0
+full_inst_ok_less_word_common_subexp_elim_statement=full_inst_ok_less ac p ⇒ full_inst_ok_less ac (word_common_subexp_elim p)
+full_inst_ok_less_word_common_subexp_elim_hypotheses=0
+word_cse_full_inst_ok_less_typed=∀(p :α prog) (data :knowledge) (c :α asm_config) (data' :knowledge) (q :α prog). full_inst_ok_less c p ∧ word_cse data p = (data',q) ⇒ full_inst_ok_less c q

@@ -98,8 +98,8 @@ private theorem compExpPreservesEvalAux {width : Nat} [NeZero width] {C F : Type
       have h1 : (1#width).toNat = 1 := by
         rw [BitVec.toNat_ofNat]
         exact Nat.mod_eq_of_lt (Nat.one_lt_two_pow (by omega))
-      have hs : wordShiftHOL Shift.lsl (BitVec.ofNat width len) 1 =
-          some (BitVec.ofNat width len <<< (1 : Nat)) := by
+      have hs : wordShiftHOL Shift.lsl len 1 =
+          some (len <<< (1 : Nat)) := by
         simp only [wordShiftHOL]; rw [if_neg (by omega)]
       rw [h1, hs]
       simp only [theWords, Option.map_some, wordOpHOL, wordOp, List.foldr_cons, List.foldr_nil,

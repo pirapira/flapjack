@@ -1,5 +1,5 @@
-load "preamble"; load "word_gcFunctionsTheory"; load "word_simpProofTheory";
-open bossLib; open HolKernel Parse; open preamble; open word_gcFunctionsTheory;
+load "preamble"; load "word_gcFunctionsTheory"; load "word_simpProofTheory"; load "gc_sharedTheory";
+open bossLib; open HolKernel Parse; open preamble; open word_gcFunctionsTheory; open gc_sharedTheory;
 
 val print_eval = fn label => fn q =>
   (print label; print "="; print_term (rconc (EVAL q)); print "\n");
@@ -69,3 +69,14 @@ val _ = print_eval "gc_is_gc_const_even" ``word_simp$is_gc_const (6w:64 word)``;
 val _ = print_eval "gc_is_gc_const_odd" ``word_simp$is_gc_const (7w:64 word)``;
 val _ = print_eval "gc_is_gc_word_const_loc" ``word_simpProof$is_gc_word_const (Loc 1 2 : 64 word_loc)``;
 val _ = print_eval "gc_is_gc_word_const_odd" ``word_simpProof$is_gc_word_const (Word 7w : 64 word_loc)``;
+
+val _ = print_eval "gc_refs_to_addresses_empty"
+  ``refs_to_addresses ([] : (64 word, 64 word) heap_element list)``;
+val _ = print_eval "gc_refs_to_addresses_basic"
+  ``refs_to_addresses ([DataElement [(Pointer 0 (1000w:64 word)); (Data (2000w:64 word))] 2 (9w:64 word);
+                        Unused 3;
+                        ForwardPointer 1 (1000w:64 word) 4])``;
+val _ = print_eval "gc_refs_to_addresses_skip"
+  ``refs_to_addresses ([Unused 1;
+                        DataElement [(Data (3000w:64 word))] 5 (7w:64 word)] :
+                       (64 word, 64 word) heap_element list)``;

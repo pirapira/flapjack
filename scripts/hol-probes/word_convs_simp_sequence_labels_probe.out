@@ -1,0 +1,18 @@
+simpSequenceLabels1_typed=∀(p2 :α prog) (p1 :α prog). extract_labels (SmartSeq p1 p2) = extract_labels (Seq p1 p2)
+simpSequenceLabels1_proved=T
+simpSequenceLabels1_hypotheses=0
+simpSequenceLabels2_typed=∀(p1 :α prog) (p2 :α prog). extract_labels (Seq_assoc p1 p2) = extract_labels p1 ++ extract_labels p2
+simpSequenceLabels2_proved=T
+simpSequenceLabels2_hypotheses=0
+simpSequenceLabels3_typed=∀(p :α prog). extract_labels (Seq_assoc (Skip :α prog) p) = extract_labels p
+simpSequenceLabels3_proved=T
+simpSequenceLabels3_hypotheses=0
+simpSequenceLabels4_typed=∀(ls :num list) (cs :α word sptree$num_map). extract_labels (drop_consts cs ls) = ([] :(num # num) list)
+simpSequenceLabels4_proved=T
+simpSequenceLabels4_hypotheses=0
+simpSequenceLabels5_typed=∀(p :α prog) (ls :num list) (cs :α word sptree$num_map). extract_labels (SmartSeq (drop_consts cs ls) p) = extract_labels p
+simpSequenceLabels5_proved=T
+simpSequenceLabels5_hypotheses=0
+simpSequenceLabels6_typed=∀(Z :α list) (Y :α list) (X :α list). labels_rel (Y ++ X) Z ⇒ labels_rel (X ++ Y) Z
+simpSequenceLabels6_proved=T
+simpSequenceLabels6_hypotheses=0

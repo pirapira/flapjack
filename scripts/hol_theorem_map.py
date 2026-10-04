@@ -91,6 +91,7 @@ OPTIONAL_FIELDS: frozenset[str] = frozenset(
         "fmap_as_finite_support_heterogeneous_function",
         "words_as_type_indexed_bitvec",
         "word_dimension_as_width",
+        "word_dimensions_as_widths",
         "hol_line",
     }
 )

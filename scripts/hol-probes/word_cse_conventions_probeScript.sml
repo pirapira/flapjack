@@ -1,0 +1,18 @@
+load "word_cseProofTheory";
+open HolKernel Parse bossLib word_cseProofTheory;
+val _ = Globals.linewidth := 1000000;
+val _ = (print "word_cse_full_inst_ok_less_statement="; print_term(concl word_cse_full_inst_ok_less));
+val _ = print("word_cse_full_inst_ok_less_hypotheses=" ^ Int.toString(length(hyp word_cse_full_inst_ok_less)) ^ "\n");
+val _ = (print "word_cse_pre_alloc_conventions_statement="; print_term(concl word_cse_pre_alloc_conventions));
+val _ = print("word_cse_pre_alloc_conventions_hypotheses=" ^ Int.toString(length(hyp word_cse_pre_alloc_conventions)) ^ "\n");
+val _ = (print "word_cse_every_inst_distinct_tar_reg_statement="; print_term(concl word_cse_every_inst_distinct_tar_reg));
+val _ = print("word_cse_every_inst_distinct_tar_reg_hypotheses=" ^ Int.toString(length(hyp word_cse_every_inst_distinct_tar_reg)) ^ "\n");
+val _ = (print "word_cse_every_inst_two_reg_statement="; print_term(concl word_cse_every_inst_two_reg));
+val _ = print("word_cse_every_inst_two_reg_hypotheses=" ^ Int.toString(length(hyp word_cse_every_inst_two_reg)) ^ "\n");
+val _ = (print "every_inst_distinct_tar_reg_word_common_subexp_elim_statement="; print_term(concl every_inst_distinct_tar_reg_word_common_subexp_elim));
+val _ = print("every_inst_distinct_tar_reg_word_common_subexp_elim_hypotheses=" ^ Int.toString(length(hyp every_inst_distinct_tar_reg_word_common_subexp_elim)) ^ "\n");
+val _ = (print "pre_alloc_conventions_word_common_subexp_elim_statement="; print_term(concl pre_alloc_conventions_word_common_subexp_elim));
+val _ = print("pre_alloc_conventions_word_common_subexp_elim_hypotheses=" ^ Int.toString(length(hyp pre_alloc_conventions_word_common_subexp_elim)) ^ "\n");
+val _ = (print "full_inst_ok_less_word_common_subexp_elim_statement="; print_term(concl full_inst_ok_less_word_common_subexp_elim));
+val _ = print("full_inst_ok_less_word_common_subexp_elim_hypotheses=" ^ Int.toString(length(hyp full_inst_ok_less_word_common_subexp_elim)) ^ "\n");
+val _ = (print "word_cse_full_inst_ok_less_typed="; Lib.with_flag (Globals.show_types, true) print_term (concl word_cse_full_inst_ok_less));

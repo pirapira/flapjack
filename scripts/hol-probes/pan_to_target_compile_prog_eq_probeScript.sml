@@ -1,0 +1,11 @@
+load "preamble"; load "pan_to_targetTheory";
+open HolKernel Parse bossLib preamble pan_to_targetTheory;
+val _ = Globals.linewidth := 1000000;
+val _ = show_types := true;
+val original = GEN_ALL compile_prog_eq;
+val _ = if null(hyp original) andalso null(free_vars(concl original)) then () else raise Fail "open original theorem";
+val _ = print "compile_prog_eq_statement=";
+val _ = print_term(concl original);
+val _ = print "\n";
+val _ = print("compile_prog_eq_hypotheses=" ^ Int.toString(length(hyp original)) ^ "\n");
+val _ = print("compile_prog_eq_proved=" ^ term_to_string(rhs(concl(EQT_INTRO original))) ^ "\n");

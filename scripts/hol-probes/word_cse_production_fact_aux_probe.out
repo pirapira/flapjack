@@ -1,0 +1,16 @@
+aux_data_definition=⊢ ∀(data :knowledge) (r :num) (i :num list) (x :α prog). add_to_data_aux data r i x = case (lookup listCmp i data.instrs_mem :num option) of (NONE :num option) => if EVEN r then (data,x) else (data with <|instrs_mem := (insert listCmp i r data.instrs_mem :(num list, num) balanced_map); to_canonical := (insert r r data.to_canonical :num sptree$num_map); to_latest := (insert r r data.to_latest :num sptree$num_map)|>,x) | SOME r' => (let (k :num) = lookup_any r' data.to_latest r' in if EVEN r then (data,(Move (0 :num) [(r,k)] :α prog)) else (data with <|to_canonical := (insert r r' data.to_canonical :num sptree$num_map); to_latest := (insert r' r data.to_latest :num sptree$num_map)|>,(Move (0 :num) [(r,k)] :α prog)))
+aux_load_definition=⊢ ∀(data :knowledge) (r :num) (i :num list) (x :α prog). add_to_load_aux data r i x = case (lookup listCmp i data.loads_mem :num option) of (NONE :num option) => if EVEN r then (data,x) else (data with <|loads_mem := (insert listCmp i r data.loads_mem :(num list, num) balanced_map); to_canonical := (insert r r data.to_canonical :num sptree$num_map); to_latest := (insert r r data.to_latest :num sptree$num_map)|>,x) | SOME r' => (let (k :num) = lookup_any r' data.to_latest r' in if EVEN r then (data,(Move (0 :num) [(r,k)] :α prog)) else (data with <|to_canonical := (insert r r' data.to_canonical :num sptree$num_map); to_latest := (insert r' r data.to_latest :num sptree$num_map)|>,(Move (0 :num) [(r,k)] :α prog)))
+aux_data_type=:knowledge -> num -> num list -> α prog -> knowledge # α prog
+aux_load_type=:knowledge -> num -> num list -> α prog -> knowledge # α prog
+aux_data_0_2=([NONE; SOME 3; SOME 9],[NONE; NONE; SOME 9],[SOME 9; NONE],[NONE; SOME 9],[NONE; SOME 9],1,0,[])
+aux_data_0_7=([SOME 7; SOME 3; SOME 9],[NONE; SOME 7; SOME 9],[SOME 9; NONE],[SOME 7; SOME 9],[NONE; SOME 9],1,0,[])
+aux_data_1_2=([NONE; SOME 3; SOME 9],[NONE; NONE; SOME 9],[SOME 9; NONE],[SOME 3; NONE],[SOME 3; NONE],0,0,[(2,3)])
+aux_data_1_7=([SOME 3; SOME 3; SOME 9],[SOME 7; NONE; SOME 9],[SOME 9; NONE],[SOME 3; NONE],[SOME 3; NONE],0,0,[(7,3)])
+aux_data_2_2=([NONE; SOME 3; SOME 9],[SOME 5; NONE; SOME 9],[SOME 9; NONE],[SOME 3; NONE],[SOME 3; NONE],0,0,[(2,5)])
+aux_data_2_7=([SOME 3; SOME 3; SOME 9],[SOME 7; NONE; SOME 9],[SOME 9; NONE],[SOME 3; NONE],[SOME 3; NONE],0,0,[(7,5)])
+aux_load_0_2=([NONE; SOME 3; SOME 9],[NONE; NONE; SOME 9],[SOME 9; NONE],[NONE; SOME 9],[NONE; SOME 9],1,0,[])
+aux_load_0_7=([SOME 7; SOME 3; SOME 9],[NONE; SOME 7; SOME 9],[SOME 9; NONE],[NONE; SOME 9],[SOME 7; SOME 9],1,0,[])
+aux_load_1_2=([NONE; SOME 3; SOME 9],[NONE; NONE; SOME 9],[SOME 9; NONE],[SOME 3; NONE],[SOME 3; NONE],0,0,[(2,3)])
+aux_load_1_7=([SOME 3; SOME 3; SOME 9],[SOME 7; NONE; SOME 9],[SOME 9; NONE],[SOME 3; NONE],[SOME 3; NONE],0,0,[(7,3)])
+aux_load_2_2=([NONE; SOME 3; SOME 9],[SOME 5; NONE; SOME 9],[SOME 9; NONE],[SOME 3; NONE],[SOME 3; NONE],0,0,[(2,5)])
+aux_load_2_7=([SOME 3; SOME 3; SOME 9],[SOME 7; NONE; SOME 9],[SOME 9; NONE],[SOME 3; NONE],[SOME 3; NONE],0,0,[(7,5)])

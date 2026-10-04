@@ -1,0 +1,28 @@
+pull_exp_definition=(∀(ls :α exp list). pull_exp (Op Sub ls) = (let (new_ls :α exp list) = MAP (λ(a :α exp). pull_exp a) ls in convert_sub new_ls)) ∧ pull_exp (Op Add ([] :α exp list)) = (op_consts Add :α exp) ∧ pull_exp (Op And ([] :α exp list)) = (op_consts And :α exp) ∧ pull_exp (Op Or ([] :α exp list)) = (op_consts Or :α exp) ∧ pull_exp (Op Xor ([] :α exp list)) = (op_consts Xor :α exp) ∧ (∀(x :α exp). pull_exp (Op Add [x]) = pull_exp x) ∧ (∀(x :α exp). pull_exp (Op And [x]) = pull_exp x) ∧ (∀(x :α exp). pull_exp (Op Or [x]) = pull_exp x) ∧ (∀(x :α exp). pull_exp (Op Xor [x]) = pull_exp x) ∧ (∀(v25 :α exp list) (v24 :α exp) (v18 :α exp). pull_exp (Op Add (v18::v24::v25)) = (let (new_ls :α exp list) = MAP (λ(a :α exp). pull_exp a) (v18::v24::v25); (pull_ls :α exp list) = pull_ops Add new_ls ([] :α exp list) in optimize_consts Add pull_ls)) ∧ (∀(v37 :α exp list) (v36 :α exp) (v30 :α exp). pull_exp (Op And (v30::v36::v37)) = (let (new_ls :α exp list) = MAP (λ(a :α exp). pull_exp a) (v30::v36::v37); (pull_ls :α exp list) = pull_ops And new_ls ([] :α exp list) in optimize_consts And pull_ls)) ∧ (∀(v49 :α exp list) (v48 :α exp) (v42 :α exp). pull_exp (Op Or (v42::v48::v49)) = (let (new_ls :α exp list) = MAP (λ(a :α exp). pull_exp a) (v42::v48::v49); (pull_ls :α exp list) = pull_ops Or new_ls ([] :α exp list) in optimize_consts Or pull_ls)) ∧ (∀(v61 :α exp list) (v60 :α exp) (v54 :α exp). pull_exp (Op Xor (v54::v60::v61)) = (let (new_ls :α exp list) = MAP (λ(a :α exp). pull_exp a) (v54::v60::v61); (pull_ls :α exp list) = pull_ops Xor new_ls ([] :α exp list) in optimize_consts Xor pull_ls)) ∧ (∀(exp :α exp). pull_exp (Load exp :α exp) = (Load (pull_exp exp) :α exp)) ∧ (∀(shift :ast$shift) (nexp :α exp) (exp :α exp). pull_exp (Shift shift exp nexp :α exp) = (Shift shift (pull_exp exp) (pull_exp nexp) :α exp)) ∧ (∀(v :α word). pull_exp (Const v :α exp) = (Const v :α exp)) ∧ (∀(v1 :num). pull_exp (Var v1 :α exp) = (Var v1 :α exp)) ∧ ∀(v2 :store_name). pull_exp (Lookup v2 :α exp) = (Lookup v2 :α exp)
+optimize_consts_definition=∀(op :binop) (ls :α exp list). optimize_consts op ls = (let ((const_ls :α exp list),(nconst_ls :α exp list)) = PARTITION (is_const :α exp -> bool) ls in case const_ls of ([] :α exp list) => Op op nconst_ls | v2::v3 => (let (w :α word) = THE (word_op op (MAP (rm_const :α exp -> α word) const_ls)) in reduce_const op w nconst_ls))
+word_op_definition=∀(op :binop) (ws :α word list). word_op op ws = case (op,ws) of (Add,ws) => SOME (FOLDR ($+ :α word -> α word -> α word) (0w :α word) ws) | (Sub,([] :α word list)) => (NONE :α word option) | (Sub,[w1]) => (NONE :α word option) | (Sub,[w1; w2]) => SOME (w1 − w2) | (Sub,w1::w2::v14::v15) => (NONE :α word option) | (And,ws) => SOME (FOLDR ($&& :α word -> α word -> α word) (¬(0w :α word)) ws) | (Or,ws) => SOME (FOLDR ($|| :α word -> α word -> α word) (0w :α word) ws) | (Xor,ws) => SOME (FOLDR ($?? :α word -> α word -> α word) (0w :α word) ws)
+pull_exp_type=:α exp -> α exp
+add_empty=Const 0w
+and_empty=Const 0xFFFFFFFFFFFFFFFFw
+or_empty=Const 0w
+xor_empty=Const 0w
+sub_empty=Op Sub []
+sub_single=Op Sub [Const 5w]
+sub_pair=Const 5w
+sub_var_const=Op Add [Const 0xFFFFFFFFFFFFFFFDw; Var 1]
+sub_three=Op Sub [Const 9w; Const 4w; Const 2w]
+add_constants=Op Add [Const 15w]
+add_mixed=Op Add [Const 8w; Var 1; Var 2; Var 3]
+add_no_constants=Op Add [Var 1; Var 2; Var 3]
+nested_add=Op Add [Const 8w; Var 1; Var 2]
+xor_cancel=Var 1
+and_zero=Const 0w
+and_all_ones=Op And [Const 0xFFFFFFFFFFFFFFFFw; Var 1]
+or_constants=Op Or [Const 11w]
+xor_constants=Op Xor [Const 6w]
+load_nested=Load (Op Add [Const 16w; Var 1])
+shift_nested=ShiftN Lsl (Op Xor [Const 6w]) 2
+lookup=Lookup CurrHeap
+width1_wrap=Const 0w
+width32_wrap=Const 0w
+width64_wrap=Const 0w

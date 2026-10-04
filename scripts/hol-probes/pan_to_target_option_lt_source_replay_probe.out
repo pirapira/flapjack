@@ -1,0 +1,11 @@
+option_lt_local_replay_type=:num option -> num option -> bool
+option_lt_local_replay_def_typed=∀(n2 :num) (n1 :num) (n0 :num option).
+  (option_lt n0 (NONE :num option) ⇔ T) ∧
+  (option_lt (NONE :num option) (SOME n1) ⇔ F) ∧
+  (option_lt (SOME n1) (SOME n2) ⇔ n1 < n2)
+none_none=T
+some_none=T
+none_some=F
+less=T
+equal=F
+greater=F

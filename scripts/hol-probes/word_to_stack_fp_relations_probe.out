@@ -1,0 +1,6 @@
+fpRelationRead_typed=∀(t :(α, β, γ) stackSem$state) (s :(α, num # β, γ) state) (n :num) (lens :num list) (k :num) (f' :num) (f :num) (extra :num) (ac :α asm_config). state_rel ac k f f' s t lens extra ⇒ get_fp_var n s = get_fp_var n t
+fpRelationRead_proved=T
+fpRelationRead_hypotheses=0
+fpRelationUpdate_typed=∀(v :word64) (t :(α, β, γ) stackSem$state) (s :(α, num # β, γ) state) (n :num) (lens :num list) (k :num) (f' :num) (f :num) (extra :num) (ac :α asm_config). state_rel ac k f f' s t lens extra ⇒ state_rel ac k f f' (set_fp_var n v s) (set_fp_var n v t) lens extra
+fpRelationUpdate_proved=T
+fpRelationUpdate_hypotheses=0

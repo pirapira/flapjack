@@ -235,6 +235,32 @@ def subtractionSingletonPreserved : Bool :=
   | .op .sub [.var 2] => true
   | _ => false
 
+/-- `word_inst_sub_probe.out: pull_sub_empty`: HOL's `pull_exp` matches `Op Sub`
+    before its empty fallback, so `convert_sub [] = Op Sub []` survives instead
+    of becoming the `op_consts` zero. -/
+def subtractionEmptyPreserved : Bool :=
+  match wordInstPullExp (α := Nat) (.op .sub []) with
+  | .op .sub [] => true
+  | _ => false
+
+/-- `word_inst_sub_probe.out: pull_sub_unary_var` / `pull_sub_unary_const`:
+    the dedicated `Sub` clause also precedes the unary fallback, so a singleton
+    subtraction keeps its `Op Sub` shape rather than unwrapping to its operand. -/
+def subtractionUnaryPreserved : Bool :=
+  match wordInstPullExp (α := Nat) (.op .sub [.var 2]) with
+  | .op .sub [.var 2] => true
+  | _ => false
+
+/-- `word_inst_sub_probe.out: norm_sub_empty` / `norm_sub_unary_var`: the
+    composed `flatten_exp o pull_exp` keeps the malformed `Sub` shape too. -/
+def subtractionMalformedNormalizePreserved : Bool :=
+  (match wordInstNormalizeExp (α := Nat) (.op .sub []) with
+   | .op .sub [] => true
+   | _ => false)
+  && (match wordInstNormalizeExp (α := Nat) (.op .sub [.var 2]) with
+      | .op .sub [.var 2] => true
+      | _ => false)
+
 /-- `word_inst_probe.out: optimize_consts_or_zero` / `norm_or_zero`: the `0w`
 identity is dropped for `Or` exactly as for `Add`. -/
 def orZeroConstantDropped : Bool :=
@@ -451,6 +477,9 @@ def runChecks : IO Bool := do
     , ("x - 8 normalizes to x + (-8) with the constant second", subtractionConstantSecond)
     , ("subtraction preserves Cake's source operand order", subtractionOperandOrderMatches)
     , ("the dedicated subtraction clause preserves a singleton node", subtractionSingletonPreserved)
+    , ("an empty subtraction keeps Cake's dedicated Sub clause", subtractionEmptyPreserved)
+    , ("a unary subtraction keeps Cake's dedicated Sub clause", subtractionUnaryPreserved)
+    , ("malformed subtraction survives the composed normalization", subtractionMalformedNormalizePreserved)
     , ("several constants fold into one value with the constant second", foldTwoConstantsMatches)
     , ("a zero constant is dropped like Cake reduce_const", zeroConstantDropped)
     , ("an all-constant addition folds to the constant", allConstantAddFolds)

@@ -1,0 +1,12 @@
+load "preamble"; load "word_to_stackProofTheory";
+open HolKernel Parse bossLib preamble word_to_stackProofTheory;
+val _ = Globals.linewidth := 1000000;
+val store_result = GEN_ALL word_to_stackProofTheory.state_rel_mem_store;
+val replace_result = GEN_ALL word_to_stackProofTheory.state_rel_with_memory;
+val _ = if null(hyp store_result) andalso null(free_vars(concl store_result)) andalso null(hyp replace_result) andalso null(free_vars(concl replace_result)) then () else raise Fail "open memory relation";
+val _ = (print "stateRelMemStore_typed="; Lib.with_flag (Globals.show_types,true) print_term(concl store_result));
+val _ = print("stateRelMemStore_proved=" ^ term_to_string(rhs(concl(EQT_INTRO store_result))) ^ "\n");
+val _ = print("stateRelMemStore_hypotheses=" ^ Int.toString(length(hyp store_result)) ^ "\n");
+val _ = (print "stateRelWithMemory_typed="; Lib.with_flag (Globals.show_types,true) print_term(concl replace_result));
+val _ = print("stateRelWithMemory_proved=" ^ term_to_string(rhs(concl(EQT_INTRO replace_result))) ^ "\n");
+val _ = print("stateRelWithMemory_hypotheses=" ^ Int.toString(length(hyp replace_result)) ^ "\n");

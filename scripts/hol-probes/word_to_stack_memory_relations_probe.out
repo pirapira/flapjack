@@ -1,0 +1,6 @@
+stateRelMemStore_typed=∀(t :(α, β, γ) stackSem$state) (s' :(α, num # β, γ) state) (s :(α, num # β, γ) state) (lens :num list) (k :num) (f' :num) (f :num) (extra :num) (b :α word_loc) (ac :α asm_config) (a :α word). state_rel ac k f f' s t lens extra ∧ mem_store a b s = SOME s' ⇒ ∃(t' :(α, β, γ) stackSem$state). mem_store a b t = SOME t' ∧ state_rel ac k f f' s' t' lens extra
+stateRelMemStore_proved=T
+stateRelMemStore_hypotheses=0
+stateRelWithMemory_typed=∀(t :(α, β, γ) stackSem$state) (s :(α, num # β, γ) state) (m :α word -> α word_loc) (lens :num list) (k :num) (f' :num) (f :num) (extra :num) (ac :α asm_config). state_rel ac k f f' s t lens extra ⇒ state_rel ac k f f' (s with memory := m) (t with memory := m) lens extra
+stateRelWithMemory_proved=T
+stateRelWithMemory_hypotheses=0

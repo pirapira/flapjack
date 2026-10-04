@@ -1,0 +1,18 @@
+load "preamble"; load "word_to_stackProofTheory";
+open HolKernel Parse bossLib preamble word_to_stackProofTheory;
+val _ = Globals.linewidth := 1000000;
+val result = GEN_ALL (Q.SPEC `(asm$Mem asm$Load load_destination (asm$Addr load_base load_offset) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp result) andalso null(free_vars(concl result)) then () else raise Fail "open memory-load case";
+val _ = (print "memoryLoad_typed="; Lib.with_flag (Globals.show_types,true) print_term(concl result));
+val _ = print("memoryLoad_proved=" ^ term_to_string(rhs(concl(EQT_INTRO result))) ^ "\n");
+val _ = print("memoryLoad_hypotheses=" ^ Int.toString(length(hyp result)) ^ "\n");
+val result = GEN_ALL (Q.SPEC `(asm$Mem asm$Load8 load_destination (asm$Addr load_base load_offset) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp result) andalso null(free_vars(concl result)) then () else raise Fail "open memory-load case";
+val _ = (print "memoryLoad8_typed="; Lib.with_flag (Globals.show_types,true) print_term(concl result));
+val _ = print("memoryLoad8_proved=" ^ term_to_string(rhs(concl(EQT_INTRO result))) ^ "\n");
+val _ = print("memoryLoad8_hypotheses=" ^ Int.toString(length(hyp result)) ^ "\n");
+val result = GEN_ALL (Q.SPEC `(asm$Mem asm$Load32 load_destination (asm$Addr load_base load_offset) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp result) andalso null(free_vars(concl result)) then () else raise Fail "open memory-load case";
+val _ = (print "memoryLoad32_typed="; Lib.with_flag (Globals.show_types,true) print_term(concl result));
+val _ = print("memoryLoad32_proved=" ^ term_to_string(rhs(concl(EQT_INTRO result))) ^ "\n");
+val _ = print("memoryLoad32_hypotheses=" ^ Int.toString(length(hyp result)) ^ "\n");

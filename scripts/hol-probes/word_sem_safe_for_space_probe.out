@@ -1,0 +1,2 @@
+word_lang_safe_for_space_def_typed=∀(s :(α, γ, 'ffi) state) (start :num). word_lang_safe_for_space s start ⇔ (let (prog :α prog) = (Call (NONE :(num list # (sptree$num_set # sptree$num_set) # α prog # num # num) option) (SOME start) [(0 :num)] (NONE :(num # α prog # num # num) option) :α prog) in ∀(k :num) (res :α result option) (t :(α, γ, 'ffi) state). evaluate (prog,s with clock := k) = (res,t) ⇒ ∃(max :num). t.stack_max = SOME max ∧ max ≤ t.stack_limit)
+word_lang_safe_for_space_def_hypotheses=0

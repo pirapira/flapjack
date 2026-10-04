@@ -1,0 +1,180 @@
+addi_hypotheses=(rd :word5) ≠ (0w :word5)
+addi_statement=dfn'ADDI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if rs1 = (0w :word5) then (sw2sw imm :word64)
+           else s.c_gpr s.procID rs1 + (sw2sw imm :word64))
+      ⦈
+  ⦈
+addi_gen=∀(s :riscv_state) (rs1 :word5) (rd :word5) (imm :word12).
+  rd ≠ (0w :word5) ⇒
+  dfn'ADDI (rd,rs1,imm) s =
+  s with
+  c_gpr :=
+    s.c_gpr⦇
+      s.procID ↦
+        (s.c_gpr s.procID)⦇
+          rd ↦
+            (if rs1 = (0w :word5) then (sw2sw imm :word64)
+             else s.c_gpr s.procID rs1 + (sw2sw imm :word64))
+        ⦈
+    ⦈
+slti_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+slti_statement=dfn'SLTI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (v2w
+             [(if rs1 = (0w :word5) then (0w :word64)
+               else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then
+                 (sw2sw
+                    (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :
+                  word64)
+               else s.c_gpr s.procID rs1) < (sw2sw imm :word64)] :word64)
+      ⦈
+  ⦈
+slti_gen=∀(s :riscv_state) (rs1 :word5) (rd :word5) (imm :word12).
+  rd ≠ (0w :word5) ⇒
+  (s.c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2) ⇒
+  dfn'SLTI (rd,rs1,imm) s =
+  s with
+  c_gpr :=
+    s.c_gpr⦇
+      s.procID ↦
+        (s.c_gpr s.procID)⦇
+          rd ↦
+            (v2w
+               [(if rs1 = (0w :word5) then (0w :word64)
+                 else if
+                   (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2)
+                 then
+                   (sw2sw
+                      (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :
+                    word64)
+                 else s.c_gpr s.procID rs1) < (sw2sw imm :word64)] :word64)
+        ⦈
+    ⦈
+sltiu_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+sltiu_statement=dfn'SLTIU ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (v2w
+             [(if rs1 = (0w :word5) then (0w :word64)
+               else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then
+                 (sw2sw
+                    (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :
+                  word64)
+               else s.c_gpr s.procID rs1) <₊ (sw2sw imm :word64)] :word64)
+      ⦈
+  ⦈
+sltiu_gen=∀(s :riscv_state) (rs1 :word5) (rd :word5) (imm :word12).
+  rd ≠ (0w :word5) ⇒
+  (s.c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2) ⇒
+  dfn'SLTIU (rd,rs1,imm) s =
+  s with
+  c_gpr :=
+    s.c_gpr⦇
+      s.procID ↦
+        (s.c_gpr s.procID)⦇
+          rd ↦
+            (v2w
+               [(if rs1 = (0w :word5) then (0w :word64)
+                 else if
+                   (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2)
+                 then
+                   (sw2sw
+                      (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :
+                    word64)
+                 else s.c_gpr s.procID rs1) <₊ (sw2sw imm :word64)] :word64)
+        ⦈
+    ⦈
+andi_hypotheses=(rd :word5) ≠ (0w :word5)
+andi_statement=dfn'ANDI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if rs1 = (0w :word5) then (0w :word64)
+           else s.c_gpr s.procID rs1 && (sw2sw imm :word64))
+      ⦈
+  ⦈
+andi_gen=∀(s :riscv_state) (rs1 :word5) (rd :word5) (imm :word12).
+  rd ≠ (0w :word5) ⇒
+  dfn'ANDI (rd,rs1,imm) s =
+  s with
+  c_gpr :=
+    s.c_gpr⦇
+      s.procID ↦
+        (s.c_gpr s.procID)⦇
+          rd ↦
+            (if rs1 = (0w :word5) then (0w :word64)
+             else s.c_gpr s.procID rs1 && (sw2sw imm :word64))
+        ⦈
+    ⦈
+ori_hypotheses=(rd :word5) ≠ (0w :word5)
+ori_statement=dfn'ORI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if rs1 = (0w :word5) then (sw2sw imm :word64)
+           else s.c_gpr s.procID rs1 ‖ (sw2sw imm :word64))
+      ⦈
+  ⦈
+ori_gen=∀(s :riscv_state) (rs1 :word5) (rd :word5) (imm :word12).
+  rd ≠ (0w :word5) ⇒
+  dfn'ORI (rd,rs1,imm) s =
+  s with
+  c_gpr :=
+    s.c_gpr⦇
+      s.procID ↦
+        (s.c_gpr s.procID)⦇
+          rd ↦
+            (if rs1 = (0w :word5) then (sw2sw imm :word64)
+             else s.c_gpr s.procID rs1 ‖ (sw2sw imm :word64))
+        ⦈
+    ⦈
+xori_hypotheses=(rd :word5) ≠ (0w :word5)
+xori_statement=dfn'XORI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if rs1 = (0w :word5) then (sw2sw imm :word64)
+           else s.c_gpr s.procID rs1 ⊕ (sw2sw imm :word64))
+      ⦈
+  ⦈
+xori_gen=∀(s :riscv_state) (rs1 :word5) (rd :word5) (imm :word12).
+  rd ≠ (0w :word5) ⇒
+  dfn'XORI (rd,rs1,imm) s =
+  s with
+  c_gpr :=
+    s.c_gpr⦇
+      s.procID ↦
+        (s.c_gpr s.procID)⦇
+          rd ↦
+            (if rs1 = (0w :word5) then (sw2sw imm :word64)
+             else s.c_gpr s.procID rs1 ⊕ (sw2sw imm :word64))
+        ⦈
+    ⦈
+imm12_type=:word12
+source=HOL riscv_stepScript.sml:837-843 class evaluator over dfn'ADDI/SLTI/SLTIU/ANDI/ORI/XORI_def; per-theorem Thm.hyp captured above (ADDI/ANDI/ORI/XORI have rd <> 0w; SLTI/SLTIU additionally retain the ArchBase <> 1w mode hypothesis propagated by in32BitMode), plus GEN_ALL(DISCH_ALL) typed statements

@@ -132,4 +132,71 @@ theorem wordToStackStateRelSetVar2 {width : Nat} [NeZero width] {C F : Type}
         simpa only [Nat.add_zero,List.getElem?_take,List.getElem?_drop,
           List.length_set,List.getElem?_set_ne different] using placement.1
 
+/-- Writing a target register `n` that no source variable maps to (`k ≤ n`)
+leaves the relation unchanged. Flapjack factoring of both conjuncts of
+`state_rel_set_var_k`; no separate HOL declaration. -/
+theorem stateRelSetVarHigh {width : Nat} [NeZero width] {C F : Type}
+    {ac : AsmConfigExact width} {k f frame : Nat}
+    {source : WordSemStateFiniteExact width (Nat × C) F}
+    {target : StackSemStateFiniteExact width C F} {lens : List Nat} {extra : Nat}
+    (n : Nat) (value : WordLocW width) (high : k ≤ n) :
+    stateRel ac k f frame source (StackSemStateOps.setVar n value target) lens extra ↔
+      stateRel ac k f frame source target lens extra := by
+  unfold stateRel
+  have regs : ∀ m, m < k → (StackSemStateOps.setVar n value target).regs.lookup m =
+      target.regs.lookup m := by
+    intro m hm
+    have : m ≠ n := by omega
+    simp [StackSemStateOps.setVar, HolFiniteMapExact.updateEq, FUPDATE_HOL, this]
+  constructor
+  · rintro ⟨h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,
+      h19,h20,h21,h22,h23,h24,h25,h26,h27,h28,h29,h30,h31,h32,h33,h34,h35,h36,
+      h37,h38,hloc⟩
+    refine ⟨h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,
+      h19,h20,h21,h22,h23,h24,h25,h26,h27,h28,h29,h30,h31,h32,h33,h34,h35,h36,
+      h37,h38,fun m v found => ?_⟩
+    obtain ⟨even, placement⟩ := hloc m v found
+    refine ⟨even, ?_⟩
+    split at placement
+    · rename_i inReg
+      rw [if_pos inReg, ← regs _ inReg]
+      exact placement
+    · rename_i inReg
+      rw [if_neg inReg]
+      exact placement
+  · rintro ⟨h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,
+      h19,h20,h21,h22,h23,h24,h25,h26,h27,h28,h29,h30,h31,h32,h33,h34,h35,h36,
+      h37,h38,hloc⟩
+    refine ⟨h1,h2,h3,h4,h5,h6,h7,h8,h9,h10,h11,h12,h13,h14,h15,h16,h17,h18,
+      h19,h20,h21,h22,h23,h24,h25,h26,h27,h28,h29,h30,h31,h32,h33,h34,h35,h36,
+      h37,h38,fun m v found => ?_⟩
+    obtain ⟨even, placement⟩ := hloc m v found
+    refine ⟨even, ?_⟩
+    split at placement
+    · rename_i inReg
+      rw [if_pos inReg, regs _ inReg]
+      exact placement
+    · rename_i inReg
+      rw [if_neg inReg]
+      exact placement
+
+/-- Full original `state_rel_set_var_k` (2917–2928): writing target register
+`k+1` or `k` (the two scratch registers) leaves the relation unchanged, for every
+extra offset. -/
+@[hol "cakeml/compiler/backend/proofs/word_to_stackProofScript.sml" "state_rel_set_var_k"
+  (fmap_as_finite_support_relation := [WordSemStateFiniteExact.fpRegs,
+    WordSemStateFiniteExact.store, StackSemStateFiniteExact.regs,
+    StackSemStateFiniteExact.fpRegs, StackSemStateFiniteExact.store])
+  (words_as_type_indexed_bitvec)]
+theorem stateRelSetVarK {width : Nat} [NeZero width] {C F : Type}
+    {ac : AsmConfigExact width} {k f frame : Nat}
+    {source : WordSemStateFiniteExact width (Nat × C) F}
+    {target : StackSemStateFiniteExact width C F} {lens : List Nat} {extra : Nat}
+    {value : WordLocW width} :
+    (stateRel ac k f frame source (StackSemStateOps.setVar (k+1) value target) lens extra ↔
+      stateRel ac k f frame source target lens extra) ∧
+    (stateRel ac k f frame source (StackSemStateOps.setVar k value target) lens extra ↔
+      stateRel ac k f frame source target lens extra) :=
+  ⟨stateRelSetVarHigh (k+1) value (by omega), stateRelSetVarHigh k value (Nat.le_refl k)⟩
+
 end Flapjack.WordToStackProofs.StateRelRegisterUpdate

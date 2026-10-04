@@ -1,0 +1,24 @@
+source_shift_clause=arith_upd (Shift op rd rs ri) src = assert (case ri of Reg r => w2n (read_reg r src) < 64 | Imm v3 => T) (upd_reg rd (word_shift op (read_reg rs src) (w2n (reg_imm ri src))) src)
+source_shift_types=src : :64 asm_state, ri : :64 reg_imm, rs : :num, rd : :num, op : :shift
+source_shift_hypotheses=0
+target_ok_clause=riscv_ok ms ⇔ (ms.c_MCSR ms.procID).mstatus.VM = 0w ∧ (ms.c_MCSR ms.procID).mcpuid.ArchBase = 2w ∧ ms.c_NextFetch ms.procID = NONE ∧ ms.exception = NoException ∧ aligned 2 (ms.c_PC ms.procID)
+target_ok_types=ms : :riscv_state
+target_ok_hypotheses=0
+run_sll_clause=Run (Shift (SLL (rdv,rs1v,rs2v))) ms = (let (v,s) = in32BitMode () ms in if v then write'GPR (GPR rs1v s <<~ w2w ((4 >< 0) (GPR rs2v s)),rdv) s else write'GPR (GPR rs1v s <<~ w2w ((5 >< 0) (GPR rs2v s)),rdv) s)
+run_sll_types=ms : :riscv_state, rs2v : :word5, rs1v : :word5, rdv : :word5
+run_sll_hypotheses=0
+run_srl_clause=Run (Shift (SRL (rdv,rs1v,rs2v))) ms = (let (v,s) = in32BitMode () ms in if v then write'GPR (w2w ((31 >< 0) (GPR rs1v s) >>>~ w2w ((4 >< 0) (GPR rs2v s))),rdv) s else write'GPR (GPR rs1v s >>>~ w2w ((5 >< 0) (GPR rs2v s)),rdv) s)
+run_srl_types=ms : :riscv_state, rs2v : :word5, rs1v : :word5, rdv : :word5
+run_srl_hypotheses=0
+run_sra_clause=Run (Shift (SRA (rdv,rs1v,rs2v))) ms = (let (v,s) = in32BitMode () ms in if v then write'GPR (sw2sw ((31 >< 0) (GPR rs1v s) >>~ w2w ((4 >< 0) (GPR rs2v s))),rdv) s else write'GPR (GPR rs1v s >>~ w2w ((5 >< 0) (GPR rs2v s)),rdv) s)
+run_sra_types=ms : :riscv_state, rs2v : :word5, rs1v : :word5, rdv : :word5
+run_sra_hypotheses=0
+run_slli_clause=Run (Shift (SLLI (rdv,rs1v,amtv))) ms = (let (v,s) = in32BitMode () ms in if v ∧ word_bit 5 amtv then signalException Illegal_Instr s else write'GPR (GPR rs1v s ≪ w2n amtv,rdv) s)
+run_slli_types=ms : :riscv_state, amtv : :word6, rs1v : :word5, rdv : :word5
+run_slli_hypotheses=0
+run_srli_clause=Run (Shift (SRLI (rdv,rs1v,amtv))) ms = (let (v,s) = in32BitMode () ms in if v ∧ word_bit 5 amtv then signalException Illegal_Instr s else (let (v,s) = in32BitMode () s in write'GPR ((if v then w2w ((31 >< 0) (GPR rs1v s)) else GPR rs1v s) ⋙ w2n amtv,rdv) s))
+run_srli_types=ms : :riscv_state, amtv : :word6, rs1v : :word5, rdv : :word5
+run_srli_hypotheses=0
+run_srai_clause=Run (Shift (SRAI (rdv,rs1v,amtv))) ms = (let (v,s) = in32BitMode () ms in if v ∧ word_bit 5 amtv then signalException Illegal_Instr s else (let (v,s) = in32BitMode () s in write'GPR ((if v then sw2sw ((31 >< 0) (GPR rs1v s)) else GPR rs1v s) ≫ w2n amtv,rdv) s))
+run_srai_types=ms : :riscv_state, amtv : :word6, rs1v : :word5, rdv : :word5
+run_srai_hypotheses=0

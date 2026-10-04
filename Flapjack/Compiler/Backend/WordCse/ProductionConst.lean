@@ -8,7 +8,7 @@ open Flapjack RiscV
 
 /-- Input register-map observations imply both updated register-map
 observations. This is actual API infrastructure with no HOL original. -/
-private theorem registerPair_transport {width : Nat} [NeZero width]
+theorem registerPair_transport {width : Nat} [NeZero width]
     (native : Knowledge) (executed : WordCseKnowledge)
     (related : KnowledgeRel width native executed)
     (canonicalKey canonicalValue latestKey latestValue : Nat) :

@@ -3,6 +3,7 @@ import Flapjack.Compiler.Backend.ClosToBvl.Config
 import Flapjack.Compiler.Backend.BvlToBvi.Config
 import Flapjack.Compiler.Backend.DataToWord.Config
 import Flapjack.Compiler.Backend.WordToWord.Config
+import Flapjack.Compiler.Backend.WordToWord.Compile
 import Flapjack.Compiler.Backend.WordToStack.NativeConfig
 import Flapjack.Compiler.Backend.WordToStack.NativeTopCompile
 import Flapjack.Compiler.Backend.DataToWord.MaxHeapLimit
@@ -86,5 +87,19 @@ def fromWord {width : Nat} [NeZero width]
     WordToStack.Native.compileNative asmConf config.stackConf.perfCalls program
   let config := { config with wordConf := wordConf }
   fromStack asmConf config names program bitmaps
+
+/-- Original complete word optimisation and lower-backend composition. Retain
+both actual WordToWord outputs, update only its colouring oracle, and pass the
+transformed program to fromWord. This source-shaped definition is proof-side;
+executed pipeline routing and machine-semantics correctness remain separate. -/
+@[hol "cakeml/compiler/backend/backendScript.sml" "from_word_0_def"
+  (words_as_type_indexed_bitvec)]
+noncomputable def fromWord0 {width : Nat} [NeZero width]
+    (asmConf : AsmConfigExact width) (config : Flapjack.Compiler.Backend.Backend.Config)
+    (names : Spt MlString) (program : List (Nat × Nat × WordLangProgHOL (BitVec width))) :
+    Option (List (BitVec 8) × List (BitVec width) × Flapjack.Compiler.Backend.Backend.Config) :=
+  let (col, program) := WordToWord.compile config.wordToWordConf asmConf program
+  let config := { config with wordToWordConf := { config.wordToWordConf with colOracle := col } }
+  fromWord asmConf config names program
 
 end Flapjack.Compiler.Backend.Backend

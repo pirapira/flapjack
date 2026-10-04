@@ -1,0 +1,24 @@
+no_alloc_word_evaluate_replay_statement=∀prog s res t. evaluate (prog,s) = (res,t) ∧ no_install_code s.code ∧ no_alloc_code s.code ∧ no_install prog ∧ no_alloc prog ⇒ res ≠ SOME NotEnoughSpace
+no_alloc_word_evaluate_replay_hypotheses=0
+no_alloc_word_evaluate_replay_typed=∀(prog :α wordLang$prog) (s :(α, β, γ) wordSem$state) (res :α word_instProof$result option) (t :(α, β, γ) wordSem$state). (evaluate (prog,s) :α word_instProof$result option # (α, β, γ) wordSem$state) = (res,t) ∧ no_install_code s.code ∧ no_alloc_code s.code ∧ no_install prog ∧ no_alloc prog ⇒ res ≠ SOME (NotEnoughSpace :α word_instProof$result)
+panLang_wordSem_neq_NotEnoughSpace_replay_statement=evaluate (Call NONE (SOME start) [0] NONE,s with clock := k) = (res,t) ∧ ALL_DISTINCT (MAP FST (functions pan_code)) ∧ word_to_word_compile c.word_to_word_conf mc.target.config (pan_to_word_compile_prog mc.target.config.ISA pan_code) = (col,wprog) ∧ s.code = fromAList wprog ⇒ res ≠ SOME NotEnoughSpace
+panLang_wordSem_neq_NotEnoughSpace_replay_hypotheses=0
+panLang_wordSem_neq_NotEnoughSpace_replay_typed=(evaluate ((Call (NONE :(num list # (sptree$num_set # sptree$num_set) # α wordLang$prog # num # num) option) (SOME (start :num)) [(0 :num)] (NONE :(num # α wordLang$prog # num # num) option) :α wordLang$prog),(s :(α, β, γ) wordSem$state) with clock := (k :num)) :α word_instProof$result option # (α, β, γ) wordSem$state) = ((res :α word_instProof$result option),(t :(α, β, γ) wordSem$state)) ∧ ALL_DISTINCT (MAP (FST :mlstring # (mlstring # shape) list # α panLang$prog # shape -> mlstring) (functions (pan_code :α decl list))) ∧ word_to_word_compile (c :config).word_to_word_conf (mc :(α, δ, ε) machine_config).target.config (pan_to_word_compile_prog mc.target.config.ISA pan_code) = ((col :num sptree$num_map option list),(wprog :(num # num # α wordLang$prog) list)) ∧ s.code = fromAList wprog ⇒ res ≠ SOME (NotEnoughSpace :α word_instProof$result)
+inst_stack_size_const_panLang_replay_statement=∀i s t. inst i s = SOME t ⇒ t.stack_size = s.stack_size
+inst_stack_size_const_panLang_replay_hypotheses=0
+inst_stack_size_const_panLang_replay_typed=∀(i :α inst) (s :(α, β, γ) wordSem$state) (t :(α, β, γ) wordSem$state). (inst i s :(α, β, γ) wordSem$state option) = SOME t ⇒ t.stack_size = s.stack_size
+inst_stack_limit_const_panLang_replay_statement=∀i s t. inst i s = SOME t ⇒ t.stack_limit = s.stack_limit
+inst_stack_limit_const_panLang_replay_hypotheses=0
+inst_stack_limit_const_panLang_replay_typed=∀(i :α inst) (s :(α, β, γ) wordSem$state) (t :(α, β, γ) wordSem$state). (inst i s :(α, β, γ) wordSem$state option) = SOME t ⇒ t.stack_limit = s.stack_limit
+inst_stack_max_const_panLang_replay_statement=∀i s t. inst i s = SOME t ⇒ t.stack_max = s.stack_max
+inst_stack_max_const_panLang_replay_hypotheses=0
+inst_stack_max_const_panLang_replay_typed=∀(i :α inst) (s :(α, β, γ) wordSem$state) (t :(α, β, γ) wordSem$state). (inst i s :(α, β, γ) wordSem$state option) = SOME t ⇒ t.stack_max = s.stack_max
+share_inst_modifies_replay_statement=share_inst op v ad s = (res,t) ⇒ ∃ls ffi stk lsz st. t = s with <|locals := ls; ffi := ffi; stack := stk; locals_size := lsz; store := st|>
+share_inst_modifies_replay_hypotheses=0
+share_inst_modifies_replay_typed=(share_inst (op :memop) (v :num) (ad :β word) (s :(β, γ, δ) wordSem$state) :α word_instProof$result option # (β, γ, δ) wordSem$state) = ((res :α word_instProof$result option),(t :(β, γ, δ) wordSem$state)) ⇒ ∃(ls :β word_loc sptree$num_map) (ffi :δ ffi_state) (stk :β stack_frame list) (lsz :num option) (st :store_name |-> β word_loc). t = s with <|locals := ls; ffi := ffi; stack := stk; locals_size := lsz; store := st|>
+evaluate_stack_size_limit_const_panLang_replay_statement=∀prog s res t. evaluate (prog,s) = (res,t) ∧ no_install prog ∧ no_install_code s.code ∧ no_alloc prog ∧ no_alloc_code s.code ⇒ t.stack_size = s.stack_size ∧ t.stack_limit = s.stack_limit
+evaluate_stack_size_limit_const_panLang_replay_hypotheses=0
+evaluate_stack_size_limit_const_panLang_replay_typed=∀(prog :α wordLang$prog) (s :(α, β, γ) wordSem$state) (res :α word_instProof$result option) (t :(α, β, γ) wordSem$state). (evaluate (prog,s) :α word_instProof$result option # (α, β, γ) wordSem$state) = (res,t) ∧ no_install prog ∧ no_install_code s.code ∧ no_alloc prog ∧ no_alloc_code s.code ⇒ t.stack_size = s.stack_size ∧ t.stack_limit = s.stack_limit
+option_lt_SOME_replay_statement=option_lt x (SOME n) ⇔ ∃m. x = SOME m ∧ m < n
+option_lt_SOME_replay_hypotheses=0
+option_lt_SOME_replay_typed=option_lt (x :num option) (SOME (n :num)) ⇔ ∃(m :num). x = SOME m ∧ m < n

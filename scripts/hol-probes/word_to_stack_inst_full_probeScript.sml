@@ -1,0 +1,12 @@
+load "preamble"; load "word_to_stackProofTheory";
+open HolKernel Parse bossLib preamble word_to_stackProofTheory;
+val _ = Globals.linewidth := 1000000;
+val inst_result = GEN_ALL word_to_stackProofTheory.evaluate_wInst;
+val fp_result = GEN_ALL (Q.SPEC `(asm$FP operation : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp inst_result) andalso null(free_vars(concl inst_result)) andalso null(hyp fp_result) andalso null(free_vars(concl fp_result)) then () else raise Fail "open instruction theorem";
+val _ = (print "inst_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl inst_result));
+val _ = print("inst_proved=" ^ term_to_string(rhs(concl(EQT_INTRO inst_result))) ^ "\n");
+val _ = print("inst_hypotheses=" ^ Int.toString(length(hyp inst_result)) ^ "\n");
+val _ = (print "fp_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl fp_result));
+val _ = print("fp_proved=" ^ term_to_string(rhs(concl(EQT_INTRO fp_result))) ^ "\n");
+val _ = print("fp_hypotheses=" ^ Int.toString(length(hyp fp_result)) ^ "\n");

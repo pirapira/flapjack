@@ -40,7 +40,7 @@ ALLOWED_QUALIFIERS = {
     "fmap_as_finite_support_relation", "fmap_as_finite_support_equalities",
     "fmap_as_finite_support_equality",
     "words_as_type_indexed_bitvec",
-    "word_dimension_as_width",
+    "word_dimension_as_width", "word_dimensions_as_widths",
     "reals_as_rational_cuts",
 }
 BOOLEAN_QUALIFIERS = {
@@ -126,6 +126,7 @@ def manifest_qualifiers(record: dict[str, Any]) -> dict[str, Any]:
         "fmap_as_finite_support_result_observations",
         "fmap_as_finite_support_parameters",
         "fmap_as_finite_support_existentials",
+        "word_dimensions_as_widths",
     ):
         if record.get(key, ()):
             qualifiers[key] = list(record[key])

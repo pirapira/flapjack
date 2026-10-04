@@ -332,7 +332,7 @@
     "Flapjack/RiscV/L3/Step/DecodeAny.lean:DecodeAny": {
       "lean_sha256": "2c4bd154084ef0aa1a62b2eb72dec0a5f31580a40b167df8f01f054c41fcea43",
       "rendered_sha256": "ebedcf672e9608ddec3cae6f3c6bb27482ac73be3850ad766edca4bcf9655588",
-      "review_note": "Source riscv_step DecodeAny_def: handwritten match layout omits redundant parentheses; exact Half16 and Word32 clauses retained."
+      "review_note": "Source riscv_step DecodeAny_def: the rendered case form spells the rawInstType constructors `Half`/`Word`; the Lean handwritten match uses `.Half`/`.Word` with layout parentheses omitted. The exact clauses `Half (BitVec 16) => DecodeRVC h` and `Word (BitVec 32) => Decode w` are retained; no success or opcode premise is added."
     },
     "Flapjack/RiscV/L3/Step/Fetch.lean:Fetch": {
       "lean_sha256": "5200b6aa19c92590323b56bf8cd4e68100223064f6af96b4332ecaf575f958a8",

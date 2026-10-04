@@ -1,0 +1,91 @@
+sll_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+sll_statement=dfn'SLL ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then
+             (if rs1 = (0w :word5) then (0w :word64)
+              else s.c_gpr s.procID rs1) <<~
+             if rs2 = (0w :word5) then (0w :word64)
+             else
+               (w2w (((4 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word5) :
+                word64)
+           else
+             (if rs1 = (0w :word5) then (0w :word64)
+              else s.c_gpr s.procID rs1) <<~
+             (if rs2 = (0w :word5) then (0w :word64)
+              else
+                (w2w (((5 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word6) :
+                 word64)))
+      ⦈
+  ⦈
+srl_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+srl_statement=dfn'SRL ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then
+             (w2w
+                ((if rs1 = (0w :word5) then (0w :word32)
+                  else
+                    (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32)) >>>~
+                 if rs2 = (0w :word5) then (0w :word32)
+                 else
+                   (w2w
+                      (((4 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word5) :
+                    word32)) :word64)
+           else
+             (if rs1 = (0w :word5) then (0w :word64)
+              else s.c_gpr s.procID rs1) >>>~
+             (if rs2 = (0w :word5) then (0w :word64)
+              else
+                (w2w (((5 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word6) :
+                 word64)))
+      ⦈
+  ⦈
+sra_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+sra_statement=dfn'SRA ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then
+             (sw2sw
+                ((if rs1 = (0w :word5) then (0w :word32)
+                  else
+                    (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32)) >>~
+                 if rs2 = (0w :word5) then (0w :word32)
+                 else
+                   (w2w
+                      (((4 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word5) :
+                    word32)) :word64)
+           else
+             (if rs1 = (0w :word5) then (0w :word64)
+              else s.c_gpr s.procID rs1) >>~
+             (if rs2 = (0w :word5) then (0w :word64)
+              else
+                (w2w (((5 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word6) :
+                 word64)))
+      ⦈
+  ⦈
+sll_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+sll_nop_statement=dfn'SLL ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+srl_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+srl_nop_statement=dfn'SRL ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+sra_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+sra_nop_statement=dfn'SRA ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+source=HOL riscv_stepScript.sml:867-869 class evaluator over dfn'SLL/SRL/SRA_def; per-theorem Thm.hyp captured above (each register-shift write theorem carries the invalid-selector and rd <> 0w hypotheses), plus the rd = 0w companions

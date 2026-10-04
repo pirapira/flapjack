@@ -60,10 +60,14 @@ theorem compileExpListEveryLocalised {width : Nat} [NeZero width]
     (try split) <;>
     simp_all [everyExpHOL, everyExpListHOL, localisedExpHOL_eq_every, localisedExpPredHOL]
 
-/-- `shape_val` builds localised expressions. Flapjack infrastructure; no HOL
-original. -/
+/-- First genuine conjunct of HOL `localised_exp_shape_val`
+(`pan_globalsProofScript.sml:3207-3212`): arbitrary shapes build localised
+expressions at the original positive word dimension. The complete conjunction
+is assembled below as `localisedExpShapeValHOL`. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "localised_exp_shape_val"
+  (words_as_type_indexed_bitvec)]
 theorem shapeValLocalised {width : Nat} [NeZero width] :
-    ∀ sh : ShapeHOL, localisedExpHOL (shapeValHOL (width := width) sh) = true := by
+    ∀ sh : ShapeHOL, localisedExpHOL (shapeValHOL sh : ExpHOL width) = true := by
   intro sh
   rw [localisedExpHOL_eq_every]
   induction sh using shapeValHOL.induct
@@ -71,6 +75,22 @@ theorem shapeValLocalised {width : Nat} [NeZero width] :
       (shapeValsHOL (width := width) shs) = true) <;>
     (try rw [shapeValHOL]) <;> (try rw [shapeValsHOL]) <;>
     simp_all [everyExpHOL, everyExpListHOL, localisedExpPredHOL]
+
+/-- Full HOL `localised_exp_shape_val` (source lines 3207-3212), with both
+universally quantified expression and expression-list conjuncts. HOL `EVERY`
+is native `List.all = true`; the reviewed mutual `shape_val`/`shape_vals`
+definitions and the exact positive-width expression carrier are used directly.
+No source premise or component of the original conjunction is omitted. -/
+@[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "localised_exp_shape_val"
+  (words_as_type_indexed_bitvec)]
+theorem localisedExpShapeValHOL {width : Nat} [NeZero width] :
+    (∀ shape : ShapeHOL, localisedExpHOL (shapeValHOL shape : ExpHOL width) = true) ∧
+    (∀ shapes : List ShapeHOL,
+      (shapeValsHOL shapes : List (ExpHOL width)).all localisedExpHOL = true) := by
+  constructor
+  · exact shapeValLocalised
+  · intro shapes
+    simp [shapeValLocalised]
 
 /-- Exact HOL `compile_localised` (`pan_globalsProofScript.sml:3214-3224`). -/
 @[hol "cakeml/pancake/proofs/pan_globalsProofScript.sml" "compile_localised"

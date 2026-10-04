@@ -1,0 +1,13 @@
+load "preamble"; load "word_to_stackProofTheory";
+open HolKernel Parse bossLib preamble word_to_stackProofTheory;
+val _ = Globals.linewidth := 1000000;
+val longMul_result = GEN_ALL (Q.SPEC `(asm$Arith (asm$LongMul long_high_destination long_low_destination long_left long_right) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp longMul_result) andalso null(free_vars(concl longMul_result)) then () else raise Fail "open instruction case";
+val _ = (print "longMul_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl longMul_result));
+val _ = print("longMul_proved=" ^ term_to_string(rhs(concl(EQT_INTRO longMul_result))) ^ "\n");
+val _ = print("longMul_hypotheses=" ^ Int.toString(length(hyp longMul_result)) ^ "\n");
+val longDiv_result = GEN_ALL (Q.SPEC `(asm$Arith (asm$LongDiv long_quotient_destination long_remainder_destination long_high long_low long_divisor) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp longDiv_result) andalso null(free_vars(concl longDiv_result)) then () else raise Fail "open instruction case";
+val _ = (print "longDiv_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl longDiv_result));
+val _ = print("longDiv_proved=" ^ term_to_string(rhs(concl(EQT_INTRO longDiv_result))) ^ "\n");
+val _ = print("longDiv_hypotheses=" ^ Int.toString(length(hyp longDiv_result)) ^ "\n");

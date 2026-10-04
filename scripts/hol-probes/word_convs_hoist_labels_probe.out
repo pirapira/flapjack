@@ -1,0 +1,6 @@
+hoistLabels_typed=∀(rhs :α reg_imm) (p3 :α prog) (lhs :num) (cmp :cmp) (br2 :α prog) (br1 :α prog) (N :num) (p1 :α prog) (interm :α prog) (dummy :α prog) (p2 :α prog) (s :β). try_if_hoist2 N p1 interm dummy p2 = SOME p3 ⇒ dest_If p2 = SOME (cmp,lhs,rhs,br1,br2) ⇒ dummy = (If cmp lhs rhs (Raise (1 :num) :α prog) (Raise (2 :num) :α prog) :α prog) ⇒ extract_labels interm = ([] :(num # num) list) ⇒ labels_rel (extract_labels p1 ++ extract_labels p2) (extract_labels p3)
+hoistLabels_proved=T
+hoistLabels_hypotheses=0
+duplicateIfLabels_typed=∀(p :α prog). labels_rel (extract_labels p) (extract_labels (simp_duplicate_if p))
+duplicateIfLabels_proved=T
+duplicateIfLabels_hypotheses=0

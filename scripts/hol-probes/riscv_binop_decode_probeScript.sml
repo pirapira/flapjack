@@ -1,0 +1,52 @@
+load "preamble"; load "riscvTheory";
+open HolKernel Parse bossLib preamble riscvTheory;
+val _ = computeLib.add_funs [Encode_def, Itype_def, Rtype_def, opc_def, Decode_def, boolify32_def];
+val _ = Globals.linewidth := 1000000;
+fun out label tm = (print(label ^ "="); print_term(rhs(concl(EVAL tm))); print "\n");
+fun showtm label tm = (print(label ^ "="); print_term tm; print "\n");
+fun types label tm = (print(label ^ "="); print (String.concatWith ", " (map (fn v => term_to_string v ^ " : " ^ type_to_string (type_of v)) (free_vars tm))); print "\n");
+val _ = out "andi_decode_zero" ``Decode (Encode (ArithI (ANDI (0w,0w,0w)))) = ArithI (ANDI (0w,0w,0w))``;
+val _ = out "andi_decode_all_ones" ``Decode (Encode (ArithI (ANDI (31w,31w,4095w)))) = ArithI (ANDI (31w,31w,4095w))``;
+val _ = out "andi_decode_sign_bit" ``Decode (Encode (ArithI (ANDI (1w,0w,2048w)))) = ArithI (ANDI (1w,0w,2048w))``;
+val _ = out "andi_decode_positive_max" ``Decode (Encode (ArithI (ANDI (0w,31w,2047w)))) = ArithI (ANDI (0w,31w,2047w))``;
+val _ = out "add_decode_zero" ``Decode (Encode (ArithR (ADD (0w,0w,0w)))) = ArithR (ADD (0w,0w,0w))``;
+val _ = out "add_decode_all_ones" ``Decode (Encode (ArithR (ADD (31w,31w,31w)))) = ArithR (ADD (31w,31w,31w))``;
+val _ = out "add_decode_sign_bit" ``Decode (Encode (ArithR (ADD (1w,0w,16w)))) = ArithR (ADD (1w,0w,16w))``;
+val _ = out "add_decode_positive_max" ``Decode (Encode (ArithR (ADD (0w,31w,15w)))) = ArithR (ADD (0w,31w,15w))``;
+val _ = out "sub_decode_zero" ``Decode (Encode (ArithR (SUB (0w,0w,0w)))) = ArithR (SUB (0w,0w,0w))``;
+val _ = out "sub_decode_all_ones" ``Decode (Encode (ArithR (SUB (31w,31w,31w)))) = ArithR (SUB (31w,31w,31w))``;
+val _ = out "sub_decode_sign_bit" ``Decode (Encode (ArithR (SUB (1w,0w,16w)))) = ArithR (SUB (1w,0w,16w))``;
+val _ = out "sub_decode_positive_max" ``Decode (Encode (ArithR (SUB (0w,31w,15w)))) = ArithR (SUB (0w,31w,15w))``;
+val _ = out "and_decode_zero" ``Decode (Encode (ArithR (AND (0w,0w,0w)))) = ArithR (AND (0w,0w,0w))``;
+val _ = out "and_decode_all_ones" ``Decode (Encode (ArithR (AND (31w,31w,31w)))) = ArithR (AND (31w,31w,31w))``;
+val _ = out "and_decode_sign_bit" ``Decode (Encode (ArithR (AND (1w,0w,16w)))) = ArithR (AND (1w,0w,16w))``;
+val _ = out "and_decode_positive_max" ``Decode (Encode (ArithR (AND (0w,31w,15w)))) = ArithR (AND (0w,31w,15w))``;
+val andi_term = ``Encode (ArithI (ANDI (rdv,rs1v,immv)))``;
+val andi_source = SIMP_CONV (srw_ss()) [Encode_def] andi_term;
+val _ = showtm "andi_encode_source_clause" (concl andi_source);
+val _ = print ("andi_encode_source_hypotheses=" ^ Int.toString(length(hyp andi_source)) ^ "\n");
+val _ = types "andi_carrier_types" andi_term;
+(* Printed query only: no HOL theorem of this local composition is claimed. *)
+val _ = showtm "andi_symbolic_replay_query" ``Decode (Encode (ArithI (ANDI (rdv,rs1v,immv)))) = ArithI (ANDI (rdv,rs1v,immv))``;
+val add_term = ``Encode (ArithR (ADD (rdv,rs1v,rs2v)))``;
+val add_source = SIMP_CONV (srw_ss()) [Encode_def] add_term;
+val _ = showtm "add_encode_source_clause" (concl add_source);
+val _ = print ("add_encode_source_hypotheses=" ^ Int.toString(length(hyp add_source)) ^ "\n");
+val _ = types "add_carrier_types" add_term;
+(* Printed query only: no HOL theorem of this local composition is claimed. *)
+val _ = showtm "add_symbolic_replay_query" ``Decode (Encode (ArithR (ADD (rdv,rs1v,rs2v)))) = ArithR (ADD (rdv,rs1v,rs2v))``;
+val sub_term = ``Encode (ArithR (SUB (rdv,rs1v,rs2v)))``;
+val sub_source = SIMP_CONV (srw_ss()) [Encode_def] sub_term;
+val _ = showtm "sub_encode_source_clause" (concl sub_source);
+val _ = print ("sub_encode_source_hypotheses=" ^ Int.toString(length(hyp sub_source)) ^ "\n");
+val _ = types "sub_carrier_types" sub_term;
+(* Printed query only: no HOL theorem of this local composition is claimed. *)
+val _ = showtm "sub_symbolic_replay_query" ``Decode (Encode (ArithR (SUB (rdv,rs1v,rs2v)))) = ArithR (SUB (rdv,rs1v,rs2v))``;
+val and_term = ``Encode (ArithR (AND (rdv,rs1v,rs2v)))``;
+val and_source = SIMP_CONV (srw_ss()) [Encode_def] and_term;
+val _ = showtm "and_encode_source_clause" (concl and_source);
+val _ = print ("and_encode_source_hypotheses=" ^ Int.toString(length(hyp and_source)) ^ "\n");
+val _ = types "and_carrier_types" and_term;
+(* Printed query only: no HOL theorem of this local composition is claimed. *)
+val _ = showtm "and_symbolic_replay_query" ``Decode (Encode (ArithR (AND (rdv,rs1v,rs2v)))) = ArithR (AND (rdv,rs1v,rs2v))``;
+val _ = OS.Process.exit OS.Process.success;

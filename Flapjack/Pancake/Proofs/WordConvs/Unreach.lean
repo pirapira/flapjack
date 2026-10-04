@@ -1,5 +1,6 @@
 import Flapjack.Compiler.Backend.WordUnreach.ProductionDecoderDomain
 import Flapjack.Pancake.WordConvs.FullInstOkLess
+import Flapjack.Pancake.WordConvs.WfCutsets
 
 namespace Flapjack.WordConvs
 open Flapjack Flapjack.Compiler.Backend.WordUnreach Flapjack.Compiler.Encoders.Asm
@@ -131,6 +132,63 @@ theorem flatExpConventions_removeUnreach {width : Nat} [NeZero width]
     (source : flatExpConventions program = true) :
     flatExpConventions (removeUnreach program) = true :=
   flatExpConventions_seqAssocRight program .skip source rfl
+
+/-- Flapjack factoring of the descriptor analysis for the `wf_cutsets` proof;
+HOL has no separately named descriptor theorem. -/
+private theorem wfCutsets_ofDestSeqMove {width : Nat} [NeZero width]
+    (program : WordLangProgHOL (BitVec width)) (priority : Nat)
+    (moves : List (Nat × Nat)) (rest : WordLangProgHOL (BitVec width))
+    (descriptor : destSeqMove program = some (priority, moves, rest))
+    (source : wfCutsets program) :
+    wfCutsets rest := by
+  cases program <;> simp_all [destSeqMove, wfCutsets]
+  case move =>
+    rw [← descriptor.2.2]
+    simp [wfCutsets]
+  case seq first second =>
+    cases first <;> simp_all [wfCutsets]
+
+/-- HOL `wf_cutsets_SimpSeq` (`wordConvsProofScript.sml:2668-2679`). -/
+@[hol "cakeml/compiler/backend/proofs/wordConvsProofScript.sml"
+  "wf_cutsets_SimpSeq" (words_as_type_indexed_bitvec)]
+theorem wfCutsets_simpSeq {width : Nat} [NeZero width]
+    (p1 p2 : WordLangProgHOL (BitVec width)) (h : wfCutsets p1 ∧ wfCutsets p2) :
+    wfCutsets (simpSeq p1 p2) := by
+  obtain ⟨firstValid, secondValid⟩ := h
+  fun_cases simpSeq p1 p2 <;> simp_all +zetaDelta [wfCutsets]
+  all_goals
+    first
+    | apply wfCutsets_ofDestSeqMove p2 <;> assumption
+    | simp_all +zetaDelta [wfCutsets]
+
+/-- HOL `wf_cutsets_Seq_assoc_right_lemma` (`wordConvsProofScript.sml:2681-2695`). -/
+@[hol "cakeml/compiler/backend/proofs/wordConvsProofScript.sml"
+  "wf_cutsets_Seq_assoc_right_lemma" (words_as_type_indexed_bitvec)]
+theorem wfCutsets_seqAssocRight {width : Nat} [NeZero width] :
+    ∀ (p1 p2 : WordLangProgHOL (BitVec width)),
+      wfCutsets p1 ∧ wfCutsets p2 → wfCutsets (seqAssocRight p1 p2) := by
+  intro first second ⟨firstValid, secondValid⟩
+  induction first using
+      (measure (fun p : WordLangProgHOL (BitVec width) => sizeOf p)).wf.induction
+      generalizing second with
+  | h first ih =>
+    fun_cases seqAssocRight first second <;> try simp_all +zetaDelta only [wfCutsets]
+    all_goals
+      repeat' first
+        | (apply wfCutsets_simpSeq; constructor)
+        | (apply ih; change sizeOf _ < sizeOf _; simp <;> omega)
+        | assumption
+        | simp_all +zetaDelta only [wfCutsets]
+        | split
+        | constructor
+
+/-- HOL `wf_cutsets_remove_unreach` (`wordConvsProofScript.sml:2697-2703`). -/
+@[hol "cakeml/compiler/backend/proofs/wordConvsProofScript.sml"
+  "wf_cutsets_remove_unreach" (words_as_type_indexed_bitvec)]
+theorem wfCutsets_removeUnreach {width : Nat} [NeZero width]
+    (p : WordLangProgHOL (BitVec width)) :
+    wfCutsets p → wfCutsets (removeUnreach p) :=
+  fun h => wfCutsets_seqAssocRight p .skip ⟨h, trivial⟩
 
 /-- Flapjack factoring of the same native descriptor analysis for the original
 full-instruction proof; HOL has no separately named descriptor theorem. -/

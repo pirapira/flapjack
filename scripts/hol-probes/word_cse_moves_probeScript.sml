@@ -1,0 +1,14 @@
+load "word_cseProofTheory";
+open HolKernel Parse bossLib word_cseProofTheory;
+val _ = Globals.linewidth := 1000000;
+val _ = (print "lookup_map_insert0_statement="; print_term(concl lookup_map_insert0));
+val _ = print("lookup_map_insert0_hypotheses=" ^ Int.toString(length(hyp lookup_map_insert0)) ^ "\n");
+val _ = (print "get_set_vars_lemma_statement="; print_term(concl get_set_vars_lemma));
+val _ = print("get_set_vars_lemma_hypotheses=" ^ Int.toString(length(hyp get_set_vars_lemma)) ^ "\n");
+val _ = (print "MEM_FST_reduc_statement="; print_term(concl MEM_FST_reduc));
+val _ = print("MEM_FST_reduc_hypotheses=" ^ Int.toString(length(hyp MEM_FST_reduc)) ^ "\n");
+val _ = (print "canonicalMoveRegs_lemma_statement="; print_term(concl canonicalMoveRegs_lemma));
+val _ = print("canonicalMoveRegs_lemma_hypotheses=" ^ Int.toString(length(hyp canonicalMoveRegs_lemma)) ^ "\n");
+val _ = (print "data_inv_clock_statement="; print_term(concl data_inv_clock));
+val _ = print("data_inv_clock_hypotheses=" ^ Int.toString(length(hyp data_inv_clock)) ^ "\n");
+val _ = (print "canonicalMoveRegs_lemma_typed="; Lib.with_flag (Globals.show_types, true) print_term (concl canonicalMoveRegs_lemma));

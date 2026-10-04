@@ -1,0 +1,8 @@
+largest_type=:(α # β) itself -> real
+largest_def_typed=largest (:τ # χ) =
+(2 :real) pow (UINT_MAX (:χ) − (1 :num)) / (2 :real) pow INT_MAX (:χ) *
+((2 :real) − ((2 :real) pow dimindex (:τ))⁻¹)
+threshold_type=:(α # β) itself -> real
+threshold_def_typed=threshold (:τ # χ) =
+(2 :real) pow (UINT_MAX (:χ) − (1 :num)) / (2 :real) pow INT_MAX (:χ) *
+((2 :real) − ((2 :real) pow SUC (dimindex (:τ)))⁻¹)

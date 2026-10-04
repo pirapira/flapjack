@@ -1,0 +1,3 @@
+gc_fun_const_ok_word_gc_fun_statement=gc_fun_const_ok (word_gc_fun c)
+gc_fun_const_ok_word_gc_fun_hypotheses=0
+gc_fun_const_ok_word_gc_fun_typed=gc_fun_const_ok (word_gc_fun (c :data_to_word$config) :α word_loc list # (α word -> α word_loc) # (α word -> bool) # (store_name |-> α word_loc) -> (α word_loc list # (α word -> α word_loc) # (store_name |-> α word_loc)) option)

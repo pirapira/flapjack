@@ -1,0 +1,37 @@
+val _ = loadPath := (Globals.HOLDIR ^ "/examples/l3-machine-code/riscv/step") ::
+  (Globals.HOLDIR ^ "/examples/l3-machine-code/riscv/model") :: !loadPath;
+load "riscv_stepTheory";
+open HolKernel boolLib bossLib riscvTheory riscv_stepTheory;
+val _ = Globals.show_types := true;
+fun stmt label th = (print(label ^ "="); print_term(concl th); print "\n");
+fun hyps label th =
+  (print(label ^ "="); List.app (fn h => (print_term h; print "\n")) (Thm.hyp th));
+val _ = hyps "ld_hypotheses" LD;
+val _ = stmt "ld_statement" LD;
+val _ = hyps "lw_hypotheses" LW;
+val _ = stmt "lw_statement" LW;
+val _ = hyps "lh_hypotheses" LH;
+val _ = stmt "lh_statement" LH;
+val _ = hyps "lb_hypotheses" LB;
+val _ = stmt "lb_statement" LB;
+val _ = hyps "lwu_hypotheses" LWU;
+val _ = stmt "lwu_statement" LWU;
+val _ = hyps "lhu_hypotheses" LHU;
+val _ = stmt "lhu_statement" LHU;
+val _ = hyps "ld_nop_hypotheses" LD_NOP;
+val _ = stmt "ld_nop_statement" LD_NOP;
+val _ = hyps "lw_nop_hypotheses" LW_NOP;
+val _ = stmt "lw_nop_statement" LW_NOP;
+val _ = hyps "lh_nop_hypotheses" LH_NOP;
+val _ = stmt "lh_nop_statement" LH_NOP;
+val _ = hyps "lb_nop_hypotheses" LB_NOP;
+val _ = stmt "lb_nop_statement" LB_NOP;
+val _ = hyps "lwu_nop_hypotheses" LWU_NOP;
+val _ = stmt "lwu_nop_statement" LWU_NOP;
+val _ = hyps "lhu_nop_hypotheses" LHU_NOP;
+val _ = stmt "lhu_nop_statement" LHU_NOP;
+val _ = hyps "lbu_hypotheses" LBU;
+val _ = stmt "lbu_statement" LBU;
+val _ = hyps "lbu_nop_hypotheses" LBU_NOP;
+val _ = stmt "lbu_nop_statement" LBU_NOP;
+val _ = print "source=HOL riscv_stepScript.sml:902-908 load = class_rd0 (rd,rs1,offs) over dfn'LD/LW/LH/LB/LWU/LHU/LBU_def; per-theorem Thm.hyp captured above, plus the rd = 0w companions\n";

@@ -1,0 +1,75 @@
+get_code_labels_comp_4090_statement=∀f p. complex_get_code_labels (comp f p) = complex_get_code_labels p
+get_code_labels_comp_4090_statement_typed=∀(f :num sptree$num_map) (p :α prog). complex_get_code_labels (comp f p :α prog) = complex_get_code_labels p
+get_code_labels_comp_4090_statement_types=(f :num sptree$num_map)::num sptree$num_map;(p :α prog)::α prog;
+stack_names_get_code_labels_statement=LIST_REL (λcp p. complex_get_code_labels cp = complex_get_code_labels p) (MAP SND (compile f prog)) (MAP SND prog)
+stack_names_get_code_labels_statement_typed=LIST_REL (λ(cp :α prog) (p :α prog). complex_get_code_labels cp = complex_get_code_labels p) (MAP (SND :β # α prog -> α prog) (compile (f :num sptree$num_map) (prog :(β # α prog) list) :(β # α prog) list)) (MAP (SND :β # α prog -> α prog) prog)
+stack_names_get_code_labels_statement_types=(prog :(β # α prog) list)::(β # α prog) list;(f :num sptree$num_map)::num sptree$num_map;
+get_code_labels_comp_4110_statement=∀a b c p. get_code_labels (comp a b c p) ⊆ (stack_err_lab,0) INSERT get_code_labels p
+get_code_labels_comp_4110_statement_typed=∀(a :bool) (b :α word # α word) (c :num) (p :α prog). (get_code_labels (comp a b c p :α prog) :num # num -> bool) ⊆ (stack_err_lab,(0 :num)) INSERT (get_code_labels p :num # num -> bool)
+get_code_labels_comp_4110_statement_types=(a :bool)::bool;(b :α word # α word)::α word # α word;(c :num)::num;(p :α prog)::α prog;
+init_stubs_labels_statement=EVERY (λp. get_code_labels p ⊆ set [(1,0); (start,0)]) (MAP SND (init_stubs ggc mh k start))
+init_stubs_labels_statement_typed=EVERY (λ(p :α prog). (get_code_labels p :num # num -> bool) ⊆ set [((1 :num),(0 :num)); ((start :num),(0 :num))]) (MAP (SND :num # α prog -> α prog) (init_stubs (ggc :bool) (mh :num) (k :num) start :(num # α prog) list))
+init_stubs_labels_statement_types=(k :num)::num;(mh :num)::num;(ggc :bool)::bool;(start :num)::num;
+stack_names_get_code_labels_comp_statement=∀f p. get_code_labels (comp f p) = get_code_labels p
+stack_names_get_code_labels_comp_statement_typed=∀(f :num sptree$num_map) (p :α prog). (get_code_labels (comp f p :α prog) :num # num -> bool) = (get_code_labels p :num # num -> bool)
+stack_names_get_code_labels_comp_statement_types=(f :num sptree$num_map)::num sptree$num_map;(p :α prog)::α prog;
+stack_names_stack_get_handler_labels_comp_statement=∀f p n. stack_get_handler_labels n (comp f p) = stack_get_handler_labels n p
+stack_names_stack_get_handler_labels_comp_statement_typed=∀(f :num sptree$num_map) (p :α prog) (n :num). stack_get_handler_labels n (comp f p :α prog) = stack_get_handler_labels n p
+stack_names_stack_get_handler_labels_comp_statement_types=(f :num sptree$num_map)::num sptree$num_map;(p :α prog)::α prog;(n :num)::num;
+UNCURRY_PAIR_ETA_statement=UNCURRY f = (λ(p1,p2). f p1 p2)
+UNCURRY_PAIR_ETA_statement_typed=UNCURRY (f :α -> β -> γ) = (λ((p1 :α),(p2 :β)). f p1 p2)
+UNCURRY_PAIR_ETA_statement_types=(f :α -> β -> γ)::α -> β -> γ;
+stack_names_stack_good_code_labels_statement=∀prog f. stack_good_code_labels prog elabs ⇒ stack_good_code_labels (compile f prog) elabs
+stack_names_stack_good_code_labels_statement_typed=∀(prog :(num # α prog) list) (f :num sptree$num_map). stack_good_code_labels prog (elabs :num -> bool) ⇒ stack_good_code_labels (compile f prog :(num # α prog) list) elabs
+stack_names_stack_good_code_labels_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(f :num sptree$num_map)::num sptree$num_map;(elabs :num -> bool)::num -> bool;
+stack_remove_get_code_labels_comp_statement=∀a b c p. get_code_labels (comp a b c p) ⊆ (stack_err_lab,0) INSERT get_code_labels p
+stack_remove_get_code_labels_comp_statement_typed=∀(a :bool) (b :α word # α word) (c :num) (p :α prog). (get_code_labels (comp a b c p :α prog) :num # num -> bool) ⊆ (stack_err_lab,(0 :num)) INSERT (get_code_labels p :num # num -> bool)
+stack_remove_get_code_labels_comp_statement_types=(a :bool)::bool;(b :α word # α word)::α word # α word;(c :num)::num;(p :α prog)::α prog;
+stack_remove_stack_get_handler_labels_comp_statement=∀a b c p m. stack_get_handler_labels m (comp a b c p) = stack_get_handler_labels m p
+stack_remove_stack_get_handler_labels_comp_statement_typed=∀(a :bool) (b :α word # α word) (c :num) (p :α prog) (m :num). stack_get_handler_labels m (comp a b c p :α prog) = stack_get_handler_labels m p
+stack_remove_stack_get_handler_labels_comp_statement_types=(a :bool)::bool;(b :α word # α word)::α word # α word;(c :num)::num;(p :α prog)::α prog;(m :num)::num;
+stack_remove_init_code_labels_statement=x ∈ get_code_labels (init_code ggc mh sp) ⇒ x = (1,0)
+stack_remove_init_code_labels_statement_typed=(x :num # num) ∈ (get_code_labels (init_code (ggc :bool) (mh :num) (sp :num) :α prog) :num # num -> bool) ⇒ x = ((1 :num),(0 :num))
+stack_remove_init_code_labels_statement_types=(sp :num)::num;(mh :num)::num;(ggc :bool)::bool;(x :num # num)::num # num;
+stack_remove_stack_good_code_labels_statement=∀prog. MEM loc (MAP FST prog) ∧ stack_good_code_labels prog elabs ⇒ stack_good_code_labels (compile jump off ggc mh sp loc prog) elabs
+stack_remove_stack_good_code_labels_statement_typed=∀(prog :(num # α prog) list). MEM (loc :num) (MAP (FST :num # α prog -> num) prog) ∧ stack_good_code_labels prog (elabs :num -> bool) ⇒ stack_good_code_labels (compile (jump :bool) (off :α word # α word) (ggc :bool) (mh :num) (sp :num) loc prog :(num # α prog) list) elabs
+stack_remove_stack_good_code_labels_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(sp :num)::num;(mh :num)::num;(ggc :bool)::bool;(off :α word # α word)::α word # α word;(jump :bool)::bool;(elabs :num -> bool)::num -> bool;(loc :num)::num;
+stack_remove_stack_good_code_labels_incr_statement=∀prog. stack_err_lab ∈ elabs ∧ stack_good_code_labels prog elabs ⇒ stack_good_code_labels (MAP (prog_comp jump offset sp) prog) elabs
+stack_remove_stack_good_code_labels_incr_statement_typed=∀(prog :(num # α prog) list). stack_err_lab ∈ (elabs :num -> bool) ∧ stack_good_code_labels prog elabs ⇒ stack_good_code_labels (MAP (prog_comp (jump :bool) (offset :α word # α word) (sp :num) :num # α prog -> num # α prog) prog) elabs
+stack_remove_stack_good_code_labels_incr_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(sp :num)::num;(offset :α word # α word)::α word # α word;(jump :bool)::bool;(elabs :num -> bool)::num -> bool;
+stack_alloc_get_code_labels_comp_statement=∀n m p pp mm. get_code_labels (FST (comp n m p)) ⊆ (gc_stub_location,0) INSERT get_code_labels p
+stack_alloc_get_code_labels_comp_statement_typed=∀(n :num) (m :num) (p :α prog) (pp :β) (mm :γ). (get_code_labels (FST (comp n m p :α prog # num)) :num # num -> bool) ⊆ (gc_stub_location,(0 :num)) INSERT (get_code_labels p :num # num -> bool)
+stack_alloc_get_code_labels_comp_statement_types=(n :num)::num;(m :num)::num;(p :α prog)::α prog;(pp :β)::β;(mm :γ)::γ;
+stack_alloc_stack_get_handler_labels_comp_statement=∀n m p pp mm. stack_get_handler_labels i (FST (comp n m p)) = stack_get_handler_labels i p
+stack_alloc_stack_get_handler_labels_comp_statement_typed=∀(n :num) (m :num) (p :α prog) (pp :β) (mm :γ). stack_get_handler_labels (i :num) (FST (comp n m p :α prog # num)) = stack_get_handler_labels i p
+stack_alloc_stack_get_handler_labels_comp_statement_types=(n :num)::num;(m :num)::num;(p :α prog)::α prog;(pp :β)::β;(mm :γ)::γ;(i :num)::num;
+stack_alloc_init_code_labels_statement=get_code_labels (word_gc_code c) = ∅
+stack_alloc_init_code_labels_statement_typed=(get_code_labels (word_gc_code (c :data_to_word$config) :α prog) :num # num -> bool) = (∅ :num # num -> bool)
+stack_alloc_init_code_labels_statement_types=(c :data_to_word$config)::data_to_word$config;
+stack_alloc_stack_good_code_labels_statement=∀prog c. stack_good_code_labels prog elabs ⇒ stack_good_code_labels (compile c prog) elabs
+stack_alloc_stack_good_code_labels_statement_typed=∀(prog :(num # α prog) list) (c :data_to_word$config). stack_good_code_labels prog (elabs :num -> bool) ⇒ stack_good_code_labels (compile c prog :(num # α prog) list) elabs
+stack_alloc_stack_good_code_labels_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(c :data_to_word$config)::data_to_word$config;(elabs :num -> bool)::num -> bool;
+stack_alloc_stack_good_code_labels_incr_statement=∀prog. gc_stub_location ∈ elabs ∧ stack_good_code_labels prog elabs ⇒ stack_good_code_labels (MAP prog_comp prog) elabs
+stack_alloc_stack_good_code_labels_incr_statement_typed=∀(prog :(num # α prog) list). gc_stub_location ∈ (elabs :num -> bool) ∧ stack_good_code_labels prog elabs ⇒ stack_good_code_labels (MAP (prog_comp :num # α prog -> num # α prog) prog) elabs
+stack_alloc_stack_good_code_labels_incr_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(elabs :num -> bool)::num -> bool;
+IN_get_code_labels_comp_top_lemma_statement=∀i q p_1 p_2. ((p_1,p_2) ∈ get_code_labels (comp i q) ⇒ ∃k. (p_1,k) ∈ get_code_labels q ∧ (p_2 ≠ k ⇒ p_2 = 1 ∧ k = 0 ∧ p_1 ∈ domain i)) ∧ ((p_1,p_2) ∈ get_code_labels (comp_top i q) ⇒ ∃k. (p_1,k) ∈ get_code_labels q ∧ (p_2 ≠ k ⇒ p_2 = 1 ∧ k = 0 ∧ p_1 ∈ domain i))
+IN_get_code_labels_comp_top_lemma_statement_typed=∀(i :num sptree$num_map) (q :α prog) (p_1 :num) (p_2 :num). ((p_1,p_2) ∈ (get_code_labels (comp i q :α prog) :num # num -> bool) ⇒ ∃(k :num). (p_1,k) ∈ (get_code_labels q :num # num -> bool) ∧ (p_2 ≠ k ⇒ p_2 = (1 :num) ∧ k = (0 :num) ∧ p_1 ∈ (domain i :num -> bool))) ∧ ((p_1,p_2) ∈ (get_code_labels (comp_top i q) :num # num -> bool) ⇒ ∃(k :num). (p_1,k) ∈ (get_code_labels q :num # num -> bool) ∧ (p_2 ≠ k ⇒ p_2 = (1 :num) ∧ k = (0 :num) ∧ p_1 ∈ (domain i :num -> bool)))
+IN_get_code_labels_comp_top_lemma_statement_types=(i :num sptree$num_map)::num sptree$num_map;(q :α prog)::α prog;(p_1 :num)::num;(p_2 :num)::num;
+IN_domain_collect_info_statement=∀prog f p_1. p_1 ∈ domain (collect_info prog f) ⇒ MEM p_1 (MAP FST prog) ∨ p_1 ∈ domain f
+IN_domain_collect_info_statement_typed=∀(prog :(num # α prog) list) (f :num sptree$num_map) (p_1 :num). p_1 ∈ (domain (collect_info prog f) :num -> bool) ⇒ MEM p_1 (MAP (FST :num # α prog -> num) prog) ∨ p_1 ∈ (domain f :num -> bool)
+IN_domain_collect_info_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(f :num sptree$num_map)::num sptree$num_map;(p_1 :num)::num;
+IN_get_code_labels_comp_top_statement=(p_1,p_2) ∈ get_code_labels (comp_top (collect_info prog LN) q) ⇒ ∃k. (p_1,k) ∈ get_code_labels q ∧ (p_2 ≠ k ⇒ p_2 = 1 ∧ k = 0 ∧ MEM p_1 (MAP FST prog))
+IN_get_code_labels_comp_top_statement_typed=((p_1 :num),(p_2 :num)) ∈ (get_code_labels (comp_top (collect_info (prog :(num # β prog) list) (LN :num sptree$num_map)) (q :α prog)) :num # num -> bool) ⇒ ∃(k :num). (p_1,k) ∈ (get_code_labels q :num # num -> bool) ∧ (p_2 ≠ k ⇒ p_2 = (1 :num) ∧ k = (0 :num) ∧ MEM p_1 (MAP (FST :num # β prog -> num) prog))
+IN_get_code_labels_comp_top_statement_types=(q :α prog)::α prog;(prog :(num # β prog) list)::(num # β prog) list;(p_2 :num)::num;(p_1 :num)::num;
+stack_rawcall_stack_good_code_labels_statement=stack_good_code_labels prog elabs ⇒ stack_good_code_labels (compile prog) elabs
+stack_rawcall_stack_good_code_labels_statement_typed=stack_good_code_labels (prog :(num # α prog) list) (elabs :num -> bool) ⇒ stack_good_code_labels (compile prog :(num # α prog) list) elabs
+stack_rawcall_stack_good_code_labels_statement_types=(elabs :num -> bool)::num -> bool;(prog :(num # α prog) list)::(num # α prog) list;
+stack_to_lab_stack_good_code_labels_statement=compile stack_conf data_conf max_heap sp offset prog = prog' ∧ MEM InitGlobals_location (MAP FST prog) ∧ stack_good_code_labels prog elabs ∧ EVERY sec_labels_ok prog' ⇒ get_labels prog' ⊆ get_code_labels prog' ∪ IMAGE (λn. (n,0)) elabs ∪ IMAGE (λn. (n,1)) elabs
+stack_to_lab_stack_good_code_labels_statement_typed=(compile (stack_conf :stack_to_lab$config) (data_conf :data_to_word$config) (max_heap :num) (sp :num) (offset :α word # α word) (prog :(num # α prog) list) :α sec list) = (prog' :α sec list) ∧ MEM InitGlobals_location (MAP (FST :num # α prog -> num) prog) ∧ stack_good_code_labels prog (elabs :num -> bool) ∧ EVERY (sec_labels_ok :α sec -> bool) prog' ⇒ get_labels prog' ⊆ (get_code_labels prog' :num # num -> bool) ∪ IMAGE (λ(n :num). (n,(0 :num))) elabs ∪ IMAGE (λ(n :num). (n,(1 :num))) elabs
+stack_to_lab_stack_good_code_labels_statement_types=(elabs :num -> bool)::num -> bool;(prog' :α sec list)::α sec list;(prog :(num # α prog) list)::(num # α prog) list;(offset :α word # α word)::α word # α word;(sp :num)::num;(max_heap :num)::num;(data_conf :data_to_word$config)::data_to_word$config;(stack_conf :stack_to_lab$config)::stack_to_lab$config;
+stack_to_lab_stack_good_code_labels_incr_statement=stack_err_lab ∈ elabs ∧ gc_stub_location ∈ elabs ∧ compile_no_stubs f jump offset sp prog = prog' ∧ stack_good_code_labels prog elabs ∧ EVERY sec_labels_ok prog' ⇒ get_labels prog' ⊆ get_code_labels prog' ∪ IMAGE (λn. (n,0)) elabs ∪ IMAGE (λn. (n,1)) elabs
+stack_to_lab_stack_good_code_labels_incr_statement_typed=stack_err_lab ∈ (elabs :num -> bool) ∧ gc_stub_location ∈ elabs ∧ compile_no_stubs (f :num sptree$num_map) (jump :bool) (offset :α word # α word) (sp :num) (prog :(num # α prog) list) = (prog' :α sec list) ∧ stack_good_code_labels prog elabs ∧ EVERY (sec_labels_ok :α sec -> bool) prog' ⇒ get_labels prog' ⊆ (get_code_labels prog' :num # num -> bool) ∪ IMAGE (λ(n :num). (n,(0 :num))) elabs ∪ IMAGE (λ(n :num). (n,(1 :num))) elabs
+stack_to_lab_stack_good_code_labels_incr_statement_types=(prog' :α sec list)::α sec list;(prog :(num # α prog) list)::(num # α prog) list;(sp :num)::num;(offset :α word # α word)::α word # α word;(jump :bool)::bool;(f :num sptree$num_map)::num sptree$num_map;(elabs :num -> bool)::num -> bool;
+rawcall_stack_get_handler_labels_comp_statement=∀i p k. stack_get_handler_labels k (comp i p) = stack_get_handler_labels k p ∧ stack_get_handler_labels k (comp_top i p) = stack_get_handler_labels k p
+rawcall_stack_get_handler_labels_comp_statement_typed=∀(i :num sptree$num_map) (p :α prog) (k :num). stack_get_handler_labels k (comp i p :α prog) = stack_get_handler_labels k p ∧ stack_get_handler_labels k (comp_top i p) = stack_get_handler_labels k p
+rawcall_stack_get_handler_labels_comp_statement_types=(i :num sptree$num_map)::num sptree$num_map;(p :α prog)::α prog;(k :num)::num;

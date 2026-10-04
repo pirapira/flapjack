@@ -1,0 +1,27 @@
+dest_Seq_no_inst_typed=∀(P :α inst -> bool) (prog :α prog). every_inst P prog ⇒ every_inst P (FST (dest_Seq prog)) ∧ every_inst P (SND (dest_Seq prog))
+dest_Seq_no_inst_proved=T
+dest_Seq_no_inst_hypotheses=0
+Seq_assoc_no_inst_typed=∀(P :α inst -> bool) (p1 :α prog) (p2 :α prog). every_inst P p1 ∧ every_inst P p2 ⇒ every_inst P (Seq_assoc p1 p2)
+Seq_assoc_no_inst_proved=T
+Seq_assoc_no_inst_hypotheses=0
+every_inst_SmartSeq_typed=∀(q :α prog) (p :α prog) (P :α inst -> bool). every_inst P (SmartSeq p q) ⇔ every_inst P p ∧ every_inst P q
+every_inst_SmartSeq_proved=T
+every_inst_SmartSeq_hypotheses=0
+every_inst_drop_consts_typed=∀(p :α prog) (ls :num list) (cs :α word sptree$num_map) (P :α inst -> bool). every_inst P (SmartSeq (drop_consts cs ls) p) ⇔ every_inst P p
+every_inst_drop_consts_proved=T
+every_inst_drop_consts_hypotheses=0
+every_inst_const_fp_typed=∀(P :α inst -> bool) (prog :α prog). every_inst P prog ⇒ every_inst P (const_fp prog)
+every_inst_const_fp_proved=T
+every_inst_const_fp_hypotheses=0
+try_if_hoist2_no_inst_typed=∀(p3 :α prog) (P :α inst -> bool) (N :num) (p1 :α prog) (interm :α prog) (dummy :α prog) (p2 :α prog) (s :β). try_if_hoist2 N p1 interm dummy p2 = SOME p3 ⇒ every_inst P p1 ⇒ every_inst P interm ⇒ every_inst P p2 ⇒ every_inst P p3
+try_if_hoist2_no_inst_proved=T
+try_if_hoist2_no_inst_hypotheses=0
+simp_duplicate_if_no_inst_typed=∀(P :α inst -> bool) (p :α prog). every_inst P p ⇒ every_inst P (simp_duplicate_if p)
+simp_duplicate_if_no_inst_proved=T
+simp_duplicate_if_no_inst_hypotheses=0
+simp_push_out_if_no_inst_typed=∀(P :α inst -> bool) (p :α prog). every_inst P p ⇒ every_inst P (push_out_if p)
+simp_push_out_if_no_inst_proved=T
+simp_push_out_if_no_inst_hypotheses=0
+compile_exp_no_inst_typed=∀(P :α inst -> bool) (prog :α prog). every_inst P prog ⇒ every_inst P (compile_exp prog)
+compile_exp_no_inst_proved=T
+compile_exp_no_inst_hypotheses=0

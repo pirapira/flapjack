@@ -1,0 +1,83 @@
+"""Reject drift in original HOL immediate-shift evaluated instruction captures."""
+from pathlib import Path
+
+EXPECTED = [
+    'slli_hypotheses=¬(((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) ∧',
+    ' word_bit (5 :num) (imm :word6))',
+    '((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)',
+    '(rd :word5) ≠ (0w :word5)',
+    "slli_statement=dfn'SLLI ((rd :word5),(rs1 :word5),(imm :word6)) (s :riscv_state) =",
+    's with',
+    'c_gpr :=',
+    '  s.c_gpr⦇',
+    '    s.procID ↦',
+    '      (s.c_gpr s.procID)⦇',
+    '        rd ↦',
+    '          (if rs1 = (0w :word5) then (0w :word64)',
+    '           else s.c_gpr s.procID rs1 ≪ w2n imm)',
+    '      ⦈',
+    '  ⦈',
+    'srli_hypotheses=¬(((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) ∧',
+    ' word_bit (5 :num) (imm :word6))',
+    '((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)',
+    '(rd :word5) ≠ (0w :word5)',
+    "srli_statement=dfn'SRLI ((rd :word5),(rs1 :word5),(imm :word6)) (s :riscv_state) =",
+    's with',
+    'c_gpr :=',
+    '  s.c_gpr⦇',
+    '    s.procID ↦',
+    '      (s.c_gpr s.procID)⦇',
+    '        rd ↦',
+    '          (if rs1 = (0w :word5) then (0w :word64)',
+    '           else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then',
+    '             (w2w (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :',
+    '              word64) ⋙ w2n imm',
+    '           else s.c_gpr s.procID rs1 ⋙ w2n imm)',
+    '      ⦈',
+    '  ⦈',
+    'srai_hypotheses=¬(((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) ∧',
+    ' word_bit (5 :num) (imm :word6))',
+    '((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)',
+    '(rd :word5) ≠ (0w :word5)',
+    "srai_statement=dfn'SRAI ((rd :word5),(rs1 :word5),(imm :word6)) (s :riscv_state) =",
+    's with',
+    'c_gpr :=',
+    '  s.c_gpr⦇',
+    '    s.procID ↦',
+    '      (s.c_gpr s.procID)⦇',
+    '        rd ↦',
+    '          (if rs1 = (0w :word5) then (0w :word64)',
+    '           else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then',
+    '             (sw2sw',
+    '                (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :',
+    '              word64)',
+    '           else s.c_gpr s.procID rs1) ≫ w2n imm',
+    '      ⦈',
+    '  ⦈',
+    'slli_nop_hypotheses=¬(((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) ∧',
+    ' word_bit (5 :num) (imm :word6))',
+    '((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)',
+    '(rd :word5) = (0w :word5)',
+    "slli_nop_statement=dfn'SLLI ((rd :word5),(rs1 :word5),(imm :word6)) (s :riscv_state) = s",
+    'srli_nop_hypotheses=¬(((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) ∧',
+    ' word_bit (5 :num) (imm :word6))',
+    '((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)',
+    '(rd :word5) = (0w :word5)',
+    "srli_nop_statement=dfn'SRLI ((rd :word5),(rs1 :word5),(imm :word6)) (s :riscv_state) = s",
+    'srai_nop_hypotheses=¬(((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) ∧',
+    ' word_bit (5 :num) (imm :word6))',
+    '((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)',
+    '(rd :word5) = (0w :word5)',
+    "srai_nop_statement=dfn'SRAI ((rd :word5),(rs1 :word5),(imm :word6)) (s :riscv_state) = s",
+    "source=HOL riscv_stepScript.sml:844-846 class evaluator over dfn'SLLI/SRLI/SRAI_def; per-theorem Thm.hyp captured above (each immediate-shift write theorem carries the legality, invalid-selector and rd <> 0w hypotheses), plus the rd = 0w companions",
+]
+
+
+def check(text):
+    if text.splitlines() != EXPECTED:
+        raise ValueError("original HOL immediate-shift capture differs from reviewed statements")
+
+
+if __name__ == "__main__":
+    check(Path(__file__).with_name("l3_step_shift_probe.out").read_text())
+    print("step_shift: exact original HOL statements, hypotheses and types PASS")

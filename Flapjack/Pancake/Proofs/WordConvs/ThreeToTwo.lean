@@ -1,5 +1,6 @@
 import Flapjack.Compiler.Backend.WordInst
 import Flapjack.Pancake.WordConvs.FullInstOkLess
+import Flapjack.Pancake.WordConvs.WfCutsets
 
 namespace Flapjack.WordConvs
 open Flapjack Flapjack.Compiler.Backend.WordInst Flapjack.Compiler.Encoders.Asm
@@ -180,5 +181,26 @@ theorem threeToTwoRegProg_preAllocConventions {width : Nat} [NeZero width]
         (by change sizeOf handlerBody < sizeOf _; simp; omega)
         source.1.2 source.2.2.2
       exact ⟨⟨source.2.1.1, returns.2⟩, ⟨source.2.2.1, handler.2⟩⟩
+
+
+/-- HOL `three_to_two_reg_prog_wf_cutsets` (`wordConvsProofScript.sml:2227-2236`);
+HOL's free flag `b` is the leading binder. -/
+@[hol "cakeml/compiler/backend/proofs/wordConvsProofScript.sml"
+  "three_to_two_reg_prog_wf_cutsets" (words_as_type_indexed_bitvec)]
+theorem threeToTwoRegProg_wfCutsets {width : Nat} [NeZero width] (b : Bool) :
+    ∀ prog : WordLangProgHOL (BitVec width), wfCutsets prog → wfCutsets (threeToTwoRegProg b prog) := by
+  intro program source
+  cases b <;> simp [threeToTwoRegProg, source]
+  induction program using
+      (measure (fun p : WordLangProgHOL (BitVec width) => sizeOf p)).wf.induction with
+  | h program ih =>
+    fun_cases threeToTwoReg program <;> simp_all +zetaDelta [wfCutsets]
+    all_goals
+      repeat' first
+        | (apply ih; change sizeOf _ < sizeOf _; simp <;> omega)
+        | assumption
+        | simp_all +zetaDelta [wfCutsets]
+        | split
+        | constructor
 
 end Flapjack.WordConvs

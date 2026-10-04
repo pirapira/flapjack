@@ -53,10 +53,6 @@ theorem cseProgramMemoryGuard {α : Type} [WordCseHash α]
     allocatorMemorySupported (wordCseProg data program).1 = true := by
   fun_induction wordApplyColour (fun name => name) program generalizing data <;>
     simp_all [wordCseProg, allocatorMemorySupported, cseInstructionMemoryGuard, cseFactMemoryGuard]
-  case case3 =>
-    unfold wordCseProg
-    split <;> simp_all [allocatorMemorySupported, wordCseAddToLoad]
-    repeat' (split <;> simp_all [allocatorMemorySupported, cseFactMemoryGuard])
   case case5 =>
     rename_i destination store
     cases (wordCseInvalidate data destination).getsMem[wordCseStoreCode store]? <;> simp_all

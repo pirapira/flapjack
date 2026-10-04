@@ -1,0 +1,255 @@
+ld_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+aligned (3 :num)
+  (if (rs1 :word5) = (0w :word5) then (sw2sw (offs :word12) :word64)
+   else (s :riscv_state).c_gpr s.procID rs1 + (sw2sw offs :word64))
+ld_statement=dfn'LD ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          ((s.MEM8
+              (if rs1 = (0w :word5) then (sw2sw offs :word64) + (7w :word64)
+               else
+                 (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (7w :word64))) @@
+            ((s.MEM8
+                (if rs1 = (0w :word5) then
+                   (sw2sw offs :word64) + (6w :word64)
+                 else
+                   (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (6w
+                      :word64))) @@
+              ((s.MEM8
+                  (if rs1 = (0w :word5) then
+                     (sw2sw offs :word64) + (5w :word64)
+                   else
+                     (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (5w
+                        :word64))) @@
+                ((s.MEM8
+                    (if rs1 = (0w :word5) then
+                       (sw2sw offs :word64) + (4w :word64)
+                     else
+                       (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (4w
+                          :word64))) @@
+                  ((s.MEM8
+                      (if rs1 = (0w :word5) then
+                         (sw2sw offs :word64) + (3w :word64)
+                       else
+                         (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (3w
+                            :word64))) @@
+                    ((s.MEM8
+                        (if rs1 = (0w :word5) then
+                           (sw2sw offs :word64) + (2w :word64)
+                         else
+                           (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (2w
+                              :word64))) @@
+                      ((s.MEM8
+                          (if rs1 = (0w :word5) then
+                             (sw2sw offs :word64) + (1w :word64)
+                           else
+                             (s.c_gpr s.procID rs1 + (sw2sw offs :word64) +
+                              (1w :word64))) @@
+                        s.MEM8
+                          (if rs1 = (0w :word5) then (sw2sw offs :word64)
+                           else s.c_gpr s.procID rs1 + (sw2sw offs :word64)))
+                         :word16))
+                       :word24))
+                     :word32))
+                   :40 word))
+                 :word48))
+               :word56))
+             :word64)
+      ⦈
+  ⦈
+lw_hypotheses=(rd :word5) ≠ (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+aligned (2 :num)
+  (if (rs1 :word5) = (0w :word5) then (sw2sw (offs :word12) :word64)
+   else (s :riscv_state).c_gpr s.procID rs1 + (sw2sw offs :word64))
+lw_statement=dfn'LW ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (sw2sw
+             ((s.MEM8
+                 (if rs1 = (0w :word5) then
+                    (sw2sw offs :word64) + (3w :word64)
+                  else
+                    (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (3w
+                       :word64))) @@
+               ((s.MEM8
+                   (if rs1 = (0w :word5) then
+                      (sw2sw offs :word64) + (2w :word64)
+                    else
+                      (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (2w
+                         :word64))) @@
+                 ((s.MEM8
+                     (if rs1 = (0w :word5) then
+                        (sw2sw offs :word64) + (1w :word64)
+                      else
+                        (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (1w
+                           :word64))) @@
+                   s.MEM8
+                     (if rs1 = (0w :word5) then (sw2sw offs :word64)
+                      else s.c_gpr s.procID rs1 + (sw2sw offs :word64)))
+                    :word16))
+                  :word24))
+                :word32) :word64)
+      ⦈
+  ⦈
+lh_hypotheses=(rd :word5) ≠ (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+aligned (1 :num)
+  (if (rs1 :word5) = (0w :word5) then (sw2sw (offs :word12) :word64)
+   else (s :riscv_state).c_gpr s.procID rs1 + (sw2sw offs :word64))
+lh_statement=dfn'LH ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (sw2sw
+             ((s.MEM8
+                 (if rs1 = (0w :word5) then
+                    (sw2sw offs :word64) + (1w :word64)
+                  else
+                    (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (1w
+                       :word64))) @@
+               s.MEM8
+                 (if rs1 = (0w :word5) then (sw2sw offs :word64)
+                  else s.c_gpr s.procID rs1 + (sw2sw offs :word64)))
+                :word16) :word64)
+      ⦈
+  ⦈
+lb_hypotheses=(rd :word5) ≠ (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+lb_statement=dfn'LB ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (sw2sw
+             (s.MEM8
+                (if rs1 = (0w :word5) then (sw2sw offs :word64)
+                 else s.c_gpr s.procID rs1 + (sw2sw offs :word64))) :word64)
+      ⦈
+  ⦈
+lwu_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+aligned (2 :num)
+  (if (rs1 :word5) = (0w :word5) then (sw2sw (offs :word12) :word64)
+   else (s :riscv_state).c_gpr s.procID rs1 + (sw2sw offs :word64))
+lwu_statement=dfn'LWU ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (w2w
+             ((s.MEM8
+                 (if rs1 = (0w :word5) then
+                    (sw2sw offs :word64) + (3w :word64)
+                  else
+                    (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (3w
+                       :word64))) @@
+               ((s.MEM8
+                   (if rs1 = (0w :word5) then
+                      (sw2sw offs :word64) + (2w :word64)
+                    else
+                      (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (2w
+                         :word64))) @@
+                 ((s.MEM8
+                     (if rs1 = (0w :word5) then
+                        (sw2sw offs :word64) + (1w :word64)
+                      else
+                        (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (1w
+                           :word64))) @@
+                   s.MEM8
+                     (if rs1 = (0w :word5) then (sw2sw offs :word64)
+                      else s.c_gpr s.procID rs1 + (sw2sw offs :word64)))
+                    :word16))
+                  :word24))
+                :word32) :word64)
+      ⦈
+  ⦈
+lhu_hypotheses=(rd :word5) ≠ (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+aligned (1 :num)
+  (if (rs1 :word5) = (0w :word5) then (sw2sw (offs :word12) :word64)
+   else (s :riscv_state).c_gpr s.procID rs1 + (sw2sw offs :word64))
+lhu_statement=dfn'LHU ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (w2w
+             ((s.MEM8
+                 (if rs1 = (0w :word5) then
+                    (sw2sw offs :word64) + (1w :word64)
+                  else
+                    (s.c_gpr s.procID rs1 + (sw2sw offs :word64) + (1w
+                       :word64))) @@
+               s.MEM8
+                 (if rs1 = (0w :word5) then (sw2sw offs :word64)
+                  else s.c_gpr s.procID rs1 + (sw2sw offs :word64)))
+                :word16) :word64)
+      ⦈
+  ⦈
+ld_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+aligned (3 :num)
+  (if (rs1 :word5) = (0w :word5) then (sw2sw (offs :word12) :word64)
+   else (s :riscv_state).c_gpr s.procID rs1 + (sw2sw offs :word64))
+ld_nop_statement=dfn'LD ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) = s
+lw_nop_hypotheses=(rd :word5) = (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+lw_nop_statement=dfn'LW ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) = s
+lh_nop_hypotheses=(rd :word5) = (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+lh_nop_statement=dfn'LH ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) = s
+lb_nop_hypotheses=(rd :word5) = (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+lb_nop_statement=dfn'LB ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) = s
+lwu_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+lwu_nop_statement=dfn'LWU ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) = s
+lhu_nop_hypotheses=(rd :word5) = (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+lhu_nop_statement=dfn'LHU ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) = s
+lbu_hypotheses=(rd :word5) ≠ (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+lbu_statement=dfn'LBU ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (w2w
+             (s.MEM8
+                (if rs1 = (0w :word5) then (sw2sw offs :word64)
+                 else s.c_gpr s.procID rs1 + (sw2sw offs :word64))) :word64)
+      ⦈
+  ⦈
+lbu_nop_hypotheses=(rd :word5) = (0w :word5)
+((s :riscv_state).c_MCSR s.procID).mstatus.VM = (0w :word5)
+lbu_nop_statement=dfn'LBU ((rd :word5),(rs1 :word5),(offs :word12)) (s :riscv_state) = s
+source=HOL riscv_stepScript.sml:902-908 load = class_rd0 (rd,rs1,offs) over dfn'LD/LW/LH/LB/LWU/LHU/LBU_def; per-theorem Thm.hyp captured above, plus the rd = 0w companions

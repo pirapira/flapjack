@@ -296,6 +296,8 @@ elab "#emit_hol_ref_export" : command => do
               toJson ref.fmapAsFiniteSupportHeterogeneousFunction)]
         if let some width := ref.wordDimensionAsWidth then
           qualifiers := qualifiers ++ [("word_dimension_as_width", toJson width)]
+        if !ref.wordDimensionsAsWidths.isEmpty then
+          qualifiers := qualifiers ++ [("word_dimensions_as_widths", toJson ref.wordDimensionsAsWidths)]
         if ref.realsAsRationalCuts then
           qualifiers := qualifiers ++ [("reals_as_rational_cuts", toJson true)]
         let mut fields : List (String × Json) := [

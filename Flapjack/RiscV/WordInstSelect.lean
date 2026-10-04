@@ -205,10 +205,10 @@ def wordInstOpConstants [OfNat α 0] [WordInstSelectConstants α]
 
 def wordInstPullExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [WordInstSelectConstants α] : WordExp α → WordExp α
-  | .op operator [] => wordInstOpConstants operator
-  | .op _ [expression] => wordInstPullExp expression
   | .op .sub expressions =>
       wordInstConvertSub (expressions.map wordInstPullExp)
+  | .op operator [] => wordInstOpConstants operator
+  | .op _ [expression] => wordInstPullExp expression
   | .op operator expressions =>
       let expressions := expressions.map wordInstPullExp
       let normalized := wordInstConstantsToEnd operator

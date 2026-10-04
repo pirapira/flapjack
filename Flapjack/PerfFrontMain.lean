@@ -847,7 +847,7 @@ def main : IO Unit := do
                   (functions.length + bitmaps.length)
                 let initialLabel := fullSsaInitialLabLabel functions
                 let ti4 ← stage "image:initialLabel" ti3 initialLabel
-                match RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVCakeChecked
+                match RiscV.compileStackProgramNatListToRiscVSectionsCakeChecked
                     (width := 64) { services := services } perfRemoveConfig
                     { gcStubLocation := stackGcStubLocation, returnLabel := 0,
                       firstFreshLabel := stackFunctionFirstLabel }
@@ -855,10 +855,9 @@ def main : IO Unit := do
                     0 initialLabel
                     (functions.map (fun (label, _, body) => (label, body))) with
                 | .error _ => IO.println "PERF image:lab FAILED"
-                | .ok sections =>
+                | .ok encoded =>
                     let ti5 ← stage "image:labToRiscV" ti4
-                      (sections.foldl (fun acc (_, _, code) => acc + code.length) 0)
-                    let encoded := RiscV.encodeLinkedSections sections
+                      (encoded.foldl (fun acc entry => acc + entry.bytes.length) 0)
                     let ti6 ← stage "image:encode" ti5 encoded.length
                     let image : SourceRiscVRuntimeImage 64 :=
                       { crepe := crepe, bitmaps := bitmaps, sections := encoded,

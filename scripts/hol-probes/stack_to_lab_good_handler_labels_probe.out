@@ -1,0 +1,36 @@
+nonzero_get_labels_MAP_prog_to_section_SUBSET_code_labels_statement=∀p. EVERY sec_labels_ok (MAP prog_to_section p) ∧ stack_good_handler_labels p ⇒ restrict_nonzero (get_labels (MAP prog_to_section p)) ⊆ get_code_labels (MAP prog_to_section p)
+nonzero_get_labels_MAP_prog_to_section_SUBSET_code_labels_statement_typed=∀(p :(num # α prog) list). EVERY (sec_labels_ok :α sec -> bool) (MAP (prog_to_section :num # α prog -> α sec) p) ∧ stack_good_handler_labels p ⇒ restrict_nonzero (get_labels (MAP (prog_to_section :num # α prog -> α sec) p)) ⊆ (get_code_labels (MAP (prog_to_section :num # α prog -> α sec) p) :num # num -> bool)
+nonzero_get_labels_MAP_prog_to_section_SUBSET_code_labels_statement_types=(p :(num # α prog) list)::(num # α prog) list;
+stack_names_stack_good_handler_labels_statement=∀prog f. stack_good_handler_labels prog ⇒ stack_good_handler_labels (compile f prog)
+stack_names_stack_good_handler_labels_statement_typed=∀(prog :(num # α prog) list) (f :num sptree$num_map). stack_good_handler_labels prog ⇒ stack_good_handler_labels (compile f prog :(num # α prog) list)
+stack_names_stack_good_handler_labels_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(f :num sptree$num_map)::num sptree$num_map;
+restrict_nonzero_union_statement=restrict_nonzero (A ∪ B) = restrict_nonzero A ∪ restrict_nonzero B
+restrict_nonzero_union_statement_typed=restrict_nonzero ((A :num # num -> bool) ∪ (B :num # num -> bool)) = restrict_nonzero A ∪ restrict_nonzero B
+restrict_nonzero_union_statement_types=(B :num # num -> bool)::num # num -> bool;(A :num # num -> bool)::num # num -> bool;
+restrict_nonzero_IN_statement=x ∈ restrict_nonzero s ⇔ x ∈ s ∧ SND x ≠ 0
+restrict_nonzero_IN_statement_typed=(x :num # num) ∈ restrict_nonzero (s :num # num -> bool) ⇔ x ∈ s ∧ SND x ≠ (0 :num)
+restrict_nonzero_IN_statement_types=(s :num # num -> bool)::num # num -> bool;(x :num # num)::num # num;
+stack_good_handler_labels_append_statement=stack_good_handler_labels xs ∧ stack_good_handler_labels ys ⇒ stack_good_handler_labels (xs ++ ys)
+stack_good_handler_labels_append_statement_typed=stack_good_handler_labels (xs :(num # α prog) list) ∧ stack_good_handler_labels (ys :(num # α prog) list) ⇒ stack_good_handler_labels (xs ++ ys)
+stack_good_handler_labels_append_statement_types=(ys :(num # α prog) list)::(num # α prog) list;(xs :(num # α prog) list)::(num # α prog) list;
+stack_remove_stack_good_handler_labels_incr_statement=∀prog. stack_good_handler_labels prog ⇒ stack_good_handler_labels (MAP (prog_comp jump offset sp) prog)
+stack_remove_stack_good_handler_labels_incr_statement_typed=∀(prog :(num # α prog) list). stack_good_handler_labels prog ⇒ stack_good_handler_labels (MAP (prog_comp (jump :bool) (offset :α word # α word) (sp :num) :num # α prog -> num # α prog) prog)
+stack_remove_stack_good_handler_labels_incr_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(sp :num)::num;(offset :α word # α word)::α word # α word;(jump :bool)::bool;
+stack_remove_stack_good_handler_labels_statement=∀prog. stack_good_handler_labels prog ⇒ stack_good_handler_labels (compile jump off ggc mh sp loc prog)
+stack_remove_stack_good_handler_labels_statement_typed=∀(prog :(num # α prog) list). stack_good_handler_labels prog ⇒ stack_good_handler_labels (compile (jump :bool) (off :α word # α word) (ggc :bool) (mh :num) (sp :num) (loc :num) prog :(num # α prog) list)
+stack_remove_stack_good_handler_labels_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(loc :num)::num;(sp :num)::num;(mh :num)::num;(ggc :bool)::bool;(off :α word # α word)::α word # α word;(jump :bool)::bool;
+stack_alloc_stack_good_handler_labels_incr_statement=∀prog. stack_good_handler_labels prog ⇒ stack_good_handler_labels (MAP prog_comp prog)
+stack_alloc_stack_good_handler_labels_incr_statement_typed=∀(prog :(num # α prog) list). stack_good_handler_labels prog ⇒ stack_good_handler_labels (MAP (prog_comp :num # α prog -> num # α prog) prog)
+stack_alloc_stack_good_handler_labels_incr_statement_types=(prog :(num # α prog) list)::(num # α prog) list;
+stack_alloc_stack_good_handler_labels_statement=∀prog c. stack_good_handler_labels prog ⇒ stack_good_handler_labels (compile c prog)
+stack_alloc_stack_good_handler_labels_statement_typed=∀(prog :(num # α prog) list) (c :data_to_word$config). stack_good_handler_labels prog ⇒ stack_good_handler_labels (compile c prog :(num # α prog) list)
+stack_alloc_stack_good_handler_labels_statement_types=(prog :(num # α prog) list)::(num # α prog) list;(c :data_to_word$config)::data_to_word$config;
+stack_rawcall_stack_good_handler_labels_statement=stack_good_handler_labels prog ⇒ stack_good_handler_labels (compile prog)
+stack_rawcall_stack_good_handler_labels_statement_typed=stack_good_handler_labels (prog :(num # α prog) list) ⇒ stack_good_handler_labels (compile prog :(num # α prog) list)
+stack_rawcall_stack_good_handler_labels_statement_types=(prog :(num # α prog) list)::(num # α prog) list;
+stack_to_lab_stack_good_handler_labels_statement=compile stack_conf data_conf max_heap sp offset prog = prog' ∧ stack_good_handler_labels prog ∧ EVERY sec_labels_ok prog' ⇒ restrict_nonzero (get_labels prog') ⊆ get_code_labels prog'
+stack_to_lab_stack_good_handler_labels_statement_typed=(compile (stack_conf :stack_to_lab$config) (data_conf :data_to_word$config) (max_heap :num) (sp :num) (offset :α word # α word) (prog :(num # α prog) list) :α sec list) = (prog' :α sec list) ∧ stack_good_handler_labels prog ∧ EVERY (sec_labels_ok :α sec -> bool) prog' ⇒ restrict_nonzero (get_labels prog') ⊆ (get_code_labels prog' :num # num -> bool)
+stack_to_lab_stack_good_handler_labels_statement_types=(prog' :α sec list)::α sec list;(prog :(num # α prog) list)::(num # α prog) list;(offset :α word # α word)::α word # α word;(sp :num)::num;(max_heap :num)::num;(data_conf :data_to_word$config)::data_to_word$config;(stack_conf :stack_to_lab$config)::stack_to_lab$config;
+stack_to_lab_stack_good_handler_labels_incr_statement=compile_no_stubs f jump offset sp prog = prog' ∧ stack_good_handler_labels prog ∧ EVERY sec_labels_ok prog' ⇒ restrict_nonzero (get_labels prog') ⊆ get_code_labels prog'
+stack_to_lab_stack_good_handler_labels_incr_statement_typed=compile_no_stubs (f :num sptree$num_map) (jump :bool) (offset :α word # α word) (sp :num) (prog :(num # α prog) list) = (prog' :α sec list) ∧ stack_good_handler_labels prog ∧ EVERY (sec_labels_ok :α sec -> bool) prog' ⇒ restrict_nonzero (get_labels prog') ⊆ (get_code_labels prog' :num # num -> bool)
+stack_to_lab_stack_good_handler_labels_incr_statement_types=(prog' :α sec list)::α sec list;(prog :(num # α prog) list)::(num # α prog) list;(sp :num)::num;(offset :α word # α word)::α word # α word;(jump :bool)::bool;(f :num sptree$num_map)::num sptree$num_map;

@@ -1,0 +1,7 @@
+pull_sub_empty=Op Sub []
+pull_sub_unary_var=Op Sub [Var 2]
+pull_sub_unary_const=Op Sub [Const 5w]
+norm_sub_empty=Op Sub []
+norm_sub_unary_var=Op Sub [Var 2]
+pull_sub_binary_const=Op Add [Const 0xFFFFFFFFFFFFFFF8w; Var 7]
+norm_sub_binary_const=Op Add [Var 7; Const 0xFFFFFFFFFFFFFFF8w]

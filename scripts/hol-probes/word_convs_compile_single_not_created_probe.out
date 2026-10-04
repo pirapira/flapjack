@@ -1,0 +1,3 @@
+compile_single_not_created_subprogs_statement=not_created_subprogs P (SND (SND (FST prog_opt))) ⇒ not_created_subprogs P (SND (SND (compile_single two_reg_arith reg_count alg c prog_opt)))
+compile_single_not_created_subprogs_hypotheses=0
+compile_single_not_created_subprogs_typed=not_created_subprogs (P :α prog -> bool) (SND (SND (FST (prog_opt :(num # num # α prog) # num sptree$num_map option)))) ⇒ not_created_subprogs P (SND (SND (compile_single (two_reg_arith :bool) (reg_count :num) (alg :num) (c :α asm_config) prog_opt)))

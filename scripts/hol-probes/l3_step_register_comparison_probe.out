@@ -1,0 +1,20 @@
+slt_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+slt_statement=dfn'SLT ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s with c_gpr := s.c_gpr⦇s.procID ↦ (s.c_gpr s.procID)⦇rd ↦ (v2w [(if rs1 = (0w :word5) then (0w :word64) else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then (sw2sw (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :word64) else s.c_gpr s.procID rs1) < if rs2 = (0w :word5) then (0w :word64) else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then (sw2sw (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32) :word64) else s.c_gpr s.procID rs2] :word64)⦈⦈
+slt_gen=∀(s :riscv_state) (rs2 :word5) (rs1 :word5) (rd :word5). rd ≠ (0w :word5) ⇒ (s.c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2) ⇒ dfn'SLT (rd,rs1,rs2) s = s with c_gpr := s.c_gpr⦇s.procID ↦ (s.c_gpr s.procID)⦇rd ↦ (v2w [(if rs1 = (0w :word5) then (0w :word64) else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then (sw2sw (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :word64) else s.c_gpr s.procID rs1) < if rs2 = (0w :word5) then (0w :word64) else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then (sw2sw (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32) :word64) else s.c_gpr s.procID rs2] :word64)⦈⦈
+slt_hypothesis_count=2
+sltu_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+sltu_statement=dfn'SLTU ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s with c_gpr := s.c_gpr⦇s.procID ↦ (s.c_gpr s.procID)⦇rd ↦ (v2w [(if rs1 = (0w :word5) then (0w :word64) else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then (w2w (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :word64) else s.c_gpr s.procID rs1) <₊ if rs2 = (0w :word5) then (0w :word64) else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then (w2w (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32) :word64) else s.c_gpr s.procID rs2] :word64)⦈⦈
+sltu_gen=∀(s :riscv_state) (rs2 :word5) (rs1 :word5) (rd :word5). rd ≠ (0w :word5) ⇒ (s.c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2) ⇒ dfn'SLTU (rd,rs1,rs2) s = s with c_gpr := s.c_gpr⦇s.procID ↦ (s.c_gpr s.procID)⦇rd ↦ (v2w [(if rs1 = (0w :word5) then (0w :word64) else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then (w2w (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :word64) else s.c_gpr s.procID rs1) <₊ if rs2 = (0w :word5) then (0w :word64) else if (s.c_MCSR s.procID).mcpuid.ArchBase = (0w :word2) then (w2w (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32) :word64) else s.c_gpr s.procID rs2] :word64)⦈⦈
+sltu_hypothesis_count=2
+slt_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+slt_nop_statement=dfn'SLT ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+slt_nop_gen=∀(s :riscv_state) (rs2 :word5) (rs1 :word5) (rd :word5). rd = (0w :word5) ⇒ (s.c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2) ⇒ dfn'SLT (rd,rs1,rs2) s = s
+slt_nop_hypothesis_count=2
+sltu_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+sltu_nop_statement=dfn'SLTU ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+sltu_nop_gen=∀(s :riscv_state) (rs2 :word5) (rs1 :word5) (rd :word5). rd = (0w :word5) ⇒ (s.c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2) ⇒ dfn'SLTU (rd,rs1,rs2) s = s
+sltu_nop_hypothesis_count=2

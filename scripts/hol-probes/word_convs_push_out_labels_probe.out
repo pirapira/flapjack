@@ -1,0 +1,6 @@
+pushOutLabelsHelper_typed=∀(Z :α list) (Y :α list) (X :α list). labels_rel (Y ++ X) Z ⇒ labels_rel (X ++ Y) Z
+pushOutLabelsHelper_proved=T
+pushOutLabelsHelper_hypotheses=0
+pushOutLabels_typed=∀(p :α prog). labels_rel (extract_labels p) (extract_labels (push_out_if p))
+pushOutLabels_proved=T
+pushOutLabels_hypotheses=0

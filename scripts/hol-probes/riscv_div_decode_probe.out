@@ -1,0 +1,6 @@
+div_decode_zero=T
+div_decode_all_ones=T
+div_decode_mixed=T
+div_encode_source_clause=Encode (MulDiv ($DIV (rdv,rs1v,rs2v))) = Rtype (opc 12w,4w,rdv,rs1v,rs2v,1w)
+div_encode_source_hypotheses=0
+div_carrier_types=rs2v : :word5, rs1v : :word5, rdv : :word5

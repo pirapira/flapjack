@@ -1,0 +1,27 @@
+word_to_stack_compile_FST_replay_statement=word_to_stack_compile mc.target.config F wprog = (bitmaps,c'',fs,p) ⇒ MAP FST p = raise_stub_location::store_consts_stub_location::MAP FST wprog
+word_to_stack_compile_FST_replay_hypotheses=0
+word_to_stack_compile_FST_replay_typed=word_to_stack_compile (mc :(α, β, γ) machine_config).target.config F (wprog :(num # num # α wordLang$prog) list) = ((bitmaps :α word list),(c'' :word_to_stack$config),(fs :num list),(p :(num # α stack_rawcallProof$prog) list)) ⇒ MAP (FST :num # α stack_rawcallProof$prog -> num) p = raise_stub_location::store_consts_stub_location::MAP (FST :num # num # α wordLang$prog -> num) wprog
+good_dimindex_0w_8w_replay_statement=good_dimindex (:α) ⇒ 0w ≤ 8w ∧ -8w ≤ 0w
+good_dimindex_0w_8w_replay_hypotheses=0
+good_dimindex_0w_8w_replay_typed=good_dimindex (:α) ⇒ (0w :α word) ≤ (8w :α word) ∧ -(8w :α word) ≤ (0w :α word)
+FLOOKUP_MAP_KEYS_LINV_replay_statement=f PERMUTES 𝕌(:α) ⇒ FLOOKUP (MAP_KEYS (LINV f 𝕌(:α)) m) i = FLOOKUP m (f i)
+FLOOKUP_MAP_KEYS_LINV_replay_hypotheses=0
+FLOOKUP_MAP_KEYS_LINV_replay_typed=(f :α -> α) PERMUTES 𝕌(:α) ⇒ FLOOKUP (MAP_KEYS (LINV f 𝕌(:α)) (m :α |-> β)) (i :α) = FLOOKUP m (f i)
+full_make_init_be_replay_statement=(FST (full_make_init a b c d e f g h i j k)).be ⇔ h.be
+full_make_init_be_replay_hypotheses=0
+full_make_init_be_replay_typed=(FST (full_make_init (a :stack_to_lab$config) (b :data_to_word$config) (c :num) (d :num) (e :α word # α word) (f :α word list) (g :(num # α stack_rawcallProof$prog) list) (h :(α, β, γ) labSem$state) (i :num -> bool) (j :num) (k :num -> β # (num # α stack_rawcallProof$prog) list # α word list))).be ⇔ h.be
+n2w_sub_alt_replay_statement=∀a b. b ≤ a ⇒ n2w (a − b) = n2w a + -1w * n2w b
+n2w_sub_alt_replay_hypotheses=0
+n2w_sub_alt_replay_typed=∀(a :num) (b :num). b ≤ a ⇒ (n2w (a − b) :α word) = (n2w a :α word) + -(1w :α word) * (n2w b :α word)
+aligned_n2w_IMP_replay_statement=aligned k (n2w n) ∧ n < dimword (:α) ⇒ divides (2 ** k) n
+aligned_n2w_IMP_replay_hypotheses=0
+aligned_n2w_IMP_replay_typed=aligned (k :num) (n2w (n :num) :α word) ∧ n < dimword (:α) ⇒ divides ((2 :num) ** k) n
+word_list_exists_addresses_replay_statement=word_list_exists a n (fun2set (d,addresses a m)) ∧ good_dimindex (:α) ∧ m < dimword (:α) DIV w2n bytes_in_word ⇒ n = m
+word_list_exists_addresses_replay_hypotheses=0
+word_list_exists_addresses_replay_typed=word_list_exists (a :α word) (n :num) (fun2set ((d :α word -> β),addresses a (m :num))) ∧ good_dimindex (:α) ∧ m < dimword (:α) DIV w2n (bytes_in_word :α word) ⇒ n = m
+good_dimindex_div_mul_replay_statement=good_dimindex (:α) ⇒ a * dimindex (:α) DIV 8 = a * (dimindex (:α) DIV 8)
+good_dimindex_div_mul_replay_hypotheses=0
+good_dimindex_div_mul_replay_typed=good_dimindex (:α) ⇒ (a :num) * dimindex (:α) DIV (8 :num) = a * (dimindex (:α) DIV (8 :num))
+InitGlobals_location_eq_first_name_replay_statement=InitGlobals_location = first_name
+InitGlobals_location_eq_first_name_replay_hypotheses=0
+InitGlobals_location_eq_first_name_replay_typed=InitGlobals_location = first_name

@@ -13,7 +13,8 @@ theorem updatePC_some (v : BitVec 64) (s : riscv_state) :
     update_pc v s = some («write'PC» v s) := rfl
 
 /-- Flapjack full-record regression derived from both source definitions, without
-core bounds, successful-run premises or narrowed state. No separate HOL theorem. -/
+core bounds, successful-run premises or narrowed state. -/
+@[hol "HOL/examples/l3-machine-code/riscv/step/riscv_stepScript.sml" "update_pc"]
 theorem updatePC_fullRecord (v : BitVec 64) (s : riscv_state) :
     update_pc v s = some { s with c_PC := holUpdate s.procID v s.c_PC } := rfl
 

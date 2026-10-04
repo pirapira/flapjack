@@ -1,0 +1,3 @@
+code_rel_def_statement=∀stc ttc. code_rel stc ttc ⇔ ∀n v. lookup n stc = SOME v ⇒ ∃col t k a c. lookup n ttc = SOME (SND (compile_single t k a c ((n,v),col)))
+code_rel_def_hypotheses=0
+code_rel_def_typed=∀(stc :(num # α prog) sptree$num_map) (ttc :(num # α prog) sptree$num_map). (code_rel stc ttc :bool) ⇔ ∀(n :num) (v :num # α prog). (lookup n stc :(num # α prog) option) = SOME v ⇒ ∃(col :num sptree$num_map option) (t :bool) (k :num) (a :num) (c :α asm_config). (lookup n ttc :(num # α prog) option) = SOME (SND (compile_single t k a c ((n,v),col)))

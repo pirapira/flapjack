@@ -642,6 +642,24 @@ entire equation and its operator associativity, and record the comparison in
 the manifest. The qualifier permits no changed hypotheses or behavior and does
 not itself prove cross-language equivalence.
 
+**Qualify two independent word-free dimensions.** Use
+`(word_dimensions_as_widths := [t, w])` for a dimension-only real definition
+such as original binary_ieee `largest_def` or `threshold_def`. The declaration
+must bind exactly two distinct explicit `(t : Nat)` / `(w : Nat)` parameters,
+each with its own `[NeZero ...]`, and return Mathlib `ℝ`/`Real` without
+word-valued arguments, extra binders, or positivity premises. Keep HOL's two
+independent dimensions and compare the entire formula: dimindex is the named
+width, dimword is `2 ^ width`, and all UINT_MAX/INT_MAX uses retain the original
+dimension. The qualifier permits no fixed-width specialization, real-domain
+restriction, changed equation, or cross-language equivalence claim. It is
+mutually exclusive with all other representation qualifiers except the
+separately reviewed `reals_as_rational_cuts` family marker. Use manifest status
+`reviewed_word_dimensions_as_widths`, the identical ordered pair and a local
+source-comparison note naming both dimensions. The singular
+`word_dimension_as_width` route remains separate and unchanged. Parser,
+source/manifest checkers and native attribute export validate this scope and
+agreement; none independently proves HOL-to-Lean correspondence.
+
 **Qualify the reviewed binary64 real rendering.** Use
 `(reals_as_rational_cuts)` on a tagged declaration whose own source uses a
 declaration of the reviewed HOL-standard-library IEEE renderings

@@ -1,0 +1,207 @@
+mk_Branch_type=:call_tree -> call_tree -> call_tree
+mk_Branch_def_typed=∀(t1 :call_tree) (t2 :call_tree).
+  mk_Branch t1 t2 =
+  if t1 = t2 then t1
+  else if t1 = Leaf then t2
+  else if t2 = Leaf then t1
+  else if t1 = Unknown then t1
+  else if t2 = Unknown then t2
+  else Branch t1 t2
+call_graph_type=:(num # α prog) sptree$num_map ->
+num -> num list -> num -> α prog -> call_tree
+call_graph_def_typed=(∀(total :num) (p2 :α prog) (p1 :α prog) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns total (Seq p1 p2) =
+   mk_Branch (call_graph funs n ns total p1) (call_graph funs n ns total p2)) ∧
+(∀(v2 :α reg_imm) (v1 :num) (v0 :cmp) (total :num) (p2 :α prog) (p1 :α prog)
+     (ns :num list) (n :num) (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns total (If v0 v1 v2 p1 p2 :α prog) =
+   mk_Branch (call_graph funs n ns total p1) (call_graph funs n ns total p2)) ∧
+(∀(total :num)
+     (ret :(num list # (sptree$num_set # sptree$num_set) # α prog # num # num)
+           option) (ns :num list) (n :num)
+     (handler :(num # α prog # num # num) option)
+     (funs :(num # α prog) sptree$num_map) (dest :num option)
+     (args :num list).
+   call_graph funs n ns total (Call ret dest args handler :α prog) =
+   case dest of
+     (NONE :num option) => Unknown
+   | SOME d =>
+     if
+       MEM d ns ∧
+       ret =
+       (NONE :(num list #
+               (sptree$num_set # sptree$num_set) # α prog # num # num) option)
+     then
+       Leaf
+     else
+       case lookup d funs of
+         (NONE :(num # α prog) option) => Unknown
+       | SOME (a,body) =>
+         case ret of
+           (NONE :(num list #
+                   (sptree$num_set # sptree$num_set) # α prog # num # num)
+                  option) =>
+             if LENGTH ns < total then
+               mk_Branch (Call d Leaf :call_tree)
+                 (call_graph funs d (d::ns) total body)
+             else Leaf
+         | SOME (v6,v8,v10,v11) =>
+           (let
+              (new_funs :(num # α prog) sptree$num_map) = delete d funs
+            in
+              case handler of
+                (NONE :(num # α prog # num # num) option) =>
+                  Branch (Call n (Call d Leaf :call_tree) :call_tree)
+                    (mk_Branch
+                       (Call n (call_graph new_funs d [d] total body) :
+                        call_tree) (call_graph funs n ns total v10))
+              | SOME (v1,v3,v4) =>
+                Branch
+                  (Call n
+                     (Const (3 :num) (Call d Leaf :call_tree) :call_tree) :
+                   call_tree)
+                  (mk_Branch
+                     (Call n
+                        (Const (3 :num)
+                           (call_graph new_funs d [d] total body) :call_tree) :
+                      call_tree)
+                     (mk_Branch (call_graph funs n ns total v3)
+                        (call_graph funs n ns total v10))))) ∧
+(∀(total :num) (p :α prog) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns total (MustTerminate p) =
+   call_graph funs n ns total p) ∧
+(∀(v4 :sptree$num_set # sptree$num_set) (v3 :num) (total :num) (ns :num list)
+     (n :num) (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns total (Alloc v3 v4 :α prog) =
+   (Call n Leaf :call_tree)) ∧
+(∀(v9 :sptree$num_set # sptree$num_set) (v8 :num) (v7 :num) (v6 :num)
+     (v5 :num) (total :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns total (Install v5 v6 v7 v8 v9 :α prog) = Unknown) ∧
+(∀(v11 :sptree$num_set) (v10 :sptree$num_set) (total :num) (ns :num list)
+     (n :num) (funs :(num # α prog) sptree$num_map) (body :α prog).
+   call_graph funs n ns total (Loop v10 body v11 :α prog) =
+   call_graph funs n ns total body) ∧
+(∀(v12 :num) (ns :num list) (n :num) (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Skip :α prog) = Leaf) ∧
+(∀(v23 :(num # num) list) (v22 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Move v22 v23 :α prog) = Leaf) ∧
+(∀(v24 :α inst) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Inst v24 :α prog) = Leaf) ∧
+(∀(v26 :α exp) (v25 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Assign v25 v26) = Leaf) ∧
+(∀(v28 :store_name) (v27 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Get v27 v28 :α prog) = Leaf) ∧
+(∀(v30 :α exp) (v29 :store_name) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Set v29 v30 :α prog) = Leaf) ∧
+(∀(v32 :num) (v31 :α exp) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Store v31 v32 :α prog) = Leaf) ∧
+(∀(v54 :(bool # α word) list) (v53 :num) (v52 :num) (v51 :num) (v50 :num)
+     (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (StoreConsts v50 v51 v52 v53 v54 :α prog) = Leaf) ∧
+(∀(v55 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Raise v55 :α prog) = Leaf) ∧
+(∀(v57 :num list) (v56 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Return v56 v57 :α prog) = Leaf) ∧
+(∀(v58 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Break v58 :α prog) = Leaf) ∧
+(∀(v59 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Continue v59 :α prog) = Leaf) ∧
+(∀(v12 :num) (ns :num list) (n :num) (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (Tick :α prog) = Leaf) ∧
+(∀(v62 :num) (v61 :num) (v60 :binop) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (OpCurrHeap v60 v61 v62 :α prog) = Leaf) ∧
+(∀(v64 :num) (v63 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (LocValue v63 v64 :α prog) = Leaf) ∧
+(∀(v71 :num) (v70 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (CodeBufferWrite v70 v71 :α prog) = Leaf) ∧
+(∀(v73 :num) (v72 :num) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (DataBufferWrite v72 v73 :α prog) = Leaf) ∧
+(∀(v79 :sptree$num_set # sptree$num_set) (v78 :num) (v77 :num) (v76 :num)
+     (v75 :num) (v74 :mlstring) (v12 :num) (ns :num list) (n :num)
+     (funs :(num # α prog) sptree$num_map).
+   call_graph funs n ns v12 (FFI v74 v75 v76 v77 v78 v79 :α prog) = Leaf) ∧
+∀(v82 :α exp) (v81 :num) (v80 :memop) (v12 :num) (ns :num list) (n :num)
+    (funs :(num # α prog) sptree$num_map).
+  call_graph funs n ns v12 (ShareInst v80 v81 v82) = Leaf
+full_call_graph_type=:num -> (num # α prog) sptree$num_map -> call_tree
+full_call_graph_def_typed=∀(n :num) (funs :(num # α prog) sptree$num_map).
+  full_call_graph n funs =
+  case lookup n funs of
+    (NONE :(num # α prog) option) => Unknown
+  | SOME (a,prog) =>
+    Branch (Call n Leaf :call_tree) (call_graph funs n [n] (size funs) prog)
+max_depth_graphs_type=:num sptree$num_map ->
+num list ->
+num list ->
+(num # α prog) sptree$num_map -> (β # α prog) sptree$num_map -> num option
+max_depth_graphs_def_typed=(∀(ss :num sptree$num_map) (all :num list)
+     (funs :(num # α prog) sptree$num_map)
+     (all_funs :(β # α prog) sptree$num_map).
+   max_depth_graphs ss ([] :num list) all funs all_funs = SOME (0 :num)) ∧
+∀(ss :num sptree$num_map) (n :num) (ns :num list) (all :num list)
+    (funs :(num # α prog) sptree$num_map)
+    (all_funs :(β # α prog) sptree$num_map).
+  max_depth_graphs ss (n::ns) all funs all_funs =
+  case lookup n all_funs of
+    (NONE :(β # α prog) option) => (NONE :num option)
+  | SOME (a,body) =>
+    OPTION_MAP2 MAX (lookup n ss)
+      (OPTION_MAP2 MAX
+         (max_depth ss (call_graph funs n all (size all_funs) body))
+         (max_depth_graphs ss ns all funs all_funs))
+mb_identity=Leaf
+mb_leaf_left=(Const (1 :num) Leaf :call_tree)
+mb_leaf_right=(Const (1 :num) Leaf :call_tree)
+mb_unknown_left=Unknown
+mb_unknown_right=Unknown
+mb_branch=Branch (Const (1 :num) Leaf :call_tree) (Const (2 :num) Leaf :call_tree)
+cg_default=Leaf
+cg_seq=Leaf
+cg_alloc=(Call (5 :num) Leaf :call_tree)
+cg_install=Unknown
+cg_call_dest_none=Unknown
+cg_call_lookup_miss=Unknown
+cg_call_tail_hit=(Call (2 :num) Leaf :call_tree)
+cg_call_shortcircuit=Leaf
+cg_call_guard=Leaf
+fcg_miss=Unknown
+fcg_hit=Branch (Call (2 :num) Leaf :call_tree) Leaf
+mdg_empty=SOME (0 :num)
+mdg_frame_hit=SOME (5 :num)
+mdg_frame_miss=(NONE :num option)
+mdg_code_miss=(NONE :num option)
+cg_if=(Call (3 :num) Leaf :call_tree)
+cg_must_terminate=(Call (3 :num) Leaf :call_tree)
+cg_loop=(Call (3 :num) Leaf :call_tree)
+cg_return=Branch (Call (1 :num) (Call (2 :num) Leaf :call_tree) :call_tree)
+  (Call (1 :num) Leaf :call_tree)
+cg_handler=Branch
+  (Call (1 :num)
+     (Const (3 :num) (Call (2 :num) Leaf :call_tree) :call_tree) :call_tree)
+  (Call (1 :num) (Const (3 :num) Leaf :call_tree) :call_tree)
+fcg_tail_self=Branch (Call (1 :num) Leaf :call_tree) Leaf
+fcg_ret_self=Branch (Call (1 :num) Leaf :call_tree)
+  (Branch (Call (1 :num) (Call (1 :num) Leaf :call_tree) :call_tree)
+     (Call (1 :num) Unknown :call_tree))
+fcg_mutual=Branch (Call (1 :num) Leaf :call_tree) (Call (2 :num) Leaf :call_tree)
+mdg_recursive=SOME (4 :num)
+mdg_bool_metadata=SOME (5 :num)
+mdg_list_metadata=SOME (5 :num)

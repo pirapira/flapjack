@@ -1,0 +1,12 @@
+load "preamble";
+load "pan_globalsProofTheory";
+open HolKernel Parse bossLib preamble pan_globalsProofTheory;
+val _ = Globals.linewidth := 1000000;
+val _ = show_types := true;
+val full = GEN_ALL localised_exp_shape_val;
+val _ = if null(hyp full) andalso null(free_vars(concl full)) then () else raise Fail "open theorem";
+val _ = print "localised_exp_shape_val_statement=";
+val _ = print_term(concl full);
+val _ = print "\n";
+val _ = print("localised_exp_shape_val_proved=" ^ term_to_string(rhs(concl(EQT_INTRO full))) ^ "\n");
+val _ = print("localised_exp_shape_val_types=" ^ type_to_string(type_of ``panLang$shape_val``) ^ ";" ^ type_to_string(type_of ``panLang$shape_vals``) ^ "\n");

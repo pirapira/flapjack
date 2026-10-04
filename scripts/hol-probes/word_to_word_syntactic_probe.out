@@ -1,0 +1,39 @@
+cond16bit_inst_select_exp_prime_statement=x = inst_select_exp c t1 t2 exp ⇒ no_share_inst x ∨ c.ISA ≠ Ag32
+cond16bit_inst_select_exp_prime_hypotheses=0
+cond16bit_inst_select_exp_prime_typed=(x :α prog) = inst_select_exp (c :α asm_config) (t1 :num) (t2 :num) (exp :α exp) ⇒ no_share_inst x ∨ c.ISA ≠ Ag32
+cond16bit_inst_select_statement=x = inst_select c n p ∧ (no_share_inst p ∨ c.ISA ≠ Ag32) ⇒ no_share_inst x ∨ c.ISA ≠ Ag32
+cond16bit_inst_select_hypotheses=0
+cond16bit_inst_select_typed=(x :α prog) = inst_select (c :α asm_config) (n :num) (p :α prog) ∧ (no_share_inst p ∨ c.ISA ≠ Ag32) ⇒ no_share_inst x ∨ c.ISA ≠ Ag32
+remove_must_terminate_no_share_inst_statement=no_share_inst p ⇒ no_share_inst (remove_must_terminate p)
+remove_must_terminate_no_share_inst_hypotheses=0
+remove_must_terminate_no_share_inst_typed=no_share_inst (p :α prog) ⇒ no_share_inst (remove_must_terminate p)
+full_compile_single_no_share_inst_statement=no_share_inst (SND (SND (FST prog_info))) ⇒ no_share_inst (SND (SND (full_compile_single two_reg_arith reg_count alg c prog_info)))
+full_compile_single_no_share_inst_hypotheses=0
+full_compile_single_no_share_inst_typed=no_share_inst (SND (SND (FST (prog_info :(num # num # α prog) # num sptree$num_map option)))) ⇒ no_share_inst (SND (SND (full_compile_single (two_reg_arith :bool) (reg_count :num) (alg :num) (c :α asm_config) prog_info)))
+code_rel_not_created_subprogs_statement=find_code op args c1 sz = SOME v ∧ code_rel c1 c2 ∧ not_created_subprogs P (FST (SND v)) ∧ find_code op args c2 sz = SOME v' ⇒ not_created_subprogs P (FST (SND v'))
+code_rel_not_created_subprogs_hypotheses=0
+code_rel_not_created_subprogs_typed=find_code (op :num option) (args :α word_loc list) (c1 :(num # β prog) sptree$num_map) (sz :γ sptree$num_map) = SOME (v :α word_loc list # β prog # γ option) ∧ (code_rel c1 (c2 :(num # β prog) sptree$num_map) :bool) ∧ not_created_subprogs (P :β prog -> bool) (FST (SND v)) ∧ find_code op args c2 sz = SOME (v' :α word_loc list # β prog # γ option) ⇒ not_created_subprogs P (FST (SND v'))
+no_mt_remove_must_terminate_const_statement=no_mt prog ⇒ remove_must_terminate prog = prog
+no_mt_remove_must_terminate_const_hypotheses=0
+no_mt_remove_must_terminate_const_typed=no_mt (prog :α prog) ⇒ remove_must_terminate prog = prog
+no_mt_full_compile_single_statement=no_mt (SND (SND (FST x))) ⇒ full_compile_single tt kk aa c x = compile_single tt kk aa c x
+no_mt_full_compile_single_hypotheses=0
+no_mt_full_compile_single_typed=no_mt (SND (SND (FST (x :(num # num # α prog) # num sptree$num_map option)))) ⇒ full_compile_single (tt :bool) (kk :num) (aa :num) (c :α asm_config) x = compile_single tt kk aa c x
+no_mt_code_full_compile_single_statement=no_mt_code (fromAList progs) ∧ ALL_DISTINCT (MAP FST progs) ∧ LENGTH x = LENGTH progs ⇒ MAP (full_compile_single tt kk aa co) (ZIP (progs,x)) = MAP (compile_single tt kk aa co) (ZIP (progs,x))
+no_mt_code_full_compile_single_hypotheses=0
+no_mt_code_full_compile_single_typed=no_mt_code (fromAList (progs :(num # num # α prog) list)) ∧ ALL_DISTINCT (MAP (FST :num # num # α prog -> num) progs) ∧ LENGTH (x :num sptree$num_map option list) = LENGTH progs ⇒ MAP (full_compile_single (tt :bool) (kk :num) (aa :num) (co :α asm_config)) (ZIP (progs,x)) = MAP (compile_single tt kk aa co) (ZIP (progs,x))
+code_rel_ext_def_statement=∀code l. code_rel_ext code l ⇔ ∀n p_1 p_2. SOME (p_1,p_2) = lookup n code ⇒ ∃t' k' a' c' col. SOME (SND (full_compile_single t' k' a' c' ((n,p_1,p_2),col))) = lookup n l
+code_rel_ext_def_hypotheses=0
+code_rel_ext_def_typed=∀(code :(num # α prog) sptree$num_map) (l :(num # α prog) sptree$num_map). code_rel_ext code l ⇔ ∀(n :num) (p_1 :num) (p_2 :α prog). SOME (p_1,p_2) = (lookup n code :(num # α prog) option) ⇒ ∃(t' :bool) (k' :num) (a' :num) (c' :α asm_config) (col :num sptree$num_map option). SOME (SND (full_compile_single t' k' a' c' ((n,p_1,p_2),col))) = (lookup n l :(num # α prog) option)
+code_rel_ext_word_to_word_statement=∀code c1 col code'. compile c1 c2 code = (col,code') ⇒ code_rel_ext (fromAList code) (fromAList code')
+code_rel_ext_word_to_word_hypotheses=0
+code_rel_ext_word_to_word_typed=∀(code :(num # num # α prog) list) (c1 :config) (col :num sptree$num_map option list) (code' :(num # num # α prog) list). compile c1 (c2 :α asm_config) code = (col,code') ⇒ code_rel_ext (fromAList code) (fromAList code')
+no_mt_code_rel_ext_statement=no_mt_code cd1 ∧ code_rel_ext cd1 cd2 ⇒ code_rel cd1 cd2
+no_mt_code_rel_ext_hypotheses=0
+no_mt_code_rel_ext_typed=no_mt_code (cd1 :(num # α prog) sptree$num_map) ∧ code_rel_ext cd1 (cd2 :(num # α prog) sptree$num_map) ⇒ (code_rel cd1 cd2 :bool)
+code_rel_no_share_inst_statement=find_code op args c1 sz = SOME v ∧ code_rel c1 c2 ∧ no_share_inst (FST (SND v)) ∧ find_code op args c2 sz = SOME v' ⇒ no_share_inst (FST (SND v'))
+code_rel_no_share_inst_hypotheses=0
+code_rel_no_share_inst_typed=find_code (op :num option) (args :α word_loc list) (c1 :(num # β prog) sptree$num_map) (sz :γ sptree$num_map) = SOME (v :α word_loc list # β prog # γ option) ∧ (code_rel c1 (c2 :(num # β prog) sptree$num_map) :bool) ∧ no_share_inst (FST (SND v)) ∧ find_code op args c2 sz = SOME (v' :α word_loc list # β prog # γ option) ⇒ no_share_inst (FST (SND v'))
+no_mt_code_def_statement=∀code. no_mt_code code ⇔ ∀k n p. lookup k code = SOME (n,p) ⇒ no_mt p
+no_mt_code_def_hypotheses=0
+no_mt_code_def_typed=∀(code :(num # α prog) sptree$num_map). no_mt_code code ⇔ ∀(k :num) (n :num) (p :α prog). (lookup k code :(num # α prog) option) = SOME (n,p) ⇒ no_mt p

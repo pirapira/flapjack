@@ -1,0 +1,33 @@
+val _ = loadPath := (Globals.HOLDIR ^ "/examples/l3-machine-code/riscv/step") ::
+  (Globals.HOLDIR ^ "/examples/l3-machine-code/riscv/model") :: !loadPath;
+load "riscv_stepTheory";
+open HolKernel boolLib bossLib riscvTheory riscv_stepTheory;
+val _ = Globals.show_types := true;
+fun stmt label th = (print(label ^ "="); print_term(concl th); print "\n");
+fun hyps label th =
+  (print(label ^ "="); List.app (fn h => (print_term h; print "\n")) (Thm.hyp th));
+val _ = hyps "slliw_hypotheses" SLLIW;
+val _ = stmt "slliw_statement" SLLIW;
+val _ = hyps "srliw_hypotheses" SRLIW;
+val _ = stmt "srliw_statement" SRLIW;
+val _ = hyps "sraiw_hypotheses" SRAIW;
+val _ = stmt "sraiw_statement" SRAIW;
+val _ = hyps "sllw_hypotheses" SLLW;
+val _ = stmt "sllw_statement" SLLW;
+val _ = hyps "srlw_hypotheses" SRLW;
+val _ = stmt "srlw_statement" SRLW;
+val _ = hyps "sraw_hypotheses" SRAW;
+val _ = stmt "sraw_statement" SRAW;
+val _ = hyps "slliw_nop_hypotheses" SLLIW_NOP;
+val _ = stmt "slliw_nop_statement" SLLIW_NOP;
+val _ = hyps "srliw_nop_hypotheses" SRLIW_NOP;
+val _ = stmt "srliw_nop_statement" SRLIW_NOP;
+val _ = hyps "sraiw_nop_hypotheses" SRAIW_NOP;
+val _ = stmt "sraiw_nop_statement" SRAIW_NOP;
+val _ = hyps "sllw_nop_hypotheses" SLLW_NOP;
+val _ = stmt "sllw_nop_statement" SLLW_NOP;
+val _ = hyps "srlw_nop_hypotheses" SRLW_NOP;
+val _ = stmt "srlw_nop_statement" SRLW_NOP;
+val _ = hyps "sraw_nop_hypotheses" SRAW_NOP;
+val _ = stmt "sraw_nop_statement" SRAW_NOP;
+val _ = print "source=HOL riscv_stepScript.sml:847-849 (immediate W shifts) and 870-872 (register W shifts) class evaluator over dfn'SLLIW/SRLIW/SRAIW_def and dfn'SLLW/SRLW/SRAW_def; per-theorem Thm.hyp captured above (each W-shift write theorem carries the RV32-exclusion, invalid-selector and rd <> 0w hypotheses), plus the rd = 0w companions\n";

@@ -14,3 +14,8 @@ val _ = print "from_word_type=";
 val _ = print (type_to_string (type_of ``backend$from_word``));
 val _ = print "\n";
 val _ = emit "from_word_def_typed" (DB.fetch "backend" "from_word_def");
+
+val _ = print ("from_word_0_type=" ^ type_to_string(type_of ``backend$from_word_0``) ^ "\n");
+val zeroDef = GEN_ALL (DB.fetch "backend" "from_word_0_def");
+val _ = if null(hyp zeroDef) andalso null(free_vars(concl zeroDef)) then () else raise Fail "open original from_word_0";
+val _ = print ("from_word_0_def_typed=" ^ term_to_string(concl zeroDef) ^ "\n");

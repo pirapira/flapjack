@@ -1,0 +1,5 @@
+comp_correct_statement=∀v v1 res s' data p' data'. evaluate (v,v1) = (res,s') ∧ flat_exp_conventions v ∧ data_inv data v1 ∧ res ≠ SOME Error ∧ word_cse data v = (data',p') ⇒ evaluate (p',v1) = (res,s') ∧ (res = NONE ⇒ data_inv data' s')
+comp_correct_hypotheses=0
+word_common_subexp_elim_correct_statement=evaluate (p,s) = (res,s1) ∧ flat_exp_conventions p ∧ res ≠ SOME Error ⇒ evaluate (word_common_subexp_elim p,s) = (res,s1)
+word_common_subexp_elim_correct_hypotheses=0
+comp_correct_typed=∀(v :α prog) (v1 :(α, β, γ) state) (res :α result option) (s' :(α, β, γ) state) (data :knowledge) (p' :α prog) (data' :knowledge). evaluate (v,v1) = (res,s') ∧ flat_exp_conventions v ∧ data_inv data v1 ∧ res ≠ SOME (Error :α result) ∧ word_cse data v = (data',p') ⇒ evaluate (p',v1) = (res,s') ∧ (res = (NONE :α result option) ⇒ data_inv data' s')

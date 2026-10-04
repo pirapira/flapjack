@@ -479,7 +479,7 @@ def execute (state : State width) : Instruction width → State width
       writeRegister { state with pc := nextPc state } destination
         (if divisor == 0 then BitVec.allOnes width
         else BitVec.ofInt width
-          ((readRegister state sourceLeft).toInt.ediv divisor.toInt))
+          ((readRegister state sourceLeft).toInt.tdiv divisor.toInt))
   | .remU destination sourceLeft sourceRight =>
       let divisor := readRegister state sourceRight
       writeRegister { state with pc := nextPc state } destination
@@ -728,7 +728,7 @@ theorem execute_divU (state : State width) (destination sourceLeft sourceRight :
       if destination = 0 then readRegister state destination
       else if readRegister state sourceRight == 0 then BitVec.allOnes width
       else BitVec.ofInt width
-        ((readRegister state sourceLeft).toInt.ediv
+        ((readRegister state sourceLeft).toInt.tdiv
           (readRegister state sourceRight).toInt) := by
   by_cases h : destination = 0 <;>
     simp [execute, writeRegister, readRegister, h]

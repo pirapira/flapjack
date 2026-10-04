@@ -1857,6 +1857,7 @@ VALID_STATUSES = {
     "reviewed_fmap_as_finite_support_equality_words_as_type_indexed_bitvec",
     "reviewed_words_as_type_indexed_bitvec",
     "reviewed_word_dimension_as_width",
+    "reviewed_word_dimensions_as_widths",
     "reviewed_reals_as_rational_cuts",
     "reviewed_fmap_as_finite_support_words_as_type_indexed_bitvec",
     "reviewed_fmap_as_finite_support_relation_words_as_type_indexed_bitvec",
@@ -2017,7 +2018,7 @@ def tagged_declarations(
              fmap_parameters, fmap_existentials, dimension_width,
              fmap_function_positions,
              fmap_heterogeneous_function_positions, reals_cuts,
-             fmap_equality, result_observations) in HOL_ATTRIBUTE_SITES(
+             fmap_equality, result_observations, dimension_widths) in HOL_ATTRIBUTE_SITES(
                  lines, include_fmap_existentials=True,
                  include_word_dimension_width=True,
                  include_fmap_function=True,
@@ -2025,6 +2026,7 @@ def tagged_declarations(
                  include_reals_as_rational_cuts=True,
                  include_fmap_as_finite_support_equality=True,
                  include_result_observations=True,
+                 include_word_dimensions_widths=True,
              ):
             lean_name = FIND_LEAN_DECL(lines, line - 1)
             key = (rel, lean_name)
@@ -2035,7 +2037,7 @@ def tagged_declarations(
                      boundary_fields, fmap_fields, fmap_result, fmap_relation,
                      fmap_equalities, words_bitvec, fmap_parameters,
                      fmap_existentials, dimension_width, fmap_function_positions,
-                     fmap_heterogeneous_function_positions, reals_cuts, fmap_equality, result_observations)
+                     fmap_heterogeneous_function_positions, reals_cuts, fmap_equality, result_observations, dimension_widths)
             if key in tagged and tagged[key] != value:
                 raise ValueError(f"conflicting @[hol] references for {rel}:{lean_name}")
             tagged[key] = value
@@ -2051,7 +2053,7 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
         fmap_result, fmap_relation, fmap_equalities, words_bitvec, fmap_parameters,
         fmap_existentials, dimension_width,
         fmap_function_positions, fmap_heterogeneous_function_positions, reals_cuts,
-        fmap_equality, result_observations,
+        fmap_equality, result_observations, dimension_widths,
     ) in tagged.items():
         entry = {
             "hol_path": hol_path,
@@ -2092,6 +2094,8 @@ def build_inventory(root: Path = ROOT) -> list[dict[str, Any]]:
             entry["fmap_as_finite_support_equalities"] = True
         if words_bitvec:
             entry["words_as_type_indexed_bitvec"] = True
+        if dimension_widths:
+            entry["word_dimensions_as_widths"] = list(dimension_widths)
         if dimension_width:
             entry["word_dimension_as_width"] = dimension_width
         if reals_cuts:
@@ -2404,6 +2408,7 @@ def validate_inventory(
         reals_cuts = bool(tag[15]) if tag is not None and len(tag) > 15 else False
         fmap_equality = bool(tag[16]) if tag is not None and len(tag) > 16 else False
         result_observations = tag[17] if tag is not None and len(tag) > 17 else ()
+        dimension_widths = tag[18] if tag is not None and len(tag) > 18 else ()
         manifest_observations = tuple(record.get("fmap_as_finite_support_result_observations", ()))
         observation_status = "reviewed_fmap_as_finite_support_result_observations"
         if manifest_observations != result_observations:
@@ -2560,6 +2565,24 @@ def validate_inventory(
             errors.append(
                 f"{key[0]}:{key[1]}: reviewed_word_dimension_as_width needs a matching @[hol] qualifier"
             )
+        manifest_dimensions = tuple(record.get("word_dimensions_as_widths", ()))
+        if manifest_dimensions != dimension_widths:
+            errors.append(f"{key[0]}:{key[1]}: manifest word_dimensions_as_widths does not match its @[hol] tag")
+        if dimension_widths:
+            if len(dimension_widths) != 2 or len(set(dimension_widths)) != 2:
+                errors.append(f"{key[0]}:{key[1]}: word_dimensions_as_widths requires exactly two distinct dimensions")
+            if (dimension_width or words_bitvec or list_fields or names_fields or boundary_fields
+                    or fmap_fields or fmap_result or fmap_relation or fmap_equalities or fmap_equality
+                    or fmap_parameters or fmap_existentials or fmap_function_positions
+                    or fmap_heterogeneous_function_positions or result_observations):
+                errors.append(f"{key[0]}:{key[1]}: word_dimensions_as_widths conflicts with other representation qualifiers except reals_as_rational_cuts")
+            if status != "reviewed_word_dimensions_as_widths":
+                errors.append(f"{key[0]}:{key[1]}: word_dimensions_as_widths needs reviewed_word_dimensions_as_widths status, never reviewed_exact")
+            note = reviewer.lower() if isinstance(reviewer, str) else ""
+            if "source" not in note or "word_dimensions_as_widths" not in note or any(name.lower() not in note for name in dimension_widths):
+                errors.append(f"{key[0]}:{key[1]}: word_dimensions_as_widths requires a source-comparison note naming both dimensions")
+        elif status == "reviewed_word_dimensions_as_widths":
+            errors.append(f"{key[0]}:{key[1]}: reviewed_word_dimensions_as_widths needs a matching @[hol] qualifier")
         if bool(record.get("reals_as_rational_cuts", False)) != reals_cuts:
             errors.append(
                 f"{key[0]}:{key[1]}: manifest reals_as_rational_cuts does not match its @[hol] tag"
@@ -2567,7 +2590,7 @@ def validate_inventory(
         other_qualified = bool(
             list_fields or names_fields or boundary_fields or fmap_fields or fmap_result
             or fmap_relation or fmap_equalities or words_bitvec or fmap_parameters
-            or fmap_existentials or dimension_width or fmap_function_positions
+            or fmap_existentials or dimension_width or dimension_widths or fmap_function_positions
         )
         if reals_cuts:
             if status == "reviewed_exact":

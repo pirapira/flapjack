@@ -1,0 +1,11 @@
+lookup_map_insert0_statement=∀xs r. lookup r (map_insert xs m) = case ALOOKUP xs r of NONE => lookup r m | SOME r' => SOME r'
+lookup_map_insert0_hypotheses=0
+get_set_vars_lemma_statement=∀xs xs' x y s. ¬MEM x xs ∧ ¬MEM y xs ⇒ get_var x s = get_var y s ⇒ get_var x (set_vars xs xs' s) = get_var y (set_vars xs xs' s)
+get_set_vars_lemma_hypotheses=0
+MEM_FST_reduc_statement=∀moves r p_2. MEM (r,p_2) moves ⇒ MEM r (MAP FST moves)
+MEM_FST_reduc_hypotheses=0
+canonicalMoveRegs_lemma_statement=∀data s rs vs. data_inv data s ∧ ALL_DISTINCT (MAP FST rs) ∧ get_vars (MAP SND rs) s = SOME vs ⇒ data_inv (canonicalMoveRegs data rs) (set_vars (MAP FST rs) vs s)
+canonicalMoveRegs_lemma_hypotheses=0
+data_inv_clock_statement=∀data s c td. data_inv data s ⇒ data_inv data (s with <|clock := c; termdep := td|>)
+data_inv_clock_hypotheses=0
+canonicalMoveRegs_lemma_typed=∀(data :knowledge) (s :(α, γ, 'ffi) state) (rs :(num # num) list) (vs :α word_loc list). data_inv data s ∧ ALL_DISTINCT (MAP (FST :num # num -> num) rs) ∧ get_vars (MAP (SND :num # num -> num) rs) s = SOME vs ⇒ data_inv (canonicalMoveRegs data rs) (set_vars (MAP (FST :num # num -> num) rs) vs s)

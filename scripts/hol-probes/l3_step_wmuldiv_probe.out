@@ -1,0 +1,170 @@
+mulw_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+mulw_statement=dfn'MULW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (sw2sw
+             (((31 :num) >< (0 :num))
+                (sw2sw
+                   ((if rs1 = (0w :word5) then (0w :word32)
+                     else
+                       (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :
+                        word32)) *
+                    if rs2 = (0w :word5) then (0w :word32)
+                    else
+                      (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32)) :
+                 word64) :word32) :word64)
+      ⦈
+  ⦈
+divw_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+divw_statement=dfn'DIVW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if
+             if rs2 = (0w :word5) then T
+             else
+               (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32) =
+               (0w
+                 :word32)
+           then
+             (0xFFFFFFFFFFFFFFFFw :word64)
+           else
+             (sw2sw
+                ((if rs1 = (0w :word5) then (0w :word32)
+                  else
+                    (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32)) /
+                 if rs2 = (0w :word5) then (0w :word32)
+                 else
+                   (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32)) :
+              word64))
+      ⦈
+  ⦈
+divuw_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+divuw_statement=dfn'DIVUW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if
+             if rs2 = (0w :word5) then T
+             else
+               (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32) =
+               (0w
+                 :word32)
+           then
+             (0xFFFFFFFFFFFFFFFFw :word64)
+           else
+             (sw2sw
+                ((if rs1 = (0w :word5) then (0w :word32)
+                  else
+                    (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32)) //
+                 if rs2 = (0w :word5) then (0w :word32)
+                 else
+                   (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32)) :
+              word64))
+      ⦈
+  ⦈
+remw_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+remw_statement=dfn'REMW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if
+             if rs2 = (0w :word5) then T
+             else
+               (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32) =
+               (0w
+                 :word32)
+           then
+             if rs1 = (0w :word5) then (0w :word64)
+             else
+               (sw2sw
+                  (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :
+                word64)
+           else
+             (sw2sw
+                (word_rem
+                   (if rs1 = (0w :word5) then (0w :word32)
+                    else
+                      (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32))
+                   (if rs2 = (0w :word5) then (0w :word32)
+                    else
+                      (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32))) :
+              word64))
+      ⦈
+  ⦈
+remuw_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) ≠ (0w :word5)
+remuw_statement=dfn'REMUW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) =
+s with
+c_gpr :=
+  s.c_gpr⦇
+    s.procID ↦
+      (s.c_gpr s.procID)⦇
+        rd ↦
+          (if
+             if rs2 = (0w :word5) then T
+             else
+               (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32) =
+               (0w
+                 :word32)
+           then
+             if rs1 = (0w :word5) then (0w :word64)
+             else
+               (sw2sw
+                  (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32) :
+                word64)
+           else
+             (sw2sw
+                (word_mod
+                   (if rs1 = (0w :word5) then (0w :word32)
+                    else
+                      (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs1) :word32))
+                   (if rs2 = (0w :word5) then (0w :word32)
+                    else
+                      (((31 :num) >< (0 :num)) (s.c_gpr s.procID rs2) :word32))) :
+              word64))
+      ⦈
+  ⦈
+mulw_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+mulw_nop_statement=dfn'MULW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+divw_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+divw_nop_statement=dfn'DIVW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+divuw_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+divuw_nop_statement=dfn'DIVUW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+remw_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+remw_nop_statement=dfn'REMW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+remuw_nop_hypotheses=((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (0w :word2)
+((s :riscv_state).c_MCSR s.procID).mcpuid.ArchBase ≠ (1w :word2)
+(rd :word5) = (0w :word5)
+remuw_nop_statement=dfn'REMUW ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s
+source=HOL riscv_stepScript.sml W multiply/divide families via arithr [[ArchBase<>0]] over dfn'MULW/MULW_def and 874-886 DIVW/DIVUW/REMW/REMUW with the rd = 0w companions avoided; per-theorem Thm.hyp captured above; W forms keep the RV32-exclusion, invalid-selector and rd <> 0w hypotheses and signal Illegal_Instr on RV32

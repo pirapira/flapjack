@@ -551,7 +551,7 @@ theorem executeInstructions_divU_result [NeZero width]
     readRegister (executeInstructions state
       [.divU destination sourceLeft sourceRight]) destination =
       BitVec.ofInt width
-        ((readRegister state sourceLeft).toInt.ediv
+        ((readRegister state sourceLeft).toInt.tdiv
           (readRegister state sourceRight).toInt) := by
   rw [executeInstructions_single, execute_divU]
   split <;> simp_all
@@ -566,7 +566,7 @@ theorem wordFunctionToRiscVWithCalls_div_result [NeZero width]
       some (code, [])) :
     readRegister (executeInstructions state code) 5 =
       BitVec.ofInt width
-        ((readRegister state 2).toInt.ediv (readRegister state 3).toInt) := by
+        ((readRegister state 2).toInt.tdiv (readRegister state 3).toInt) := by
   have hshape : wordFunctionToRiscVWithCalls context
       ((.inst (.arith (.div 5 2 3))) : WordProg (Word width)) =
       some ([.divU 5 2 3], []) := by

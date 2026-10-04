@@ -1,0 +1,3 @@
+instSkip_typed=∀(lens :num list) (k :num) (f' :num) (f :num) (ac :α asm_config) (s :(α, num # β, γ) state) (t :(α, β, γ) stackSem$state) (s' :(α, num # β, γ) state). inst (Skip :α inst) s = SOME s' ∧ every_var_inst is_phy_var (Skip :α inst) ∧ max_var_inst (Skip :α inst) < (2 :num) * f' + (2 :num) * k ∧ inst_arg_convention (Skip :α inst) ∧ state_rel ac k f f' s t lens (0 :num) ⇒ ∃(t' :(α, β, γ) stackSem$state). (evaluate (wInst (Skip :α inst) (k,f,f'),t) :α stackSem$result option # (α, β, γ) stackSem$state) = ((NONE :α stackSem$result option),t') ∧ state_rel ac k f f' s' t' lens (0 :num) ∧ LENGTH t'.stack = LENGTH t.stack ∧ t'.stack_space = t.stack_space
+instSkip_proved=T
+instSkip_hypotheses=0

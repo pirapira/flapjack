@@ -34,7 +34,12 @@ class NativeInstructionCodecTests(unittest.TestCase):
         names = re.findall(r"^  \| \.(\w+)", codec, re.M)
         tests = (ROOT / "Flapjack/Test/RiscVNativeInstructionParity.lean").read_text()
         for name in names:
-            self.assertEqual(len(re.findall(r"example : encodeInstruction \(width := 64\) \(Instruction\." + name + r"[ )]", tests)), 3, name)
+            samples = re.findall(
+                r"example : EncodingReference\.encodeInstructionWeighted \(width := 64\)"
+                r" \(Instruction\." + name + r"[ )][^\n]*= L3\.Encode \(nativeInstruction",
+                tests,
+            )
+            self.assertEqual(len(samples), 3, name)
         self.assertEqual(tests.count(":= by decide"), 3 * len(names))
         for opcode in ["SB", "SH", "SW", "SD"]:
             self.assertIn(".Store (." + opcode + " (nativeRegister a, nativeRegister d,", codec)

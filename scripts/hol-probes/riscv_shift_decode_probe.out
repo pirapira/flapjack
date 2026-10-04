@@ -1,0 +1,40 @@
+sll_decode_zero=T
+sll_decode_all_ones=T
+sll_decode_high_bit=T
+sll_decode_alias=T
+sll_encode_source_clause=Encode (Shift (SLL (rdv,rs1v,rs2v))) = Rtype (opc 12w,1w,rdv,rs1v,rs2v,0w)
+sll_carrier_types=rs2v : :word5, rs1v : :word5, rdv : :word5
+sll_symbolic_query=Decode (Encode (Shift (SLL (rdv,rs1v,rs2v)))) = Shift (SLL (rdv,rs1v,rs2v))
+sll_source_hypotheses=0
+srl_decode_zero=T
+srl_decode_all_ones=T
+srl_decode_high_bit=T
+srl_decode_alias=T
+srl_encode_source_clause=Encode (Shift (SRL (rdv,rs1v,rs2v))) = Rtype (opc 12w,5w,rdv,rs1v,rs2v,0w)
+srl_carrier_types=rs2v : :word5, rs1v : :word5, rdv : :word5
+srl_symbolic_query=Decode (Encode (Shift (SRL (rdv,rs1v,rs2v)))) = Shift (SRL (rdv,rs1v,rs2v))
+srl_source_hypotheses=0
+sra_decode_zero=T
+sra_decode_all_ones=T
+sra_decode_high_bit=T
+sra_decode_alias=T
+sra_encode_source_clause=Encode (Shift (SRA (rdv,rs1v,rs2v))) = Rtype (opc 12w,5w,rdv,rs1v,rs2v,32w)
+sra_carrier_types=rs2v : :word5, rs1v : :word5, rdv : :word5
+sra_symbolic_query=Decode (Encode (Shift (SRA (rdv,rs1v,rs2v)))) = Shift (SRA (rdv,rs1v,rs2v))
+sra_source_hypotheses=0
+srli_decode_zero=T
+srli_decode_all_ones=T
+srli_decode_high_bit=T
+srli_decode_alias=T
+srli_encode_source_clause=Encode (Shift (SRLI (rdv,rs1v,amtv))) = Itype (opc 4w,5w,rdv,rs1v,0w @@ amtv)
+srli_carrier_types=amtv : :word6, rs1v : :word5, rdv : :word5
+srli_symbolic_query=Decode (Encode (Shift (SRLI (rdv,rs1v,amtv)))) = Shift (SRLI (rdv,rs1v,amtv))
+srli_source_hypotheses=0
+srai_decode_zero=T
+srai_decode_all_ones=T
+srai_decode_high_bit=T
+srai_decode_alias=T
+srai_encode_source_clause=Encode (Shift (SRAI (rdv,rs1v,amtv))) = Itype (opc 4w,5w,rdv,rs1v,16w @@ amtv)
+srai_carrier_types=amtv : :word6, rs1v : :word5, rdv : :word5
+srai_symbolic_query=Decode (Encode (Shift (SRAI (rdv,rs1v,amtv)))) = Shift (SRAI (rdv,rs1v,amtv))
+srai_source_hypotheses=0

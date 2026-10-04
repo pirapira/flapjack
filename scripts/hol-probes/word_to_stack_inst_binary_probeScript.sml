@@ -1,0 +1,12 @@
+load "preamble"; load "word_to_stackProofTheory";
+open HolKernel Parse bossLib preamble word_to_stackProofTheory;
+val _ = Globals.linewidth := 1000000;
+val reg_result = GEN_ALL (Q.SPEC `(asm$Arith (asm$Binop binary_operator binary_destination binary_input (asm$Reg binary_right)) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val imm_result = GEN_ALL (Q.SPEC `(asm$Arith (asm$Binop binary_operator binary_destination binary_input (asm$Imm binary_right)) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp reg_result) andalso null(free_vars(concl reg_result)) andalso null(hyp imm_result) andalso null(free_vars(concl imm_result)) then () else raise Fail "open Binop case";
+val _ = (print "binaryReg_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl reg_result));
+val _ = print("binaryReg_proved=" ^ term_to_string(rhs(concl(EQT_INTRO reg_result))) ^ "\n");
+val _ = print("binaryReg_hypotheses=" ^ Int.toString(length(hyp reg_result)) ^ "\n");
+val _ = (print "binaryImm_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl imm_result));
+val _ = print("binaryImm_proved=" ^ term_to_string(rhs(concl(EQT_INTRO imm_result))) ^ "\n");
+val _ = print("binaryImm_hypotheses=" ^ Int.toString(length(hyp imm_result)) ^ "\n");

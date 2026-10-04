@@ -1,0 +1,30 @@
+source_reg_imm_clause=(∀r s. reg_imm (Reg r) s = read_reg r s) ∧ ∀w s. reg_imm (Imm w) s = w
+source_reg_imm_hypotheses=0
+source_reg_imm_types=:α reg_imm -> α asm_state -> α word ;
+source_binop_upd_clause=(∀r w1 w2. binop_upd r Add w1 w2 = upd_reg r (w1 + w2)) ∧ (∀r w1 w2. binop_upd r Sub w1 w2 = upd_reg r (w1 − w2)) ∧ (∀r w1 w2. binop_upd r And w1 w2 = upd_reg r (w1 && w2)) ∧ (∀r w1 w2. binop_upd r Or w1 w2 = upd_reg r (w1 ‖ w2)) ∧ ∀r w1 w2. binop_upd r Xor w1 w2 = upd_reg r (w1 ⊕ w2)
+source_binop_upd_hypotheses=0
+source_binop_upd_types=:num -> binop -> α word -> α word -> α asm_state -> α asm_state ;
+source_arith_upd_clause=(∀b r1 r2 ri s. arith_upd (Binop b r1 r2 ri) s = binop_upd r1 b (read_reg r2 s) (reg_imm ri s) s) ∧ (∀l r1 r2 ri s. arith_upd (Shift l r1 r2 ri) s = assert (case ri of Reg r => w2n (read_reg r s) < dimindex (:α) | Imm v3 => T) (upd_reg r1 (word_shift l (read_reg r2 s) (w2n (reg_imm ri s))) s)) ∧ (∀r1 r2 r3 s. arith_upd (Div r1 r2 r3) s = (let q = read_reg r3 s in assert (q ≠ 0w) (upd_reg r1 (read_reg r2 s / q) s))) ∧ (∀r1 r2 r3 r4 s. arith_upd (LongMul r1 r2 r3 r4) s = (let r = w2n (read_reg r3 s) * w2n (read_reg r4 s) in upd_reg r2 (n2w r) (upd_reg r1 (n2w (r DIV dimword (:α))) s))) ∧ (∀r1 r2 r3 r4 r5 s. arith_upd (LongDiv r1 r2 r3 r4 r5) s = (let n = w2n (read_reg r3 s) * dimword (:α) + w2n (read_reg r4 s); d = w2n (read_reg r5 s); q = n DIV d in assert (d ≠ 0 ∧ q < dimword (:α)) (upd_reg r1 (n2w q) (upd_reg r2 (n2w (n MOD d)) s)))) ∧ (∀r1 r2 r3 r4 s. arith_upd (AddCarry r1 r2 r3 r4) s = (let r = w2n (read_reg r2 s) + w2n (read_reg r3 s) + if read_reg r4 s = 0w then 0 else 1 in upd_reg r4 (if dimword (:α) ≤ r then 1w else 0w) (upd_reg r1 (n2w r) s))) ∧ (∀r1 r2 r3 r4 s. arith_upd (AddOverflow r1 r2 r3 r4) s = (let w2 = read_reg r2 s; w3 = read_reg r3 s in upd_reg r4 (if w2i (w2 + w3) ≠ w2i w2 + w2i w3 then 1w else 0w) (upd_reg r1 (w2 + w3) s))) ∧ ∀r1 r2 r3 r4 s. arith_upd (SubOverflow r1 r2 r3 r4) s = (let w2 = read_reg r2 s; w3 = read_reg r3 s in upd_reg r4 (if w2i (w2 − w3) ≠ w2i w2 − w2i w3 then 1w else 0w) (upd_reg r1 (w2 − w3) s))
+source_arith_upd_hypotheses=0
+source_arith_upd_types=:α arith -> α asm_state -> α asm_state ;
+source_asm_step_clause=∀c s1 i s2. asm_step c s1 i s2 ⇔ bytes_in_memory s1.pc (c.encode i) s1.mem s1.mem_domain ∧ (case c.link_reg of NONE => T | SOME r => s1.lr = r) ∧ (s1.be ⇔ c.big_endian) ∧ s1.align = c.code_alignment ∧ asm i (s1.pc + n2w (LENGTH (c.encode i))) s1 = s2 ∧ ¬s2.failed ∧ asm_ok i c
+source_asm_step_hypotheses=0
+source_asm_step_types=:α asm_config -> α asm_state -> α asm -> α asm_state -> bool ;
+source_bop_r_clause=riscv_bop_r Add = ADD ∧ riscv_bop_r Sub = SUB ∧ riscv_bop_r And = AND ∧ riscv_bop_r Or = OR ∧ riscv_bop_r Xor = XOR
+source_bop_r_hypotheses=0
+source_bop_r_types=:binop -> word5 # word5 # word5 -> ArithR ;
+native_add_clause=Run (ArithR (ADD (rdv,rs1v,rs2v))) stv = write'GPR (GPR rs1v stv + GPR rs2v stv,rdv) stv
+native_add_hypotheses=0
+native_add_types=:riscv_state ; stv : :riscv_state, rs2v : :word5, rs1v : :word5, rdv : :word5
+native_sub_clause=Run (ArithR (SUB (rdv,rs1v,rs2v))) stv = write'GPR (GPR rs1v stv + -1w * GPR rs2v stv,rdv) stv
+native_sub_hypotheses=0
+native_sub_types=:riscv_state ; stv : :riscv_state, rs2v : :word5, rs1v : :word5, rdv : :word5
+native_and_clause=Run (ArithR (AND (rdv,rs1v,rs2v))) stv = write'GPR (GPR rs1v stv && GPR rs2v stv,rdv) stv
+native_and_hypotheses=0
+native_and_types=:riscv_state ; stv : :riscv_state, rs2v : :word5, rs1v : :word5, rdv : :word5
+native_or_clause=Run (ArithR (OR (rdv,rs1v,rs2v))) stv = write'GPR (GPR rs1v stv ‖ GPR rs2v stv,rdv) stv
+native_or_hypotheses=0
+native_or_types=:riscv_state ; stv : :riscv_state, rs2v : :word5, rs1v : :word5, rdv : :word5
+native_xor_clause=Run (ArithR (XOR (rdv,rs1v,rs2v))) stv = write'GPR (GPR rs1v stv ⊕ GPR rs2v stv,rdv) stv
+native_xor_hypotheses=0
+native_xor_types=:riscv_state ; stv : :riscv_state, rs2v : :word5, rs1v : :word5, rdv : :word5

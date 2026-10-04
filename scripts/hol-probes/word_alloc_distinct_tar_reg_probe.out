@@ -1,0 +1,6 @@
+ssa_cc_trans_distinct_tar_reg_statement=∀prog ssa na lt. is_alloc_var na ∧ every_var (λx. x < na) prog ∧ ssa_map_ok na ssa ⇒ every_inst distinct_tar_reg (FST (ssa_cc_trans prog ssa na lt))
+ssa_cc_trans_distinct_tar_reg_hypotheses=0
+ssa_cc_trans_distinct_tar_reg_typed=∀(prog :α prog) (ssa :num sptree$num_map) (na :num) (lt :(num sptree$num_map # sptree$num_set # sptree$num_set) list). is_alloc_var na ∧ every_var (λ(x :num). x < na) prog ∧ ssa_map_ok na ssa ⇒ every_inst (distinct_tar_reg :α inst -> bool) (FST (ssa_cc_trans prog ssa na lt))
+full_ssa_cc_trans_distinct_tar_reg_statement=∀n prog. every_inst distinct_tar_reg (full_ssa_cc_trans n prog)
+full_ssa_cc_trans_distinct_tar_reg_hypotheses=0
+full_ssa_cc_trans_distinct_tar_reg_typed=∀(n :num) (prog :α prog). every_inst (distinct_tar_reg :α inst -> bool) (full_ssa_cc_trans n prog)

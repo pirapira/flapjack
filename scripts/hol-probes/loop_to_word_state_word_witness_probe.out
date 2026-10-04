@@ -1,0 +1,20 @@
+state_rel_type=:(α, β) state -> (α, γ, β) wordSem$state -> bool
+state_rel_def_typed=∀(s :(α, β) state) (t :(α, γ, β) wordSem$state).
+  state_rel s t ⇔
+  ∃(len :α word).
+    t.memory = s.memory ∧ t.mdomain = s.mdomain ∧
+    t.sh_mdomain = s.sh_mdomain ∧ t.clock = s.clock ∧ (t.be ⇔ s.be) ∧
+    t.ffi = s.ffi ∧
+    ALOOKUP (fmap_to_alist t.store) CurrHeap = SOME (Word s.base_addr) ∧
+    ALOOKUP (fmap_to_alist t.store) HeapLength = SOME (Word len) ∧
+    s.top_addr = s.base_addr + (2w :α word) * len ∧
+    globals_rel s.globals t.store ∧ code_rel s.code t.code
+state_rel_intro_typed=state_rel (s :(α, β) state) (t :(α, γ, β) wordSem$state) ⇒
+t.memory = s.memory ∧ t.mdomain = s.mdomain ∧ t.clock = s.clock ∧
+(t.be ⇔ s.be) ∧ t.ffi = s.ffi ∧
+ALOOKUP (fmap_to_alist t.store) CurrHeap = SOME (Word s.base_addr) ∧
+globals_rel s.globals t.store ∧ code_rel s.code t.code
+state_rel_IMP_typed_replay=∀(s :(α, β) state) (t :(α, γ, β) wordSem$state).
+  state_rel s t ⇒ t.clock = s.clock
+state_rel_with_clock_typed=state_rel (s :(α, β) state) (t :(α, γ, β) wordSem$state) ⇒
+state_rel (s with clock := (k :num)) (t with clock := k)

@@ -4,6 +4,7 @@ import Flapjack.Parser
 import Flapjack.Parser.ParseTopDecsByteRanged
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.LabDiagnostics
+import Flapjack.RiscV.LabToTargetRoute
 import Flapjack.RiscV.WordDiagnostics
 import Flapjack.RiscV.CakeRegAlloc
 import Flapjack.RiscV.WordFuseConditions
@@ -697,7 +698,9 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                     pipeline.crepe error)
               | .ok (functions, bitmaps) =>
                   let initialLabel := fullSsaInitialLabLabel functions
-                  match RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVCakeChecked
+                  -- At RV64 the bytes come from the reviewed `lab_to_target$compile`
+                  -- (`RiscV.labProgramToRiscVSections`).
+                  match RiscV.compileStackProgramNatListToRiscVSectionsCakeChecked
                       { services := services } removeConfig
                       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
                         firstFreshLabel := stackFunctionFirstLabel }
@@ -708,8 +711,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                       .error (sourceRiscVImageErrorOfLowering stackFunctionFirstLabel
                         pipeline.crepe (.labToRiscV error))
                   | .ok sections =>
-                      .ok { crepe := pipeline.crepe, bitmaps,
-                            sections := RiscV.encodeLinkedSections sections,
+                      .ok { crepe := pipeline.crepe, bitmaps, sections,
                             warnings, ffiNames := discoveredNames }
 
 end Flapjack

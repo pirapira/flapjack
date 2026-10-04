@@ -1,0 +1,12 @@
+load "preamble";
+load "pan_to_wordProofTheory";
+open HolKernel Parse bossLib preamble pan_to_wordProofTheory;
+val _ = Globals.linewidth := 1000000;
+val _ = show_types := true;
+val full = GEN_ALL state_rel_imp_semantics;
+val _ = if null(hyp full) andalso null(free_vars(concl full)) then () else raise Fail "open theorem";
+val _ = print "state_rel_imp_semantics_statement=";
+val _ = print_term(concl full);
+val _ = print "\n";
+val _ = print("state_rel_imp_semantics_proved=" ^ term_to_string(rhs(concl(EQT_INTRO full))) ^ "\n");
+val _ = print("state_rel_imp_semantics_types=" ^ String.concatWith ";" (map (fn t => term_to_string t ^ ":" ^ type_to_string(type_of t)) (fst(strip_forall(concl full)))) ^ "\n");

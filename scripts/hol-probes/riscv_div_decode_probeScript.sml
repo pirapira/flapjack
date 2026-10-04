@@ -1,0 +1,13 @@
+load "preamble"; load "riscvTheory";
+open HolKernel Parse bossLib preamble riscvTheory;
+val _ = computeLib.add_funs [Encode_def,Rtype_def,opc_def,Decode_def,boolify32_def];
+val _ = Globals.linewidth := 1000000;
+val _ = (print "div_decode_zero="; print_term(rhs(concl(EVAL ``Decode (Encode (MulDiv (riscv$DIV (0w,0w,0w)))) = MulDiv (riscv$DIV (0w,0w,0w))``))); print "\n");
+val _ = (print "div_decode_all_ones="; print_term(rhs(concl(EVAL ``Decode (Encode (MulDiv (riscv$DIV (31w,31w,31w)))) = MulDiv (riscv$DIV (31w,31w,31w))``))); print "\n");
+val _ = (print "div_decode_mixed="; print_term(rhs(concl(EVAL ``Decode (Encode (MulDiv (riscv$DIV (1w,0w,16w)))) = MulDiv (riscv$DIV (1w,0w,16w))``))); print "\n");
+val term = ``Encode (MulDiv (riscv$DIV (rdv,rs1v,rs2v)))``;
+val source = SIMP_CONV (srw_ss()) [Encode_def] term;
+val _ = (print "div_encode_source_clause="; print_term(concl source); print "\n");
+val _ = print ("div_encode_source_hypotheses=" ^ Int.toString(length(hyp source)) ^ "\n");
+val _ = print ("div_carrier_types=" ^ String.concatWith ", " (map (fn v => term_to_string v ^ " : " ^ type_to_string(type_of v)) (free_vars term)) ^ "\n");
+val _ = OS.Process.exit OS.Process.success;

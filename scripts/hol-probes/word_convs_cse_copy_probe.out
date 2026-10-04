@@ -1,0 +1,26 @@
+extract_labels_word_common_subexp_elim_statement=extract_labels (word_common_subexp_elim p) = extract_labels p
+extract_labels_word_common_subexp_elim_hypotheses=0
+flat_exp_conventions_word_common_subexp_elim_statement=flat_exp_conventions p ⇒ flat_exp_conventions (word_common_subexp_elim p)
+flat_exp_conventions_word_common_subexp_elim_hypotheses=0
+wf_cutsets_word_common_subexp_elim_statement=wf_cutsets p ⇒ wf_cutsets (word_common_subexp_elim p)
+wf_cutsets_word_common_subexp_elim_hypotheses=0
+wf_cutsets_copy_prop_statement=wf_cutsets p ⇒ wf_cutsets (copy_prop p)
+wf_cutsets_copy_prop_hypotheses=0
+every_inst_distinct_tar_reg_copy_prop_statement=every_inst distinct_tar_reg p ⇒ every_inst distinct_tar_reg (copy_prop p)
+every_inst_distinct_tar_reg_copy_prop_hypotheses=0
+extract_labels_copy_prop_statement=extract_labels (copy_prop p) = extract_labels p
+extract_labels_copy_prop_hypotheses=0
+flat_exp_conventions_copy_prop_statement=flat_exp_conventions p ⇒ flat_exp_conventions (copy_prop p)
+flat_exp_conventions_copy_prop_hypotheses=0
+pre_alloc_conventions_copy_prop_statement=pre_alloc_conventions p ⇒ pre_alloc_conventions (copy_prop p)
+pre_alloc_conventions_copy_prop_hypotheses=0
+full_inst_ok_less_copy_prop_statement=full_inst_ok_less ac p ⇒ full_inst_ok_less ac (copy_prop p)
+full_inst_ok_less_copy_prop_hypotheses=0
+three_to_two_reg_prog_wf_cutsets_statement=∀prog. wf_cutsets prog ⇒ wf_cutsets (three_to_two_reg_prog b prog)
+three_to_two_reg_prog_wf_cutsets_hypotheses=0
+wf_cutsets_remove_unreach_statement=wf_cutsets p ⇒ wf_cutsets (remove_unreach p)
+wf_cutsets_remove_unreach_hypotheses=0
+full_ssa_cc_trans_wf_cutsets_statement=∀n prog. wf_cutsets (full_ssa_cc_trans n prog)
+full_ssa_cc_trans_wf_cutsets_hypotheses=0
+pre_alloc_conventions_copy_prop_typed=pre_alloc_conventions (p :α prog) ⇒ pre_alloc_conventions (copy_prop p)
+full_ssa_cc_trans_wf_cutsets_typed=∀(n :num) (prog :α prog). wf_cutsets (full_ssa_cc_trans n prog)

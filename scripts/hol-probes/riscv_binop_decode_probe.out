@@ -1,0 +1,32 @@
+andi_decode_zero=T
+andi_decode_all_ones=T
+andi_decode_sign_bit=T
+andi_decode_positive_max=T
+add_decode_zero=T
+add_decode_all_ones=T
+add_decode_sign_bit=T
+add_decode_positive_max=T
+sub_decode_zero=T
+sub_decode_all_ones=T
+sub_decode_sign_bit=T
+sub_decode_positive_max=T
+and_decode_zero=T
+and_decode_all_ones=T
+and_decode_sign_bit=T
+and_decode_positive_max=T
+andi_encode_source_clause=Encode (ArithI (ANDI (rdv,rs1v,immv))) = Itype (opc 4w,7w,rdv,rs1v,immv)
+andi_encode_source_hypotheses=0
+andi_carrier_types=immv : :word12, rs1v : :word5, rdv : :word5
+andi_symbolic_replay_query=Decode (Encode (ArithI (ANDI (rdv,rs1v,immv)))) = ArithI (ANDI (rdv,rs1v,immv))
+add_encode_source_clause=Encode (ArithR (ADD (rdv,rs1v,rs2v))) = Rtype (opc 12w,0w,rdv,rs1v,rs2v,0w)
+add_encode_source_hypotheses=0
+add_carrier_types=rs2v : :word5, rs1v : :word5, rdv : :word5
+add_symbolic_replay_query=Decode (Encode (ArithR (ADD (rdv,rs1v,rs2v)))) = ArithR (ADD (rdv,rs1v,rs2v))
+sub_encode_source_clause=Encode (ArithR (SUB (rdv,rs1v,rs2v))) = Rtype (opc 12w,0w,rdv,rs1v,rs2v,32w)
+sub_encode_source_hypotheses=0
+sub_carrier_types=rs2v : :word5, rs1v : :word5, rdv : :word5
+sub_symbolic_replay_query=Decode (Encode (ArithR (SUB (rdv,rs1v,rs2v)))) = ArithR (SUB (rdv,rs1v,rs2v))
+and_encode_source_clause=Encode (ArithR (AND (rdv,rs1v,rs2v))) = Rtype (opc 12w,7w,rdv,rs1v,rs2v,0w)
+and_encode_source_hypotheses=0
+and_carrier_types=rs2v : :word5, rs1v : :word5, rdv : :word5
+and_symbolic_replay_query=Decode (Encode (ArithR (AND (rdv,rs1v,rs2v)))) = ArithR (AND (rdv,rs1v,rs2v))

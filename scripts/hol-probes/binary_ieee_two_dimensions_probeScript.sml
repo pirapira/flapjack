@@ -1,0 +1,12 @@
+load "bossLib"; load "binary_ieeeTheory";
+open bossLib HolKernel Parse binary_ieeeTheory;
+val _ = show_types := true;
+fun emit label th = (print (label ^ "="); print_term (concl th); print "\n");
+val _ = print "largest_type=";
+val _ = print (type_to_string (type_of ``binary_ieee$largest``));
+val _ = print "\n";
+val _ = emit "largest_def_typed" (DB.fetch "binary_ieee" "largest_def");
+val _ = print "threshold_type=";
+val _ = print (type_to_string (type_of ``binary_ieee$threshold``));
+val _ = print "\n";
+val _ = emit "threshold_def_typed" (DB.fetch "binary_ieee" "threshold_def");

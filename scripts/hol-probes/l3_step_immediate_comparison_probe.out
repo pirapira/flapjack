@@ -1,0 +1,8 @@
+slti_statement=∀s rs1 rd imm. rd ≠ 0w ⇒ (s.c_MCSR s.procID).mcpuid.ArchBase ≠ 1w ⇒ dfn'SLTI (rd,rs1,imm) s = s with c_gpr := s.c_gpr⦇s.procID ↦ (s.c_gpr s.procID)⦇rd ↦ v2w [(if rs1 = 0w then 0w else if (s.c_MCSR s.procID).mcpuid.ArchBase = 0w then sw2sw ((31 >< 0) (s.c_gpr s.procID rs1)) else s.c_gpr s.procID rs1) < sw2sw imm]⦈⦈
+slti_types=s : :riscv_state, rs1 : :word5, rd : :word5, imm : :word12
+slti_source_hypotheses=2
+slti_proved=T
+sltiu_statement=∀s rs1 rd imm. rd ≠ 0w ⇒ (s.c_MCSR s.procID).mcpuid.ArchBase ≠ 1w ⇒ dfn'SLTIU (rd,rs1,imm) s = s with c_gpr := s.c_gpr⦇s.procID ↦ (s.c_gpr s.procID)⦇rd ↦ v2w [(if rs1 = 0w then 0w else if (s.c_MCSR s.procID).mcpuid.ArchBase = 0w then sw2sw ((31 >< 0) (s.c_gpr s.procID rs1)) else s.c_gpr s.procID rs1) <₊ sw2sw imm]⦈⦈
+sltiu_types=s : :riscv_state, rs1 : :word5, rd : :word5, imm : :word12
+sltiu_source_hypotheses=2
+sltiu_proved=T

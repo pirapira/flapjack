@@ -57,10 +57,6 @@ private theorem cseDomain {width : Nat} [WordCseHash (BitVec width)] (data : Wor
   fun_induction wordApplyColour (fun name => name) program generalizing data <;>
     simp_all [wordCseProg, supportsCodec, cseInstructionDomain,
       factDomain]
-  case case3 =>
-    unfold wordCseProg
-    split <;> simp_all [supportsCodec, wordCseAddToLoad]
-    repeat' (split <;> simp_all [supportsCodec, factDomain])
   case case5 =>
     rename_i destination store
     cases (wordCseInvalidate data destination).getsMem[wordCseStoreCode store]? <;>

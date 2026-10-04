@@ -1,0 +1,6 @@
+inst_typed=∀(lens :num list) (k :num) (f' :num) (f :num) (ac :α asm_config) (i :α inst) (s :(α, num # β, γ) state) (t :(α, β, γ) stackSem$state) (s' :(α, num # β, γ) state). inst i s = SOME s' ∧ every_var_inst is_phy_var i ∧ max_var_inst i < (2 :num) * f' + (2 :num) * k ∧ inst_arg_convention i ∧ state_rel ac k f f' s t lens (0 :num) ⇒ ∃(t' :(α, β, γ) stackSem$state). (evaluate (wInst i (k,f,f'),t) :α stackSem$result option # (α, β, γ) stackSem$state) = ((NONE :α stackSem$result option),t') ∧ state_rel ac k f f' s' t' lens (0 :num) ∧ LENGTH t'.stack = LENGTH t.stack ∧ t'.stack_space = t.stack_space
+inst_proved=T
+inst_hypotheses=0
+fp_typed=∀(operation :fp) (lens :num list) (k :num) (f' :num) (f :num) (ac :α asm_config) (s :(α, num # β, γ) state) (t :(α, β, γ) stackSem$state) (s' :(α, num # β, γ) state). inst (FP operation :α inst) s = SOME s' ∧ every_var_inst is_phy_var (FP operation :α inst) ∧ max_var_inst (FP operation :α inst) < (2 :num) * f' + (2 :num) * k ∧ inst_arg_convention (FP operation :α inst) ∧ state_rel ac k f f' s t lens (0 :num) ⇒ ∃(t' :(α, β, γ) stackSem$state). (evaluate (wInst (FP operation :α inst) (k,f,f'),t) :α stackSem$result option # (α, β, γ) stackSem$state) = ((NONE :α stackSem$result option),t') ∧ state_rel ac k f f' s' t' lens (0 :num) ∧ LENGTH t'.stack = LENGTH t.stack ∧ t'.stack_space = t.stack_space
+fp_proved=T
+fp_hypotheses=0

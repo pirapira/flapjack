@@ -96,11 +96,11 @@ top-address equation `top_addr = base_addr + 2w*len`; and the exact
 `LoopSemStateFiniteExact.globals` and `WordSemStateFiniteExact.store` are named
 by the qualifier; `code` is an `Spt` tree map, not a `|->` finite map.
 
-The existential length is transcribed as `∃ len : Nat` with `BitVec.ofNat width len`
-instead of HOL's `∃ len : 'a word`. `BitVec.ofNat width` is surjective at every
-positive width, so both binders range over the same set of lengths; the Lean form
-is chosen because `BitVec.ofNat` is the concrete renderer used by the rest of the
-port and it keeps the equation `top_addr = base_addr + 2w*len` typable. -/
+The existential length retains HOL's word carrier as `∃ len : BitVec width`.
+The same native word appears directly in both HeapLength and the top-address
+equation; the width remains positive and the configuration and FFI types remain
+independent. No natural-number witness or extra representation qualifier is
+introduced. -/
 @[hol "cakeml/pancake/proofs/loop_to_wordProofScript.sml" "state_rel_def"
   (fmap_as_finite_support_relation :=
     [LoopSemStateFiniteExact.globals, WordSemStateFiniteExact.store])
@@ -108,7 +108,7 @@ port and it keeps the equation `top_addr = base_addr + 2w*len` typable. -/
 def loopToWordStateRelHOLExact {width : Nat} [NeZero width] {C F : Type}
     (source : LoopSemStateFiniteExact width F)
     (target : WordSemStateFiniteExact width C F) : Prop :=
-  ∃ len : Nat,
+  ∃ len : BitVec width,
     target.memory = source.memory ∧
       target.mdomain = source.mdomain ∧
       target.shMdomain = source.shMdomain ∧
@@ -116,8 +116,8 @@ def loopToWordStateRelHOLExact {width : Nat} [NeZero width] {C F : Type}
       target.be = source.be ∧
       target.ffi = source.ffi ∧
       target.store.lookup .currHeap = some (.word source.baseAddr) ∧
-      target.store.lookup .heapLength = some (.word (BitVec.ofNat width len)) ∧
-      source.topAddr = source.baseAddr + (2 : BitVec width) * BitVec.ofNat width len ∧
+      target.store.lookup .heapLength = some (.word len) ∧
+      source.topAddr = source.baseAddr + (2 : BitVec width) * len ∧
       loopToWordGlobalsRelHOLExact source.globals target.store ∧
       loopToWordCodeRelHOLExact source.code target.code
 

@@ -39,3 +39,21 @@ from_word_def_typed=∀(asm_conf :α asm_config) (c :config) (names :mlstring sp
      (c :config) = c with word_conf := c'
    in
      from_stack asm_conf c names p bm)
+from_word_0_type=:α asm_config ->
+config ->
+mlstring sptree$num_map ->
+(num # num # α prog) list -> (word8 list # α word list # config) option
+from_word_0_def_typed=∀(asm_conf :α asm_config) (c :config) (names :mlstring sptree$num_map)
+    (p :(num # num # α prog) list).
+  from_word_0 asm_conf c names p =
+  (let
+     ((col :num sptree$num_map option list),(prog :(num # num # α prog) list))
+       =
+       (compile c.word_to_word_conf asm_conf p :
+        num sptree$num_map option list # (num # num # α prog) list);
+     (c :config) =
+       c with
+       word_to_word_conf updated_by
+         (λ(c :word_to_word$config). c with col_oracle := col)
+   in
+     from_word asm_conf c names prog)

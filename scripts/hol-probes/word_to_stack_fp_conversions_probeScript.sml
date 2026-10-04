@@ -1,0 +1,12 @@
+load "preamble"; load "word_to_stackProofTheory";
+open HolKernel Parse bossLib preamble word_to_stackProofTheory;
+val _ = Globals.linewidth := 1000000;
+val to_int = GEN_ALL (Q.SPEC `(asm$FP (asm$FPToInt destination input) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val from_int = GEN_ALL (Q.SPEC `(asm$FP (asm$FPFromInt destination input) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp to_int) andalso null(free_vars(concl to_int)) andalso null(hyp from_int) andalso null(free_vars(concl from_int)) then () else raise Fail "open FP conversion case";
+val _ = (print "fpToInt_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl to_int));
+val _ = print("fpToInt_proved=" ^ term_to_string(rhs(concl(EQT_INTRO to_int))) ^ "\n");
+val _ = print("fpToInt_hypotheses=" ^ Int.toString(length(hyp to_int)) ^ "\n");
+val _ = (print "fpFromInt_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl from_int));
+val _ = print("fpFromInt_proved=" ^ term_to_string(rhs(concl(EQT_INTRO from_int))) ^ "\n");
+val _ = print("fpFromInt_hypotheses=" ^ Int.toString(length(hyp from_int)) ^ "\n");

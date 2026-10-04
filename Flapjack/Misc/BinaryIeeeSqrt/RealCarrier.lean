@@ -87,11 +87,21 @@ noncomputable def holClosestSuchR {t : Nat} {w : Nat} [NeZero t] [NeZero w] (p :
 noncomputable def holClosestR {t : Nat} {w : Nat} [NeZero t] [NeZero w] (s : HolFloat t w → Prop) (x : ℝ) : HolFloat t w :=
   holClosestSuchR (fun _ => True) s x
 
-/-- HOL `largest_def` (`binary_ieeeScript.sml:355-359`) over `ℝ`. -/
+/-- HOL `largest_def` (`binary_ieeeScript.sml:355-359`) over arbitrary Mathlib
+reals. The two independent type dimensions are numeric only: `t` retains
+`dimindex (:'t)` and `w` controls UINT_MAX/INT_MAX, each with its own NeZero.
+No word-valued carrier, extra bound, or rational-domain restriction occurs. -/
+@[hol "HOL/src/floating-point/binary_ieeeScript.sml" "largest_def"
+  (word_dimensions_as_widths := [t, w]) (reals_as_rational_cuts)]
 noncomputable def holFloatLargestR (t : Nat) (w : Nat) [NeZero t] [NeZero w] : ℝ :=
   (2 ^ (holUintMax w - 1) / 2 ^ holFloatBias w) * (2 - (2 ^ t : ℝ)⁻¹)
 
-/-- HOL `threshold_def` (`binary_ieeeScript.sml:361-365`) over `ℝ`. -/
+/-- HOL `threshold_def` (`binary_ieeeScript.sml:361-365`) over arbitrary Mathlib
+reals. The two independent type dimensions are numeric only: `t` retains
+`dimindex (:'t)` and `w` controls UINT_MAX/INT_MAX, each with its own NeZero.
+No word-valued carrier, extra bound, or rational-domain restriction occurs. -/
+@[hol "HOL/src/floating-point/binary_ieeeScript.sml" "threshold_def"
+  (word_dimensions_as_widths := [t, w]) (reals_as_rational_cuts)]
 noncomputable def holFloatThresholdR (t : Nat) (w : Nat) [NeZero t] [NeZero w] : ℝ :=
   (2 ^ (holUintMax w - 1) / 2 ^ holFloatBias w) * (2 - (2 ^ (t + 1) : ℝ)⁻¹)
 

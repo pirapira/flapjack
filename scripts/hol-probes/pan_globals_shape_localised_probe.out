@@ -1,0 +1,3 @@
+localised_exp_shape_val_statement=(∀(sh :shape). localised_exp (shape_val sh :α exp)) ∧ ∀(shs :shape list). EVERY (localised_exp :α exp -> bool) (shape_vals shs :α exp list)
+localised_exp_shape_val_proved=T
+localised_exp_shape_val_types=:shape -> α exp;:shape list -> α exp list

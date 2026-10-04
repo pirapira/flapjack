@@ -1,0 +1,3 @@
+compileExpLabels_typed=∀(p :α prog). labels_rel (extract_labels p) (extract_labels (compile_exp p))
+compileExpLabels_proved=T
+compileExpLabels_hypotheses=0

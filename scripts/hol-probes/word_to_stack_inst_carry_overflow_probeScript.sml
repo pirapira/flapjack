@@ -1,0 +1,18 @@
+load "preamble"; load "word_to_stackProofTheory";
+open HolKernel Parse bossLib preamble word_to_stackProofTheory;
+val _ = Globals.linewidth := 1000000;
+val carry_result = GEN_ALL (Q.SPEC `(asm$Arith (asm$AddCarry flag_destination flag_left flag_right flag_register) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp carry_result) andalso null(free_vars(concl carry_result)) then () else raise Fail "open instruction case";
+val _ = (print "carry_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl carry_result));
+val _ = print("carry_proved=" ^ term_to_string(rhs(concl(EQT_INTRO carry_result))) ^ "\n");
+val _ = print("carry_hypotheses=" ^ Int.toString(length(hyp carry_result)) ^ "\n");
+val addOverflow_result = GEN_ALL (Q.SPEC `(asm$Arith (asm$AddOverflow flag_destination flag_left flag_right flag_register) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp addOverflow_result) andalso null(free_vars(concl addOverflow_result)) then () else raise Fail "open instruction case";
+val _ = (print "addOverflow_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl addOverflow_result));
+val _ = print("addOverflow_proved=" ^ term_to_string(rhs(concl(EQT_INTRO addOverflow_result))) ^ "\n");
+val _ = print("addOverflow_hypotheses=" ^ Int.toString(length(hyp addOverflow_result)) ^ "\n");
+val subOverflow_result = GEN_ALL (Q.SPEC `(asm$Arith (asm$SubOverflow flag_destination flag_left flag_right flag_register) : 'a asm$inst)` word_to_stackProofTheory.evaluate_wInst);
+val _ = if null(hyp subOverflow_result) andalso null(free_vars(concl subOverflow_result)) then () else raise Fail "open instruction case";
+val _ = (print "subOverflow_typed="; Lib.with_flag (Globals.show_types,true) print_term (concl subOverflow_result));
+val _ = print("subOverflow_proved=" ^ term_to_string(rhs(concl(EQT_INTRO subOverflow_result))) ^ "\n");
+val _ = print("subOverflow_hypotheses=" ^ Int.toString(length(hyp subOverflow_result)) ^ "\n");

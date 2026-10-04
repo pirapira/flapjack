@@ -1,0 +1,3 @@
+compile_word_to_stack_bitmaps_typed=(compile (c :α asm_config) F (p :(num # num # α prog) list) :α word list # config # num list # (num # α stackLang$prog) list) = ((bitmaps :α word list),(c2 :config),(prog1 :num list # (num # α stackLang$prog) list)) ⇒ (case bitmaps of ([] :α word list) => F | h::v1 => (4w :α word) = h) ∧ c2.bitmaps_length = LENGTH bitmaps
+compile_word_to_stack_bitmaps_hypotheses=0
+compile_word_to_stack_bitmaps_free=5

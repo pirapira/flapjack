@@ -667,23 +667,10 @@ def wordCseProg [WordCseHash α] : WordCseKnowledge → WordProg α → WordProg
         (fun data register => wordCseRecordInst data register [48, source])
   | data, .store address value =>
       (.store address value, { data with loadsMem := ∅ })
-  | data, .assign name value =>
-      /- Instruction selection leaves a load whose address does not fit
-         `WordInst.mem` as this carrier.  `word_cse` used to pass it through
-         untouched, so a repeated load was never shared: reading one global
-         twice emitted the global-table load twice where Cake emits it once.
-         Treat the carrier exactly as the `.mem` load case does. -/
-      match value with
-      | .load (.op .add [.var address, .const offset]) =>
-          let data := wordCseInvalidate data name
-          if name % 2 == 0 || address % 2 == 0 || address = name then
-            (.assign name value, data)
-          else
-            let canonicalAddress := wordCseCanonicalRegs' name data address
-            wordCseAddToLoad (wordCseRegisterRead data canonicalAddress) name
-              (wordCseLoadOffsetToNumList .load canonicalAddress offset)
-              (.assign name value)
-      | _ => (.assign name value, data)
+  /- Original word_cse Assign is unconditional identity. Instruction selection
+     emits memory loads as mem/memOffset before CSE; an unselected load
+     expression must retain its original knowledge and program as well. -/
+  | data, .assign name value => (.assign name value, data)
   | data, .raise exception => (.raise exception, data)
   | data, .return label values => (.return label values, data)
   | data, .tick => (.tick, data)

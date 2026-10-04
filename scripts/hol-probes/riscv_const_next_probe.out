@@ -1,0 +1,16 @@
+const_next_wrapper_type=:riscv_state -> riscv_state option
+const_next_fetch_type=:riscv_state -> rawInstType # riscv_state
+const_next_lui_zero=T
+const_next_lui_all_ones=T
+const_next_addi_zero=T
+const_next_addi_all_ones=T
+const_next_ori_zero=T
+const_next_ori_all_ones=T
+const_next_xori_zero=T
+const_next_xori_all_ones=T
+const_next_slli_zero=T
+const_next_slli_all_ones=T
+const_next_or_zero=T
+const_next_or_all_ones=T
+const_next_xor_zero=T
+const_next_xor_all_ones=T

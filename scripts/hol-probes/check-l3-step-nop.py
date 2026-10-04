@@ -1,0 +1,38 @@
+"""Reject drift in original HOL zero-destination (``X_NOP``) step captures."""
+from pathlib import Path
+
+EXPECTED = [
+    "add_nop_statement=dfn'ADD ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s",
+    'add_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "sub_nop_statement=dfn'SUB ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s",
+    'sub_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "and_nop_statement=dfn'AND ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s",
+    'and_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "or_nop_statement=dfn'OR ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s",
+    'or_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "xor_nop_statement=dfn'XOR ((rd :word5),(rs1 :word5),(rs2 :word5)) (s :riscv_state) = s",
+    'xor_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "addi_nop_statement=dfn'ADDI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) = s",
+    'addi_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "andi_nop_statement=dfn'ANDI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) = s",
+    'andi_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "ori_nop_statement=dfn'ORI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) = s",
+    'ori_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "xori_nop_statement=dfn'XORI ((rd :word5),(rs1 :word5),(imm :word12)) (s :riscv_state) = s",
+    'xori_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "lui_nop_statement=dfn'LUI ((rd :word5),(imm :word20)) (s :riscv_state) = s",
+    'lui_nop_hypotheses=(rd :word5) = (0w :word5)',
+    "auipc_nop_statement=dfn'AUIPC ((rd :word5),(imm :word20)) (s :riscv_state) = s",
+    'auipc_nop_hypotheses=(rd :word5) = (0w :word5)',
+    'source=HOL riscv_stepScript.sml:807-833 class_rd0 factories arithi/arithr/load emit the NAME^"_NOP" companion through utilsLib.save_thms; sole hypothesis rd = 0w and the state is unchanged',
+]
+
+
+def check(text):
+    if text.splitlines() != EXPECTED:
+        raise ValueError("original HOL zero-destination capture differs from reviewed statements")
+
+
+if __name__ == "__main__":
+    check(Path(__file__).with_name("l3_step_nop_probe.out").read_text())
+    print("step_nop: exact original HOL zero-destination statements and hypotheses PASS")

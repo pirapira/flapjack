@@ -1,0 +1,23 @@
+compile_prog_max_local_replay_type=:config ->
+(α, β, γ) machine_config ->
+α decl list -> (word8 list # α word list # config) option # num option
+compile_prog_max_local_replay_def_typed=∀(c :config) (mc :(α, β, γ) machine_config) (prog :α decl list).
+  compile_prog_max c mc prog =
+  (let
+     (asm_conf :α asm_config) = mc.target.config;
+     (prog :(num # num # α wordLang$prog) list) =
+       (compile_prog asm_conf.ISA prog :(num # num # α wordLang$prog) list);
+     ((col :num sptree$num_map option list),
+        (wprog :(num # num # α wordLang$prog) list)) =
+       (compile c.word_to_word_conf asm_conf prog :
+        num sptree$num_map option list # (num # num # α wordLang$prog) list);
+     ((bm :α word list),(c' :word_to_stack$config),(fs :num list),
+        (p :(num # α stackLang$prog) list)) =
+       (compile asm_conf F wprog :
+        α word list #
+        word_to_stack$config # num list # (num # α stackLang$prog) list);
+     (max :num option) =
+       max_depth c'.stack_frame_size
+         (full_call_graph InitGlobals_location (fromAList wprog))
+   in
+     (from_stack asm_conf c (LN :mlstring sptree$num_map) p bm,max))

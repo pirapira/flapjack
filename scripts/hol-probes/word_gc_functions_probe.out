@@ -26,3 +26,6 @@ gc_is_gc_const_even=T
 gc_is_gc_const_odd=F
 gc_is_gc_word_const_loc=T
 gc_is_gc_word_const_odd=F
+gc_refs_to_addresses_empty=[]
+gc_refs_to_addresses_basic=[Pointer 0 1000w; Data 2000w]
+gc_refs_to_addresses_skip=[Data 3000w]

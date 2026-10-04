@@ -5,6 +5,7 @@ import Flapjack.Misc.GoodDimindex
 import Flapjack.Misc.FiniteMapApply
 import Flapjack.Compiler.Backend.BackendCommon
 import Flapjack.Compiler.Backend.DataToWord.Config
+import Flapjack.Compiler.Backend.GcShared
 import Flapjack.Compiler.Backend.Semantics.WordSem.Accessors
 import Flapjack.Pancake.Semantics.PanSemStateEval
 
@@ -27,8 +28,8 @@ results stay tupled, in HOL order.  HOL `bytes_in_word` is
 is `2 ^ width`, `theWord` is `wordSemTheWord`, `isWord` is `wordSemIsWordLoc`,
 `is_fwd_ptr` is `wordSemIsFwdPtr`, `f ' x` is `holFapply`, `|++` is
 `HolFiniteMapExact.updateListEq`, `HD` is `holHd` and `TL` is `List.tail`
-(HOL `TL [] = []`).  HOL `refs_to_addresses_def` is not needed downstream and
-is not ported here.
+(HOL `TL [] = []`).  The collector's `refs_to_addresses` is ported below over
+the faithful `heap_element`/`heap_address` carriers in `GcShared`.
 -/
 
 namespace Flapjack.Compiler.Backend.WordGcFunctions
@@ -764,5 +765,11 @@ noncomputable def wordGcFun {width : Nat} [NeZero width] (conf : Config) :
             (.temp 0, .word 0), (.temp 1, .word 0), (.temp 2, .word 0), (.temp 3, .word 0),
             (.temp 4, .word 0), (.temp 5, .word 0), (.temp 6, .word 0)]
           if c2 = true then some (roots1.tail, m1, s1) else none
+
+@[hol "cakeml/compiler/backend/proofs/word_gcFunctionsScript.sml" "refs_to_addresses_def"]
+def refs_to_addresses {α β : Type} : List (HeapElement α β) → List (HeapAddress α)
+  | [] => []
+  | .dataElement ptrs _ _ :: refs => ptrs ++ refs_to_addresses refs
+  | _ :: refs => refs_to_addresses refs
 
 end Flapjack.Compiler.Backend.WordGcFunctions
